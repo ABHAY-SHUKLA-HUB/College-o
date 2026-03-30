@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Help Center - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .hc-hero { text-align: center; padding: 32px 24px 24px; }
+    .hc-hero h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 800; margin: 0 0 12px; }
+    .hc-hero p { color: var(--text-muted, #64748b); max-width: 560px; margin: 0 auto 24px; font-size: 1.05rem; }
+    .hc-search-wrap {
+      max-width: 540px; margin: 0 auto 36px;
+      position: relative;
+    }
+    .hc-search-wrap i {
+      position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+      color: var(--text-muted, #64748b); pointer-events: none;
+    }
+    .hc-search-wrap input { padding-left: 44px; font-size: 1rem; }
+    .hc-categories-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+    .hc-cat-card {
+      background: var(--surface-0, #fff);
+      border: 1px solid var(--border-color, #dbe4ef);
+      border-radius: 16px;
+      padding: 22px 18px;
+      cursor: pointer;
+      transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+      text-align: center;
+    }
+    .hc-cat-card:hover, .hc-cat-card.selected {
+      box-shadow: 0 6px 20px rgba(15,23,42,0.1);
+      transform: translateY(-2px);
+      border-color: var(--brand-primary, #0f7b6c);
+    }
+    .hc-cat-icon {
+      width: 48px; height: 48px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; margin: 0 auto 12px;
+    }
+    .hc-cat-card h4 { font-size: 0.95rem; font-weight: 700; margin: 0 0 4px; }
+    .hc-cat-card .cat-count { font-size: 0.8rem; color: var(--text-muted, #64748b); }
+    .hc-articles-section { margin-bottom: 32px; }
+    .hc-articles-section h3 { font-size: 1.2rem; font-weight: 700; margin: 0 0 16px; }
+    .hc-accordion { display: flex; flex-direction: column; gap: 8px; }
+    .hc-accordion-item {
+      background: var(--surface-0, #fff);
+      border: 1px solid var(--border-color, #dbe4ef);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .hc-accordion-q {
+      padding: 16px 20px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      transition: background 0.15s;
+    }
+    .hc-accordion-q:hover { background: var(--surface-1, #f8fafc); }
+    .hc-accordion-a {
+      padding: 0 20px;
+      max-height: 0; overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+      font-size: 0.9rem; color: var(--text-muted, #64748b); line-height: 1.7;
+    }
+    .hc-accordion-item.open .hc-accordion-a { max-height: 400px; padding: 0 20px 18px; }
+    .hc-accordion-item.open .hc-chevron { transform: rotate(180deg); }
+    .hc-chevron { transition: transform 0.3s; flex-shrink: 0; color: var(--text-muted, #64748b); }
+    .hc-cta-section {
+      background: var(--surface-1, #f1f5f9);
+      border-radius: 18px;
+      padding: 40px 28px;
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .hc-cta-section h3 { font-size: 1.3rem; font-weight: 800; margin: 0 0 10px; }
+    .hc-cta-section p { color: var(--text-muted, #64748b); margin: 0 0 22px; }
+    .hc-cta-section .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .search-no-results { text-align: center; padding: 32px 16px; color: var(--text-muted, #64748b); }
+    .hc-search-results { margin-bottom: 28px; }
+    .search-result-item {
+      background: var(--surface-0, #fff);
+      border: 1px solid var(--border-color, #dbe4ef);
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: box-shadow 0.15s;
+    }
+    .search-result-item:hover { box-shadow: 0 4px 12px rgba(15,23,42,0.08); }
+    .search-result-item .sr-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
+    .search-result-item .sr-body { font-size: 0.85rem; color: var(--text-muted, #64748b); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .search-result-item .sr-cat { font-size: 0.78rem; color: var(--brand-primary, #0f7b6c); font-weight: 600; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+
+    <!-- Hero + Search -->
+    <section class="hc-hero">
+      <h1 id="hcHeroTitle">Help Center</h1>
+      <p id="hcHeroDesc">Find answers to common questions, explore guides, or submit a support ticket if you need more help.</p>
+    </section>
+    <div class="hc-search-wrap">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="search" id="hcSearch" placeholder="Search help articles..." />
+    </div>
+
+    <!-- Search Results (shown when searching) -->
+    <div class="hc-search-results" id="hcSearchResults" style="display:none;">
+      <h3 id="hcSearchResultsTitle">Search Results</h3>
+      <div id="hcSearchResultsList"></div>
+    </div>
+
+    <!-- Category Grid (hidden when search active) -->
+    <div id="hcMainContent">
+      <div class="hc-categories-grid" id="hcCategoriesGrid">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Article Accordion (shown when category selected) -->
+      <section class="hc-articles-section" id="hcArticlesSection" style="display:none;">
+        <h3 id="hcArticlesSectionTitle"></h3>
+        <div class="hc-accordion" id="hcArticlesList"></div>
+        <div style="margin-top:18px;">
+          <button class="btn secondary" id="hcBackToCatsBtn">
+            <i class="fa-solid fa-arrow-left"></i> Back to All Topics
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <!-- CTA Section -->
+    <section class="hc-cta-section" id="hcCtaSection">
+      <h3 id="hcCtaTitle">Still need help?</h3>
+      <p id="hcCtaDesc">Can't find what you're looking for? Our support team is ready to help.</p>
+      <div class="actions">
+        <a class="btn primary" id="hcCtaLink" href="contact-us.html">
+          <i class="fa-solid fa-headset"></i> Contact Support
+        </a>
+        <a class="btn secondary" href="my-tickets.html">
+          <i class="fa-solid fa-ticket"></i> My Tickets
+        </a>
+      </div>
+    </section>
+
+  </template>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/company-support.js"></script>
+</body>
+</html>
+
+
+

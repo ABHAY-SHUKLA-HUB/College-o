@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>College OS - Academic Contribution Hub</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .contrib-shell {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .contrib-hero {
+      border-radius: 18px;
+      padding: 1.15rem;
+      color: #fff;
+      background:
+        radial-gradient(circle at 16% 12%, rgba(255, 255, 255, 0.2), transparent 34%),
+        radial-gradient(circle at 82% 0%, rgba(255, 255, 255, 0.22), transparent 28%),
+        linear-gradient(125deg, #062b5b 0%, #0f766e 44%, #1d4ed8 100%);
+      box-shadow: 0 18px 38px rgba(5, 23, 46, 0.23);
+    }
+
+    .contrib-hero h1 {
+      margin-bottom: 0.35rem;
+      font-size: clamp(1.45rem, 2.2vw, 2rem);
+    }
+
+    .contrib-hero p {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.9);
+      max-width: 880px;
+    }
+
+    .contrib-kpis {
+      margin-top: 0.9rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+      gap: 0.6rem;
+    }
+
+    .contrib-kpi {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.12);
+      padding: 0.68rem;
+    }
+
+    .contrib-kpi .label {
+      font-size: 0.75rem;
+      opacity: 0.85;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+
+    .contrib-kpi .value {
+      margin-top: 0.25rem;
+      font-size: 1.35rem;
+      font-weight: 700;
+    }
+
+    .contrib-level {
+      margin-top: 0.6rem;
+      display: inline-flex;
+      gap: 0.45rem;
+      align-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 999px;
+      padding: 0.35rem 0.7rem;
+      background: rgba(255, 255, 255, 0.14);
+      font-size: 0.84rem;
+      font-weight: 700;
+    }
+
+    .contrib-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 0.95rem;
+      align-items: start;
+    }
+
+    .contrib-card {
+      border-radius: 16px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      background: #fff;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.07);
+      padding: 0.95rem;
+      display: grid;
+      gap: 0.8rem;
+    }
+
+    .contrib-card h3 {
+      font-size: 1.02rem;
+    }
+
+    .contrib-form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.72rem;
+    }
+
+    .contrib-form-grid .full {
+      grid-column: 1 / -1;
+    }
+
+    .contrib-status-list,
+    .contrib-library-list {
+      display: grid;
+      gap: 0.6rem;
+      max-height: 720px;
+      overflow-y: auto;
+      padding-right: 0.2rem;
+    }
+
+    .instant-search-wrapper {
+      position: relative;
+      margin-bottom: 1rem;
+    }
+
+    .instant-search-input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+
+    .instant-search-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      max-height: 360px;
+      overflow-y: auto;
+      z-index: 100;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    }
+
+    .instant-search-item {
+      padding: 0.75rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .instant-search-item:hover {
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    .instant-search-item strong {
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    .community-panel {
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+      background: #fff;
+      padding: 0.75rem;
+      margin-top: 0.75rem;
+      display: none;
+    }
+
+    .community-panel.active {
+      display: block;
+    }
+
+    .community-comment {
+      border-left: 3px solid #0066cc;
+      padding-left: 0.75rem;
+      margin-bottom: 0.5rem;
+      padding: 0.5rem;
+      background: rgba(0, 102, 204, 0.04);
+      border-radius: 6px;
+    }
+
+    .community-comment.is-answer {
+      border-left-color: #28a745;
+      background: rgba(40, 167, 69, 0.04);
+    }
+
+    .ai-insights-panel {
+      background: linear-gradient(135deg, rgba(102, 153, 255, 0.1) 0%, rgba(102, 51, 255, 0.1) 100%);
+      border: 1px solid rgba(102, 153, 255, 0.3);
+      border-radius: 12px;
+      padding: 0.9rem;
+      margin-top: 0.75rem;
+      display: none;
+    }
+
+    .ai-insights-panel.active {
+      display: block;
+    }
+
+    .growth-tracker {
+      background: linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 87, 34, 0.1) 100%);
+      border: 1px solid rgba(255, 193, 7, 0.3);
+      border-radius: 12px;
+      padding: 0.9rem;
+      margin-top: 0.75rem;
+    }
+
+    .milestone-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .milestone-item:last-child {
+      border-bottom: none;
+    }
+
+    .milestone-bar {
+      height: 6px;
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 3px;
+      overflow: hidden;
+      flex: 1;
+      margin: 0 0.5rem;
+    }
+
+    .milestone-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4CAF50 0%, #8BC34A 100%);
+      transition: width 0.3s ease;
+    }
+
+    .contrib-item {
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+      padding: 0.76rem;
+      background: #fff;
+      display: grid;
+      gap: 0.4rem;
+    }
+
+    .contrib-item-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.65rem;
+      align-items: flex-start;
+    }
+
+    .contrib-pills {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+
+    .contrib-pill {
+      border-radius: 999px;
+      font-size: 0.74rem;
+      padding: 0.2rem 0.55rem;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      background: #f8fbff;
+    }
+
+    .status-pill {
+      text-transform: capitalize;
+      font-weight: 700;
+    }
+
+    .status-pending { background: #fff5cc; color: #8a6300; border-color: #f8d77a; }
+    .status-approved { background: #def6e4; color: #0d6a2d; border-color: #7fd99a; }
+    .status-rejected { background: #ffe2e2; color: #a03030; border-color: #f2a5a5; }
+    .status-needs_correction { background: #e6f0ff; color: #214f9c; border-color: #9bbcff; }
+
+    .contrib-actions {
+      display: flex;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .contrib-filters {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.6rem;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .preview-panel {
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 12px;
+      padding: 0.6rem;
+      background: #f8fbff;
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .preview-frame {
+      width: 100%;
+      min-height: 260px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    .preview-image {
+      width: 100%;
+      max-height: 280px;
+      object-fit: contain;
+      border-radius: 10px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      background: #fff;
+    }
+
+    .badge-chip {
+      border-radius: 999px;
+      padding: 0.18rem 0.5rem;
+      font-size: 0.72rem;
+      border: 1px solid rgba(29, 78, 216, 0.35);
+      background: rgba(29, 78, 216, 0.08);
+      color: #1e40af;
+      font-weight: 700;
+      text-transform: capitalize;
+    }
+
+    .micro-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.6rem;
+    }
+
+    .micro-card {
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+      background: #fff;
+      padding: 0.65rem;
+    }
+
+    .quality-tips {
+      border-radius: 12px;
+      border: 1px solid rgba(15, 118, 110, 0.25);
+      background: rgba(15, 118, 110, 0.08);
+      padding: 0.65rem;
+      font-size: 0.86rem;
+      color: #0f4d48;
+    }
+
+    .quality-tips ul {
+      margin: 0.4rem 0 0;
+      padding-left: 1rem;
+    }
+
+    .resubmit-box {
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      border-radius: 12px;
+      background: rgba(59, 130, 246, 0.08);
+      padding: 0.6rem;
+      display: grid;
+      gap: 0.4rem;
+    }
+
+    .leaderboard-list {
+      display: grid;
+      gap: 0.45rem;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+
+    @media (max-width: 1060px) {
+      .micro-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 1060px) {
+      .contrib-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .contrib-filters,
+      .contrib-form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .contrib-form-grid .full {
+        grid-column: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <section class="contrib-shell">
+      <article class="contrib-hero" id="contributionHero">
+        <h1>Academic Contribution Hub</h1>
+        <p>Publish high-quality notes and papers to your college knowledge archive. Every submission is verified by moderation before it reaches your peers.</p>
+        <div class="contrib-level" id="contributorLevelLabel"><i class="fa-solid fa-shield-check"></i> New Contributor</div>
+        <div class="contrib-kpis">
+          <div class="contrib-kpi"><div class="label">Total</div><div class="value" id="kpiTotal">0</div></div>
+          <div class="contrib-kpi"><div class="label">Approved</div><div class="value" id="kpiApproved">0</div></div>
+          <div class="contrib-kpi"><div class="label">Pending</div><div class="value" id="kpiPending">0</div></div>
+          <div class="contrib-kpi"><div class="label">Rejected</div><div class="value" id="kpiRejected">0</div></div>
+          <div class="contrib-kpi"><div class="label">Points</div><div class="value" id="kpiPoints">0</div></div>
+        </div>
+      </article>
+
+      <section class="contrib-grid">
+        <article class="contrib-card" id="uploadCard">
+          <div>
+            <h3><i class="fa-solid fa-file-arrow-up"></i> Structured Academic Upload</h3>
+            <p class="muted">Submissions are strictly college-scoped and reviewed for relevance, duplication, and quality.</p>
+          </div>
+
+          <div class="quality-tips" id="uploadQualityTips">
+            <strong>Upload Quality Guidance</strong>
+            <ul id="uploadTipsList"></ul>
+          </div>
+
+          <form id="contributionForm" class="contrib-form-grid">
+            <div class="full">
+              <label>Title *</label>
+              <input id="contribTitle" name="title" type="text" maxlength="220" placeholder="Example: DBMS MST-1 Solved Paper 2025" required />
+            </div>
+
+            <div>
+              <label>Resource Type *</label>
+              <select id="contribResourceType" name="resourceType" required></select>
+            </div>
+
+            <div>
+              <label>Academic Category</label>
+              <select id="contribCategory" name="categoryId">
+                <option value="">Select Category</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Branch / Course *</label>
+              <select id="contribBranch" name="branchId" required>
+                <option value="">Select Branch</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Semester / Year *</label>
+              <select id="contribSemester" name="semesterId" required>
+                <option value="">Select Semester</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Subject *</label>
+              <input id="contribSubject" name="subject" type="text" maxlength="180" placeholder="Subject name" required />
+            </div>
+
+            <div class="question-only hidden">
+              <label>Exam Type *</label>
+              <select id="contribExamType" name="examType">
+                <option value="">Select Exam Type</option>
+                <option value="mst1">MST 1</option>
+                <option value="mst2">MST 2</option>
+                <option value="final">Final</option>
+                <option value="pyq">PYQ</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div class="question-only hidden">
+              <label>Exam Session / Year *</label>
+              <input id="contribExamSession" name="examSession" type="text" maxlength="40" placeholder="2025, Nov 2024, 2023-24" />
+            </div>
+
+            <div class="full">
+              <label>Short Description</label>
+              <textarea id="contribDescription" name="description" rows="3" maxlength="1200" placeholder="What does this file contain? Include syllabus coverage and quality context."></textarea>
+            </div>
+
+            <div>
+              <label>Tags</label>
+              <input id="contribTags" name="tags" type="text" placeholder="dbms, mst, solved-paper, unit-1" />
+            </div>
+
+            <div>
+              <label>Resource File *</label>
+              <input id="contribFile" name="resourceFile" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" required />
+            </div>
+
+            <div>
+              <label>Preview Image (Optional)</label>
+              <input id="contribPreview" name="previewImage" type="file" accept=".png,.jpg,.jpeg,.webp" />
+            </div>
+
+            <div class="full preview-panel" id="uploadPreviewPanel">
+              <strong>Preview Before Upload</strong>
+              <div id="uploadPreviewHint" class="muted">Select a file to preview PDF/image before submission.</div>
+              <a id="uploadPdfPreviewLink" class="btn secondary hidden" target="_blank" rel="noopener noreferrer">Open PDF preview in new tab</a>
+              <iframe id="uploadPdfPreview" class="preview-frame hidden" title="PDF preview" aria-hidden="true"></iframe>
+              <img id="uploadImagePreview" class="preview-image hidden" alt="Image preview" />
+            </div>
+
+            <div class="full contrib-actions">
+              <button type="submit" class="btn primary" id="contribSubmitBtn"><i class="fa-solid fa-cloud-arrow-up"></i> Submit For Moderation</button>
+              <button type="button" class="btn secondary" id="contribResetBtn">Reset Form</button>
+            </div>
+          </form>
+          <p class="muted" id="contribFormStatus"></p>
+
+          <div class="resubmit-box hidden" id="resubmitBox">
+            <strong>Needs Correction Resubmission</strong>
+            <div id="resubmitContext" class="muted"></div>
+            <input id="resubmitTargetId" type="number" min="1" placeholder="Submission ID" />
+            <textarea id="resubmitChangeNotes" rows="2" placeholder="What did you improve in this version?"></textarea>
+            <button class="btn primary" id="resubmitBtn" type="button"><i class="fa-solid fa-rotate"></i> Resubmit Selected Record</button>
+          </div>
+        </article>
+
+        <article class="contrib-card">
+          <div class="contrib-actions" style="justify-content: space-between;">
+            <h3><i class="fa-solid fa-clipboard-list"></i> My Submission Status</h3>
+            <select id="submissionStatusFilter" style="max-width:170px;">
+              <option value="">All</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="needs_correction">Needs Correction</option>
+            </select>
+          </div>
+          <div id="mySubmissionsList" class="contrib-status-list">
+            <div class="empty-state">Loading submissions...</div>
+          </div>
+        </article>
+      </section>
+
+      <article class="contrib-card">
+        <div class="contrib-actions" style="justify-content: space-between;">
+          <h3><i class="fa-solid fa-library"></i> Approved Campus Resource Vault</h3>
+          <button class="btn secondary" id="libraryRefreshBtn"><i class="fa-solid fa-rotate"></i> Refresh</button>
+        </div>
+
+        <div class="contrib-filters">
+          <div>
+            <label>Branch</label>
+            <select id="libraryBranchFilter"><option value="">All Branches</option></select>
+          </div>
+          <div>
+            <label>Semester</label>
+            <select id="librarySemesterFilter"><option value="">All Semesters</option></select>
+          </div>
+          <div>
+            <label>Resource Type</label>
+            <select id="libraryTypeFilter"><option value="">All Types</option></select>
+          </div>
+          <div>
+            <label>Exam Type</label>
+            <select id="libraryExamFilter">
+              <option value="">All</option>
+              <option value="mst1">MST 1</option>
+              <option value="mst2">MST 2</option>
+              <option value="final">Final</option>
+              <option value="pyq">PYQ</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label>Subject</label>
+            <input id="librarySubjectFilter" placeholder="Filter by subject" />
+          </div>
+          <div class="instant-search-wrapper">
+            <label>Smart Search</label>
+            <input id="librarySearchFilter" class="instant-search-input" placeholder="Type to search instantly (DBMS, Data Structures, PYQ...)" autcomplete="off" />
+            <div id="instantSearchDropdown" class="instant-search-dropdown hidden"></div>
+          </div>
+          <div>
+            <label>Sort</label>
+            <select id="librarySortBy">
+              <option value="latest">Latest</option>
+              <option value="most_useful">Most Useful</option>
+              <option value="most_downloaded">Most Downloaded</option>
+              <option value="trending">Trending</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="resourceLibraryList" class="contrib-library-list">
+          <div class="empty-state">Loading approved resources...</div>
+        </div>
+      </article>
+
+      <section class="micro-grid">
+        <article class="micro-card">
+          <div class="contrib-actions" style="justify-content:space-between;">
+            <h3><i class="fa-solid fa-ranking-star"></i> Contributor Leaderboard</h3>
+            <select id="leaderboardRange" style="max-width:140px;">
+              <option value="weekly">Weekly</option>
+              <option value="monthly" selected>Monthly</option>
+              <option value="all">All Time</option>
+            </select>
+          </div>
+          <div id="leaderboardList" class="leaderboard-list"><div class="empty-state">Loading leaderboard...</div></div>
+        </article>
+
+        <article class="micro-card">
+          <h3><i class="fa-solid fa-layer-group"></i> My Study Collections</h3>
+          <div class="contrib-actions">
+            <input id="newCollectionName" placeholder="New collection name" />
+            <button class="btn secondary" id="createCollectionBtn" type="button">Create</button>
+          </div>
+          <div id="collectionsList" class="leaderboard-list"><div class="empty-state">Loading collections...</div></div>
+        </article>
+
+        <article class="micro-card">
+          <h3><i class="fa-solid fa-calendar-days"></i> Academic Season Mode</h3>
+          <div id="seasonModePanel" class="leaderboard-list"><div class="empty-state">Loading season insights...</div></div>
+        </article>
+
+        <article class="micro-card">
+          <div class="growth-tracker" id="growthTrackerMount">
+            <div class="muted">Loading milestones...</div>
+          </div>
+        </article>
+
+        <article class="micro-card">
+          <div id="downloadIntelligenceMount" class="growth-tracker" style="background: linear-gradient(135deg, rgba(56, 142, 60, 0.1) 0%, rgba(76, 175, 80, 0.1) 100%); border-color: rgba(56, 142, 60, 0.3);">
+            <div class="muted">Loading insights...</div>
+          </div>
+        </article>
+      </section>
+    </section>
+  </template>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/academic-contributions.js"></script>
+</body>
+</html>

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ask for Help - College OS Support</title>
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.css">
+  <style>
+    .form-container {
+      max-width: 800px; margin: 30px auto; padding: 30px; background: white;
+      border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .form-header { text-align: center; margin-bottom: 30px; }
+    .form-header h1 { color: #667eea; font-size: 2em; margin: 0 0 10px 0; }
+    .form-header p { color: #666; margin: 0; }
+    
+    .form-group { margin-bottom: 25px; }
+    .form-group label {
+      display: block; font-weight: 700; color: #222; margin-bottom: 8px; font-size: 1.05em;
+    }
+    .form-group .hint { display: block; color: #999; font-size: 0.9em; margin-top: 4px; }
+    
+    .form-group input[type="text"],
+    .form-group input[type="email"],
+    .form-group input[type="url"],
+    .form-group select,
+    .form-group textarea {
+      width: 100%; padding: 12px 15px; border: 1.5px solid #ddd; border-radius: 8px;
+      font-size: 1em; font-family: inherit; transition: border-color 0.3s;
+      box-sizing: border-box;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none; border-color: #667eea; background: #f8f9ff;
+    }
+    
+    .form-group textarea { resize: vertical; min-height: 150px; }
+    
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 600px) {
+      .form-row { grid-template-columns: 1fr; }
+    }
+    
+    .form-group-row { display: flex; gap: 15px; align-items: flex-start; }
+    .form-group-row > div { flex: 1; margin-bottom: 0; }
+    
+    .tag-input { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px; border: 1.5px solid #ddd;
+                  border-radius: 8px; min-height: 40px; }
+    .tag { background: #667eea; color: white; padding: 5px 12px; border-radius: 20px;
+           display: flex; align-items: center; gap: 8px; }
+    .tag > i { cursor: pointer; opacity: 0.7; }
+    .tag > i:hover { opacity: 1; }
+    
+    .file-upload { border: 2px dashed #ddd; border-radius: 8px; padding: 20px;
+                    text-align: center; background: #f9f9f9; cursor: pointer;
+                    transition: all 0.3s; }
+    .file-upload:hover { border-color: #667eea; background: #f8f9ff; }
+    .file-upload i { font-size: 2em; color: #667eea; margin-bottom: 10px; }
+    .file-upload p { margin: 0; color: #666; }
+    .file-upload input { display: none; }
+    
+    .files-list { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .file-item { background: #f0f0f0; padding: 8px 12px; border-radius: 8px;
+                 display: flex; align-items: center; gap: 10px; }
+    .file-item i { cursor: pointer; color: #d63031; }
+    
+    .form-group .error { color: #d63031; font-size: 0.9em; margin-top: 5px; }
+    .form-group.error input,
+    .form-group.error textarea,
+    .form-group.error select { border-color: #d63031; background: #ffe0e0; }
+    
+    .actions { display: flex; gap: 15px; justify-content: center; margin-top: 30px; }
+    .btn-submit, .btn-cancel {
+      padding: 15px 40px; font-size: 1em; font-weight: 700; border: none;
+      border-radius: 8px; cursor: pointer; transition: all 0.3s;
+    }
+    .btn-submit { background: #667eea; color: white; }
+    .btn-submit:hover { background: #5568d3; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3); }
+    .btn-submit:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+    .btn-cancel { background: #f0f0f0; color: #222; }
+    .btn-cancel:hover { background: #e0e0e0; }
+    
+    .success-message { background: #d4edda; color: #155724; padding: 15px;
+                       border-radius: 8px; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <div class="form-container">
+    <div class="form-header">
+      <h1><i class="fas fa-question-circle"></i> Ask for Help</h1>
+      <p>Post a detailed question and get support from peers in your academic group</p>
+    </div>
+    
+    <form id="supportForm" onsubmit="submitForm(event)">
+      <!-- Title -->
+      <div class="form-group">
+        <label for="title"><i class="fas fa-heading"></i> Request Title *</label>
+        <input 
+          type="text" id="title" name="title" required
+          placeholder="e.g., Help with Binary Trees - Traversal Algorithms"
+          maxlength="250">
+        <span class="hint">Be specific and clear about what you need help with</span>
+      </div>
+      
+      <!-- Description -->
+      <div class="form-group">
+        <label for="description"><i class="fas fa-align-left"></i> Detailed Description *</label>
+        <textarea 
+          id="description" name="description" required
+          placeholder="Explain what you're struggling with...&#10;- What have you already tried?&#10;- What specific concept confuses you?&#10;- Any error messages?"></textarea>
+        <span class="hint">Provide enough detail so helpers can give you the best solution</span>
+      </div>
+      
+      <!-- Row: Category and Urgency -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="request_category"><i class="fas fa-tag"></i> Request Type *</label>
+          <select id="request_category" name="request_category" required>
+            <option value="">-- Select --</option>
+            <option value="doubt">Doubt Clarification</option>
+            <option value="coding">Coding Help</option>
+            <option value="assignment">Assignment Help</option>
+            <option value="exam">Exam Revision</option>
+            <option value="urgent">Urgent Academic Help</option>
+            <option value="practical">Practical/Lab Help</option>
+            <option value="concept">Concept Understanding</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="urgency_level"><i class="fas fa-exclamation-circle"></i> Urgency Level *</label>
+          <select id="urgency_level" name="urgency_level" required>
+            <option value="medium" selected>Medium</option>
+            <option value="low">Low (Can wait)</option>
+            <option value="high">High (Needed soon)</option>
+            <option value="urgent">Urgent (Needed ASAP)</option>
+          </select>
+        </div>
+      </div>
+      
+      <!-- Row: Subject and Topic -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="subject"><i class="fas fa-book"></i> Subject/Course</label>
+          <input 
+            type="text" id="subject" name="subject"
+            placeholder="e.g., Data Structures, Web Design, Accounting">
+          <span class="hint">What subject is this related to?</span>
+        </div>
+        
+        <div class="form-group">
+          <label><i class="fas fa-search"></i> Tags</label>
+          <div class="tag-input" id="tag-input" onclick="focusTagInput()">
+            <input 
+              type="text" id="tag-field" placeholder="Add tags... (press Enter)"
+              onkeydown="handleTagInput(event)" style="border: none; flex: 1; outline: none;">
+          </div>
+          <span class="hint">Add relevant tags to help others find your question</span>
+        </div>
+      </div>
+      
+      <!-- File Upload -->
+      <div class="form-group">
+        <label><i class="fas fa-paperclip"></i> Attachments (Optional)</label>
+        <div class="file-upload" onclick="document.getElementById('file-input').click()">
+          <i class="fas fa-cloud-upload-alt"></i>
+          <p>Click to upload files or screenshots</p>
+          <input type="file" id="file-input" multiple onchange="handleFiles(event)">
+        </div>
+        <div class="files-list" id="files-list"></div>
+        <span class="hint">Upload images, code snippets, or error messages</span>
+      </div>
+      
+      <!-- Meet Link -->
+      <div class="form-group">
+        <label for="meet_link"><i class="fas fa-video"></i> Google Meet Link (Optional)</label>
+        <input 
+          type="url" id="meet_link" name="meet_link"
+          placeholder="https://meet.google.com/...">
+        <span class="hint">Share a Meet link if you want live help</span>
+      </div>
+      
+      <!-- Form Actions -->
+      <div class="actions">
+        <button type="button" class="btn-cancel" onclick="goBack()">
+          <i class="fas fa-times"></i> Cancel
+        </button>
+        <button type="submit" class="btn-submit" id="submit-btn">
+          <i class="fas fa-paper-plane"></i> Post Request
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    let selectedTags = [];
+    let uploadedFiles = [];
+    
+    function handleTagInput(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const tag = document.getElementById('tag-field').value.trim().toLowerCase();
+        
+        if (tag && !selectedTags.includes(tag) && tag.length <= 30) {
+          selectedTags.push(tag);
+          renderTags();
+          document.getElementById('tag-field').value = '';
+        }
+      }
+    }
+    
+    function renderTags() {
+      const tagInput = document.getElementById('tag-input');
+      const tagField = document.getElementById('tag-field');
+      
+      const tagElements = selectedTags.map(tag => `
+        <div class="tag">
+          ${escapeHtml(tag)}
+          <i class="fas fa-times" onclick="removeTag('${escapeHtml(tag)}')"></i>
+        </div>
+      `).join('');
+      
+      tagInput.innerHTML = tagElements + `
+        <input type="text" id="tag-field" placeholder="Add tags..." 
+               onkeydown="handleTagInput(event)" 
+               style="border: none; flex: 1; outline: none;">
+      `;
+      
+      document.getElementById('tag-field').addEventListener('keydown', handleTagInput);
+    }
+    
+    function removeTag(tag) {
+      selectedTags = selectedTags.filter(t => t !== tag);
+      renderTags();
+    }
+    
+    function focusTagInput() {
+      document.getElementById('tag-field').focus();
+    }
+    
+    function handleFiles(e) {
+      const files = Array.from(e.target.files);
+      files.forEach(file => {
+        if (file.size > 5 * 1024 * 1024) {
+          alert(`File ${file.name} is too large (max 5MB)`);
+          return;
+        }
+        uploadedFiles.push(file);
+      });
+      renderFiles();
+    }
+    
+    function renderFiles() {
+      const filesList = document.getElementById('files-list');
+      filesList.innerHTML = uploadedFiles.map((file, idx) => `
+        <div class="file-item">
+          <i class="fas fa-file"></i>
+          ${escapeHtml(file.name)} (${(file.size / 1024).toFixed(0)}KB)
+          <i class="fas fa-trash" onclick="removeFile(${idx})"></i>
+        </div>
+      `).join('');
+    }
+    
+    function removeFile(idx) {
+      uploadedFiles.splice(idx, 1);
+      renderFiles();
+    }
+    
+    async function submitForm(e) {
+      e.preventDefault();
+      
+      const title = document.getElementById('title').value.trim();
+      const description = document.getElementById('description').value.trim();
+      const request_category = document.getElementById('request_category').value;
+      const urgency_level = document.getElementById('urgency_level').value;
+      const subject = document.getElementById('subject').value.trim();
+      const meet_link = document.getElementById('meet_link').value.trim();
+      
+      if (!title || !description || !request_category) {
+        alert('Please fill in required fields');
+        return;
+      }
+      
+      document.getElementById('submit-btn').disabled = true;
+      
+      try {
+        const payload = {
+          title, description, request_category, urgency_level,
+          subject: subject || null,
+          attachment_urls: [],
+          image_urls: [],
+          meet_link: meet_link || null,
+          tags: selectedTags
+        };
+        
+        const response = await fetch('/api/support/create-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          alert(`Error: ${error.error || 'Failed to create request'}`);
+          document.getElementById('submit-btn').disabled = false;
+          return;
+        }
+        
+        const result = await response.json();
+        alert('Request posted successfully!');
+        window.location.href = `support-request-detail.html?id=${result.request.id}`;
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to post request');
+        document.getElementById('submit-btn').disabled = false;
+      }
+    }
+    
+    function goBack() {
+      window.location.href = 'support-hub.html';
+    }
+    
+    function escapeHtml(text) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+      return text.replace(/[&<>"']/g, m => map[m]);
+    }
+  </script>
+</body>
+</html>

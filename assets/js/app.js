@@ -1,0 +1,627 @@
+const navGroups = [
+  {
+    title: 'Main',
+    items: [
+      { href: 'home.html', label: 'Home', icon: 'fa-house', key: 'home' },
+      { href: 'dashboard.html', label: 'Dashboard', icon: 'fa-gauge-high', key: 'dashboard' }
+    ]
+  },
+  {
+    title: 'Learning',
+    items: [
+      { href: 'study.html', label: 'Study', icon: 'fa-book-open', key: 'study' },
+      { href: 'mock-tests.html', label: 'Mock Test', icon: 'fa-flask', key: 'mock' },
+      { href: 'notes-library.html', label: 'Notes', icon: 'fa-file-lines', key: 'notes' },
+      { href: 'academic-contribution-hub.html', label: 'Contribute', icon: 'fa-upload', key: 'contribute' },
+      { href: 'study-roadmap.html', label: 'Roadmap', icon: 'fa-map', key: 'roadmap' },
+      { href: 'ai-tools.html', label: 'AI Tools', icon: 'fa-sparkles', key: 'aiTools' }
+    ]
+  },
+  {
+    title: 'Achievements',
+    items: [
+      { href: 'leaderboards.html', label: 'Leaderboard', icon: 'fa-trophy', key: 'leaderboard' },
+      { href: 'certificates.html', label: 'Certificate', icon: 'fa-graduation-cap', key: 'certificate' }
+    ]
+  },
+  {
+    title: 'Community',
+    items: [
+      { href: 'college-feed.html', label: 'Campus Feed', icon: 'fa-newspaper', key: 'campusFeed' },
+      { href: 'notifications.html', label: 'Notifications', icon: 'fa-bell', key: 'notifications' },
+      { href: 'forum.html', label: 'Forum', icon: 'fa-comments', key: 'forum' },
+      { href: 'support-hub.html', label: 'Support Hub', icon: 'fa-life-ring', key: 'supportHub' },
+      { href: 'support-dashboard.html', label: 'Support Dashboard', icon: 'fa-chart-line', key: 'supportDashboard' },
+      { href: 'referrals.html', label: 'Referrals', icon: 'fa-handshake', key: 'referrals' },
+      { href: 'feedback.html', label: 'Feedback', icon: 'fa-star', key: 'feedback' }
+    ]
+  },
+  {
+    title: 'Account',
+    items: [
+      { href: 'profile.html', label: 'Profile', icon: 'fa-user', key: 'profile' },
+      { href: 'pricing.html', label: 'Membership', icon: 'fa-crown', key: 'membership' },
+      { href: 'settings.html', label: 'Settings', icon: 'fa-gear', key: 'settings' }
+    ]
+  },
+  {
+    title: 'Company',
+    items: [
+      { href: 'about-us.html', label: 'About Us', icon: 'fa-building', key: 'aboutUs' },
+      { href: 'contact-us.html', label: 'Contact Us', icon: 'fa-headset', key: 'contactUs' },
+      { href: 'help-center.html', label: 'Help Center', icon: 'fa-circle-question', key: 'helpCenter' },
+      { href: 'my-tickets.html', label: 'My Tickets', icon: 'fa-ticket', key: 'myTickets' }
+    ]
+  }
+];
+
+const navItems = navGroups.flatMap((group) => group.items);
+
+const iconColors = {
+  home: '#0f7b6c',
+  dashboard: '#0f7b6c',
+  study: '#2f6fed',
+  mock: '#da4e3a',
+  notes: '#8b6f00',
+  contribute: '#0b5fd8',
+  roadmap: '#1f7f55',
+  aiTools: '#7c3aed',
+  leaderboard: '#8c2ad8',
+  profile: '#006e8f',
+  certificate: '#03614a',
+  membership: '#b26a00',
+  settings: '#5553a9',
+  campusFeed: '#0a6b8f',
+  notifications: '#b14b00',
+  forum: '#9f2f72',
+  supportHub: '#1f4acc',
+  supportDashboard: '#026b8f',
+  referrals: '#7b3f00',
+  feedback: '#b76a00',
+  aboutUs: '#1e4fd8',
+  contactUs: '#0f7b6c',
+  helpCenter: '#444',
+  myTickets: '#7c3aed'
+};
+
+const tooltipMap = {
+  Home: 'Go to Home page',
+  Dashboard: 'Track your learning progress',
+  Study: 'Access learning materials and resources',
+  'Mock Test': 'Take full-length tests',
+  Notes: 'Open summary notes library',
+  Contribute: 'Submit and track verified academic contributions',
+  Roadmap: 'View personalized study path',
+  'AI Tools': 'Use AI study and career tools',
+  Leaderboard: 'Check your rank',
+  Profile: 'Manage profile and achievements',
+  Certificate: 'Generate and verify certificates',
+  Membership: 'Manage plan, payments, and renewals',
+  Settings: 'Update preferences',
+  'Campus Feed': 'Read and post college-specific updates',
+  Notifications: 'Review alerts',
+  Forum: 'Ask and discuss doubts',
+  'Support Hub': 'Get structured 24/7 peer academic help',
+  'Support Dashboard': 'Track your support activity and points',
+  Referrals: 'Invite and earn rewards',
+  Feedback: 'Share your product experience',
+  'About Us': 'Learn about the College OS team and mission',
+  'Contact Us': 'Reach our support team directly',
+  'Help Center': 'Browse FAQs and help articles',
+  'My Tickets': 'View and track your support tickets'
+};
+
+function resolveThemeMode(theme) {
+  const preferredDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  return theme === 'system' ? (preferredDark ? 'dark' : 'light') : theme;
+}
+
+function getStoredThemePreference() {
+  const hasSaved = window.localStorage.getItem('collegeos_theme') !== null;
+  const saved = hasSaved ? window.localStorage.getItem('collegeos_theme') : 'light';
+  if (!['light', 'dark', 'system'].includes(saved)) return 'light';
+  return saved;
+}
+
+function applyThemePreference(theme) {
+  const resolved = resolveThemeMode(theme);
+  document.documentElement.dataset.themeMode = resolved;
+  document.documentElement.style.colorScheme = resolved;
+}
+
+function restoreTheme() {
+  applyThemePreference(getStoredThemePreference());
+}
+
+window.CollegeOSTheme = {
+  resolveThemeMode,
+  getStoredThemePreference,
+  applyThemePreference
+};
+
+restoreTheme();
+
+try {
+  const media = window.matchMedia('(prefers-color-scheme: dark)');
+  media.addEventListener('change', () => {
+    if (getStoredThemePreference() === 'system') {
+      applyThemePreference('system');
+    }
+  });
+} catch {
+  // Ignore unsupported environments.
+}
+
+window.addEventListener('storage', (event) => {
+  if (event.key !== 'collegeos_theme') return;
+  applyThemePreference(getStoredThemePreference());
+});
+
+function pageName() {
+  const file = window.location.pathname.split('/').pop() || 'index.html';
+  return file.toLowerCase();
+}
+
+function navHtml() {
+  const current = pageName();
+  return navGroups
+    .map((group) => {
+      const links = group.items
+        .map((item) => {
+          const active = current === item.href ? 'active' : '';
+          const color = iconColors[item.key] || '#0f7b6c';
+          const badge = item.key === 'notifications' ? '<span class="nav-badge" id="notifNavBadge" style="display:none;">0</span>' : '';
+          return `<a class="nav-link ${active}" href="${item.href}" title="${tooltipMap[item.label] || item.label}" data-label="${item.label}"><i class="fa-solid ${item.icon}" style="color:${color}"></i><span class="nav-label">${item.label}</span>${badge}</a>`;
+        })
+        .join('');
+
+      return `<section class="nav-group"><p class="nav-group-title">${group.title}</p>${links}</section>`;
+    })
+    .join('');
+}
+
+function mobileNavHtml() {
+  const current = pageName();
+  const quick = [
+    { href: 'dashboard.html', icon: 'fa-house', label: 'Home' },
+    { href: 'study.html', icon: 'fa-book-open', label: 'Study' },
+    { href: 'ai-tools.html', icon: 'fa-sparkles', label: 'AI' },
+    { href: 'study-roadmap.html', icon: 'fa-map', label: 'Roadmap' },
+    { href: 'profile.html', icon: 'fa-user', label: 'Profile' }
+  ];
+
+  return quick
+    .map((item) => {
+      const active = current === item.href ? 'active' : '';
+      return `<a class="${active}" href="${item.href}" title="${item.label}"><i class="fa-solid ${item.icon}"></i><div>${item.label}</div></a>`;
+    })
+    .join('');
+}
+
+function mountShell() {
+  const shell = document.querySelector('[data-shell]');
+  if (!shell) return;
+  shell.innerHTML = `
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <div class="logo"><i class="fa-solid fa-graduation-cap"></i><span>College OS</span></div>
+        <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Collapse sidebar" title="Collapse sidebar">
+          <i class="fa-solid fa-angle-left" id="sidebarToggleIcon"></i>
+        </button>
+      </div>
+      <div class="sidebar-nav-wrap">
+        <nav class="nav-list">${navHtml()}</nav>
+      </div>
+      <section class="sidebar-profile" id="sidebarProfile">
+        <div class="sidebar-avatar" id="sidebarUserAvatar">CO</div>
+        <div class="sidebar-user-meta">
+          <strong id="sidebarUserName">College User</strong>
+          <span id="sidebarUserRole">Student</span>
+        </div>
+      </section>
+    </aside>
+    <section class="main-area">
+      <header class="topbar">
+        <strong id="pageTitle">College OS</strong>
+        <div class="quick-icons">
+          <a class="icon-chip" href="study-roadmap.html"><i class="fa-solid fa-map"></i> Roadmap</a>
+          <a class="icon-chip" href="ai-tools.html"><i class="fa-solid fa-sparkles"></i> AI Tools</a>
+          <a class="icon-chip" href="notes-library.html"><i class="fa-solid fa-file-lines"></i> Notes</a>
+          <a class="icon-chip" href="academic-contribution-hub.html"><i class="fa-solid fa-upload"></i> Contribute</a>
+          <a class="icon-chip" href="certificates.html"><i class="fa-solid fa-graduation-cap"></i> Certificates</a>
+          <button class="icon-chip" id="logoutBtn" style="border: 1px solid rgba(0,0,0,0.1); cursor:pointer;"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+        </div>
+      </header>
+      <main class="content" id="contentMount"></main>
+    </section>
+    <nav class="mobile-nav">${mobileNavHtml()}</nav>
+  `;
+}
+
+function bindSidebarCollapse() {
+  const shell = document.querySelector('.app-shell');
+  const toggle = document.getElementById('sidebarToggle');
+  const icon = document.getElementById('sidebarToggleIcon');
+  if (!shell || !toggle || !icon) return;
+
+  const key = 'collegeos_sidebar_collapsed';
+
+  function applyState(collapsed) {
+    shell.classList.toggle('sidebar-collapsed', collapsed);
+    toggle.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+    toggle.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+    icon.className = collapsed ? 'fa-solid fa-angle-right' : 'fa-solid fa-angle-left';
+  }
+
+  const saved = window.localStorage.getItem(key) === '1';
+  applyState(saved);
+
+  toggle.addEventListener('click', () => {
+    const collapsed = !shell.classList.contains('sidebar-collapsed');
+    applyState(collapsed);
+    window.localStorage.setItem(key, collapsed ? '1' : '0');
+  });
+}
+
+async function hydrateSidebarProfile() {
+  const card = document.getElementById('sidebarProfile');
+  const avatar = document.getElementById('sidebarUserAvatar');
+  const nameNode = document.getElementById('sidebarUserName');
+  const roleNode = document.getElementById('sidebarUserRole');
+  const user = window.collegeOsCurrentUser;
+
+  if (!card || !avatar || !nameNode || !roleNode) return;
+  if (!user) {
+    card.style.display = 'none';
+    return;
+  }
+
+  const fullName = user.fullName || user.full_name || user.name || 'Student';
+  const initials = fullName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || '')
+    .join('') || 'CO';
+
+  nameNode.textContent = fullName;
+  avatar.textContent = initials;
+
+  let subLabel = user.role ? user.role[0].toUpperCase() + user.role.slice(1) : 'Student';
+  let planLabel = '';
+
+
+  // --- Caching for subscription and stats to reduce rate limit issues ---
+  if (!window._cachedSubscription) window._cachedSubscription = { data: null, ts: 0 };
+  if (!window._cachedStats) window._cachedStats = { data: null, ts: 0 };
+  const now = Date.now();
+  try {
+    if (window.CollegeOSApi) {
+      let stats;
+      if (window._cachedStats.data && now - window._cachedStats.ts < 60000) {
+        stats = window._cachedStats.data;
+      } else {
+        stats = await window.CollegeOSApi.getDashboardStats();
+        window._cachedStats = { data: stats, ts: now };
+      }
+      const xp = stats?.xp ?? stats?.totalXp ?? stats?.totalXP ?? null;
+      if (xp !== null && xp !== undefined && !Number.isNaN(Number(xp))) {
+        subLabel = `${Number(xp)} XP`;
+      }
+
+      let subscription;
+      if (window._cachedSubscription.data && now - window._cachedSubscription.ts < 60000) {
+        subscription = window._cachedSubscription.data;
+      } else {
+        subscription = await window.CollegeOSApi.getSubscription();
+        window._cachedSubscription = { data: subscription, ts: now };
+      }
+      const statusLabel = subscription?.statusLabel || 'Free';
+      const plan = subscription?.plan === 'premium' ? 'Premium' : 'Free';
+      planLabel = `<span class="membership-badge ${String(statusLabel).toLowerCase().replace(/\s+/g, '-')}">${plan} · ${statusLabel}</span>`;
+    }
+  } catch {
+    // Keep role text fallback when stats are unavailable.
+  }
+
+  roleNode.innerHTML = `${subLabel}${planLabel ? ` ${planLabel}` : ''}`;
+}
+
+async function applyPremiumLocks() {
+  const premiumPages = {
+    'notes-library.html': 'premium notes and downloads',
+    'certificates.html': 'certificates',
+    'previous-papers.html': 'premium downloads'
+  };
+
+  const file = pageName();
+  const lockTarget = premiumPages[file];
+  if (!lockTarget || !window.CollegeOSApi || !window.collegeOsCurrentUser) return;
+
+  try {
+    const membership = await window.CollegeOSApi.getSubscription();
+    if (membership.plan === 'premium' && membership.status === 'active') return;
+
+    const content = document.querySelector('.content');
+    if (!content || content.querySelector('.premium-lock-overlay')) return;
+
+    const statusLabel = membership.statusLabel || 'Free';
+    const messageByStatus = {
+      'Pending Approval': 'Payment submitted successfully. Waiting for admin verification.',
+      Rejected: 'Your payment request was rejected. Submit a fresh payment proof to continue.',
+      Expired: 'Your premium membership has expired. Renew to continue full access.'
+    };
+
+    const infoText = messageByStatus[statusLabel] || 'Upgrade to Premium to unlock this feature.';
+    const overlay = document.createElement('section');
+    overlay.className = 'premium-lock-overlay';
+    overlay.innerHTML = `
+      <div class="premium-lock-card">
+        <p class="lock-kicker">Premium Feature</p>
+        <h3>Unlock ${lockTarget}</h3>
+        <p>${infoText}</p>
+        <a class="btn warn" href="pricing.html">Upgrade Now</a>
+      </div>
+    `;
+
+    content.classList.add('content-premium-locked');
+    content.appendChild(overlay);
+  } catch {
+    // Keep page usable if membership endpoint fails.
+  }
+}
+
+async function trackPageViewEvent() {
+  if (!window.CollegeOSApi || !window.collegeOsCurrentUser) return;
+  try {
+    await window.CollegeOSApi.trackLearnerEvent({
+      eventType: 'page_view',
+      source: 'web',
+      eventPayload: {
+        page: pageName(),
+        path: window.location.pathname,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch {
+    // Keep page rendering resilient if telemetry endpoint is unavailable.
+  }
+}
+
+function setTitle() {
+  const mount = document.getElementById('pageTitle');
+  const hero = document.querySelector('[data-page-title]');
+  if (mount && hero) {
+    mount.textContent = hero.textContent.trim();
+  }
+}
+
+function setContentLoadingState(isLoading) {
+  const target = document.getElementById('contentMount');
+  if (!target) return;
+  target.classList.toggle('content-loading', isLoading);
+  target.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+  document.body.classList.toggle('app-loading', isLoading);
+}
+
+function mountContent() {
+  const template = document.querySelector('template[data-page]');
+  const target = document.getElementById('contentMount');
+  if (!template || !target) return;
+  target.append(template.content.cloneNode(true));
+}
+
+function publicPage() {
+  const file = pageName();
+  return ['index.html', 'login.html', 'signup.html', 'pricing.html', 'support.html', 'about-us.html', 'contact-us.html', 'help-center.html'].includes(file);
+}
+
+async function hydrateCommonStats() {
+  if (!window.CollegeOSApi) return;
+
+  let stats = {};
+  try {
+    if (document.querySelector('[data-stat="myRoadmaps"]') || document.querySelector('[data-stat="savedNotes"]')) {
+      const profile = await window.CollegeOSApi.getProfile();
+      stats = { ...(profile?.totals || {}) };
+    }
+  } catch {
+    stats = {};
+  }
+
+  try {
+    const dashboard = await window.CollegeOSApi.getDashboardStats();
+    stats = { ...stats, ...dashboard };
+  } catch {
+    // Ignore on pages where stats are not required.
+  }
+
+  document.querySelectorAll('[data-stat]').forEach((node) => {
+    const key = node.dataset.stat;
+    if (stats[key] !== undefined) node.textContent = stats[key];
+  });
+}
+
+async function applyAuthGuard() {
+  if (!window.CollegeOSApi) return;
+  let user = null;
+  try {
+    const result = await window.CollegeOSApi.getMe();
+    user = result.user;
+  } catch {
+    if (!publicPage()) {
+      window.location.href = 'login.html';
+      return;
+    }
+  }
+  window.collegeOsCurrentUser = user;
+  if (!user && !publicPage()) {
+    window.location.href = 'login.html';
+    return;
+  }
+  if (user && ['login.html', 'signup.html'].includes(pageName())) {
+    window.location.href = 'dashboard.html';
+  }
+}
+
+async function enforceAcademicOnboarding() {
+  const file = pageName();
+  if (publicPage()) return;
+  if (file === 'academic-onboarding.html') return;
+  if (!window.collegeOsCurrentUser || !window.CollegeOSApi) return;
+  if (window.collegeOsCurrentUser.role === 'admin') return;
+
+  try {
+    const profileData = await window.CollegeOSApi.getStudentAcademicProfile();
+    const completed = profileData?.onboarding_completed === true && Boolean(profileData?.profile);
+    if (!completed) {
+      window.location.href = 'academic-onboarding.html';
+    }
+  } catch {
+    // Do not block page rendering if academic profile API is temporarily unavailable.
+  }
+}
+
+function bindLogout() {
+  const button = document.getElementById('logoutBtn');
+  if (!button || !window.CollegeOSApi) return;
+  if (!window.collegeOsCurrentUser) {
+    button.style.display = 'none';
+    return;
+  }
+  button.addEventListener('click', async () => {
+    await window.CollegeOSApi.logout();
+    window.location.href = 'login.html';
+  });
+}
+
+function bindAdminShortcut() {
+  document.addEventListener('keydown', (event) => {
+    const isShortcut = event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'a';
+    if (!isShortcut) return;
+    event.preventDefault();
+    window.location.href = 'admin-login.html';
+  });
+}
+
+async function hydrateNotificationBadge() {
+  const badge = document.getElementById('notifNavBadge');
+  if (!badge || !window.CollegeOSApi || !window.collegeOsCurrentUser) return;
+
+  try {
+    const result = await window.CollegeOSApi.getUnreadNotificationCount();
+    const unread = Number(result?.unreadCount || 0);
+    if (unread > 0) {
+      badge.textContent = unread > 99 ? '99+' : String(unread);
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  } catch {
+    badge.style.display = 'none';
+  }
+}
+
+async function applyContributionVisibility() {
+  if (!window.CollegeOSApi || !window.collegeOsCurrentUser) return;
+  if (window.collegeOsCurrentUser.role === 'admin') return;
+
+  try {
+    const payload = await window.CollegeOSApi.getContributionConfig();
+    const cfg = payload?.config || {};
+    const enabled = cfg.enabled !== false;
+    const showEntry = cfg?.visibility?.showHubEntryPoint !== false;
+    const visible = enabled && showEntry;
+
+    const desktopLink = document.querySelector('.nav-link[href="academic-contribution-hub.html"]');
+    if (desktopLink) desktopLink.style.display = visible ? '' : 'none';
+
+    const topbarLink = document.querySelector('.quick-icons .icon-chip[href="academic-contribution-hub.html"]');
+    if (topbarLink) topbarLink.style.display = visible ? '' : 'none';
+
+    if (!visible && pageName() === 'academic-contribution-hub.html') {
+      window.location.href = 'dashboard.html';
+    }
+  } catch {
+    // Keep links visible if config fetch fails.
+  }
+}
+
+function bindRealtimeNotificationBadge() {
+  if (!window.CollegeOSApi || !window.collegeOsCurrentUser || typeof window.EventSource !== 'function') return;
+  const streamUrl = window.CollegeOSApi.getNotificationRealtimeStreamUrl
+    ? window.CollegeOSApi.getNotificationRealtimeStreamUrl()
+    : '/api/notifications/stream';
+
+  let source = null;
+  let retryTimer = null;
+  let retryDelay = 3000;
+
+  const open = () => {
+    if (source) {
+      source.close();
+      source = null;
+    }
+
+    source = new EventSource(streamUrl, { withCredentials: true });
+    const refresh = () => {
+      hydrateNotificationBadge().catch(() => {
+        // Ignore badge refresh failures on background updates.
+      });
+    };
+
+    source.addEventListener('notification_changed', refresh);
+    source.addEventListener('campus_post_moderated', refresh);
+    source.addEventListener('campus_official_post_published', refresh);
+
+    source.onerror = () => {
+      source?.close();
+      source = null;
+      if (retryTimer) clearTimeout(retryTimer);
+      // Exponential backoff up to 30s
+      retryTimer = setTimeout(() => {
+        open();
+        retryDelay = Math.min(retryDelay * 2, 30000);
+      }, retryDelay);
+    };
+
+    // Reset delay on successful open
+    source.onopen = () => {
+      retryDelay = 3000;
+    };
+  };
+
+  open();
+  window.addEventListener('beforeunload', () => {
+    if (retryTimer) clearTimeout(retryTimer);
+    source?.close();
+  });
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  bindAdminShortcut();
+  mountShell();
+  bindSidebarCollapse();
+  mountContent();
+  setTitle();
+  setContentLoadingState(true);
+
+  try {
+    await applyAuthGuard();
+    await enforceAcademicOnboarding();
+    bindLogout();
+
+    await Promise.all([
+      hydrateSidebarProfile(),
+      hydrateCommonStats(),
+      hydrateNotificationBadge(),
+      applyContributionVisibility(),
+      applyPremiumLocks(),
+      trackPageViewEvent()
+    ]);
+
+    bindRealtimeNotificationBadge();
+  } finally {
+    setContentLoadingState(false);
+  }
+});

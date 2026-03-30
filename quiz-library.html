@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quiz Library - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <section class="hero quiz-hero">
+      <h1 data-page-title>Quiz Library</h1>
+      <p>Practice topic-wise quizzes with progress tracking, smart recommendations, and instant quick notes.</p>
+    </section>
+
+    <section class="card quiz-toolbar-card">
+      <div class="quiz-toolbar-grid">
+        <label>
+          <span class="muted">Search Quizzes</span>
+          <div class="quiz-search-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input id="quizSearchInput" type="search" placeholder="Search by subject or topic" />
+          </div>
+        </label>
+
+        <label>
+          <span class="muted">Subject</span>
+          <select id="quizSubjectFilter">
+            <option value="all">All Subjects</option>
+          </select>
+        </label>
+
+        <label>
+          <span class="muted">Branch / Course</span>
+          <select id="quizBranchFilter">
+            <option value="">My Branch</option>
+          </select>
+        </label>
+
+        <label>
+          <span class="muted">Semester / Year</span>
+          <select id="quizSemesterFilter">
+            <option value="">My Semester</option>
+          </select>
+        </label>
+
+        <label>
+          <span class="muted">Difficulty</span>
+          <select id="quizDifficultyFilter">
+            <option value="all">All Difficulties</option>
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </label>
+
+        <label>
+          <span class="muted">Status</span>
+          <select id="quizStatusFilter">
+            <option value="all">All</option>
+            <option value="completed">Completed</option>
+            <option value="not-attempted">Not Attempted</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="quiz-section-head">
+        <h3><i class="fa-solid fa-sparkles"></i> Recommended Quizzes</h3>
+        <span class="muted" id="recommendedMeta">Based on your study progress</span>
+      </div>
+      <div id="recommendedQuizGrid" class="quiz-grid recommended-grid">
+        <div class="empty-state">Loading recommendations...</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="quiz-section-head">
+        <h3><i class="fa-solid fa-layer-group"></i> All Quiz Topics</h3>
+        <span class="muted" id="quizResultMeta">Loading quizzes...</span>
+      </div>
+      <div id="quizLibraryBody" class="quiz-grid">
+        <div class="empty-state">Loading quizzes...</div>
+      </div>
+    </section>
+
+    <section id="quizInfoModal" class="quiz-modal hidden" aria-hidden="true">
+      <div class="quiz-modal-backdrop" data-close-modal></div>
+      <div class="quiz-modal-panel" role="dialog" aria-modal="true" aria-labelledby="quizModalTitle">
+        <div class="quiz-modal-head">
+          <h3 id="quizModalTitle">Quiz Details</h3>
+          <button type="button" class="btn secondary" id="closeQuizModalBtn">Close</button>
+        </div>
+        <div id="quizModalContent" class="quiz-modal-content"></div>
+      </div>
+    </section>
+  </template>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/learning.js"></script>
+</body>
+</html>
+
+
+

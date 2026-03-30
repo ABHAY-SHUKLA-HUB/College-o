@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Login — College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    :root {
+      --al-bg: #0f1117;
+      --al-grid: rgba(255, 255, 255, 0.04);
+      --al-panel: rgba(22, 27, 40, 0.90);
+      --al-panel-border: rgba(255, 255, 255, 0.07);
+      --al-title: #f1f5f9;
+      --al-text: #64748b;
+      --al-muted: #94a3b8;
+      --al-input-bg: rgba(15, 17, 23, 0.7);
+      --al-input-border: rgba(255, 255, 255, 0.08);
+      --al-input-text: #e2e8f0;
+      --al-placeholder: #334155;
+      --al-input-icon: #475569;
+      --al-note: #334155;
+    }
+
+    html[data-theme-mode='light'] {
+      --al-bg: #f8fafc;
+      --al-grid: rgba(15, 23, 42, 0.05);
+      --al-panel: rgba(255, 255, 255, 0.92);
+      --al-panel-border: #e2e8f0;
+      --al-title: #0f172a;
+      --al-text: #475569;
+      --al-muted: #64748b;
+      --al-input-bg: #ffffff;
+      --al-input-border: #dbe4ef;
+      --al-input-text: #0f172a;
+      --al-placeholder: #94a3b8;
+      --al-input-icon: #64748b;
+      --al-note: #475569;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--al-bg);
+      background-image:
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(99, 102, 241, 0.18) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(168, 85, 247, 0.10) 0%, transparent 60%);
+      padding: 1rem;
+    }
+
+    /* subtle animated dot grid */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle, var(--al-grid) 1px, transparent 1px);
+      background-size: 28px 28px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .login-wrapper {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 440px;
+    }
+
+    /* ── Brand strip ── */
+    .brand-strip {
+      text-align: center;
+      margin-bottom: 1.75rem;
+    }
+
+    .brand-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.40);
+      margin-bottom: 1rem;
+    }
+
+    .brand-icon i {
+      font-size: 1.5rem;
+      color: #fff;
+    }
+
+    .brand-name {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-name span {
+      background: linear-gradient(90deg, #818cf8, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .brand-tagline {
+      margin-top: 0.25rem;
+      font-size: 0.8rem;
+      color: #64748b;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    /* ── Login card ── */
+    .login-card {
+      background: var(--al-panel);
+      border: 1px solid var(--al-panel-border);
+      border-radius: 20px;
+      padding: 2.5rem 2rem;
+      backdrop-filter: blur(16px);
+      box-shadow:
+        0 0 0 1px rgba(99, 102, 241, 0.08),
+        0 24px 48px rgba(0, 0, 0, 0.50),
+        0 8px 16px rgba(0, 0, 0, 0.30);
+    }
+
+    .card-header {
+      margin-bottom: 1.75rem;
+    }
+
+    .card-header h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--al-title);
+      letter-spacing: -0.3px;
+    }
+
+    .card-header p {
+      margin-top: 0.35rem;
+      font-size: 0.85rem;
+      color: var(--al-text);
+    }
+
+    /* ── Form fields ── */
+    .form-group {
+      margin-bottom: 1.1rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--al-muted);
+      margin-bottom: 0.45rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    .input-wrapper .input-icon {
+      position: absolute;
+      left: 0.9rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--al-input-icon);
+      font-size: 0.85rem;
+      pointer-events: none;
+      transition: color 0.2s;
+    }
+
+    .input-wrapper input {
+      width: 100%;
+      background: var(--al-input-bg);
+      border: 1.5px solid var(--al-input-border);
+      border-radius: 10px;
+      padding: 0.7rem 0.9rem 0.7rem 2.5rem;
+      font-size: 0.925rem;
+      color: var(--al-input-text);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: inherit;
+    }
+
+    .input-wrapper input::placeholder {
+      color: var(--al-placeholder);
+    }
+
+    .input-wrapper input:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+      background: rgba(15, 17, 23, 0.90);
+    }
+
+    .input-wrapper input:focus ~ .input-icon,
+    .input-wrapper:focus-within .input-icon {
+      color: #818cf8;
+    }
+
+    /* invalid state */
+    .input-wrapper input.is-invalid {
+      border-color: #ef4444;
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+    }
+
+    /* password toggle */
+    .pwd-toggle {
+      position: absolute;
+      right: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--al-input-icon);
+      font-size: 0.85rem;
+      padding: 0.2rem;
+      transition: color 0.2s;
+      line-height: 1;
+    }
+
+    .pwd-toggle:hover { color: #818cf8; }
+
+    /* field-level error hint */
+    .field-hint {
+      font-size: 0.75rem;
+      color: #ef4444;
+      margin-top: 0.35rem;
+      min-height: 1rem;
+      display: none;
+    }
+
+    .field-hint.visible { display: block; }
+
+    /* ── Login error banner ── */
+    .error-banner {
+      display: none;
+      background: rgba(239, 68, 68, 0.10);
+      border: 1px solid rgba(239, 68, 68, 0.30);
+      color: #fca5a5;
+      border-radius: 8px;
+      padding: 0.65rem 0.9rem;
+      font-size: 0.83rem;
+      margin-bottom: 1rem;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .error-banner.visible {
+      display: flex;
+    }
+
+    .error-banner i {
+      flex-shrink: 0;
+      font-size: 0.9rem;
+    }
+
+    /* ── Submit button ── */
+    .btn-login {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      letter-spacing: 0.01em;
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.55rem;
+      margin-top: 1.5rem;
+    }
+
+    .btn-login:hover:not(:disabled) {
+      opacity: 0.92;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 22px rgba(99, 102, 241, 0.45);
+    }
+
+    .btn-login:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.30);
+    }
+
+    .btn-login:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .btn-login .spinner {
+      display: none;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.30);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    .btn-login.loading .spinner { display: block; }
+    .btn-login.loading .btn-icon { display: none; }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ── Captcha box ── */
+    .captcha-box {
+      background: rgba(99, 102, 241, 0.06);
+      border: 1px solid rgba(99, 102, 241, 0.20);
+      border-radius: 10px;
+      padding: 0.9rem;
+      margin: 1.2rem 0;
+    }
+
+    .captcha-question {
+      font-size: 0.85rem;
+      color: var(--al-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.7rem;
+    }
+
+    .captcha-question i {
+      flex-shrink: 0;
+      color: #8b5cf6;
+      font-size: 0.9rem;
+    }
+
+    .captcha-question span {
+      font-weight: 500;
+    }
+
+    .captcha-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-end;
+    }
+
+    .captcha-actions .form-group {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    .captcha-actions .form-group label {
+      font-size: 0.75rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .captcha-actions .form-group input {
+      padding: 0.6rem 0.8rem;
+      font-size: 0.9rem;
+    }
+
+    .btn-refresh-captcha {
+      background: none;
+      border: 1px solid rgba(99, 102, 241, 0.30);
+      color: #818cf8;
+      border-radius: 8px;
+      padding: 0.6rem 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.9rem;
+    }
+
+    .btn-refresh-captcha:hover {
+      background: rgba(99, 102, 241, 0.10);
+      border-color: #818cf8;
+    }
+
+    /* ── Divider / footer note ── */
+    .card-footer-note {
+      margin-top: 1.4rem;
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--al-note);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+    }
+
+    .card-footer-note i { color: #4ade80; font-size: 0.7rem; }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      .login-card { padding: 1.75rem 1.25rem; border-radius: 16px; }
+      .brand-icon { width: 48px; height: 48px; }
+      .brand-name { font-size: 1.3rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-wrapper">
+
+    <!-- Brand strip -->
+    <div class="brand-strip">
+      <div class="brand-icon">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      <div class="brand-name">College <span>OS</span></div>
+      <div class="brand-tagline">Admin Control Panel</div>
+    </div>
+
+    <!-- Login card -->
+    <div class="login-card">
+
+      <div class="card-header">
+        <h2>Sign in to Admin Portal</h2>
+        <p>Secure access — authorised personnel only.</p>
+      </div>
+
+      <!-- Error banner -->
+      <!-- Hidden target that admin.js writes to (preserves original element ID) -->
+      <p id="adminLoginError" style="position:absolute;opacity:0;height:0;overflow:hidden;pointer-events:none;" aria-hidden="true"></p>
+
+      <!-- Styled error banner (populated by MutationObserver below) -->
+      <div class="error-banner" id="errorBanner" role="alert" aria-live="polite">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <span id="errorBannerText"></span>
+      </div>
+
+      <form id="adminLoginForm" novalidate autocomplete="on">
+
+        <!-- Email -->
+        <div class="form-group">
+          <label for="adminEmail">Email address</label>
+          <div class="input-wrapper">
+            <i class="fa-regular fa-envelope input-icon"></i>
+            <input
+              id="adminEmail"
+              type="email"
+              name="email"
+              autocomplete="username"
+              placeholder="admin@example.com"
+              required
+            />
+          </div>
+          <div class="field-hint" id="emailHint">Please enter a valid email address.</div>
+        </div>
+
+        <!-- Password -->
+        <div class="form-group">
+          <label for="adminPassword">Password</label>
+          <div class="input-wrapper">
+            <i class="fa-solid fa-lock input-icon"></i>
+            <input
+              id="adminPassword"
+              type="password"
+              name="password"
+              autocomplete="current-password"
+              placeholder="••••••••"
+              required
+            />
+            <button
+              type="button"
+              class="pwd-toggle"
+              id="pwdToggle"
+              aria-label="Toggle password visibility"
+            >
+              <i class="fa-regular fa-eye" id="pwdToggleIcon"></i>
+            </button>
+          </div>
+          <div class="field-hint" id="passwordHint">Password cannot be empty.</div>
+        </div>
+
+        <!-- Captcha -->
+        <div class="captcha-box" id="adminCaptchaBox">
+          <p class="captcha-question"><i class="fa-solid fa-shield"></i> <span id="adminCaptchaQuestion">Loading captcha...</span></p>
+          <div class="captcha-actions">
+            <div class="form-group">
+              <label for="adminCaptchaInput">Enter Answer</label>
+              <input id="adminCaptchaInput" type="text" name="captcha_answer" required />
+            </div>
+            <button type="button" id="refreshAdminCaptcha" class="btn-refresh-captcha" aria-label="Refresh captcha"><i class="fa-solid fa-rotate-right"></i></button>
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <button class="btn-login" type="submit" id="loginBtn">
+          <span class="spinner"></span>
+          <i class="fa-solid fa-arrow-right-to-bracket btn-icon"></i>
+          <span class="btn-label">Sign In</span>
+        </button>
+
+      </form>
+
+      <div class="card-footer-note">
+        <i class="fa-solid fa-circle-check"></i>
+        Encrypted &amp; secure connection
+      </div>
+
+    </div>
+  </div>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/admin.js"></script>
+  <script src="assets/js/admin-login.js"></script>
+</body>
+</html>
+

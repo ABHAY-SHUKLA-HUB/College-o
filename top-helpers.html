@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Top Helpers Leaderboard - College OS</title>
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.css">
+  <style>
+    .leaderboard-container {
+      max-width: 1000px; margin: 20px auto; padding: 20px;
+    }
+    
+    .leaderboard-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white; padding: 40px 20px; border-radius: 12px; margin-bottom: 30px;
+      text-align: center;
+    }
+    .leaderboard-header h1 { font-size: 2.5em; margin: 0 0 10px 0; font-weight: 700; }
+    .leaderboard-header p { opacity: 0.9; margin: 0; }
+    
+    .leaderboard-table {
+      background: white; border-radius: 12px; overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    
+    .leaderboard-row {
+      display: flex; padding: 20px; border-bottom: 1px solid #f0f0f0;
+      align-items: center; gap: 20px; transition: all 0.3s;
+    }
+    .leaderboard-row:hover { background: #f9f9f9; }
+    
+    .rank-badge {
+      width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; font-weight: 700; color: white; font-size: 1.3em;
+      flex-shrink: 0;
+    }
+    .rank-1 { background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%); }
+    .rank-2 { background: linear-gradient(135deg, #c0c0c0 0%, #808080 100%); }
+    .rank-3 { background: linear-gradient(135deg, #cd7f32 0%, #8b4513 100%); }
+    .rank-other { background: #667eea; }
+    
+    .helper-info { flex: 1; }
+    .helper-name { font-size: 1.1em; font-weight: 700; color: #222; margin-bottom: 5px; }
+    .helper-meta { color: #999; font-size: 0.9em; }
+    .helper-badge {
+      display: inline-block; background: #cfe2ff; color: #084298; padding: 4px 12px;
+      border-radius: 16px; font-size: 0.85em; font-weight: 600; margin-top: 5px;
+    }
+    
+    .helper-stats {
+      display: flex; gap: 20px; text-align: center;
+    }
+    .stat { flex: 0 0 auto; }
+    .stat-value { font-size: 1.4em; font-weight: 700; color: #667eea; }
+    .stat-label { color: #999; font-size: 0.85em; margin-top: 3px; }
+    
+    .points-badge {
+      background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
+      color: white; padding: 10px 20px; border-radius: 25px;
+      font-weight: 700; text-align: center; min-width: 120px;
+    }
+    .points-value { font-size: 2em; }
+    .points-label { font-size: 0.8em; opacity: 0.9; }
+    
+    .empty-state {
+      text-align: center; padding: 60px 20px;
+    }
+    .empty-icon { font-size: 4em; color: #ddd; margin-bottom: 20px; }
+    .empty-title { font-size: 1.5em; font-weight: 700; color: #222; margin-bottom: 10px; }
+    .empty-desc { color: #666; font-size: 1.05em; }
+    
+    .how-to-qualify {
+      background: white; padding: 25px; border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 30px;
+    }
+    .how-to-title { font-size: 1.3em; font-weight: 700; color: #222; margin-bottom: 15px; }
+    .how-to-list { display: flex; flex-direction: column; gap: 15px; }
+    .how-to-item {
+      display: flex; gap: 15px; align-items: flex-start;
+    }
+    .how-to-icon {
+      width: 45px; height: 45px; border-radius: 50%; background: #667eea;
+      color: white; display: flex; align-items: center; justify-content: center;
+      font-weight: 700; flex-shrink: 0;
+    }
+    .how-to-content { flex: 1; }
+    .how-to-heading { font-weight: 700; color: #222; }
+    .how-to-desc { color: #666; font-size: 0.95em; margin-top: 3px; }
+    
+    @media (max-width: 768px) {
+      .leaderboard-row { flex-wrap: wrap; }
+      .helper-stats { flex-wrap: wrap; width: 100%; }
+      .points-badge { width: 100%; }
+      .leaderboard-header h1 { font-size: 1.8em; }
+    }
+  </style>
+</head>
+<body>
+  <div class="leaderboard-container">
+    <!-- Header -->
+    <div class="leaderboard-header">
+      <h1><i class="fas fa-trophy"></i> Top Helpers Leaderboard</h1>
+      <p>Recognize the amazing student helpers in your academic community</p>
+    </div>
+    
+    <!-- Leaderboard -->
+    <div class="leaderboard-table" id="leaderboard"></div>
+    
+    <!-- How to Qualify -->
+    <div class="how-to-qualify">
+      <h2 class="how-to-title"><i class="fas fa-star"></i> How to Get on the Leaderboard</h2>
+      <div class="how-to-list">
+        <div class="how-to-item">
+          <div class="how-to-icon">1</div>
+          <div class="how-to-content">
+            <div class="how-to-heading">Answer Questions</div>
+            <div class="how-to-desc">Share your knowledge by answering questions from peers in your academic group</div>
+          </div>
+        </div>
+        
+        <div class="how-to-item">
+          <div class="how-to-icon">2</div>
+          <div class="how-to-content">
+            <div class="how-to-heading">Get Your Answer Accepted</div>
+            <div class="how-to-desc">Help the person asking the question by providing a solution that gets marked as helpful</div>
+          </div>
+        </div>
+        
+        <div class="how-to-item">
+          <div class="how-to-icon">3</div>
+          <div class="how-to-content">
+            <div class="how-to-heading">Earn Points & Badges</div>
+            <div class="how-to-desc">Each accepted answer earns you points. Reach milestones to unlock helper badges</div>
+          </div>
+        </div>
+        
+        <div class="how-to-item">
+          <div class="how-to-icon">4</div>
+          <div class="how-to-content">
+            <div class="how-to-heading">Climb the Rankings</div>
+            <div class="how-to-desc">Consistent quality help moves you up the leaderboard and builds your reputation</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener('load', function() {
+      loadLeaderboard();
+    });
+    
+    async function loadLeaderboard() {
+      try {
+        const response = await fetch('/api/support/leaderboard/top-helpers', { credentials: 'include' });
+        
+        if (!response.ok) {
+          if (response.status === 403) {
+            alert('Please complete your academic profile');
+            window.location.href = 'academic-onboarding.html';
+          }
+          throw new Error('Failed to load leaderboard');
+        }
+        
+        const data = await response.json();
+        renderLeaderboard(data.helpers);
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    }
+    
+    function renderLeaderboard(helpers) {
+      const container = document.getElementById('leaderboard');
+      
+      if (!helpers || helpers.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon"><i class="fas fa-inbox"></i></div>
+            <h3 class="empty-title">No helpers yet</h3>
+            <p class="empty-desc">Start helping other students and you could be on this leaderboard!</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = helpers.map((helper, idx) => {
+        const rank = idx + 1;
+        const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
+        const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
+        
+        return `
+          <div class="leaderboard-row">
+            <div class="rank-badge ${rankClass}">
+              ${medal || rank}
+            </div>
+            <div class="helper-info">
+              <div class="helper-name">${escapeHtml(helper.full_name)}</div>
+              <div class="helper-meta">${escapeHtml(helper.email)}</div>
+              ${helper.verification_badge ? `
+                <div class="helper-badge">
+                  <i class="fas fa-star"></i> ${escapeHtml(helper.verification_badge)}
+                </div>
+              ` : ''}
+            </div>
+            <div class="helper-stats">
+              <div class="stat">
+                <div class="stat-value">${helper.total_answers}</div>
+                <div class="stat-label">Answers</div>
+              </div>
+              <div class="stat">
+                <div class="stat-value">${helper.accepted_answers}</div>
+                <div class="stat-label">Accepted</div>
+              </div>
+              <div class="stat">
+                <div class="stat-value">${helper.helpful_answers || 0}</div>
+                <div class="stat-label">Helpful</div>
+              </div>
+            </div>
+            <div class="points-badge">
+              <div class="points-value">${helper.total_points_earned || 0}</div>
+              <div class="points-label">Points</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function escapeHtml(text) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+      return text.replace(/[&<>"']/g, m => map[m]);
+    }
+  </script>
+</body>
+</html>

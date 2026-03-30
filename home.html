@@ -1,0 +1,1187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Career OS - Home</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .home-dashboard {
+      --panel: rgba(255, 255, 255, 0.9);
+      --panel-soft: rgba(255, 255, 255, 0.64);
+      --ink: #18212e;
+      --muted-ink: #5b6578;
+      display: grid;
+      gap: 1.1rem;
+      padding-bottom: 5.5rem;
+      animation: homeFadeIn 520ms ease;
+    }
+
+    @keyframes homeFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .home-hero {
+      display: grid;
+      grid-template-columns: 1.35fr 0.95fr;
+      gap: 1rem;
+      border-radius: 24px;
+      overflow: hidden;
+      padding: 1.2rem;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(74, 222, 128, 0.2) 0%, rgba(74, 222, 128, 0) 40%),
+        radial-gradient(circle at 80% 100%, rgba(59, 130, 246, 0.26) 0%, rgba(59, 130, 246, 0) 42%),
+        linear-gradient(140deg, #153a64 0%, #0f5f53 55%, #0b7c8b 100%);
+      box-shadow: 0 20px 60px rgba(9, 33, 59, 0.36);
+      color: #f8fcff;
+      position: relative;
+    }
+
+    .home-hero::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(100deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.12));
+      pointer-events: none;
+    }
+
+    .hero-content,
+    .hero-panel {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-content {
+      padding: 1.25rem;
+      display: grid;
+      gap: 0.8rem;
+      align-content: center;
+    }
+
+    .hero-kicker {
+      font-size: 0.78rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      opacity: 0.9;
+      font-weight: 600;
+    }
+
+    .hero-content h1 {
+      margin: 0;
+      font-size: clamp(1.75rem, 3vw, 2.45rem);
+      line-height: 1.15;
+      text-wrap: balance;
+    }
+
+    .hero-subtitle {
+      margin: 0;
+      color: rgba(246, 250, 255, 0.93);
+      line-height: 1.65;
+      font-size: 0.98rem;
+      max-width: 62ch;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 0.7rem;
+      flex-wrap: wrap;
+      margin-top: 0.4rem;
+    }
+
+    .hero-btn {
+      border: 1px solid rgba(255, 255, 255, 0.44);
+      color: #fff;
+      background: rgba(255, 255, 255, 0.16);
+      backdrop-filter: blur(6px);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.72rem 1rem;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: transform 160ms ease, background 160ms ease;
+    }
+
+    .hero-btn:hover {
+      transform: translateY(-2px);
+      background: rgba(255, 255, 255, 0.24);
+    }
+
+    .hero-btn.strong {
+      background: linear-gradient(120deg, #f97316, #facc15);
+      color: #0e2732;
+      border-color: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 8px 20px rgba(249, 115, 22, 0.3);
+    }
+
+    .hero-panel {
+      border-radius: 18px;
+      background: rgba(7, 22, 38, 0.42);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      padding: 1rem;
+      display: grid;
+      gap: 0.7rem;
+      align-content: center;
+    }
+
+    .hero-facts {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.5rem;
+    }
+
+    .hero-fact {
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      background: rgba(255, 255, 255, 0.12);
+      padding: 0.45rem 0.56rem;
+    }
+
+    .hero-fact-label {
+      font-size: 0.68rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      opacity: 0.85;
+      margin: 0;
+    }
+
+    .hero-fact-value {
+      margin: 0.2rem 0 0;
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .hero-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      width: fit-content;
+      padding: 0.44rem 0.68rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .hero-panel .pulse {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 0 rgba(34, 197, 94, 0.55);
+      animation: pulse 1.8s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
+      70% { box-shadow: 0 0 0 14px rgba(34, 197, 94, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+    }
+
+    .hero-progress-track {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 999px;
+      height: 10px;
+      overflow: hidden;
+    }
+
+    .hero-progress-fill {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #84cc16, #facc15 48%, #fb7185);
+      transition: width 420ms ease;
+    }
+
+    .stats-grid,
+    .continue-grid,
+    .recommend-grid,
+    .charts-grid,
+    .badges-grid,
+    .quick-grid,
+    .content-columns {
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .stats-grid,
+    .continue-grid,
+    .badges-grid,
+    .quick-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .recommend-grid,
+    .charts-grid,
+    .content-columns {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .stack-grid {
+      display: grid;
+      gap: 0.85rem;
+      grid-template-columns: 1.1fr 0.9fr;
+    }
+
+    .section-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--ink);
+    }
+
+    .panel {
+      border-radius: 18px;
+      border: 1px solid rgba(14, 38, 66, 0.08);
+      background: var(--panel);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 16px 32px rgba(12, 37, 66, 0.1);
+      padding: 1rem;
+    }
+
+    .stat-card {
+      border-radius: 16px;
+      padding: 1rem;
+      background: linear-gradient(140deg, rgba(255, 255, 255, 0.9), rgba(241, 247, 255, 0.92));
+      border: 1px solid rgba(17, 64, 110, 0.09);
+      box-shadow: 0 10px 22px rgba(13, 36, 61, 0.07);
+      transition: transform 180ms ease, box-shadow 180ms ease;
+      display: grid;
+      gap: 0.3rem;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 30px rgba(13, 36, 61, 0.13);
+    }
+
+    .stat-label {
+      color: var(--muted-ink);
+      font-size: 0.82rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .stat-value {
+      color: var(--ink);
+      font-size: 1.64rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .stat-meta {
+      color: #70839b;
+      font-size: 0.75rem;
+    }
+
+    .tasks-list,
+    .recommend-list,
+    .continue-list,
+    .ai-list,
+    .content-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.65rem;
+    }
+
+    .task-progress {
+      margin-bottom: 0.72rem;
+      border-radius: 12px;
+      padding: 0.65rem;
+      border: 1px solid rgba(14, 38, 66, 0.11);
+      background: rgba(236, 248, 255, 0.75);
+      display: grid;
+      gap: 0.42rem;
+    }
+
+    .task-progress-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.79rem;
+      color: var(--muted-ink);
+      font-weight: 700;
+    }
+
+    .task-progress-track {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(14, 38, 66, 0.13);
+      overflow: hidden;
+    }
+
+    .task-progress-fill {
+      height: 100%;
+      width: 0;
+      transition: width 280ms ease;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #10b981, #3b82f6);
+    }
+
+    .task-item,
+    .recommend-item,
+    .continue-card,
+    .content-item {
+      border-radius: 12px;
+      border: 1px solid rgba(14, 38, 66, 0.1);
+      background: var(--panel-soft);
+      padding: 0.78rem;
+      box-shadow: 0 8px 18px rgba(12, 37, 66, 0.06);
+      transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+    }
+
+    .task-item:hover,
+    .recommend-item:hover,
+    .continue-card:hover,
+    .content-item:hover {
+      transform: translateY(-3px);
+      border-color: rgba(15, 123, 108, 0.3);
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 14px 28px rgba(12, 37, 66, 0.14);
+    }
+
+    .continue-card {
+      display: grid;
+      gap: 0.52rem;
+      border-left: 4px solid #0ea5e9;
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(238, 247, 255, 0.9));
+    }
+
+    .continue-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+    }
+
+    .continue-card-head i {
+      color: #0f766e;
+      font-size: 1rem;
+    }
+
+    .continue-meta {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .continue-chip {
+      border-radius: 999px;
+      border: 1px solid rgba(14, 38, 66, 0.13);
+      color: #27425d;
+      background: rgba(255, 255, 255, 0.85);
+      padding: 0.2rem 0.5rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .card-action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      width: fit-content;
+      border-radius: 10px;
+      border: 1px solid rgba(15, 123, 108, 0.25);
+      background: linear-gradient(140deg, #0f766e, #1d4ed8);
+      color: #fff;
+      font-size: 0.76rem;
+      font-weight: 700;
+      padding: 0.4rem 0.7rem;
+      text-decoration: none;
+      transition: transform 160ms ease, box-shadow 160ms ease;
+    }
+
+    .card-action-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.2);
+    }
+
+    .task-item {
+      display: flex;
+      gap: 0.66rem;
+      align-items: flex-start;
+    }
+
+    .task-check {
+      margin-top: 0.05rem;
+      width: 18px;
+      height: 18px;
+      border-radius: 5px;
+      border: 1.5px solid #5b89c5;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      background: #fff;
+      flex-shrink: 0;
+      transition: all 160ms ease;
+      color: transparent;
+      font-size: 0.68rem;
+      font-weight: 700;
+    }
+
+    .task-item.completed .task-check {
+      border-color: #10b981;
+      background: #10b981;
+      color: #fff;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16);
+    }
+
+    .task-item.completed .task-title {
+      text-decoration: line-through;
+      opacity: 0.75;
+    }
+
+    .task-dot {
+      margin-top: 0.33rem;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #0ea5e9;
+      box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+    }
+
+    .task-title,
+    .continue-title,
+    .content-title {
+      color: var(--ink);
+      font-size: 0.9rem;
+      font-weight: 650;
+      margin: 0;
+    }
+
+    .task-note,
+    .continue-note,
+    .content-note,
+    .recommend-item p {
+      margin: 0.25rem 0 0;
+      color: var(--muted-ink);
+      line-height: 1.45;
+      font-size: 0.8rem;
+    }
+
+    .quick-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.52rem;
+      text-align: center;
+      border-radius: 12px;
+      border: 1px solid rgba(14, 38, 66, 0.12);
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(239, 246, 255, 0.95));
+      color: var(--ink);
+      padding: 0.8rem;
+      font-size: 0.85rem;
+      font-weight: 650;
+      transition: transform 160ms ease, box-shadow 160ms ease;
+    }
+
+    .quick-link:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(12, 37, 66, 0.1);
+    }
+
+    .progress-row {
+      display: grid;
+      gap: 0.26rem;
+      margin-bottom: 0.55rem;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--ink);
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .bar-track {
+      height: 9px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(14, 38, 66, 0.12);
+    }
+
+    .bar-fill {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      transition: width 420ms ease;
+      background: linear-gradient(90deg, #0ea5e9, #14b8a6);
+    }
+
+    .chart-card {
+      border-radius: 16px;
+      border: 1px solid rgba(14, 38, 66, 0.1);
+      background: linear-gradient(150deg, rgba(255, 255, 255, 0.96), rgba(242, 249, 255, 0.9));
+      padding: 0.95rem;
+      min-height: 180px;
+      display: grid;
+      gap: 0.6rem;
+    }
+
+    .chart-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.8rem;
+    }
+
+    .chart-head h4 {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--ink);
+    }
+
+    .chart-head span {
+      color: #64748b;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .chart-bars {
+      min-height: 114px;
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      align-items: end;
+      gap: 0.38rem;
+    }
+
+    .chart-bar {
+      border-radius: 8px 8px 3px 3px;
+      min-height: 6px;
+      background: linear-gradient(180deg, #0ea5e9, #2563eb);
+      opacity: 0.85;
+      transition: opacity 160ms ease;
+    }
+
+    .chart-bar:hover {
+      opacity: 1;
+    }
+
+    .chart-axis {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 0.38rem;
+      color: #6b7280;
+      font-size: 0.68rem;
+      text-align: center;
+    }
+
+    .badge-card {
+      border-radius: 14px;
+      border: 1px solid rgba(14, 38, 66, 0.1);
+      padding: 0.9rem;
+      background: linear-gradient(130deg, rgba(255, 255, 255, 0.95), rgba(249, 250, 251, 0.85));
+      display: flex;
+      gap: 0.72rem;
+      align-items: center;
+    }
+
+    .badge-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      background: linear-gradient(140deg, #64748b, #334155);
+    }
+
+    .badge-card.earned .badge-icon {
+      background: linear-gradient(140deg, #f97316, #facc15);
+      color: #0f172a;
+      box-shadow: 0 8px 18px rgba(251, 146, 60, 0.35);
+    }
+
+    .badge-meta {
+      display: grid;
+      gap: 0.2rem;
+    }
+
+    .badge-name {
+      font-size: 0.86rem;
+      color: var(--ink);
+      margin: 0;
+      font-weight: 650;
+    }
+
+    .badge-note {
+      margin: 0;
+      color: var(--muted-ink);
+      font-size: 0.76rem;
+      line-height: 1.4;
+    }
+
+    .weak-topics-grid,
+    .game-grid {
+      display: grid;
+      gap: 0.85rem;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .weak-topic-card {
+      border-radius: 14px;
+      border: 1px solid rgba(244, 114, 182, 0.34);
+      background: linear-gradient(150deg, rgba(255, 240, 246, 0.95), rgba(254, 242, 242, 0.9));
+      padding: 0.88rem;
+      display: grid;
+      gap: 0.32rem;
+      transition: transform 160ms ease;
+    }
+
+    .weak-topic-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .weak-topic-card h4 {
+      margin: 0;
+      color: #831843;
+      font-size: 0.88rem;
+      display: flex;
+      align-items: center;
+      gap: 0.42rem;
+    }
+
+    .weak-topic-card p {
+      margin: 0;
+      color: #9f1239;
+      font-size: 0.78rem;
+      line-height: 1.4;
+    }
+
+    .weak-topic-actions {
+      margin-top: 0.3rem;
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .weak-topic-actions a {
+      border-radius: 999px;
+      border: 1px solid rgba(157, 23, 77, 0.25);
+      color: #831843;
+      background: rgba(255, 255, 255, 0.7);
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.24rem 0.56rem;
+      text-decoration: none;
+    }
+
+    .game-panel {
+      border-radius: 14px;
+      border: 1px solid rgba(14, 38, 66, 0.1);
+      background: linear-gradient(150deg, rgba(255, 255, 255, 0.96), rgba(241, 247, 255, 0.9));
+      padding: 0.92rem;
+      display: grid;
+      gap: 0.55rem;
+    }
+
+    .xp-milestone {
+      display: grid;
+      gap: 0.32rem;
+    }
+
+    .xp-milestone-label {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted-ink);
+      font-size: 0.74rem;
+      font-weight: 700;
+    }
+
+    .xp-track {
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(14, 38, 66, 0.12);
+      overflow: hidden;
+    }
+
+    .xp-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #f59e0b, #f97316);
+      width: 0;
+      transition: width 300ms ease;
+    }
+
+    .assistant-widget {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      width: min(340px, calc(100vw - 24px));
+      background:
+        radial-gradient(circle at 20% -20%, rgba(59, 130, 246, 0.34), rgba(59, 130, 246, 0) 42%),
+        rgba(11, 26, 47, 0.95);
+      color: #eef4ff;
+      border: 1px solid rgba(148, 163, 184, 0.26);
+      border-radius: 16px;
+      box-shadow: 0 20px 48px rgba(11, 26, 47, 0.5);
+      overflow: hidden;
+      z-index: 120;
+    }
+
+    .assistant-head {
+      padding: 0.75rem 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(130deg, rgba(15, 123, 108, 0.9), rgba(29, 78, 216, 0.92));
+    }
+
+    .assistant-title {
+      margin: 0;
+      font-size: 0.84rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .assistant-toggle {
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+      border-radius: 8px;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+    }
+
+    .assistant-body {
+      padding: 0.8rem;
+      display: grid;
+      gap: 0.6rem;
+      max-height: 340px;
+      overflow-y: auto;
+    }
+
+    .assistant-msg {
+      border-radius: 10px;
+      font-size: 0.8rem;
+      line-height: 1.45;
+      padding: 0.55rem 0.62rem;
+    }
+
+    .assistant-msg.bot {
+      background: rgba(148, 163, 184, 0.18);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+    }
+
+    .assistant-msg.user {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      justify-self: end;
+      max-width: 90%;
+    }
+
+    .assistant-form {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem;
+      padding: 0 0.8rem 0.8rem;
+    }
+
+    .assistant-prompts {
+      padding: 0 0.8rem 0.8rem;
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .assistant-prompt-btn {
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.34);
+      background: rgba(30, 41, 59, 0.75);
+      color: #e2e8f0;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 0.22rem 0.52rem;
+      cursor: pointer;
+    }
+
+    .assistant-prompt-btn:hover {
+      border-color: rgba(250, 204, 21, 0.42);
+      background: rgba(51, 65, 85, 0.9);
+    }
+
+    .assistant-form input {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      padding: 0.55rem 0.62rem;
+      background: rgba(15, 23, 42, 0.6);
+      color: #f8fafc;
+      font-size: 0.78rem;
+    }
+
+    .assistant-send {
+      border-radius: 8px;
+      border: 1px solid rgba(250, 204, 21, 0.4);
+      background: linear-gradient(130deg, #f59e0b, #facc15);
+      color: #0f172a;
+      font-weight: 700;
+      font-size: 0.75rem;
+      cursor: pointer;
+      padding: 0 0.72rem;
+    }
+
+    .assistant-widget.collapsed .assistant-body,
+    .assistant-widget.collapsed .assistant-form {
+      display: none;
+    }
+
+    .empty-state {
+      color: var(--muted-ink);
+      font-size: 0.82rem;
+      border: 1px dashed rgba(14, 38, 66, 0.2);
+      border-radius: 10px;
+      padding: 0.72rem;
+      background: rgba(255, 255, 255, 0.45);
+    }
+
+    html[data-theme-mode="dark"] .home-dashboard {
+      --panel: rgba(15, 23, 42, 0.76);
+      --panel-soft: rgba(16, 30, 48, 0.68);
+      --ink: #e5edf8;
+      --muted-ink: #9fb2cc;
+    }
+
+    html[data-theme-mode="dark"] .stat-card,
+    html[data-theme-mode="dark"] .chart-card,
+    html[data-theme-mode="dark"] .quick-link,
+    html[data-theme-mode="dark"] .badge-card,
+    html[data-theme-mode="dark"] .task-item,
+    html[data-theme-mode="dark"] .recommend-item,
+    html[data-theme-mode="dark"] .continue-card,
+    html[data-theme-mode="dark"] .content-item {
+      border-color: rgba(148, 163, 184, 0.25);
+      background: linear-gradient(130deg, rgba(15, 23, 42, 0.86), rgba(30, 41, 59, 0.76));
+    }
+
+    html[data-theme-mode="dark"] .task-item:hover,
+    html[data-theme-mode="dark"] .recommend-item:hover,
+    html[data-theme-mode="dark"] .continue-card:hover,
+    html[data-theme-mode="dark"] .content-item:hover,
+    html[data-theme-mode="dark"] .quick-link:hover {
+      background: rgba(30, 41, 59, 0.94);
+    }
+
+    html[data-theme-mode="dark"] .bar-track,
+    html[data-theme-mode="dark"] .hero-progress-track {
+      background: rgba(148, 163, 184, 0.25);
+    }
+
+    html[data-theme-mode="dark"] .task-progress {
+      border-color: rgba(148, 163, 184, 0.28);
+      background: rgba(17, 27, 44, 0.82);
+    }
+
+    html[data-theme-mode="dark"] .task-check {
+      background: #1f2937;
+      border-color: #7aa8d9;
+    }
+
+    html[data-theme-mode="dark"] .weak-topic-card,
+    html[data-theme-mode="dark"] .game-panel {
+      border-color: rgba(148, 163, 184, 0.26);
+      background: linear-gradient(150deg, rgba(20, 30, 46, 0.9), rgba(29, 41, 60, 0.82));
+    }
+
+    html[data-theme-mode="dark"] .weak-topic-card h4,
+    html[data-theme-mode="dark"] .weak-topic-card p {
+      color: #fecdd3;
+    }
+
+    html[data-theme-mode="dark"] .task-progress-track,
+    html[data-theme-mode="dark"] .xp-track {
+      background: rgba(148, 163, 184, 0.28);
+    }
+
+    @media (max-width: 1260px) {
+      .stats-grid,
+      .continue-grid,
+      .badges-grid,
+      .quick-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .recommend-grid,
+      .charts-grid,
+      .content-columns,
+      .weak-topics-grid,
+      .game-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .home-hero {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 860px) {
+      .stack-grid,
+      .recommend-grid,
+      .charts-grid,
+      .content-columns,
+      .weak-topics-grid,
+      .game-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .assistant-widget {
+        right: 8px;
+        left: 8px;
+        width: auto;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .stats-grid,
+      .continue-grid,
+      .badges-grid,
+      .quick-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .hero-btn {
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <section class="home-dashboard" id="homeDashboard">
+      <section class="home-hero" id="homeHeroSection" data-exp-section="hero">
+        <div class="hero-content">
+          <span class="hero-kicker" id="heroContext">Personalized Learning Workspace</span>
+          <h1 data-page-title id="heroTitle">Your Learning Command Center</h1>
+          <p class="hero-subtitle" id="heroSubtitle">
+            Build momentum with daily tasks, topic-focused practice, and AI recommendations aligned to your branch.
+          </p>
+          <div class="hero-actions">
+            <a class="hero-btn strong" id="heroPrimaryCta" href="quiz-library.html"><i class="fa-solid fa-play"></i> Start Learning</a>
+            <a class="hero-btn" id="heroSecondaryCta" href="study-roadmap.html"><i class="fa-solid fa-map-location-dot"></i> Continue Roadmap</a>
+          </div>
+        </div>
+        <aside class="hero-panel">
+          <span class="hero-chip"><span class="pulse"></span> Daily Consistency</span>
+          <div class="hero-facts">
+            <div class="hero-fact">
+              <p class="hero-fact-label">Learning Streak</p>
+              <p class="hero-fact-value" id="heroStreakValue">0 day(s)</p>
+            </div>
+            <div class="hero-fact">
+              <p class="hero-fact-label">Next Milestone</p>
+              <p class="hero-fact-value" id="heroMilestoneValue">Start roadmap</p>
+            </div>
+          </div>
+          <div class="progress-label">
+            <span>Roadmap Completion</span>
+            <span id="heroRoadmapPct">0%</span>
+          </div>
+          <div class="hero-progress-track"><div class="hero-progress-fill" id="heroRoadmapFill"></div></div>
+          <div class="stat-meta" id="branchHeadline">Branch personalization loading...</div>
+        </aside>
+      </section>
+
+      <section class="stats-grid" id="homeStatsSection" data-exp-section="stats">
+        <article class="stat-card">
+          <p class="stat-label"><i class="fa-solid fa-fire"></i> Learning Streak</p>
+          <p class="stat-value" id="statStreak">0</p>
+          <p class="stat-meta">Keep your streak alive today</p>
+        </article>
+        <article class="stat-card">
+          <p class="stat-label"><i class="fa-solid fa-bolt"></i> XP Points</p>
+          <p class="stat-value" id="statXp">0</p>
+          <p class="stat-meta">Earned from quizzes and practice</p>
+        </article>
+        <article class="stat-card">
+          <p class="stat-label"><i class="fa-solid fa-route"></i> Roadmap Progress</p>
+          <p class="stat-value" id="statRoadmap">0%</p>
+          <p class="stat-meta">Track your current learning path</p>
+        </article>
+        <article class="stat-card">
+          <p class="stat-label"><i class="fa-solid fa-award"></i> Achievements Earned</p>
+          <p class="stat-value" id="statAchievements">0</p>
+          <p class="stat-meta">Certificates and unlocked badges</p>
+        </article>
+      </section>
+
+      <section class="stack-grid" id="homeStackSection" data-exp-section="study-plan">
+        <article class="panel">
+          <h3 class="section-title">Today's Study Plan</h3>
+          <div class="task-progress">
+            <div class="task-progress-line">
+              <span>Daily completion</span>
+              <span id="taskProgressText">0/0 done</span>
+            </div>
+            <div class="task-progress-track"><div class="task-progress-fill" id="taskProgressFill"></div></div>
+          </div>
+          <ul class="tasks-list" id="todayPlanList"></ul>
+        </article>
+        <article class="panel">
+          <h3 class="section-title">Quick Access</h3>
+          <div class="quick-grid">
+            <a class="quick-link" href="study.html"><i class="fa-solid fa-book-open"></i> Study</a>
+            <a class="quick-link" href="mock-tests.html"><i class="fa-solid fa-vial"></i> Mock Tests</a>
+            <a class="quick-link" href="notes-library.html"><i class="fa-solid fa-file-lines"></i> Notes</a>
+            <a class="quick-link" href="study-roadmap.html"><i class="fa-solid fa-map"></i> Roadmaps</a>
+            <a class="quick-link" href="ai-tools.html"><i class="fa-solid fa-sparkles"></i> AI Tools</a>
+            <a class="quick-link" href="certificates.html"><i class="fa-solid fa-certificate"></i> Certificates</a>
+          </div>
+        </article>
+      </section>
+
+      <section id="homeContinueSection" data-exp-section="continue-learning">
+        <h3 class="section-title">Continue Learning</h3>
+        <div class="continue-grid" id="continueLearningGrid"></div>
+      </section>
+
+      <section id="homeRecommendedForYouSection" data-exp-section="recommended-for-you">
+        <h3 class="section-title">Recommended For You</h3>
+        <div class="continue-grid" id="recommendedForYouGrid"></div>
+      </section>
+
+      <section class="recommend-grid" id="homeRecommendSection" data-exp-section="ai-suggestions">
+        <article class="panel" id="homeAiRecommendationsPanel">
+          <h3 class="section-title">AI Recommendations</h3>
+          <ul class="ai-list" id="aiRecommendationList"></ul>
+        </article>
+        <article class="panel" id="homeRoadmapPanel">
+          <h3 class="section-title">Roadmap Progress</h3>
+          <div id="roadmapBars"></div>
+        </article>
+        <article class="panel" id="homeBranchFocusPanel">
+          <h3 class="section-title">Branch Focus</h3>
+          <ul class="recommend-list" id="branchFocusList"></ul>
+        </article>
+      </section>
+
+      <section class="content-columns" id="homeContentSection" data-exp-section="recommended-content">
+        <article class="panel" id="homeRecommendedNotesPanel">
+          <h3 class="section-title">Recommended Notes</h3>
+          <ul class="content-list" id="recommendedNotes"></ul>
+        </article>
+        <article class="panel" id="homeRecommendedQuizzesPanel">
+          <h3 class="section-title">Recommended Quizzes</h3>
+          <ul class="content-list" id="recommendedQuizzes"></ul>
+        </article>
+        <article class="panel" id="homeRecommendedMocksPanel">
+          <h3 class="section-title">Recommended Mock Tests</h3>
+          <ul class="content-list" id="recommendedMockTests"></ul>
+        </article>
+      </section>
+
+      <section id="homeWeakTopicsSection" data-exp-section="weak-topics">
+        <h3 class="section-title">Weak Topics</h3>
+        <div class="weak-topics-grid" id="weakTopicsGrid"></div>
+      </section>
+
+      <section id="homeAnalyticsSection" data-exp-section="weekly-analytics">
+        <h3 class="section-title">Learning Statistics</h3>
+        <div class="charts-grid">
+          <article class="chart-card">
+            <div class="chart-head"><h4>Quizzes Attempted</h4><span>Last 7 days</span></div>
+            <div class="chart-bars" id="quizBars"></div>
+            <div class="chart-axis" id="quizAxis"></div>
+          </article>
+          <article class="chart-card">
+            <div class="chart-head"><h4>Study Hours</h4><span>Mock practice time</span></div>
+            <div class="chart-bars" id="studyBars"></div>
+            <div class="chart-axis" id="studyAxis"></div>
+          </article>
+          <article class="chart-card">
+            <div class="chart-head"><h4>Accuracy Trend</h4><span>Quiz performance</span></div>
+            <div class="chart-bars" id="accuracyBars"></div>
+            <div class="chart-axis" id="accuracyAxis"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="homeAchievementsSection" data-exp-section="achievements">
+        <h3 class="section-title">Achievements</h3>
+        <div class="badges-grid" id="badgesGrid"></div>
+      </section>
+
+      <section>
+        <h3 class="section-title">Gamification</h3>
+        <div class="game-grid">
+          <article class="game-panel">
+            <h4 class="section-title" style="font-size:0.9rem;">Streak Badge</h4>
+            <p class="stat-meta" id="streakBadgeText">Start a streak to unlock your first consistency badge.</p>
+          </article>
+          <article class="game-panel">
+            <h4 class="section-title" style="font-size:0.9rem;">XP Milestones</h4>
+            <div class="xp-milestone">
+              <div class="xp-milestone-label"><span>500 XP</span><span id="xp500Label">0%</span></div>
+              <div class="xp-track"><div class="xp-fill" id="xp500Fill"></div></div>
+            </div>
+            <div class="xp-milestone">
+              <div class="xp-milestone-label"><span>1000 XP</span><span id="xp1000Label">0%</span></div>
+              <div class="xp-track"><div class="xp-fill" id="xp1000Fill"></div></div>
+            </div>
+          </article>
+          <article class="game-panel">
+            <h4 class="section-title" style="font-size:0.9rem;">Achievement Momentum</h4>
+            <p class="stat-meta" id="achievementMomentumText">Complete one quiz and one roadmap step to push progress this week.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="assistant-widget" id="aiAssistantWidget">
+        <header class="assistant-head">
+          <p class="assistant-title"><i class="fa-solid fa-robot"></i> Quick AI Study Assistant</p>
+          <button class="assistant-toggle" type="button" id="assistantToggle" aria-label="Toggle assistant">-</button>
+        </header>
+        <div class="assistant-body" id="assistantBody"></div>
+        <form class="assistant-form" id="assistantForm">
+          <input type="text" id="assistantInput" placeholder="Ask: what should I study next?" maxlength="160" />
+          <button class="assistant-send" type="submit">Ask</button>
+        </form>
+        <div class="assistant-prompts" id="assistantPrompts">
+          <button class="assistant-prompt-btn" type="button">What should I study today?</button>
+          <button class="assistant-prompt-btn" type="button">Generate quiz</button>
+          <button class="assistant-prompt-btn" type="button">Explain topic</button>
+          <button class="assistant-prompt-btn" type="button">Create flashcards</button>
+        </div>
+      </section>
+    </section>
+  </template>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/home-dashboard.js"></script>
+</body>
+</html>
+
+
+
+

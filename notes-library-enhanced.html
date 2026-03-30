@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quick Notes & Revision - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .notes-hero {
+      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+      color: #fff;
+      border-radius: 24px;
+      padding: 40px;
+      margin-bottom: 24px;
+      box-shadow: 0 24px 48px rgba(15, 23, 42, 0.25);
+    }
+
+    .notes-hero h1 {
+      margin: 0 0 8px 0;
+      font-size: clamp(2rem, 5vw, 3rem);
+      line-height: 1.1;
+      font-weight: 700;
+    }
+
+    .notes-hero p {
+      margin: 0;
+      font-size: 1rem;
+      opacity: 0.95;
+    }
+
+    .notes-toolbar {
+      display: grid;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .notes-filter-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .notes-tag-filter {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .notes-tag-btn {
+      border-radius: 999px;
+      border: 2px solid #e2e8f0;
+      padding: 6px 14px;
+      background: #fff;
+      color: #475569;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 120ms ease;
+      font-size: 0.85rem;
+    }
+
+    .notes-tag-btn:hover {
+      border-color: #3b82f6;
+      color: #1e40af;
+      background: #f0f9ff;
+    }
+
+    .notes-tag-btn.active {
+      background: #3b82f6;
+      color: #fff;
+      border-color: #3b82f6;
+    }
+
+    .notes-select {
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      font: inherit;
+      background: #fff;
+    }
+
+    .notes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .notes-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      overflow: hidden;
+      transition: all 180ms ease;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .notes-card:hover {
+      transform: translateY(-4px);
+      border-color: #3b82f6;
+      box-shadow: 0 12px 28px rgba(59, 130, 246, 0.15);
+    }
+
+    .notes-card-header {
+      background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+      border-bottom: 2px solid #bae6fd;
+      padding: 16px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .notes-card-icon {
+      font-size: 2rem;
+    }
+
+    .notes-card-type {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      background: #dbeafe;
+      color: #1e40af;
+      width: fit-content;
+      letter-spacing: 0.02em;
+    }
+
+    .notes-card-title {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #1e293b;
+      line-height: 1.3;
+    }
+
+    .notes-card-body {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .notes-card-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 0.85rem;
+      color: #64748b;
+    }
+
+    .notes-card-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .notes-card-desc {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    .notes-tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .notes-tag {
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .notes-tag.important {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .notes-tag.exam {
+      background: #fef08a;
+      color: #713f12;
+    }
+
+    .notes-tag.quick {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .notes-card-footer {
+      padding: 12px 16px;
+      border-top: 1px solid #f1f5f9;
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .notes-rating {
+      display: flex;
+      gap: 2px;
+      align-items: center;
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+
+    .notes-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .notes-empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 60px 20px;
+      color: #94a3b8;
+    }
+
+    .notes-empty-icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+      opacity: 0.4;
+    }
+
+    @media (max-width: 768px) {
+      .notes-hero {
+        padding: 24px;
+      }
+
+      .notes-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .notes-filter-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <section class="notes-hero">
+      <h1><i class="fa-solid fa-book"></i> Quick Notes & Revision</h1>
+      <p>Exam-focused, student-contributed, and curated notes for quick revision and last-minute preparation.</p>
+    </section>
+
+    <section class="card">
+      <div class="notes-toolbar">
+        <div>
+          <p style="margin: 0 0 12px 0; font-weight: 600; color: #475569;">Filter by Purpose</p>
+          <div class="notes-tag-filter">
+            <button class="notes-tag-btn active" data-tag-filter="all"><i class="fa-solid fa-list"></i> All</button>
+            <button class="notes-tag-btn" data-tag-filter="important"><i class="fa-solid fa-star"></i> Important</button>
+            <button class="notes-tag-btn" data-tag-filter="exam"><i class="fa-solid fa-pen-fancy"></i> Exam Focus</button>
+            <button class="notes-tag-btn" data-tag-filter="quick"><i class="fa-solid fa-bolt"></i> Quick Read</button>
+          </div>
+        </div>
+
+        <div class="notes-filter-row">
+          <div>
+            <label style="font-weight: 600; font-size: 0.85rem; color: #475569; display: block; margin-bottom: 6px;">Subject</label>
+            <select id="notesSubjectFilter" class="notes-select" style="width:100%;"><option value="">All Subjects</option></select>
+          </div>
+          <div>
+            <label style="font-weight: 600; font-size: 0.85rem; color: #475569; display: block; margin-bottom: 6px;">Format</label>
+            <select id="notesFormatFilter" class="notes-select" style="width:100%;">
+              <option value="">All Formats</option>
+              <option value="one-page">One-Page Summary</option>
+              <option value="detailed">Detailed Notes</option>
+              <option value="cheat-sheet">Cheat Sheet</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-weight: 600; font-size: 0.85rem; color: #475569; display: block; margin-bottom: 6px;">Search</label>
+            <input id="notesSearch" type="text" class="notes-select" style="width:100%;" placeholder="Search notes..." />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="notes-grid" id="notesGrid">
+        <div class="notes-empty"><i class="fa-solid fa-spinner fa-spin"></i> Loading notes...</div>
+      </div>
+    </section>
+  </template>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app-base.js"></script>
+  <script>
+    const notesFilters = {
+      tag: 'all',
+      subject: '',
+      format: '',
+      search: ''
+    };
+
+    async function loadNotesOptions() {
+      try {
+        const [categoriesResp] = await Promise.all([
+          fetch('/api/student/library/categories', { credentials: 'include' }).then(r => r.json())
+        ]);
+
+        const subjectSelect = document.getElementById('notesSubjectFilter');
+        if (categoriesResp.categories) {
+          categoriesResp.categories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.id;
+            option.textContent = cat.name;
+            subjectSelect.appendChild(option);
+          });
+        }
+      } catch (error) {
+        console.error('Error loading options:', error);
+      }
+    }
+
+    async function loadNotes() {
+      const grid = document.getElementById('notesGrid');
+      grid.innerHTML = '<div class="notes-empty"><i class="fa-solid fa-spinner fa-spin"></i> Loading notes...</div>';
+
+      try {
+        const params = new URLSearchParams();
+        if (notesFilters.subject) params.set('categoryId', notesFilters.subject);
+        if (notesFilters.format) params.set('format', notesFilters.format);
+        if (notesFilters.search) params.set('search', notesFilters.search);
+
+        const suffix = params.toString() ? `?${params.toString()}` : '';
+        const response = await fetch(`/api/student/library/notes${suffix}`, { credentials: 'include' });
+        const data = await response.json();
+
+        if (!response.ok) throw new Error(data.error || 'Failed to load notes');
+
+        let notes = data.notes || [];
+        
+        // Filter by tag
+        if (notesFilters.tag !== 'all') {
+          notes = notes.filter(note => {
+            const tags = (note.tags || '').split(',').map(t => t.trim().toLowerCase());
+            return tags.includes(notesFilters.tag);
+          });
+        }
+
+        if (notes.length > 0) {
+          grid.innerHTML = notes.map(note => {
+            const format = note.note_format || 'detailed';
+            const formatLabel = format === 'one-page' ? '📄 One-Page' : format === 'cheat-sheet' ? '⚡ Cheat Sheet' : '📚 Detailed';
+            const tags = (note.tags || '').split(',').map(t => t.trim()).filter(t => t);
+            const avg_rating = note.avg_rating || 0;
+            
+            return `
+              <div class="notes-card">
+                <div class="notes-card-header">
+                  <div class="notes-card-icon">📝</div>
+                  <span class="notes-card-type">${formatLabel}</span>
+                  <h3 class="notes-card-title">${note.title || 'Untitled'}</h3>
+                </div>
+                <div class="notes-card-body">
+                  <div class="notes-card-meta">
+                    ${note.category_name ? `<div class="notes-card-meta-item"><i class="fa-solid fa-tag"></i> ${note.category_name}</div>` : ''}
+                    ${note.semester_label ? `<div class="notes-card-meta-item"><i class="fa-solid fa-calendar"></i> ${note.semester_label}</div>` : ''}
+                    ${note.chapter ? `<div class="notes-card-meta-item"><i class="fa-solid fa-book-bookmark"></i> ${note.chapter}</div>` : ''}
+                  </div>
+                  ${note.description ? `<p class="notes-card-desc">${note.description}</p>` : ''}
+                  ${tags.length > 0 ? `
+                    <div class="notes-tags">
+                      ${tags.map(tag => {
+                        let tagClass = 'quick';
+                        if (tag.toLowerCase().includes('important') || tag.toLowerCase().includes('crucial')) tagClass = 'important';
+                        if (tag.toLowerCase().includes('exam') || tag.toLowerCase().includes('test')) tagClass = 'exam';
+                        return `<span class="notes-tag ${tagClass}"><i class="fa-solid fa-tag"></i> ${tag}</span>`;
+                      }).join('')}
+                    </div>
+                  ` : ''}
+                </div>
+                <div class="notes-card-footer">
+                  <div class="notes-rating">
+                    <i class="fa-solid fa-star"></i> ${avg_rating.toFixed(1)}
+                  </div>
+                  <div class="notes-actions">
+                    ${note.file_url ? `<a href="${note.file_url}" target="_blank" class="btn primary sm"><i class="fa-solid fa-download"></i> View</a>` : ''}
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        } else {
+          grid.innerHTML = `
+            <div class="notes-empty">
+              <div class="notes-empty-icon"><i class="fa-solid fa-inbox"></i></div>
+              <h4 style="margin: 0 0 8px 0; color: #64748b;">No notes found</h4>
+              <p style="margin: 0; font-size: 0.9rem;">Try adjusting your filters or check back later.</p>
+            </div>
+          `;
+        }
+      } catch (error) {
+        grid.innerHTML = `<div class="notes-empty" style="color:#c6342d;"><i class="fa-solid fa-exclamation-triangle"></i> ${error.message}</div>`;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadNotesOptions();
+      
+      document.querySelectorAll('[data-tag-filter]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          document.querySelectorAll('[data-tag-filter]').forEach(b => b.classList.remove('active'));
+          e.target.closest('[data-tag-filter]').classList.add('active');
+          notesFilters.tag = e.target.closest('[data-tag-filter]').dataset.tagFilter;
+          loadNotes();
+        });
+      });
+
+      document.getElementById('notesSubjectFilter').addEventListener('change', (e) => {
+        notesFilters.subject = e.target.value;
+        loadNotes();
+      });
+
+      document.getElementById('notesFormatFilter').addEventListener('change', (e) => {
+        notesFilters.format = e.target.value;
+        loadNotes();
+      });
+
+      document.getElementById('notesSearch').addEventListener('input', (e) => {
+        notesFilters.search = e.target.value;
+        loadNotes();
+      });
+
+      await loadNotes();
+    });
+  </script>
+</body>
+</html>

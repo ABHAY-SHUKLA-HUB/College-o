@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+</head>
+<body class="admin-portal">
+  <div class="co-admin-shell" id="adminDashboardRoot">
+    <aside class="co-admin-aside">
+      <div class="co-admin-brand">
+        <span class="co-admin-brand-mark"><i class="fa-solid fa-shield-halved"></i></span>
+        <div>
+          <h1>College OS Admin</h1>
+          <p>Academic operations, learner management, content publishing, and platform oversight in one workspace.</p>
+        </div>
+      </div>
+
+      <section class="co-admin-nav-section">
+        <p class="co-admin-nav-label">Admin Navigation</p>
+        <nav class="co-admin-nav">
+          <a class="co-admin-nav-link active" href="admin-dashboard.html"><i class="fa-solid fa-chart-pie"></i><span>Overview</span></a>
+          <a class="co-admin-nav-link" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control System</span></a>
+          <a class="co-admin-nav-link" href="admin-academics.html#contributions"><i class="fa-solid fa-upload"></i><span>Contribution Control</span></a>
+          <a class="co-admin-nav-link" href="admin-support-governance.html"><i class="fa-solid fa-shield-halved"></i><span>Support Governance</span></a>
+          <a class="co-admin-nav-link" href="admin-notes.html"><i class="fa-solid fa-file-lines"></i><span>Notes</span></a>
+          <a class="co-admin-nav-link" href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i><span>Papers</span></a>
+          <a class="co-admin-nav-link" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i><span>Materials</span></a>
+          <a class="co-admin-nav-link" href="admin-quizzes.html"><i class="fa-solid fa-clipboard-question"></i><span>Quizzes</span></a>
+          <a class="co-admin-nav-link" href="admin-certificates.html"><i class="fa-solid fa-graduation-cap"></i><span>Certificates</span></a>
+          <a class="co-admin-nav-link" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Roadmaps</span></a>
+          <a class="co-admin-nav-link" href="admin-mock-tests.html"><i class="fa-solid fa-flask-vial"></i><span>Mock Test Studio</span></a>
+          <a class="co-admin-nav-link" href="admin-ai-tools.html"><i class="fa-solid fa-sparkles"></i><span>AI Tools</span></a>
+          <a class="co-admin-nav-link" href="admin-campus-feed.html"><i class="fa-solid fa-newspaper"></i><span>Campus Feed</span></a>
+        </nav>
+      </section>
+
+      <div class="co-admin-side-card">
+        <strong>Admin Workspace</strong>
+        <p>Use this dashboard to manage student operations, academic content, premium adoption, and platform quality without breaking workflow.</p>
+      </div>
+    </aside>
+
+    <main class="co-admin-main">
+      <header class="co-admin-topbar">
+        <div class="co-admin-topbar-title">
+          <h2>Control Center</h2>
+          <p>A premium command surface for content control, student oversight, feedback management, and platform monitoring.</p>
+        </div>
+        <div class="co-admin-topbar-actions">
+          <a class="co-admin-chip" href="/api/admin/students/report.xlsx"><i class="fa-solid fa-file-arrow-down"></i><span>Export Report</span></a>
+          <a class="co-admin-chip" href="#create-admin-panel"><i class="fa-solid fa-user-plus"></i><span>Create Admin</span></a>
+          <a class="co-admin-chip" href="admin-login.html"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+        </div>
+      </header>
+
+      <section class="co-admin-hero">
+        <div class="co-admin-hero-grid">
+          <div>
+            <div class="co-admin-hero-tags">
+              <span class="co-admin-chip-soft"><i class="fa-solid fa-buildings"></i><span id="adminCollegesCovered">0 campuses</span></span>
+              <span class="co-admin-chip-soft"><i class="fa-solid fa-wave-square"></i><span id="adminPlatformStatus">Platform healthy</span></span>
+              <span class="co-admin-chip-soft"><i class="fa-solid fa-shield-check"></i><span>Trusted admin access</span></span>
+            </div>
+
+            <h1>Admin Control Panel</h1>
+            <p>Manage centralized content control, student management, and platform activity overview with a stronger, more realistic SaaS-grade dashboard experience.</p>
+
+            <div class="co-admin-hero-list">
+              <div class="co-admin-hero-item">
+                <i class="fa-solid fa-book-open-reader"></i>
+                <div>
+                  <strong>Centralized content control</strong>
+                  <span>Oversee notes, previous papers, study materials, quizzes, certificates, and roadmap publishing from a single place.</span>
+                </div>
+              </div>
+              <div class="co-admin-hero-item">
+                <i class="fa-solid fa-user-gear"></i>
+                <div>
+                  <strong>Student management</strong>
+                  <span>Track premium adoption, engagement, XP patterns, college distribution, and academic performance at a glance.</span>
+                </div>
+              </div>
+              <div class="co-admin-hero-item">
+                <i class="fa-solid fa-chart-line"></i>
+                <div>
+                  <strong>Platform activity overview</strong>
+                  <span>Monitor signups, revenue movement, feedback flow, content operations, and system health with clearer visibility.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="co-admin-hero-insights">
+            <article class="co-admin-glass-card">
+              <p class="co-admin-kicker">Operations Snapshot</p>
+              <h4 style="margin:0 0 8px; color:#fff;">High-visibility admin summary</h4>
+              <p>Revenue, premium conversion, student activity, and operational readiness are surfaced here first so actions can be taken quickly.</p>
+            </article>
+            <article class="co-admin-glass-card">
+              <p class="co-admin-kicker">Today’s Focus</p>
+              <h4 style="margin:0 0 8px; color:#fff;">Feedback, content freshness, and growth</h4>
+              <p id="adminHeroInsight">Review new uploads, premium movement, and unanswered feedback to keep the platform polished and responsive.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <p class="muted" id="adminStatus" style="margin:0 0 18px;"></p>
+
+      <section class="co-admin-section">
+        <div class="co-admin-section-head">
+          <div>
+            <h3>Platform Metrics</h3>
+            <p>Modern analytics widgets for the platform signals that matter most to admin operations.</p>
+          </div>
+        </div>
+        <div class="co-admin-stats">
+          <article class="co-admin-stat">
+            <div class="co-admin-stat-top">
+              <div>
+                <p class="co-admin-stat-label">Total Students</p>
+                <p class="co-admin-stat-value" id="kpiStudents">0</p>
+              </div>
+              <span class="co-admin-icon-badge"><i class="fa-solid fa-users"></i></span>
+            </div>
+            <div class="co-admin-trend up" id="adminStudentsTrend"><i class="fa-solid fa-arrow-trend-up"></i> Student base growth ready</div>
+          </article>
+
+          <article class="co-admin-stat">
+            <div class="co-admin-stat-top">
+              <div>
+                <p class="co-admin-stat-label">Premium Students</p>
+                <p class="co-admin-stat-value" id="kpiPremium">0</p>
+              </div>
+              <span class="co-admin-icon-badge"><i class="fa-solid fa-crown"></i></span>
+            </div>
+            <div class="co-admin-trend" id="adminConversionRate"><i class="fa-solid fa-badge-percent"></i> Conversion rate loading</div>
+          </article>
+
+          <article class="co-admin-stat">
+            <div class="co-admin-stat-top">
+              <div>
+                <p class="co-admin-stat-label">Revenue</p>
+                <p class="co-admin-stat-value" id="kpiRevenue">Rs.0</p>
+              </div>
+              <span class="co-admin-icon-badge"><i class="fa-solid fa-wallet"></i></span>
+            </div>
+            <div class="co-admin-trend up" id="adminRevenuePulse"><i class="fa-solid fa-sack-rupee"></i> Revenue pulse loading</div>
+          </article>
+
+          <article class="co-admin-stat">
+            <div class="co-admin-stat-top">
+              <div>
+                <p class="co-admin-stat-label">Feedback</p>
+                <p class="co-admin-stat-value" id="kpiFeedback">0</p>
+              </div>
+              <span class="co-admin-icon-badge"><i class="fa-solid fa-message-lines"></i></span>
+            </div>
+            <div class="co-admin-trend warn" id="adminFeedbackPulse"><i class="fa-solid fa-clock"></i> Feedback queue loading</div>
+          </article>
+
+          <article class="co-admin-stat">
+            <div class="co-admin-stat-top">
+              <div>
+                <p class="co-admin-stat-label">Pending Approvals</p>
+                <p class="co-admin-stat-value" id="kpiPendingApprovals">0</p>
+              </div>
+              <span class="co-admin-icon-badge"><i class="fa-solid fa-hourglass-half"></i></span>
+            </div>
+            <div class="co-admin-trend warn"><i class="fa-solid fa-list-check"></i> Payment queue</div>
+          </article>
+
+          <article class="co-admin-stat">
+            <div class="co-admin-stat-top">
+              <div>
+                <p class="co-admin-stat-label">Expired Users</p>
+                <p class="co-admin-stat-value" id="kpiExpiredUsers">0</p>
+              </div>
+              <span class="co-admin-icon-badge"><i class="fa-solid fa-lock"></i></span>
+            </div>
+            <div class="co-admin-trend"><i class="fa-solid fa-user-clock"></i> Renewal target</div>
+          </article>
+
+          <article class="co-admin-stat">
+            <div class="co-admin-stat-top">
+              <div>
+                <p class="co-admin-stat-label">Monthly Revenue</p>
+                <p class="co-admin-stat-value" id="kpiMonthlyRevenue">Rs.0</p>
+              </div>
+              <span class="co-admin-icon-badge"><i class="fa-solid fa-indian-rupee-sign"></i></span>
+            </div>
+            <div class="co-admin-trend up"><i class="fa-solid fa-chart-column"></i> Current month approved</div>
+          </article>
+        </div>
+      </section>
+
+      <section class="co-admin-section">
+        <div class="co-admin-section-head">
+          <div>
+            <h3>Membership Payments</h3>
+            <p>Review payment screenshots, verify UTR details, and approve or reject requests.</p>
+          </div>
+          <div class="co-admin-chip-row">
+            <select id="adminPaymentStatusFilter" class="co-admin-chip" style="border:none; background:#fff;">
+              <option value="all">All</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+        </div>
+        <div class="co-admin-table-wrap">
+          <table class="co-admin-data-table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Method</th>
+                <th>Transaction ID</th>
+                <th>Screenshot</th>
+                <th>Submitted</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminMembershipPaymentsBody">
+              <tr><td colspan="7" class="co-admin-table-empty">Loading membership requests...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="co-admin-section">
+        <div class="co-admin-section-head">
+          <div>
+            <h3>Quick Actions</h3>
+            <p>Primary controls redesigned as clean utility widgets with stronger interaction affordances.</p>
+          </div>
+        </div>
+        <div class="co-admin-utility-grid">
+          <article class="co-admin-utility-card">
+            <span class="co-admin-icon-badge"><i class="fa-solid fa-sliders"></i></span>
+            <div>
+              <h4>Full Control System</h4>
+              <p>Open the production-style admin command center for students, payments, moderation, roles, analytics, and settings.</p>
+            </div>
+            <a class="btn primary" href="admin-control.html">Open</a>
+          </article>
+          <article class="co-admin-utility-card">
+            <span class="co-admin-icon-badge"><i class="fa-solid fa-download"></i></span>
+            <div>
+              <h4>Download Report</h4>
+              <p>Export the latest student performance report for academic review and management visibility.</p>
+            </div>
+            <a class="btn secondary" href="/api/admin/students/report.xlsx">Export</a>
+          </article>
+          <article class="co-admin-utility-card">
+            <span class="co-admin-icon-badge"><i class="fa-solid fa-user-plus"></i></span>
+            <div>
+              <h4>Create Admin</h4>
+              <p>Provision new admin access with a clearer, more production-grade workflow.</p>
+            </div>
+            <a class="btn primary" href="#create-admin-panel">Create</a>
+          </article>
+          <article class="co-admin-utility-card">
+            <span class="co-admin-icon-badge"><i class="fa-solid fa-sliders"></i></span>
+            <div>
+              <h4>AI Tools Studio</h4>
+              <p>Control premium and free AI assistants, prompt templates, academic targeting, and portal visibility.</p>
+            </div>
+            <a class="btn primary" href="admin-ai-tools.html">Open</a>
+          </article>
+          <article class="co-admin-utility-card">
+            <span class="co-admin-icon-badge"><i class="fa-solid fa-tv"></i></span>
+            <div>
+              <h4>Dashboard Manager</h4>
+              <p>Customize student dashboards with sections, announcements, recommendations, and branch-based visibility controls.</p>
+            </div>
+            <a class="btn primary" href="admin-dashboard-mgmt.html">Manage</a>
+          </article>
+          <article class="co-admin-utility-card">
+            <span class="co-admin-icon-badge"><i class="fa-solid fa-flask-vial"></i></span>
+            <div>
+              <h4>Mock Test Studio</h4>
+              <p>Create branch-aware tests, configure sections and scoring, manage question banks, and monitor mock analytics.</p>
+            </div>
+            <a class="btn primary" href="admin-mock-tests.html">Open</a>
+          </article>
+          <article class="co-admin-utility-card">
+            <span class="co-admin-icon-badge"><i class="fa-solid fa-newspaper"></i></span>
+            <div>
+              <h4>Campus Feed Moderation</h4>
+              <p>Approve student posts, publish official updates, and maintain college-specific content quality.</p>
+            </div>
+            <a class="btn primary" href="admin-campus-feed.html">Open</a>
+          </article>
+          <article class="co-admin-utility-card">
+            <span class="co-admin-icon-badge"><i class="fa-solid fa-right-from-bracket"></i></span>
+            <div>
+              <h4>Logout</h4>
+              <p>Exit the admin environment securely after moderation, reporting, or publishing tasks.</p>
+            </div>
+            <a class="btn warn" href="admin-login.html">Logout</a>
+          </article>
+        </div>
+      </section>
+
+      <section class="co-admin-section">
+        <div class="co-admin-section-head">
+          <div>
+            <h3>Content Management</h3>
+            <p>Every admin feature module now follows one clean design system with better hierarchy, spacing, and action emphasis.</p>
+          </div>
+        </div>
+        <div class="co-admin-grid modules">
+          <a href="admin-notes.html" class="co-admin-module-card">
+            <span class="co-admin-icon-badge"><i class="fa-solid fa-file-lines"></i></span>
+            <div>
+              <h4>Notes Management</h4>
+              <p>Upload, edit, organize, and maintain note libraries by subject, chapter, format, and college context.</p>
+            </div>
+            <div class="co-admin-meta-row">
+              <span class="co-admin-mini-stat"><i class="fa-solid fa-layer-group"></i> Learning assets</span>
+              <span class="co-admin-badge">Open Module</span>
+            </div>
+          </a>
+
+          <a href="admin-papers.html" class="co-admin-module-card">
+            <span class="co-admin-icon-badge"><i class="fa-solid fa-file-pdf"></i></span>
+            <div>
+              <h4>Previous Year Papers</h4>
+              <p>Maintain exam archives with better structure for subject, year, and college-based academic distribution.</p>
+            </div>
+            <div class="co-admin-meta-row">
+              <span class="co-admin-mini-stat"><i class="fa-solid fa-clock-rotate-left"></i> Exam archive</span>
+              <span class="co-admin-badge">Open Module</span>
+            </div>
+          </a>
+
+          <a href="admin-materials.html" class="co-admin-module-card">
+            <span class="co-admin-icon-badge"><i class="fa-solid fa-folder-tree"></i></span>
+            <div>
+              <h4>Study Materials</h4>
+              <p>Centralize PDFs, references, tutorial packs, and academic resources into a cleaner operational pipeline.</p>
+            </div>
+            <div class="co-admin-meta-row">
+              <span class="co-admin-mini-stat"><i class="fa-solid fa-box-archive"></i> Resource library</span>
+              <span class="co-admin-badge">Open Module</span>
+            </div>
+          </a>
+
+          <a href="admin-quizzes.html" class="co-admin-module-card">
+            <span class="co-admin-icon-badge"><i class="fa-solid fa-clipboard-question"></i></span>
+            <div>
+              <h4>Quiz Management</h4>
+              <p>Create assessments, manage questions, and keep student practice content polished and consistent.</p>
+            </div>
+            <div class="co-admin-meta-row">
+              <span class="co-admin-mini-stat"><i class="fa-solid fa-list-check"></i> Assessment engine</span>
+              <span class="co-admin-badge">Open Module</span>
+            </div>
+          </a>
+
+          <a href="admin-certificates.html" class="co-admin-module-card">
+            <span class="co-admin-icon-badge"><i class="fa-solid fa-graduation-cap"></i></span>
+            <div>
+              <h4>Certificates</h4>
+              <p>Issue and verify certificates with better visibility into credentials, approvals, and achievement workflows.</p>
+            </div>
+            <div class="co-admin-meta-row">
+              <span class="co-admin-mini-stat"><i class="fa-solid fa-award"></i> Credential ops</span>
+              <span class="co-admin-badge">Open Module</span>
+            </div>
+          </a>
+
+          <a href="admin-roadmaps.html" class="co-admin-module-card">
+            <span class="co-admin-icon-badge"><i class="fa-solid fa-map-location-dot"></i></span>
+            <div>
+              <h4>Career Roadmaps</h4>
+              <p>Publish AI, Cloud, Data Science, and career-aligned path plans with stronger content presentation.</p>
+            </div>
+            <div class="co-admin-meta-row">
+              <span class="co-admin-mini-stat"><i class="fa-solid fa-route"></i> Guided progression</span>
+              <span class="co-admin-badge">Open Module</span>
+            </div>
+          </a>
+
+          <a href="admin-ai-tools.html" class="co-admin-module-card">
+            <span class="co-admin-icon-badge"><i class="fa-solid fa-sparkles"></i></span>
+            <div>
+              <h4>AI Tools</h4>
+              <p>Manage AI Notes Summary, Quiz Generator, Resume Builder, Flashcards, Doubt Solver, and other student-facing assistants.</p>
+            </div>
+            <div class="co-admin-meta-row">
+              <span class="co-admin-mini-stat"><i class="fa-solid fa-wand-magic-sparkles"></i> AI product ops</span>
+              <span class="co-admin-badge">Open Module</span>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <section class="co-admin-section">
+        <div class="co-admin-grid two">
+          <article class="co-admin-panel">
+            <div class="co-admin-section-head">
+              <div>
+                <h3>Platform Trends</h3>
+                <p>Student signup movement, revenue performance, and campus distribution in one analytics zone.</p>
+              </div>
+            </div>
+            <div class="co-admin-grid" style="grid-template-columns:1fr; gap:16px;">
+              <div class="co-admin-table-wrap" style="padding:16px; background:#fff;">
+                <canvas id="chartSignups" height="120"></canvas>
+              </div>
+              <div class="co-admin-table-wrap" style="padding:16px; background:#fff;">
+                <canvas id="chartRevenue" height="120"></canvas>
+              </div>
+            </div>
+          </article>
+
+          <article class="co-admin-panel">
+            <div class="co-admin-section-head">
+              <div>
+                <h3>System Health</h3>
+                <p>Polished status blocks to make the dashboard feel like a real operating console.</p>
+              </div>
+            </div>
+            <div class="co-admin-health-grid">
+              <article class="co-admin-health-card">
+                <span class="co-admin-status ok" id="adminAiOpsStatus"><i class="fa-solid fa-circle"></i> AI ops loading</span>
+                <strong id="adminAiOpsTitle">AI Operations</strong>
+                <p id="adminAiOpsDesc">Gathering AI usage and resource automation signals.</p>
+              </article>
+              <article class="co-admin-health-card">
+                <span class="co-admin-status info" id="adminConversionStatus"><i class="fa-solid fa-cloud-arrow-up"></i> Conversion intelligence</span>
+                <strong id="adminConversionTitle">Monetization Signal</strong>
+                <p id="adminConversionDesc">Preparing premium conversion and payment-risk indicators.</p>
+              </article>
+              <article class="co-admin-health-card">
+                <span class="co-admin-status warn" id="adminRetentionStatus"><i class="fa-solid fa-eye"></i> Retention watch</span>
+                <strong id="adminRetentionTitle">Retention Risk</strong>
+                <p id="adminRetentionDesc">Analyzing dormant learners and streak-recovery opportunities.</p>
+              </article>
+            </div>
+            <div class="co-admin-table-wrap" style="padding:16px; margin-top:16px; background:#fff;">
+              <canvas id="chartCollege" height="180"></canvas>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="co-admin-section">
+        <div class="co-admin-grid two">
+          <article class="co-admin-panel">
+            <div class="co-admin-section-head">
+              <div>
+                <h3>Student Pipeline</h3>
+                <p>Review subscription, XP, attempts, and score behavior in a cleaner admin table.</p>
+              </div>
+              <div class="co-admin-chip-row">
+                <select id="adminCollegeFilter" class="co-admin-chip" style="border:none; background:#fff;">
+                  <option value="">All Colleges</option>
+                  <option value="Chandigarh University Mohali">Chandigarh University Mohali</option>
+                  <option value="Chandigarh University UP">Chandigarh University UP</option>
+                </select>
+              </div>
+            </div>
+            <div class="co-admin-table-wrap">
+              <table class="co-admin-data-table">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>College</th>
+                    <th>Plan</th>
+                    <th>XP</th>
+                    <th>Quizzes</th>
+                    <th>Avg Score</th>
+                  </tr>
+                </thead>
+                <tbody id="adminStudentsBody">
+                  <tr><td colspan="6" class="co-admin-table-empty">Loading students...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="co-admin-panel">
+            <div class="co-admin-section-head">
+              <div>
+                <h3>Latest Feedback Summary</h3>
+                <p>Respond quickly to the latest student sentiment and issue reports.</p>
+              </div>
+            </div>
+            <div id="adminFeedbackList" class="co-admin-list">
+              <div class="co-admin-feedback-card">Loading feedback...</div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="co-admin-section">
+        <div class="co-admin-grid two">
+          <article class="co-admin-panel">
+            <div class="co-admin-section-head">
+              <div>
+                <h3>Recent Admin Activity + Intelligence Segments</h3>
+                <p>Operational feed plus AI-prioritized learner segments and automated resource generation.</p>
+              </div>
+            </div>
+            <div class="co-admin-list" id="adminActivityList">
+              <div class="co-admin-list-item">
+                <div>
+                  <p class="co-admin-kicker">Platform overview</p>
+                  <strong>Monitoring student activity and content health</strong>
+                  <p>Growth, premium adoption, academic assets, and feedback are consolidated into a single admin workflow.</p>
+                </div>
+                <span class="co-admin-status info">Live</span>
+              </div>
+            </div>
+            <div class="co-admin-section-head" style="margin-top:16px;">
+              <div>
+                <h4 style="margin:0;">Intelligence Segments</h4>
+                <p style="margin:6px 0 0;">At-risk, high-intent, and new-user segments generated from live behavior signals.</p>
+              </div>
+            </div>
+            <div class="co-admin-list" id="adminIntelligenceSegments">
+              <div class="co-admin-list-item">
+                <div>
+                  <p class="co-admin-kicker">Segment loading</p>
+                  <strong>Computing segment recommendations...</strong>
+                  <p>Segments will appear after intelligence APIs respond.</p>
+                </div>
+                <span class="co-admin-status info">Queued</span>
+              </div>
+            </div>
+            <div class="actions" style="margin-top:14px;">
+              <button class="btn primary" id="adminGenerateResourcesBtn" type="button"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate AI Resource Pack</button>
+            </div>
+            <p class="muted" id="adminGenerateResourcesStatus" style="margin-top:8px;">Auto-generation is ready.</p>
+          </article>
+
+          <article class="co-admin-panel" id="create-admin-panel">
+            <div class="co-admin-section-head">
+              <div>
+                <h3>Create Admin User</h3>
+                <p>Provision new admin operators with a more polished and trustworthy form experience.</p>
+              </div>
+            </div>
+            <form id="createAdminForm" class="co-admin-form">
+              <div class="co-admin-form-grid">
+                <div class="co-admin-field">
+                  <label for="newAdminName">Full Name</label>
+                  <input id="newAdminName" required placeholder="Enter administrator name" />
+                </div>
+                <div class="co-admin-field">
+                  <label for="newAdminEmail">Email</label>
+                  <input id="newAdminEmail" type="email" required placeholder="admin@collegeos.in" />
+                </div>
+                <div class="co-admin-field">
+                  <label for="newAdminPassword">Password</label>
+                  <input id="newAdminPassword" type="password" required placeholder="Create a secure password" />
+                </div>
+              </div>
+              <div class="actions" style="margin-top:16px;">
+                <button class="btn primary" type="submit"><i class="fa-solid fa-user-shield"></i> Create Admin</button>
+              </div>
+              <p class="muted" id="createAdminStatus" style="margin-top:12px;"></p>
+            </form>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="assets/vendor/chartjs/chart.umd.min.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/admin.js"></script>
+</body>
+</html>
+
+
+
+

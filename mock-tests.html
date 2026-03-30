@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mock Tests - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .mock-hero {
+      background: linear-gradient(135deg, #145a7e 0%, #0f7b6c 50%, #2f6fed 100%);
+      color: #fff;
+      border-radius: 24px;
+      padding: 48px;
+      display: grid;
+      gap: 14px;
+      box-shadow: 0 32px 64px rgba(15, 123, 108, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mock-hero::after {
+      content: '';
+      position: absolute;
+      inset: -20% auto auto 70%;
+      width: 320px;
+      height: 320px;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.24), transparent 68%);
+      pointer-events: none;
+      filter: blur(1px);
+    }
+
+    .mock-hero h1 {
+      margin: 0 0 8px 0;
+      font-size: clamp(2.2rem, 5vw, 3.2rem);
+      line-height: 1.1;
+      font-weight: 800;
+      position: relative;
+      z-index: 1;
+      letter-spacing: -0.02em;
+    }
+
+    .mock-hero h1 i {
+      margin-right: 12px;
+      opacity: 0.95;
+    }
+
+    .mock-hero > p {
+      margin: 0;
+      font-size: 1.05rem;
+      opacity: 0.96;
+      max-width: 75ch;
+      line-height: 1.65;
+      position: relative;
+      z-index: 1;
+      font-weight: 500;
+    }
+
+    .mock-hero > p:last-of-type {
+      font-size: 0.98rem;
+      opacity: 0.92;
+      line-height: 1.6;
+    }
+
+    .mock-kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .mock-kpi {
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      border-radius: 18px;
+      padding: 20px 16px;
+      backdrop-filter: blur(12px);
+      text-align: center;
+      transition: all 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      cursor: pointer;
+    }
+
+    .mock-kpi::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+      opacity: 0;
+      transition: opacity 200ms ease;
+    }
+
+    .mock-kpi:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 24px 56px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      background: rgba(255, 255, 255, 0.98);
+      border-color: rgba(255, 255, 255, 1);
+    }
+
+    .mock-kpi:hover::before {
+      opacity: 1;
+    }
+
+    .mock-kpi label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      opacity: 0.72;
+      display: block;
+      margin-bottom: 10px;
+      font-weight: 700;
+      color: rgba(0, 0, 0, 0.6);
+    }
+
+    .mock-kpi-icon {
+      font-size: 1.8rem;
+      margin-bottom: 8px;
+      display: block;
+      opacity: 0.85;
+      transition: transform 200ms ease, opacity 200ms ease, color 200ms ease;
+    }
+
+    .mock-kpi:nth-child(1) .mock-kpi-icon { color: #0f7b6c; }
+    .mock-kpi:nth-child(2) .mock-kpi-icon { color: #145a7e; }
+    .mock-kpi:nth-child(3) .mock-kpi-icon { color: #2f6fed; }
+    .mock-kpi:nth-child(4) .mock-kpi-icon { color: #1f7f55; }
+    .mock-kpi:nth-child(5) .mock-kpi-icon { color: #0f766e; }
+    .mock-kpi:nth-child(6) .mock-kpi-icon { color: #0d5a66; }
+
+    .mock-kpi:hover .mock-kpi-icon {
+      transform: scale(1.12) rotate(-5deg);
+      opacity: 1;
+    }
+
+    .mock-kpi strong {
+      display: block;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #0a0e27;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .mock-kpi-unit {
+      font-size: 0.72rem;
+      color: rgba(0, 0, 0, 0.5);
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .mock-layout {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .mock-toolbar {
+      display: grid;
+      grid-template-columns: 1.5fr repeat(2, minmax(0, 1fr));
+      gap: 0.65rem;
+    }
+
+    .mock-toolbar input,
+    .mock-toolbar select {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      padding: 0.68rem 0.8rem;
+      font: inherit;
+      background: #fff;
+    }
+
+    .category-grid,
+    .recommended-grid,
+    .test-grid {
+      display: grid;
+      gap: 0.85rem;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+
+    .category-card,
+    .recommend-card,
+    .mock-test-card {
+      background: var(--surface);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 0.85rem;
+    }
+
+    .category-card {
+      display: grid;
+      gap: 0.55rem;
+      grid-template-columns: 44px 1fr auto;
+      align-items: center;
+    }
+
+    .cat-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #0f7b6c;
+      background: linear-gradient(180deg, #ebfbf7, #dff5ef);
+      border: 1px solid #bee7dc;
+    }
+
+    .mock-test-card {
+      display: grid;
+      gap: 0.75rem;
+      transition: transform 140ms ease, box-shadow 140ms ease;
+    }
+
+    .mock-test-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    .mock-test-card.locked {
+      border-color: #e7c7a4;
+      background: linear-gradient(180deg, #fffef9, #fff8ef);
+    }
+
+    .mock-test-card header {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.7rem;
+      align-items: flex-start;
+    }
+
+    .mock-test-card h4 {
+      margin: 0;
+      font-size: 1.05rem;
+    }
+
+    .mock-test-card p {
+      margin: 0.28rem 0 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .card-badges {
+      display: inline-flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .badge {
+      border-radius: 999px;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      padding: 0.2rem 0.55rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      background: #fff;
+      color: #345;
+    }
+
+    .badge.difficulty.easy { background: #eaf8ef; color: #1f7f55; border-color: #a6d7b7; }
+    .badge.difficulty.medium { background: #fff4df; color: #9a6506; border-color: #ebcf98; }
+    .badge.difficulty.hard { background: #fdeced; color: #a92d3a; border-color: #efbec5; }
+
+    .card-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.48rem;
+    }
+
+    .card-metrics > div,
+    .perf-snippet > div {
+      border-radius: 10px;
+      border: 1px solid rgba(0, 0, 0, 0.09);
+      background: #fff;
+      padding: 0.48rem;
+    }
+
+    .card-metrics label {
+      display: block;
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      font-weight: 700;
+    }
+
+    .card-metrics strong,
+    .perf-snippet strong {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.94rem;
+    }
+
+    .perf-snippet {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.48rem;
+    }
+
+    .lock-banner {
+      border-radius: 10px;
+      border: 1px solid #efcf9a;
+      background: #fff7e8;
+      padding: 0.56rem;
+      color: #8b5202;
+      font-size: 0.88rem;
+    }
+
+    .lock-banner a { color: #9a4f00; font-weight: 700; }
+
+    .card-actions {
+      display: flex;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .btn.disabled {
+      pointer-events: none;
+      opacity: 0.6;
+    }
+
+    .grid-two {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+    }
+
+    .table-wrap table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .table-wrap th,
+    .table-wrap td {
+      padding: 0.62rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+      text-align: left;
+      font-size: 0.92rem;
+    }
+
+    .table-wrap th {
+      background: #f5f8fc;
+      font-size: 0.79rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: #587082;
+    }
+
+    .table-empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 1rem;
+    }
+
+    .ai-grid {
+      display: grid;
+      gap: 0.65rem;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .ai-block {
+      border-radius: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.09);
+      background: linear-gradient(180deg, #fff, #f5faff);
+      padding: 0.75rem;
+    }
+
+    .ai-block h4 { margin: 0; font-size: 0.95rem; }
+    .ai-block p { margin: 0.4rem 0 0; color: var(--muted); }
+
+    .empty-state {
+      border: 1px dashed rgba(0, 0, 0, 0.14);
+      border-radius: 12px;
+      padding: 1rem;
+      text-align: center;
+      color: var(--muted);
+      background: #fff;
+    }
+
+    @media (max-width: 1100px) {
+      .mock-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .grid-two { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 780px) {
+      .mock-toolbar { grid-template-columns: 1fr; }
+      .card-metrics, .perf-snippet { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .mock-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 480px) {
+      .mock-kpis { grid-template-columns: 1fr; gap: 12px; }
+      .mock-kpi {
+        padding: 16px 14px;
+      }
+      .mock-kpi strong {
+        font-size: 1.5rem;
+      }
+      .mock-kpi-icon {
+        font-size: 1.4rem;
+        margin-bottom: 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <section class="mock-layout" id="mockDashboardRoot">
+      <section class="mock-hero">
+        <h1><i class="fa-solid fa-clipboard-check"></i> Mock Tests & Exams</h1>
+        <p>Simulate real exam conditions, track your percentile growth, and master weak topics through comprehensive practice tests.</p>
+        <p style="font-size: 0.95rem; opacity: 0.9;"><i class="fa-solid fa-fire"></i> Consistent practice builds confidence. Test yourself today to rank higher tomorrow.</p>
+        <div class="mock-kpis">
+          <article class="mock-kpi">
+            <span class="mock-kpi-icon"><i class="fa-solid fa-flask-vial"></i></span>
+            <label>Tests Attempted</label>
+            <strong id="statAttemptedTests">0</strong>
+          </article>
+          <article class="mock-kpi">
+            <span class="mock-kpi-icon"><i class="fa-solid fa-star"></i></span>
+            <label>Average Score</label>
+            <strong id="statAverageScore">0</strong><span class="mock-kpi-unit">/100</span>
+          </article>
+          <article class="mock-kpi">
+            <span class="mock-kpi-icon"><i class="fa-solid fa-bullseye"></i></span>
+            <label>Accuracy</label>
+            <strong id="statAccuracy">0%</strong>
+          </article>
+          <article class="mock-kpi">
+            <span class="mock-kpi-icon"><i class="fa-solid fa-medal"></i></span>
+            <label>Best Rank</label>
+            <strong id="statBestRank">--</strong>
+          </article>
+          <article class="mock-kpi">
+            <span class="mock-kpi-icon"><i class="fa-solid fa-chart-line"></i></span>
+            <label>Percentile</label>
+            <strong id="statPercentile">0%</strong>
+          </article>
+          <article class="mock-kpi">
+            <span class="mock-kpi-icon"><i class="fa-solid fa-hourglass-end"></i></span>
+            <label>Practice Hours</label>
+            <strong id="statPracticeHours">0</strong><span class="mock-kpi-unit">hrs</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="mock-toolbar">
+          <input id="mockSearchInput" type="search" placeholder="Search by title, subject, topic" />
+          <select id="mockCategoryFilter">
+            <option value="all">All Categories</option>
+            <option value="grand">Grand Tests</option>
+            <option value="practice">Practice Tests</option>
+            <option value="topic">Topic Tests</option>
+            <option value="previous">Previous Year Tests</option>
+            <option value="quick">Quick Tests</option>
+          </select>
+          <select id="mockAccessFilter">
+            <option value="all">All Access Types</option>
+            <option value="free">Free</option>
+            <option value="premium">Premium</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>Test Categories</h3>
+        <div class="category-grid" id="mockCategoryGrid"></div>
+      </section>
+
+      <section class="card">
+        <h3>Recommended Tests</h3>
+        <div class="recommended-grid" id="recommendedTestsGrid"></div>
+      </section>
+
+      <section class="card">
+        <h3>Available Mock Tests</h3>
+        <div class="test-grid" id="availableTestsGrid"></div>
+      </section>
+
+      <section class="grid-two">
+        <section class="card">
+          <h3>Recent Attempts</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Test</th><th>Score</th><th>Rank</th><th>Accuracy</th><th>Date</th><th>Time Spent</th></tr>
+              </thead>
+              <tbody id="recentAttemptsTableBody"><tr><td colspan="6" class="table-empty">Loading attempts...</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="card">
+          <h3>Top Performers</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Rank</th><th>Student</th><th>Branch</th><th>Avg Score</th><th>Percentile</th></tr>
+              </thead>
+              <tbody id="mockLeaderboardBody"><tr><td colspan="5" class="table-empty">Loading leaderboard...</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section class="card">
+        <h3>AI Insights</h3>
+        <div class="ai-grid" id="mockAiInsights"></div>
+      </section>
+    </section>
+  </template>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/mock-tests.js"></script>
+</body>
+</html>

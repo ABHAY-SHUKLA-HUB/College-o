@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leaderboards - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .lb-toolbar {
+      display: grid;
+      gap: 0.9rem;
+      margin-bottom: 1rem;
+    }
+
+    .lb-search {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      background: #fff;
+      border-radius: 12px;
+      padding: 0.7rem 0.8rem;
+    }
+
+    .lb-search input {
+      border: 0;
+      outline: none;
+      width: 100%;
+      font: inherit;
+      background: transparent;
+    }
+
+    .lb-row {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .lb-chip {
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      background: #fff;
+      color: var(--muted);
+      border-radius: 999px;
+      font-weight: 700;
+      padding: 0.42rem 0.8rem;
+      cursor: pointer;
+      transition: all 120ms ease;
+    }
+
+    .lb-chip:hover {
+      transform: translateY(-1px);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .lb-chip.active {
+      color: #fff;
+      border-color: var(--primary);
+      background: var(--primary);
+      box-shadow: 0 8px 18px rgba(15, 123, 108, 0.2);
+    }
+
+    .podium {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .podium-card {
+      border-radius: 14px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow);
+      background: linear-gradient(180deg, #fff, #f8fbff);
+      padding: 0.95rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .podium-card.first {
+      background: linear-gradient(180deg, #fff8e7, #fff2d5);
+      transform: translateY(-4px);
+    }
+
+    .podium-card.second {
+      background: linear-gradient(180deg, #f6f8fc, #edf1f6);
+    }
+
+    .podium-card.third {
+      background: linear-gradient(180deg, #fdf5ef, #f8eadf);
+    }
+
+    .podium-medal {
+      font-size: 1.35rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.9rem;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+      flex-shrink: 0;
+    }
+
+    .podium .avatar {
+      width: 56px;
+      height: 56px;
+      font-size: 1.05rem;
+      margin: 0.35rem auto;
+    }
+
+    .name-cell {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .rank-medal {
+      margin-right: 0.35rem;
+    }
+
+    .leaderboard-table-wrap {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      background: #fff;
+    }
+
+    .leaderboard-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 920px;
+    }
+
+    .leaderboard-table th,
+    .leaderboard-table td {
+      padding: 0.8rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      text-align: left;
+    }
+
+    .leaderboard-table tbody tr:hover {
+      background: #f7fbff;
+    }
+
+    .leaderboard-table tr.current-user {
+      background: #e9f8ef;
+      box-shadow: inset 4px 0 0 #1f7f55;
+    }
+
+    .small-pill {
+      padding: 0.24rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      font-size: 0.78rem;
+      font-weight: 700;
+      background: #fff;
+      color: var(--muted);
+    }
+
+    @media (max-width: 860px) {
+      .podium {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <section class="hero"><h1 data-page-title>Leaderboards</h1><p>College, city, and India rankings by XP and mock test scores.</p></section>
+
+    <section class="card lb-toolbar">
+      <div class="lb-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input id="leaderboardSearchInput" placeholder="Search student by name" />
+      </div>
+
+      <div class="lb-row" id="leaderboardTimeFilters">
+        <button class="lb-chip active" data-timeframe="all">All Time</button>
+        <button class="lb-chip" data-timeframe="month">This Month</button>
+        <button class="lb-chip" data-timeframe="week">This Week</button>
+        <button class="lb-chip" data-timeframe="today">Today</button>
+      </div>
+
+      <div class="lb-row" id="leaderboardScopeFilters">
+        <button class="lb-chip active" data-scope="college">College Ranking</button>
+        <button class="lb-chip" data-scope="city">City Ranking</button>
+        <button class="lb-chip" data-scope="india">India Ranking</button>
+      </div>
+    </section>
+
+    <section class="podium" id="leaderboardPodium">
+      <article class="podium-card second"><div class="muted">Loading podium...</div></article>
+      <article class="podium-card first"><div class="muted">Loading podium...</div></article>
+      <article class="podium-card third"><div class="muted">Loading podium...</div></article>
+    </section>
+
+    <section class="card">
+      <div class="leaderboard-table-wrap">
+        <table class="leaderboard-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Student</th>
+              <th>College</th>
+              <th>City</th>
+              <th>XP</th>
+              <th>Study Streak</th>
+              <th>Mock Tests</th>
+              <th>Certificates</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboardBody"><tr><td colspan="8">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </template>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/page-data.js"></script>
+</body>
+</html>
+
+
+

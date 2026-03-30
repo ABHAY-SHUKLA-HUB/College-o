@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Academic Content Management - College OS Admin</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    co-admin-shell { display: grid; }
+    co-admin-aside { background: #fff; border-right: 1px solid #e0e7ff; }
+    co-admin-nav { padding: 0; }
+    co-admin-main { padding: 20px; }
+
+    .admin-nav-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      color: #475569;
+      text-decoration: none;
+      font-size: 14px;
+      border-left: 3px solid transparent;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .admin-nav-link:hover {
+      background: #f8fafc;
+      color: #0f172a;
+    }
+
+    .admin-nav-link.active {
+      background: #eef4ff;
+      color: #3b82f6;
+      border-left-color: #3b82f6;
+    }
+
+    .admin-nav-section-title {
+      padding: 14px 16px;
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #94a3b8;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+    }
+
+    .page-header {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .page-header h1 {
+      margin: 0 0 8px 0;
+      font-size: 28px;
+      color: #0f172a;
+    }
+
+    .page-header p {
+      margin: 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    .content-domain-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #f1f5f9;
+    }
+
+    .content-domain-header h2 {
+      margin: 0;
+      font-size: 20px;
+      color: #0f172a;
+      flex: 1;
+    }
+
+    .content-domain-header .domain-badge {
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .tab-nav {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .tab-btn {
+      padding: 12px 16px;
+      border: none;
+      background: transparent;
+      color: #64748b;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      color: #0f172a;
+    }
+
+    .tab-btn.active {
+      color: #3b82f6;
+      border-bottom-color: #3b82f6;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-box {
+      background: white;
+      padding: 16px;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .stat-box .label {
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .stat-box .value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .filter-controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .filter-controls > * {
+      flex: 0 1 auto;
+    }
+
+    .filter-controls input,
+    .filter-controls select {
+      padding: 8px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .content-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    .content-table th {
+      background: #f8fafc;
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 12px;
+      color: #64748b;
+      font-weight: 700;
+      text-transform: uppercase;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .content-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 14px;
+    }
+
+    .content-table tr:hover {
+      background: #f8fafc;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .status-approved { background: #d1fae5; color: #065f46; }
+    .status-rejected { background: #fee2e2; color: #991b1b; }
+    .status-published { background: #dbeafe; color: #1e40af; }
+
+    .action-menu {
+      display: flex;
+      gap: 6px;
+    }
+
+    .action-btn {
+      padding: 6px 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .action-btn-approve {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .action-btn-reject {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .action-btn-view {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .loading-spinner {
+      text-align: center;
+      padding: 40px;
+      color: #94a3b8;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #94a3b8;
+    }
+
+    .moderation-card {
+      background: white;
+      padding: 16px;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      margin-bottom: 16px;
+    }
+
+    .moderation-card .contributor-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .moderation-card .contributor-name {
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .moderation-card .contributor-email {
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .moderation-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .moderation-actions button {
+      flex: 1;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-approve {
+      background: #10b981;
+      color: white;
+    }
+
+    .btn-reject {
+      background: #ef4444;
+      color: white;
+    }
+
+    .message {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .message.success {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .message.error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+  </style>
+</head>
+<body>
+  <co-admin-shell data-page="admin-academics">
+    <co-admin-aside>
+      <co-admin-navigation>
+        <div class="admin-nav-section-title">Academic Content</div>
+        <a href="#official" class="admin-nav-link active" data-section="official">
+          <i class="fa-solid fa-book"></i> Official Content
+        </a>
+        <a href="#official-notes" class="admin-nav-link" data-section="official-notes">
+          <i class="fa-regular fa-file-lines"></i> Official Notes
+        </a>
+        <a href="#official-papers" class="admin-nav-link" data-section="official-papers">
+          <i class="fa-solid fa-file-pdf"></i> Official Papers
+        </a>
+        <a href="#official-materials" class="admin-nav-link" data-section="official-materials">
+          <i class="fa-solid fa-folder"></i> Official Materials
+        </a>
+
+        <div class="admin-nav-section-title" style="margin-top: 20px;">Student Contributions</div>
+        <a href="#contributions" class="admin-nav-link" data-section="contributions">
+          <i class="fa-solid fa-inbox"></i> Moderation Queue
+        </a>
+        <a href="#contrib-notes" class="admin-nav-link" data-section="contrib-notes">
+          <i class="fa-regular fa-note-sticky"></i> Notes Submissions
+        </a>
+        <a href="#contrib-papers" class="admin-nav-link" data-section="contrib-papers">
+          <i class="fa-solid fa-graduation-cap"></i> Paper Submissions
+        </a>
+        <a href="#contrib-materials" class="admin-nav-link" data-section="contrib-materials">
+          <i class="fa-solid fa-cube"></i> Material Submissions
+        </a>
+
+        <div class="admin-nav-section-title" style="margin-top: 20px;">Governance</div>
+        <a href="#governance" class="admin-nav-link" data-section="governance">
+          <i class="fa-solid fa-gavel"></i> Moderation Rules
+        </a>
+        <a href="#analytics" class="admin-nav-link" data-section="analytics">
+          <i class="fa-solid fa-chart-line"></i> Content Analytics
+        </a>
+      </co-admin-navigation>
+    </co-admin-aside>
+
+    <co-admin-main>
+      <div class="page-header">
+        <h1>Academic Content Management</h1>
+        <p>Unified governance of official content and student contributions</p>
+      </div>
+
+      <div id="message-container"></div>
+
+      <!-- OFFICIAL CONTENT SECTION -->
+      <div id="official" class="section" style="display: none;">
+        <div class="content-domain-header">
+          <h2>Official Content Library</h2>
+          <span class="domain-badge">ADMIN UPLOADED</span>
+        </div>
+        <p style="color: #64748b; margin-bottom: 20px;">Manage official academic resources uploaded by admins</p>
+
+        <div class="stat-grid">
+          <div class="stat-box">
+            <div class="label">Official Notes</div>
+            <div class="value" id="stat-official-notes">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="label">Official Papers</div>
+            <div class="value" id="stat-official-papers">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="label">Official Materials</div>
+            <div class="value" id="stat-official-materials">0</div>
+          </div>
+        </div>
+
+        <div class="tab-nav">
+          <button class="tab-btn active" data-tab="official-notes-tab">Notes</button>
+          <button class="tab-btn" data-tab="official-papers-tab">Papers</button>
+          <button class="tab-btn" data-tab="official-materials-tab">Materials</button>
+        </div>
+
+        <!-- Official Notes Tab -->
+        <div id="official-notes-tab" class="tab-content active">
+          <div class="filter-controls">
+            <input type="text" id="search-official-notes" placeholder="Search by subject or chapter..." />
+            <select id="filter-official-branch">
+              <option value="">All Branches</option>
+            </select>
+            <button onclick="loadOfficialNotes()" class="btn" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer;">Load</button>
+          </div>
+          <div id="official-notes-container" class="loading-spinner">Loading...</div>
+        </div>
+
+        <!-- Official Papers Tab -->
+        <div id="official-papers-tab" class="tab-content" style="display: none;">
+          <div class="filter-controls">
+            <input type="text" id="search-official-papers" placeholder="Search by exam name..." />
+            <input type="number" id="filter-year" placeholder="Year" min="2000" max="2100" />
+            <button onclick="loadOfficialPapers()" class="btn" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer;">Load</button>
+          </div>
+          <div id="official-papers-container" class="loading-spinner">Loading...</div>
+        </div>
+
+        <!-- Official Materials Tab -->
+        <div id="official-materials-tab" class="tab-content" style="display: none;">
+          <div class="filter-controls">
+            <input type="text" id="search-official-materials" placeholder="Search by title..." />
+            <select id="filter-material-category">
+              <option value="">All Categories</option>
+            </select>
+            <button onclick="loadOfficialMaterials()" class="btn" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer;">Load</button>
+          </div>
+          <div id="official-materials-container" class="loading-spinner">Loading...</div>
+        </div>
+      </div>
+
+      <!-- STUDENT CONTRIBUTIONS SECTION -->
+      <div id="contributions" class="section" style="display: none;">
+        <div class="content-domain-header">
+          <h2>Moderation Queue</h2>
+          <span class="domain-badge" style="background: #fef3c7; color: #92400e;">PENDING APPROVAL</span>
+        </div>
+        <p style="color: #64748b; margin-bottom: 20px;">Review and moderate student-submitted academic content</p>
+
+        <div class="stat-grid">
+          <div class="stat-box">
+            <div class="label">Pending Notes</div>
+            <div class="value" id="stat-pending-notes">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="label">Pending Papers</div>
+            <div class="value" id="stat-pending-papers">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="label">Pending Materials</div>
+            <div class="value" id="stat-pending-materials">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="label">Total Submissions</div>
+            <div class="value" id="stat-total-submissions">0</div>
+          </div>
+        </div>
+
+        <div id="moderation-queue-container" class="loading-spinner">Loading moderation queue...</div>
+      </div>
+
+      <!-- CONTRIBUTOR NOTES -->
+      <div id="contrib-notes" class="section" style="display: none;">
+        <div class="content-domain-header">
+          <h2>Student Notes Submissions</h2>
+        </div>
+        <div class="filter-controls">
+          <select id="filter-notes-status">
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <button onclick="loadStudentNotes()" class="btn" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer;">Load</button>
+        </div>
+        <div id="student-notes-container" class="loading-spinner">Loading...</div>
+      </div>
+
+      <!-- CONTRIBUTOR PAPERS -->
+      <div id="contrib-papers" class="section" style="display: none;">
+        <div class="content-domain-header">
+          <h2>Student Paper Submissions</h2>
+        </div>
+        <div class="filter-controls">
+          <select id="filter-papers-status">
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <button onclick="loadStudentPapers()" class="btn" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer;">Load</button>
+        </div>
+        <div id="student-papers-container" class="loading-spinner">Loading...</div>
+      </div>
+
+      <!-- CONTRIBUTOR MATERIALS -->
+      <div id="contrib-materials" class="section" style="display: none;">
+        <div class="content-domain-header">
+          <h2>Student Material Submissions</h2>
+        </div>
+        <div class="filter-controls">
+          <select id="filter-materials-status">
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <button onclick="loadStudentMaterials()" class="btn" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer;">Load</button>
+        </div>
+        <div id="student-materials-container" class="loading-spinner">Loading...</div>
+      </div>
+
+      <!-- GOVERNANCE -->
+      <div id="governance" class="section" style="display: none;">
+        <div class="content-domain-header">
+          <h2>Moderation Governance</h2>
+        </div>
+        <div style="background: white; padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0;">
+          <p style="color: #64748b;">Moderation policies and contribution governance settings.</p>
+          <p style="color: #64748b;">This section manages rules for student contribution approvals, quality thresholds, and reward systems.</p>
+        </div>
+      </div>
+
+      <!-- ANALYTICS -->
+      <div id="analytics" class="section" style="display: none;">
+        <div class="content-domain-header">
+          <h2>Content Analytics</h2>
+        </div>
+        <div class="stat-grid">
+          <div class="stat-box">
+            <div class="label">Official Content</div>
+            <div class="value" id="stat-official-total">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="label">Student Contributions</div>
+            <div class="value" id="stat-student-total">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="label">Approval Rate</div>
+            <div class="value" id="stat-approval-rate">0%</div>
+          </div>
+        </div>
+        <div id="analytics-details" style="background: white; padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0;">
+          <p style="color: #64748b;">Detailed analytics comparing official vs student-contributed content performance.</p>
+        </div>
+      </div>
+
+    </co-admin-main>
+  </co-admin-shell>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    // Section Navigation
+    document.querySelectorAll('.admin-nav-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const section = link.getAttribute('data-section');
+        document.querySelectorAll('.admin-nav-link').forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+        document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+        document.getElementById(section).style.display = 'block';
+      });
+    });
+
+    // Tab Navigation
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const parent = btn.parentElement;
+        parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tabId = btn.getAttribute('data-tab');
+        parent.nextElementSibling?.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+        parent.parentElement?.querySelector(`#${tabId}`)?.style.remove();
+        parent.parentElement?.querySelector(`#${tabId}`)?.style.display = 'block';
+      });
+    });
+
+    // Initialize first section
+    document.getElementById('official').style.display = 'block';
+  </script>
+</body>
+</html>

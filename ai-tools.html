@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>College OS - AI Tools</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .ai-hero {
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at top right, rgba(255,255,255,0.18), transparent 32%),
+        linear-gradient(135deg, #0f172a 0%, #1d4ed8 50%, #0f766e 100%);
+      color: #fff;
+      padding: 28px;
+      border-radius: 24px;
+      box-shadow: 0 24px 50px rgba(15, 23, 42, 0.22);
+      margin-bottom: 22px;
+    }
+
+    .ai-hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.9fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .ai-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.18);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .ai-hero h1 {
+      margin: 0 0 10px;
+      font-size: clamp(2rem, 4vw, 3rem);
+      line-height: 1.05;
+    }
+
+    .ai-hero p {
+      margin: 0 0 18px;
+      max-width: 60ch;
+      color: rgba(255,255,255,0.85);
+    }
+
+    .ai-chip-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .ai-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.1);
+      font-size: 13px;
+      color: #fff;
+    }
+
+    .ai-hero-side {
+      display: grid;
+      gap: 12px;
+    }
+
+    .ai-glass-card {
+      border-radius: 20px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.16);
+      padding: 18px;
+      backdrop-filter: blur(10px);
+      min-height: 0;
+    }
+
+    .ai-glass-card h3,
+    .ai-glass-card p {
+      margin: 0;
+    }
+
+    .ai-glass-card h3 {
+      font-size: 1rem;
+      margin-bottom: 8px;
+    }
+
+    .ai-glass-card p {
+      color: rgba(255,255,255,0.84);
+      font-size: 0.95rem;
+      line-height: 1.55;
+    }
+
+    .ai-module-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(360px, 1.15fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .ai-toolbar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .ai-toolbar input,
+    .ai-toolbar select,
+    .ai-workbench textarea,
+    .ai-workbench input {
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      background: rgba(255,255,255,0.95);
+      border-radius: 14px;
+      padding: 11px 14px;
+      font: inherit;
+      color: inherit;
+    }
+
+    .ai-toolbar input {
+      min-width: 240px;
+      flex: 1;
+    }
+
+    .ai-tools-grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .ai-tool-card {
+      position: relative;
+      min-height: 220px;
+      display: flex;
+      flex-direction: column;
+      border-radius: 22px;
+      padding: 18px;
+      border: 1px solid rgba(15,23,42,0.08);
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.95));
+      box-shadow: 0 14px 26px rgba(15, 23, 42, 0.08);
+      transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+      cursor: pointer;
+    }
+
+    .ai-tool-card:hover,
+    .ai-tool-card.active {
+      transform: translateY(-3px);
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+      border-color: rgba(37, 99, 235, 0.24);
+    }
+
+    .ai-tool-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .ai-tool-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1.25rem;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.28);
+    }
+
+    .ai-badge {
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .ai-badge.premium {
+      background: #fff7ed;
+      color: #c2410c;
+    }
+
+    .ai-badge.locked {
+      background: #fef2f2;
+      color: #b91c1c;
+    }
+
+    .ai-tool-card h3 {
+      margin: 0 0 6px;
+      font-size: 1.05rem;
+    }
+
+    .ai-tool-card p {
+      margin: 0;
+      color: var(--text-secondary, #475569);
+      line-height: 1.55;
+      font-size: 0.94rem;
+    }
+
+    .ai-tool-benefits {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: auto;
+      padding-top: 14px;
+    }
+
+    .ai-tool-benefits span {
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.06);
+      color: #334155;
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+
+    .ai-workbench {
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.95));
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+      padding: 20px;
+      position: sticky;
+      top: 18px;
+    }
+
+    .ai-workbench-header {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .ai-workbench-header h2 {
+      margin: 0 0 6px;
+      font-size: 1.4rem;
+    }
+
+    .ai-workbench-header p {
+      margin: 0;
+      color: var(--text-secondary, #475569);
+      line-height: 1.55;
+    }
+
+    .ai-form-grid {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .ai-form-grid label {
+      display: grid;
+      gap: 8px;
+      color: var(--text-primary, #0f172a);
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .ai-form-grid textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .ai-workbench-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .ai-output {
+      border-radius: 18px;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      background: #fff;
+      padding: 18px;
+      min-height: 220px;
+    }
+
+    .ai-output h3 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+
+    .ai-output p,
+    .ai-output li,
+    .ai-output pre {
+      color: var(--text-secondary, #475569);
+      line-height: 1.6;
+      margin-top: 0;
+    }
+
+    .ai-output ul,
+    .ai-output ol {
+      padding-left: 18px;
+      margin: 10px 0 0;
+    }
+
+    .ai-empty {
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--text-secondary, #64748b);
+    }
+
+    .ai-empty i {
+      font-size: 2rem;
+      margin-bottom: 10px;
+      color: #94a3b8;
+    }
+
+    .ai-section-card {
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+      padding: 20px;
+      margin-top: 18px;
+    }
+
+    .ai-upgrade {
+      border-radius: 18px;
+      padding: 16px;
+      background: linear-gradient(135deg, #fff7ed, #ffedd5);
+      border: 1px solid #fdba74;
+      color: #9a3412;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 1100px) {
+      .ai-hero-grid,
+      .ai-module-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .ai-workbench {
+        position: static;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <section class="ai-hero">
+      <div class="ai-hero-grid">
+        <div>
+          <div class="ai-kicker"><i class="fa-solid fa-sparkles"></i><span>AI Productivity Layer</span></div>
+          <h1 data-page-title>AI Tools for Learning and Career Growth</h1>
+          <p id="aiHeroSubtitle">Use branch-aware tools to revise faster, plan better, and prepare for placements with stronger direction.</p>
+          <div class="ai-chip-row" id="aiHeroChips">
+            <span class="ai-chip"><i class="fa-solid fa-brain"></i> Personalized by profile</span>
+            <span class="ai-chip"><i class="fa-solid fa-route"></i> Roadmap-aware workflows</span>
+            <span class="ai-chip"><i class="fa-solid fa-crown"></i> Premium tool controls</span>
+          </div>
+        </div>
+        <div class="ai-hero-side">
+          <article class="ai-glass-card">
+            <h3>What you get</h3>
+            <p>Notes summaries, flashcards, quiz ideas, resume bullet generation, career suggestions, study plans, interview question sets, and roadmap recommendations.</p>
+          </article>
+          <article class="ai-glass-card">
+            <h3 id="aiMembershipTitle">Membership aware</h3>
+            <p id="aiMembershipSubtitle">Free users can access selected tools. Premium unlocks the full AI success suite.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="ai-module-grid">
+      <div>
+        <div class="ai-toolbar">
+          <input id="aiToolSearch" type="search" placeholder="Search AI tools by name or use case" />
+          <select id="aiToolFilter">
+            <option value="all">All tools</option>
+            <option value="free">Free tools</option>
+            <option value="premium">Premium tools</option>
+            <option value="featured">Featured</option>
+          </select>
+        </div>
+        <div class="ai-tools-grid" id="aiToolsGrid"></div>
+      </div>
+
+      <aside class="ai-workbench">
+        <div id="aiUpgradeBanner" class="ai-upgrade" style="display:none;"></div>
+        <div class="ai-workbench-header">
+          <div>
+            <h2 id="aiWorkbenchTitle">Choose a tool</h2>
+            <p id="aiWorkbenchDescription">Select a tool from the left to start generating useful study or career output.</p>
+          </div>
+          <span class="ai-badge" id="aiWorkbenchBadge">Ready</span>
+        </div>
+        <div class="ai-form-grid" id="aiWorkbenchForm"></div>
+        <div class="ai-workbench-actions">
+          <button class="btn primary" id="runAiToolBtn"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate</button>
+          <button class="btn secondary" id="clearAiToolBtn"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+        </div>
+        <div class="ai-output" id="aiOutput">
+          <div class="ai-empty">
+            <div>
+              <i class="fa-solid fa-sparkles"></i>
+              <p>Pick a tool, add a little input, and College OS will generate a practical first draft.</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="ai-section-card">
+      <div class="section-header">
+        <i class="fa-solid fa-lightbulb"></i>
+        <h2>Recommended Next Moves</h2>
+      </div>
+      <div class="ai-tools-grid" id="aiRecommendationGrid"></div>
+    </section>
+  </template>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/ai-tools.js"></script>
+</body>
+</html>

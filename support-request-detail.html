@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Support Request Details - College OS</title>
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.css">
+  <style>
+    .detail-container {
+      max-width: 1000px; margin: 20px auto; padding: 20px;
+    }
+    .breadcrumb {
+      display: flex; gap: 10px; margin-bottom: 20px; color: #666; font-size: 0.95em;
+    }
+    .breadcrumb a { color: #667eea; text-decoration: none; cursor: pointer; }
+    
+    .request-detail {
+      background: white; border-radius: 12px; padding: 30px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 30px;
+    }
+    
+    .request-title { font-size: 2em; font-weight: 700; color: #222; margin: 0 0 15px 0; }
+    .request-meta-row {
+      display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; color: #666;
+    }
+    .meta-badge {
+      display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px;
+      border-radius: 20px; font-weight: 600;
+    }
+    .meta-badge.urgent { background: #ffe0e0; color: #d63031; }
+    .meta-badge.medium { background: #fff3cd; color: #856404; }
+    .meta-badge.low { background: #d4edda; color: #155724; }
+    .meta-badge.solved { background: #d4edda; color: #155724; }
+    .meta-badge.open { background: #cfe2ff; color: #084298; }
+    
+    .request-body {
+      color: #555; line-height: 1.8; font-size: 1.05em;
+      padding-bottom: 20px; border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .request-author {
+      display: flex; align-items: center; gap: 15px; margin-top: 20px; padding-top: 20px;
+    }
+    .author-avatar {
+      width: 50px; height: 50px; border-radius: 50%; background: #667eea;
+      color: white; display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 1.2em;
+    }
+    .author-info { flex: 1; }
+    .author-name { font-weight: 700; color: #222; }
+    .author-time { color: #999; font-size: 0.9em; }
+    
+    .request-actions {
+      display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end;
+    }
+    .btn-small {
+      padding: 8px 16px; border: 1.5px solid #ddd; background: white;
+      border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s;
+    }
+    .btn-small:hover { border-color: #667eea; color: #667eea; }
+    .btn-small.danger { border-color: #d63031; color: #d63031; }
+    .btn-small.success { background: #d4edda; border-color: #51cf66; color: #155724; }
+    
+    .answers-section {
+      margin-top: 30px;
+    }
+    .answers-header {
+      font-size: 1.4em; font-weight: 700; color: #222; margin-bottom: 20px;
+    }
+    
+    .answer-item {
+      background: white; border-left: 4px solid #667eea; padding: 25px;
+      border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      transition: all 0.3s;
+    }
+    .answer-item.accepted {
+      border-left-color: #51cf66; background: #f0fdf4;
+    }
+    .answer-item:hover { box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
+    
+    .answer-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 15px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #f0f0f0;
+    }
+    .answerer-info {
+      display: flex; gap: 12px; align-items: flex-start;
+    }
+    .answerer-avatar {
+      width: 40px; height: 40px; border-radius: 50%; background: #667eea;
+      color: white; display: flex; align-items: center; justify-content: center;
+      font-weight: 700; text-transform: uppercase;
+    }
+    .answerer-details { flex: 1; }
+    .answerer-name { font-weight: 700; color: #222; }
+    .answerer-meta { color: #999; font-size: 0.9em; }
+    .answerer-badge {
+      display: inline-block; background: #cfe2ff; color: #084298; padding: 4px 10px;
+      border-radius: 16px; font-size: 0.85em; font-weight: 600; margin-top: 5px;
+    }
+    
+    .answer-content {
+      color: #555; line-height: 1.8; font-size: 1.05em; margin-bottom: 15px;
+    }
+    
+    .answer-footer {
+      display: flex; gap: 20px; flex-wrap: wrap; align-items: center; color: #666;
+      font-size: 0.95em;
+    }
+    .answer-votes {
+      display: flex; gap: 10px; align-items: center;
+    }
+    .vote-btn {
+      background: none; border: none; cursor: pointer; color: #666;
+      font-size: 0.9em; transition: all 0.3s; padding: 5px 10px;
+    }
+    .vote-btn:hover { color: #667eea; }
+    .vote-btn.active { color: #667eea; font-weight: 700; }
+    
+    .answer-actions {
+      display: flex; gap: 8px;
+    }
+    .accept-btn {
+      background: #d4edda; color: #155724; padding: 6px 14px; border: none;
+      border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.9em;
+    }
+    .accept-btn:hover { background: #51cf66; color: white; }
+    
+    .new-answer-section {
+      background: white; padding: 25px; border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 30px;
+    }
+    .new-answer-header { font-size: 1.3em; font-weight: 700; color: #222; margin-bottom: 20px; }
+    
+    .new-answer-form {
+      display: flex; flex-direction: column; gap: 15px;
+    }
+    .form-input {
+      padding: 12px 15px; border: 1.5px solid #ddd;
+      border-radius: 8px; font-size: 1em; font-family: inherit;
+      transition: border-color 0.3s;
+    }
+    .form-input:focus { outline: none; border-color: #667eea; }
+    .form-textarea { resize: vertical; min-height: 130px; }
+    
+    .form-actions {
+      display: flex; gap: 10px; justify-content: flex-end;
+    }
+    .btn-submit {
+      padding: 12px 25px; background: #667eea; color: white;
+      border: none; border-radius: 8px; cursor: pointer; font-weight: 700;
+      transition: all 0.3s;
+    }
+    .btn-submit:hover { background: #5568d3; transform: translateY(-2px); }
+    .btn-submit:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+    
+    .empty-answers {
+      text-align: center; padding: 40px; color: #999;
+    }
+    
+    @media (max-width: 768px) {
+      .detail-container { padding: 10px; }
+      .request-detail { padding: 20px; }
+      .request-title { font-size: 1.5em; }
+      .request-meta-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="detail-container">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <a onclick="window.location.href='support-hub.html'"><i class="fas fa-home"></i> Support Hub</a>
+      <span>/</span>
+      <span id="breadcrumb-title">Request Details</span>
+    </div>
+    
+    <!-- Request Detail -->
+    <div id="request-detail"></div>
+    
+    <!-- Answers Section -->
+    <div class="answers-section">
+      <h2 class="answers-header">
+        <i class="fas fa-comments"></i> Answers
+        <span id="answer-count">0</span>
+      </h2>
+      <div id="answers-container"></div>
+    </div>
+    
+    <!-- New Answer Form -->
+    <div class="new-answer-section" id="new-answer-section">
+      <h3 class="new-answer-header">
+        <i class="fas fa-pen"></i> Your Answer
+      </h3>
+      <div class="new-answer-form">
+        <textarea class="form-input form-textarea" id="answer-content" 
+                  placeholder="Share your knowledge and help this student..."></textarea>
+        <div class="form-actions">
+          <button class="btn-submit" onclick="submitAnswer()">
+            <i class="fas fa-paper-plane"></i> Post Answer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const requestId = new URLSearchParams(window.location.search).get('id');
+    let currentUserId = 0;
+    let requestOwnerId = 0;
+    
+    window.addEventListener('load', function() {
+      loadRequestDetails();
+    });
+    
+    async function loadRequestDetails() {
+      try {
+        const me = await fetch('/api/auth/me', { credentials: 'include' });
+        if (me.ok) {
+          const meJson = await me.json();
+          currentUserId = Number(meJson.user?.id || 0);
+        }
+
+        const response = await fetch(`/api/support/request/${requestId}`, { credentials: 'include' });
+        
+        if (!response.ok) {
+          if (response.status === 403) {
+            alert('You don\'t have access to this request');
+            window.location.href = 'support-hub.html';
+            return;
+          }
+          throw new Error('Failed to load request');
+        }
+        
+        const data = await response.json();
+        renderRequestDetail(data.request);
+        renderAnswers(data.answers);
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to load request');
+      }
+    }
+    
+    function renderRequestDetail(request) {
+      const container = document.getElementById('request-detail');
+      const displayName = request.full_name || 'Student';
+      const avatar = displayName.charAt(0).toUpperCase();
+      requestOwnerId = Number(request.user_id || 0);
+      
+      container.innerHTML = `
+        <div class="request-detail">
+          <h1 class="request-title">${escapeHtml(request.title)}</h1>
+          
+          <div class="request-meta-row">
+            <span class="meta-badge ${request.urgency_level}">${request.urgency_level.toUpperCase()}</span>
+            <span class="meta-badge ${request.status}">${request.status.toUpperCase()}</span>
+            <span><i class="fas fa-eye"></i> ${request.view_count || 0} views</span>
+          </div>
+          
+          <div class="request-body">
+            ${escapeHtml(request.description).replace(/\n/g, '<br>')}
+          </div>
+          
+          ${request.meet_link ? `
+            <div style="margin-top: 15px; padding: 15px; background: #e7f3ff; border-radius: 8px;">
+              <i class="fas fa-video"></i> 
+              <a href="${escapeHtml(request.meet_link)}" target="_blank" style="color: #0066cc;">
+                Join Google Meet
+              </a>
+            </div>
+          ` : ''}
+          
+          <div class="request-author">
+            <div class="author-avatar">${avatar}</div>
+            <div class="author-info">
+              <div class="author-name">${escapeHtml(displayName)}</div>
+              <div class="author-time">Asked ${new Date(request.created_at).toLocaleDateString()}</div>
+            </div>
+            ${requestOwnerId === currentUserId ? `
+              <div class="request-actions">
+                <button class="btn-small" onclick="markSolved()">
+                  <i class="fas fa-check"></i> Mark Solved
+                </button>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('breadcrumb-title').textContent = escapeHtml(request.title);
+    }
+    
+    function renderAnswers(answers) {
+      const container = document.getElementById('answers-container');
+      document.getElementById('answer-count').textContent = `(${answers.length})`;
+      
+      if (!answers || answers.length === 0) {
+        container.innerHTML = `
+          <div class="empty-answers">
+            <p><i class="fas fa-inbox"></i> No answers yet. Be the first to help!</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = answers.map(answer => {
+        const avatar = answer.full_name.charAt(0).toUpperCase();
+        const isAccepted = answer.is_accepted;
+        
+        return `
+          <div class="answer-item ${isAccepted ? 'accepted' : ''}">
+            <div class="answer-header">
+              <div class="answerer-info">
+                <div class="answerer-avatar">${avatar}</div>
+                <div class="answerer-details">
+                  <div class="answerer-name">${escapeHtml(answer.full_name)}</div>
+                  <div class="answerer-meta">
+                    ${answer.reputation_level || 'New Helper'} • 
+                    ${answer.total_answers} answers • 
+                    ${answer.accepted_answers} accepted
+                  </div>
+                  ${answer.reputation_level && answer.reputation_level !== 'New Helper' ? `
+                    <div class="answerer-badge"><i class="fas fa-star"></i> ${escapeHtml(answer.reputation_level)}</div>
+                  ` : ''}
+                </div>
+              </div>
+              ${isAccepted ? `
+                <div style="background: #51cf66; color: white; padding: 6px 12px; border-radius: 6px; font-weight: 700;">
+                  <i class="fas fa-check-circle"></i> Accepted Answer
+                </div>
+              ` : ''}
+            </div>
+            
+            <div class="answer-content">
+              ${escapeHtml(answer.content).replace(/\n/g, '<br>')}
+            </div>
+            
+            ${answer.meet_link ? `
+              <div style="margin: 15px 0; padding: 12px; background: #e7f3ff; border-radius: 8px;">
+                <i class="fas fa-video"></i> 
+                <a href="${escapeHtml(answer.meet_link)}" target="_blank" style="color: #0066cc;">
+                  Join helper's Meet session
+                </a>
+              </div>
+            ` : ''}
+            
+            <div class="answer-footer">
+              <div class="answer-votes">
+                <button class="vote-btn ${answer.user_vote === 'helpful' ? 'active' : ''}" 
+                        onclick="voteAnswer(${answer.id}, 'helpful')">
+                  <i class="fas fa-thumbs-up"></i> Helpful <span>(${answer.helpful_count})</span>
+                </button>
+                <button class="vote-btn ${answer.user_vote === 'unhelpful' ? 'active' : ''}" 
+                        onclick="voteAnswer(${answer.id}, 'unhelpful')">
+                  <i class="fas fa-thumbs-down"></i> <span>(${answer.unhelpful_count})</span>
+                </button>
+              </div>
+              <div class="answer-actions">
+                ${!isAccepted && currentUserId === requestOwnerId ? `
+                  <button class="accept-btn" onclick="acceptAnswer(${answer.id})">
+                    <i class="fas fa-check"></i> Accept Answer
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    async function submitAnswer() {
+      const content = document.getElementById('answer-content').value.trim();
+      
+      if (!content || content.length < 10) {
+        alert('Answer must be at least 10 characters');
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/support/answer/${requestId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content }),
+          credentials: 'include'
+        });
+        
+        if (!response.ok) throw new Error('Failed to post answer');
+        
+        document.getElementById('answer-content').value = '';
+        alert('Answer posted successfully!');
+        loadRequestDetails();
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to post answer');
+      }
+    }
+    
+    async function acceptAnswer(answerId) {
+      try {
+        const response = await fetch(`/api/support/answer/${answerId}/accept`, {
+          method: 'PUT',
+          credentials: 'include'
+        });
+        
+        if (!response.ok) throw new Error('Failed to accept answer');
+        
+        const data = await response.json();
+        alert(`Answer accepted! Helper earned ${data.points_awarded} points.`);
+        loadRequestDetails();
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to accept answer');
+      }
+    }
+    
+    async function voteAnswer(answerId, voteType) {
+      try {
+        const response = await fetch(`/api/support/answer/${answerId}/vote`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ vote_type: voteType }),
+          credentials: 'include'
+        });
+        
+        if (!response.ok) throw new Error('Failed to vote');
+        
+        loadRequestDetails();
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    }
+    
+    async function markSolved() {
+      try {
+        const response = await fetch(`/api/support/request/${requestId}/mark-solved`, {
+          method: 'PUT',
+          credentials: 'include'
+        });
+        
+        if (!response.ok) throw new Error('Failed to mark solved');
+        
+        alert('Request marked as solved!');
+        loadRequestDetails();
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to mark as solved');
+      }
+    }
+    
+    function escapeHtml(text) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+      return text.replace(/[&<>"']/g, m => map[m]);
+    }
+  </script>
+</body>
+</html>

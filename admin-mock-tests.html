@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mock Test Studio - Admin</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .studio-grid { display: grid; gap: 1rem; }
+
+    .studio-toolbar {
+      background: linear-gradient(130deg, #133563, #0f7b6c 56%, #d88d20);
+      color: #fff;
+      border-radius: 16px;
+      padding: 1rem;
+      display: grid;
+      gap: 0.5rem;
+      box-shadow: 0 16px 36px rgba(14, 42, 88, 0.3);
+    }
+
+    .studio-toolbar p { margin: 0; opacity: 0.92; }
+
+    .studio-panels {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 0.9rem;
+      display: grid;
+      gap: 0.7rem;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.55rem;
+    }
+
+    .field-grid .full { grid-column: 1 / -1; }
+
+    .panel input,
+    .panel select,
+    .panel textarea {
+      width: 100%;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 10px;
+      padding: 0.58rem 0.68rem;
+      font: inherit;
+      background: #fff;
+    }
+
+    .panel textarea { min-height: 96px; resize: vertical; }
+
+    .check-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.4rem;
+      font-size: 0.9rem;
+    }
+
+    .actions-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.48rem;
+      justify-content: flex-end;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .table-wrap table { width: 100%; border-collapse: collapse; }
+
+    .table-wrap th,
+    .table-wrap td {
+      padding: 0.56rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      text-align: left;
+      vertical-align: top;
+      font-size: 0.9rem;
+    }
+
+    .table-wrap th {
+      background: #f3f7fb;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #57708a;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.55rem;
+    }
+
+    .kpi {
+      border-radius: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      background: #fff;
+      padding: 0.62rem;
+    }
+
+    .kpi label { display: block; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
+    .kpi strong { font-family: 'Space Grotesk', sans-serif; font-size: 1.1rem; }
+
+    .insight-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; }
+
+    .insight {
+      border-radius: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      background: #fff;
+      padding: 0.62rem;
+    }
+
+    .insight ul { margin: 0.3rem 0 0; padding-left: 1rem; display: grid; gap: 0.22rem; }
+
+    .muted { color: var(--muted); }
+
+    @media (max-width: 1180px) {
+      .studio-panels { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 780px) {
+      .field-grid, .check-grid, .insight-grid { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body class="admin-portal">
+  <div class="co-admin-shell">
+    <aside class="co-admin-aside">
+      <div class="co-admin-brand">
+        <span class="co-admin-brand-mark"><i class="fa-solid fa-shield-halved"></i></span>
+        <div>
+          <h1>College OS Admin</h1>
+          <p>Mock test lifecycle control: creation, question bank, publish workflow, and analytics.</p>
+        </div>
+      </div>
+      <section class="co-admin-nav-section">
+        <p class="co-admin-nav-label">Admin Navigation</p>
+        <nav class="co-admin-nav">
+          <a class="co-admin-nav-link" href="admin-dashboard.html"><i class="fa-solid fa-chart-pie"></i><span>Overview</span></a>
+          <a class="co-admin-nav-link" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control System</span></a>
+          <a class="co-admin-nav-link" href="admin-academics.html#contributions"><i class="fa-solid fa-upload"></i><span>Contribution Control</span></a>
+          <a class="co-admin-nav-link" href="admin-support-governance.html"><i class="fa-solid fa-shield-halved"></i><span>Support Governance</span></a>
+          <a class="co-admin-nav-link" href="admin-notes.html"><i class="fa-solid fa-file-lines"></i><span>Notes</span></a>
+          <a class="co-admin-nav-link" href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i><span>Papers</span></a>
+          <a class="co-admin-nav-link" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i><span>Materials</span></a>
+          <a class="co-admin-nav-link" href="admin-quizzes.html"><i class="fa-solid fa-clipboard-question"></i><span>Quizzes</span></a>
+          <a class="co-admin-nav-link" href="admin-certificates.html"><i class="fa-solid fa-graduation-cap"></i><span>Certificates</span></a>
+          <a class="co-admin-nav-link" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Roadmaps</span></a>
+          <a class="co-admin-nav-link active" href="admin-mock-tests.html"><i class="fa-solid fa-flask-vial"></i><span>Mock Test Studio</span></a>
+          <a class="co-admin-nav-link" href="admin-ai-tools.html"><i class="fa-solid fa-sparkles"></i><span>AI Tools</span></a>
+          <a class="co-admin-nav-link" href="admin-campus-feed.html"><i class="fa-solid fa-newspaper"></i><span>Campus Feed</span></a>
+        </nav>
+      </section>
+    </aside>
+
+    <main class="co-admin-main co-admin-page-block studio-grid">
+      <header class="studio-toolbar">
+        <h2>Mock Test Management Studio</h2>
+        <p>Design premium exam experiences with branch/course filtering, access control, section configuration, question banking, and deep analytics.</p>
+        <div class="actions-row">
+          <a class="btn secondary" href="admin-dashboard.html">Back to Dashboard</a>
+          <a class="btn secondary" href="admin-control.html">Open Control System</a>
+        </div>
+      </header>
+
+      <section class="studio-panels">
+        <section class="panel">
+          <h3>Create / Update Test</h3>
+          <form id="mockTestForm" class="field-grid" onsubmit="return false;">
+            <div><label>Title</label><input id="mtTitle" placeholder="Campus Grand Test 04" /></div>
+            <div><label>Category</label><select id="mtCategoryKey"><option value="grand">Grand</option><option value="practice">Practice</option><option value="topic">Topic</option><option value="previous">Previous Year</option><option value="quick">Quick</option></select></div>
+            <div><label>Difficulty</label><select id="mtDifficulty"><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></div>
+            <div><label>Duration (min)</label><input id="mtDuration" type="number" min="1" /></div>
+            <div><label>Total Marks</label><input id="mtTotalMarks" type="number" min="1" /></div>
+            <div><label>Total Questions</label><input id="mtTotalQuestions" type="number" min="1" /></div>
+            <div><label>Subject</label><input id="mtSubject" placeholder="DBMS" /></div>
+            <div><label>Topic</label><input id="mtTopic" placeholder="Normalization" /></div>
+            <div><label>Category ID</label><select id="mtCategoryId"></select></div>
+            <div><label>Branch ID</label><select id="mtBranchId"><option value="">All / None</option></select></div>
+            <div><label>Semester ID</label><select id="mtSemesterId"></select></div>
+            <div><label>Access</label><select id="mtAccessType"><option value="free">Free</option><option value="premium">Premium</option></select></div>
+            <div><label>Status</label><select id="mtStatus"><option value="published">Published</option><option value="draft">Draft</option><option value="unpublished">Unpublished</option></select></div>
+            <div><label>Free Attempt Limit</label><input id="mtAttemptLimitFree" type="number" min="0" value="2" /></div>
+            <div><label>Marks / Question</label><input id="mtMarksPerQuestion" type="number" step="0.25" value="1" /></div>
+            <div><label>Negative Marks</label><input id="mtNegativeMarks" type="number" step="0.25" value="0" /></div>
+
+            <div class="full"><label>Syllabus</label><textarea id="mtSyllabus" placeholder="Topics covered in this test"></textarea></div>
+            <div class="full"><label>Instructions</label><textarea id="mtInstructions" placeholder="Exam instructions shown to student"></textarea></div>
+
+            <div class="full check-grid">
+              <label><input type="checkbox" id="mtIsCommon" /> Common for all branches</label>
+              <label><input type="checkbox" id="mtRetakeAllowed" checked /> Retake Allowed</label>
+              <label><input type="checkbox" id="mtShuffleQuestions" /> Shuffle Questions</label>
+              <label><input type="checkbox" id="mtShuffleOptions" /> Shuffle Options</label>
+              <label><input type="checkbox" id="mtExplanationsVisible" checked /> Show Explanation After Submission</label>
+              <label><input type="checkbox" id="mtNegativeEnabled" /> Enable Negative Marking</label>
+            </div>
+
+            <div class="full actions-row">
+              <button class="btn secondary" type="button" id="resetMockTestBtn">Reset</button>
+              <button class="btn primary" type="button" id="saveMockTestBtn">Save Mock Test</button>
+            </div>
+          </form>
+          <p id="adminMockStatus" class="muted"></p>
+        </section>
+
+        <section class="panel">
+          <h3>Admin Analytics</h3>
+          <div class="kpi-grid">
+            <article class="kpi"><label>Total Attempts</label><strong id="anaTotalAttempts">0</strong></article>
+            <article class="kpi"><label>Average Score</label><strong id="anaAvgScore">0</strong></article>
+            <article class="kpi"><label>Top Score</label><strong id="anaTopScore">0</strong></article>
+            <article class="kpi"><label>Completion Rate</label><strong id="anaCompletion">0%</strong></article>
+          </div>
+          <div class="insight-grid">
+            <article class="insight"><h4>Branch-wise Attempts</h4><ul id="anaBranchAttempts"></ul></article>
+            <article class="insight"><h4>Topic-wise Weakness</h4><ul id="anaTopicWeakness"></ul></article>
+            <article class="insight"><h4>Free vs Premium Usage</h4><ul id="anaFreePremium"></ul></article>
+          </div>
+          <div class="actions-row">
+            <button class="btn secondary" id="refreshAnalyticsBtn" type="button">Refresh Analytics</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="panel">
+        <h3>Mock Test Library</h3>
+        <div class="field-grid">
+          <div><label>Search</label><input id="mtFilterSearch" placeholder="Search title, subject, topic" /></div>
+          <div><label>Status</label><select id="mtFilterStatus"><option value="">All</option><option value="published">Published</option><option value="draft">Draft</option><option value="unpublished">Unpublished</option></select></div>
+          <div><label>Category</label><select id="mtFilterCategoryId"></select></div>
+          <div><label>Branch</label><select id="mtFilterBranchId"><option value="">All / None</option></select></div>
+          <div><label>Semester</label><select id="mtFilterSemesterId"></select></div>
+          <div><label><input type="checkbox" id="mtFilterIncludeDeleted" /> Include deleted tests</label></div>
+        </div>
+        <div class="actions-row">
+          <button class="btn secondary" id="refreshMockTestsBtn" type="button">Refresh List</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th><th>Title</th><th>Category</th><th>Branch</th><th>Semester</th><th>Exam Setup</th><th>Attempts</th><th>Access/Status</th><th>Record</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="mockTestsTableBody"><tr><td colspan="10" class="co-admin-table-empty">Loading mock tests...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="studio-panels">
+        <section class="panel">
+          <h3>Manual Question Entry</h3>
+          <form id="manualQuestionForm" class="field-grid" onsubmit="return false;">
+            <div class="full"><label>Question Text</label><textarea id="mqText" placeholder="Enter the question statement"></textarea></div>
+            <div><label>Type</label><select id="mqType"><option value="single_mcq">Single Correct MCQ</option><option value="multi_select">Multi Select</option><option value="true_false">True / False</option><option value="numerical">Numerical</option><option value="coding">Coding (future-ready)</option></select></div>
+            <div><label>Difficulty</label><select id="mqDifficulty"><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></div>
+            <div><label>Section</label><input id="mqSection" placeholder="Aptitude" /></div>
+            <div><label>Subject</label><input id="mqSubject" placeholder="DBMS" /></div>
+            <div><label>Topic</label><input id="mqTopic" placeholder="Normalization" /></div>
+            <div><label>Marks</label><input id="mqMarks" type="number" step="0.25" value="1" /></div>
+            <div><label>Negative Marks</label><input id="mqNegative" type="number" step="0.25" value="0" /></div>
+            <div><label>Order</label><input id="mqOrder" type="number" value="0" /></div>
+            <div><label>Correct Answer</label><input id="mqCorrect" placeholder="A or A,B or 42" /></div>
+            <div><label>Option A</label><input id="mqOptionA" /></div>
+            <div><label>Option B</label><input id="mqOptionB" /></div>
+            <div><label>Option C</label><input id="mqOptionC" /></div>
+            <div><label>Option D</label><input id="mqOptionD" /></div>
+            <div class="full"><label>Explanation</label><textarea id="mqExplanation" placeholder="Reasoning shown in review"></textarea></div>
+            <div class="full actions-row">
+              <button class="btn primary" type="button" id="addManualQuestionBtn">Add Question</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel">
+          <h3>Bulk Upload Question Bank</h3>
+          <p class="muted">Format per line: question|type|difficulty|topic|marks|negative|A:opt;B:opt;C:opt;D:opt|correct|explanation</p>
+          <textarea id="mqBulkInput" placeholder="What is 2+2?|single_mcq|easy|Arithmetic|1|0|A:2;B:3;C:4;D:5|C|Basic arithmetic"></textarea>
+          <div class="actions-row">
+            <button class="btn secondary" type="button" id="bulkUploadQuestionBtn">Upload Bulk Questions</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="panel">
+        <h3 id="questionPanelTitle">Question Bank · Select a test</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Order</th><th>Type</th><th>Topic</th><th>Marks</th><th>Negative</th><th>Question</th><th>Action</th></tr></thead>
+            <tbody id="mockQuestionsTableBody"><tr><td colspan="8" class="co-admin-table-empty">Select a test and click Questions to load.</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/admin-mock-tests.js"></script>
+</body>
+</html>

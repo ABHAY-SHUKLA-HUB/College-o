@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Feedback - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .feedback-layout { display:grid; grid-template-columns: 1.1fr .9fr; gap:1rem; }
+    .panel { background:#fff; border:1px solid #dce5f0; border-radius:14px; box-shadow:0 8px 22px rgba(35,56,83,.09); padding:1rem; }
+    .stats { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:.55rem; }
+    .stat { border:1px solid #dce5f0; border-radius:10px; background:#f8fbff; padding:.62rem; }
+    .stat .v { font-size:1.25rem; color:#0f7b6c; font-weight:700; }
+    .stat .k { font-size:.74rem; color:#5f6f82; }
+    .field { display:flex; flex-direction:column; gap:.28rem; }
+    .field label { font-size:.8rem; color:#5f6f82; font-weight:700; }
+    .field input, .field textarea, .field select { border:1px solid #d2deeb; border-radius:10px; padding:.62rem .72rem; }
+    .form-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:.6rem; }
+    .full { grid-column:1/-1; }
+    .stars { display:flex; gap:.22rem; }
+    .star { border:none; background:transparent; color:#c3ccd7; cursor:pointer; font-size:1.3rem; padding:0; }
+    .star.active { color:#efb022; }
+    .chips { display:flex; flex-wrap:wrap; gap:.45rem; }
+    .chip { border:1px solid #d2deeb; background:#fff; border-radius:999px; padding:.32rem .68rem; cursor:pointer; font-size:.8rem; }
+    .chip.active { background:#dff4ef; border-color:#88d1c2; color:#0c5a4f; font-weight:700; }
+    .history { display:grid; gap:.65rem; }
+    .feedback-card { border:1px solid #dce5f0; border-radius:12px; background:#fff; padding:.72rem; box-shadow:0 4px 14px rgba(35,56,83,.06); }
+    .feedback-card:hover { box-shadow:0 10px 24px rgba(35,56,83,.1); }
+    .meta { display:flex; flex-wrap:wrap; gap:.35rem; font-size:.74rem; color:#607489; }
+    .pill { border-radius:999px; background:#edf3fb; color:#2e4b6b; padding:.12rem .52rem; font-size:.7rem; }
+    .status { border-radius:999px; padding:.14rem .55rem; font-size:.7rem; font-weight:700; }
+    .status-submitted { background:#e8f0fa; color:#325274; }
+    .status-review { background:#fff2df; color:#8d5800; }
+    .status-resolved { background:#e3f7ea; color:#22693f; }
+    .status-replied { background:#efe9ff; color:#5a44a6; }
+    .card-actions { display:flex; flex-wrap:wrap; gap:.35rem; margin-top:.5rem; }
+    .btn-mini { border:none; border-radius:8px; cursor:pointer; padding:.3rem .54rem; font-size:.74rem; }
+    .btn-mini.secondary { background:#e9f0f8; color:#264765; }
+    .btn-mini.warn { background:#fff0dd; color:#7a4700; }
+    .btn-mini.danger { background:#ffe7e7; color:#8e2222; }
+    .empty { border:1px dashed #c9d9ea; border-radius:12px; background:#f8fbff; text-align:center; color:#536b86; padding:1.2rem .8rem; }
+    @media (max-width: 1080px) { .feedback-layout { grid-template-columns:1fr; } .stats { grid-template-columns: repeat(2,minmax(0,1fr)); } .form-grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <section class="hero"><h1 data-page-title>User Feedback</h1><p>Report issues, suggest improvements, and track responses from the College OS team.</p></section>
+
+    <section class="panel stats" id="feedbackStats">
+      <article class="stat"><div class="v" id="statTotalFeedback">0</div><div class="k">Total Feedback Submitted</div></article>
+      <article class="stat"><div class="v" id="statResolved">0</div><div class="k">Resolved Issues</div></article>
+      <article class="stat"><div class="v" id="statPending">0</div><div class="k">Pending Reviews</div></article>
+      <article class="stat"><div class="v" id="statAvgRating">0.00</div><div class="k">Average Rating</div></article>
+    </section>
+
+    <section class="feedback-layout">
+      <article class="panel">
+        <h3 style="margin-top:0;">Submit Feedback</h3>
+        <form id="feedbackForm">
+          <input type="hidden" id="feedbackEditId" />
+          <div class="field">
+            <label>Rating</label>
+            <div class="stars" id="ratingStars"></div>
+            <input type="hidden" id="feedbackRating" value="5" />
+          </div>
+
+          <div class="form-grid" style="margin-top:.55rem;">
+            <div class="field">
+              <label>Category</label>
+              <select id="feedbackCategory">
+                <option>Bug Report</option>
+                <option>Feature Request</option>
+                <option selected>General Feedback</option>
+                <option>UI/UX Suggestion</option>
+                <option>Content Issue</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Screenshot URL (optional)</label>
+              <input id="feedbackScreenshot" placeholder="https://..." />
+            </div>
+            <div class="field full">
+              <label>Screenshot Upload (optional)</label>
+              <input id="feedbackScreenshotFile" type="file" accept="image/*" />
+            </div>
+            <div class="field full">
+              <label>Message</label>
+              <textarea id="feedbackMessage" rows="6" required placeholder="Explain your issue or suggestion in detail."></textarea>
+            </div>
+            <div class="field full" style="flex-direction:row;align-items:center;gap:.5rem;">
+              <input id="feedbackAnonymous" type="checkbox" />
+              <label for="feedbackAnonymous" style="margin:0;">Submit anonymously</label>
+            </div>
+          </div>
+
+          <div class="actions" style="margin-top:.7rem; gap:.5rem;">
+            <button class="btn primary" type="submit" id="feedbackSubmitBtn">Submit Feedback</button>
+            <button class="btn secondary" type="button" id="feedbackCancelEditBtn" style="display:none;">Cancel Edit</button>
+          </div>
+          <p class="muted" id="feedbackStatus" style="margin-top:.45rem;"></p>
+        </form>
+      </article>
+
+      <article class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;">
+          <h3 style="margin:0;">My Feedback</h3>
+          <div class="chips" id="feedbackFilters">
+            <button class="chip active" data-filter="all">All Feedback</button>
+            <button class="chip" data-filter="my">My Feedback</button>
+            <button class="chip" data-filter="replied">Replied</button>
+            <button class="chip" data-filter="pending">Pending</button>
+            <button class="chip" data-filter="resolved">Resolved</button>
+          </div>
+        </div>
+        <div id="myFeedbackList" class="history" style="margin-top:.72rem;"></div>
+      </article>
+    </section>
+  </template>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/feedback.js"></script>
+</body>
+</html>
+
+
+
+

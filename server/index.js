@@ -1,0 +1,353 @@
+require('dotenv').config();
+
+const path = require('path');
+const express = require('express');
+const session = require('express-session');
+const pgSessionFactory = require('connect-pg-simple');
+const { pool } = require('./db/pool');
+const { ensureAdminAccount } = require('./utils/bootstrap');
+
+const authRoutes = require('./routes/auth');
+const metaRoutes = require('./routes/meta');
+const dashboardRoutes = require('./routes/dashboard');
+const intelligenceRoutes = require('./routes/intelligence');
+const quizRoutes = require('./routes/quizzes');
+const mockRoutes = require('./routes/mockTests');
+const roadmapRoutes = require('./routes/roadmaps');
+const careerRoutes = require('./routes/career');
+const notesRoutes = require('./routes/notes');
+const certificateRoutes = require('./routes/certificates');
+const leaderboardRoutes = require('./routes/leaderboard');
+const referralRoutes = require('./routes/referrals');
+const profileRoutes = require('./routes/profile');
+const settingsRoutes = require('./routes/settings');
+const notificationRoutes = require('./routes/notifications');
+const forumRoutes = require('./routes/forum');
+const contentRoutes = require('./routes/content');
+const feedbackRoutes = require('./routes/feedback');
+const subscriptionRoutes = require('./routes/subscriptions');
+const adminRoutes = require('./routes/admin');
+const adminControlRoutes = require('./routes/admin-control');
+const adminDashboardRoutes = require('./routes/admin-dashboard');
+const adminIntelligenceRoutes = require('./routes/admin-intelligence');
+const healthRoutes = require('./routes/health');
+const academicsRoutes = require('./routes/academics');
+const academicsAdminRoutes = require('./routes/academics-admin');
+const companySupportRoutes = require('./routes/company-support');
+const campusFeedRoutes = require('./routes/campus-feed');
+const adminCampusFeedRoutes = require('./routes/admin-campus-feed');
+const contributionRoutes = require('./routes/contributions');
+const contributionAdminRoutes = require('./routes/contributions-admin');
+const supportHubRoutes = require('./routes/support-hub');
+const supportAnswersRoutes = require('./routes/support-answers');
+const supportModerationRoutes = require('./routes/support-moderation');
+const adminSupportGovernanceRoutes = require('./routes/admin-support-governance');
+const academicsContentMgmtRoutes = require('./routes/academics-content-management');
+const studentLibraryUnifiedRoutes = require('./routes/student-library-unified');
+
+// Security middleware imports
+const helmet = require('helmet');
+const { csrfInit, csrfProtect } = require('./middleware/csrf');
+const { 
+  preventJsonBomb, 
+  sanitizeRequestBody,
+  limitRequestSize 
+} = require('./middleware/validation');
+const { rateLimit } = require('./middleware/rateLimiter');
+const {
+  requestIdMiddleware,
+  requestLogger,
+  securityEventLogger,
+  errorLogger,
+  performanceMonitor,
+  notFoundHandler,
+  globalErrorHandler
+} = require('./middleware/logging');
+
+const app = express();
+const PgSession = pgSessionFactory(session);
+const port = Number(process.env.PORT || 3000);
+const host = process.env.HOST || '0.0.0.0';
+
+function parseOrigins(input) {
+  return String(input || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
+const configuredOrigins = [
+  ...parseOrigins(process.env.ALLOWED_ORIGINS),
+  ...parseOrigins(process.env.FRONTEND_PUBLIC_URL),
+  ...parseOrigins(process.env.APP_BASE_URL)
+];
+const allowedOrigins = new Set(configuredOrigins);
+const hasLocalhostOrigin = configuredOrigins.some((origin) => /localhost|127\.0\.0\.1/i.test(origin));
+
+function normalizeSameSite(raw) {
+  const value = String(raw || '').trim().toLowerCase();
+  if (value === 'none' || value === 'lax' || value === 'strict') return value;
+  return isProduction ? 'lax' : 'lax';
+}
+
+const sessionOptions = {
+  name: 'college_os_sid',
+  secret: process.env.SESSION_SECRET || 'unsafe-dev-secret',
+  resave: false,
+  saveUninitialized: false,
+  rolling: true,
+  cookie: {
+    httpOnly: true,
+    sameSite: normalizeSameSite(process.env.SESSION_COOKIE_SAMESITE),
+    secure: isProduction || process.env.SESSION_COOKIE_SECURE === 'true',
+    domain: String(process.env.SESSION_COOKIE_DOMAIN || '').trim() || undefined,
+    maxAge: 1000 * 60 * 60 * 24 * 7
+  }
+};
+
+// Production environment validation - fail fast
+if (isProduction) {
+  const secret = String(process.env.SESSION_SECRET || '');
+  if (!secret || secret.length < 32 || secret === 'unsafe-dev-secret' || secret === 'replace-with-strong-secret') {
+    throw new Error('SESSION_SECRET must be set to a strong value (32+ chars) in production.');
+  }
+  if (!allowedOrigins.size) {
+    throw new Error('ALLOWED_ORIGINS (or FRONTEND_PUBLIC_URL/APP_BASE_URL) must be set in production.');
+  }
+  if (hasLocalhostOrigin) {
+    throw new Error('Production origins must not include localhost/127.0.0.1 values.');
+  }
+  if (sessionOptions.cookie.sameSite === 'none' && !sessionOptions.cookie.secure) {
+    throw new Error('SESSION cookie sameSite=none requires secure cookies in production.');
+  }
+  console.log('[Production Mode] All security validations passed ✅');
+}
+
+if (isProduction) {
+  app.set('trust proxy', 1);
+}
+
+sessionOptions.store = new PgSession({
+  pool,
+  tableName: 'session',
+  createTableIfMissing: true
+});
+
+/**
+ * CRITICAL: Middleware order matters for security!
+ * Order ensures:
+ * 1. Trust proxy FIRST (for correct IP detection)
+ * 2. Request ID tracking EARLY (for logging)
+ * 3. Helmet EARLY (sets security headers)
+ * 4. Body parsers BEFORE validators
+ * 5. Validators BEFORE routes
+ * 6. CSRF protection AFTER session
+ * 7. Error handler LAST
+ */
+
+// 1. Request ID middleware - must be early for request tracing
+app.use(requestIdMiddleware);
+
+// 2. Helmet - sets critical HTTP security headers
+//    CSP, X-Frame-Options, HSTS, X-XSS-Protection, etc.
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
+      scriptSrc: ["'self'"],
+      fontSrc: ["'self'", "fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      upgradeInsecureRequests: isProduction ? [] : []
+    }
+  },
+  hsts: {
+    maxAge: 31536000,  // 1 year
+    includeSubDomains: true,
+    preload: isProduction
+  },
+  frameguard: { action: 'deny' },
+  noSniff: true,
+  xssFilter: true,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
+}));
+
+app.disable('x-powered-by');
+
+// 3. Body parsers
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+// 4. Input validation middleware stack
+app.use(limitRequestSize(2));                                      // Request size limit
+app.use(preventJsonBomb(10));                                      // JSON nesting depth limit
+app.use(sanitizeRequestBody(['description', 'content', 'body', 'title', 'message', 'text'])); // XSS prevention
+
+// 5. CORS middleware
+app.use((req, res, next) => {
+  const origin = String(req.headers.origin || '').trim();
+  const hasOrigin = Boolean(origin);
+  const isAllowedOrigin = hasOrigin && allowedOrigins.has(origin);
+
+  if (hasOrigin && !isAllowedOrigin && isProduction) {
+    return res.status(403).json({ error: 'Origin not allowed' });
+  }
+
+  if (isAllowedOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-CSRF-Token');
+  }
+
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+
+  return next();
+});
+
+// 6. Static file serving
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+
+// 7. Session middleware
+app.use(session(sessionOptions));
+
+// 8. CSRF protection initialization - must be after session
+app.use(csrfInit());
+
+// 9. Rate limiting - general API limit
+// Relax rate limiting in development mode
+if (process.env.NODE_ENV === 'development') {
+  app.use(rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    maxRequests: 10000, // Very high limit for dev
+    keyGenerator: (req) => {
+      const xff = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+      return xff || req.ip || 'unknown';
+    },
+    skipSuccessfulRequests: false,
+    skipFailedRequests: false
+  }));
+} else {
+  app.use(rateLimit({
+    windowMs: 15 * 60 * 1000,  // 15 minutes
+    maxRequests: 100,
+    keyGenerator: (req) => {
+      const xff = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+      return xff || req.ip || 'unknown';
+    },
+    skipSuccessfulRequests: false,
+    skipFailedRequests: false
+  }));
+}
+
+// 10. CSRF protection for state-changing endpoints
+app.use(csrfProtect());
+
+// 11. Request logging middleware - logs requests/responses
+app.use(requestLogger);
+
+// 12. Security event logging - logs auth, CSRF, admin actions
+app.use(securityEventLogger);
+
+// 13. Performance monitoring - alerts on slow endpoints
+app.use(performanceMonitor);
+
+
+app.use('/api/health', healthRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/meta', metaRoutes);
+app.use('/api/academics', academicsRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/intelligence', intelligenceRoutes);
+app.use('/api/quizzes', quizRoutes);
+app.use('/api/mock-tests', mockRoutes);
+app.use('/api/roadmaps', roadmapRoutes);
+app.use('/api/career', careerRoutes);
+app.use('/api/notes', notesRoutes);
+app.use('/api/certificates', certificateRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/referrals', referralRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/forum', forumRoutes);
+app.use('/api/content', contentRoutes);
+app.use('/api/feedback', feedbackRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/admin/control', adminControlRoutes);
+app.use('/api/admin/dashboard', adminDashboardRoutes);
+app.use('/api/admin/intelligence', adminIntelligenceRoutes);
+app.use('/api/admin', academicsAdminRoutes);
+app.use('/api/company', companySupportRoutes);
+app.use('/api/campus-feed', campusFeedRoutes);
+app.use('/api/admin/campus-feed', adminCampusFeedRoutes);
+app.use('/api/contributions', contributionRoutes);
+app.use('/api/admin/contributions', contributionAdminRoutes);
+app.use('/api/support', supportHubRoutes);
+app.use('/api/support', supportAnswersRoutes);
+app.use('/api/support', supportModerationRoutes);
+app.use('/api/admin/support-governance', adminSupportGovernanceRoutes);
+app.use('/api', academicsContentMgmtRoutes);
+app.use('/api', studentLibraryUnifiedRoutes);
+
+app.use(express.static(path.join(__dirname, '..')));
+
+// SPA fallback - serve index.html for client-side routing
+app.get('*', (req, res) => {
+  if (res.headersSent) {
+    return;
+  }
+
+  if (req.path.startsWith('/api')) {
+    // API routes should reach 404 handler instead
+    return res.status(404).json({
+      success: false,
+      error: 'API endpoint not found',
+      code: 'NOT_FOUND',
+      path: req.path
+    });
+  }
+  // Serve index.html for all non-API paths (SPA client-side routing)
+  return res.sendFile(path.join(__dirname, '..', 'index.html'));
+});
+
+// 14. 404 Not Found handler - catches unhandled routes
+
+// 15. Error logging middleware - logs all errors
+app.use(errorLogger);
+
+// 16. Global error handler - MUST BE LAST
+app.use(globalErrorHandler);
+
+// Handle uncaught exceptions
+process.on('unhandledRejection', (reason) => {
+  const safeReason = reason instanceof Error ? reason.message : String(reason || 'Unhandled rejection');
+  console.error('[Unhandled Promise Rejection]', safeReason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[Uncaught Exception]', err.message);
+  process.exit(1);
+});
+
+async function startServer() {
+  await pool.query('SELECT 1');
+  await ensureAdminAccount();
+  app.listen(port, host, () => {
+    const displayHost = host === '0.0.0.0' ? 'localhost' : host;
+    console.log(`College OS server listening on http://${displayHost}:${port}`);
+  });
+}
+
+startServer().catch((error) => {
+  console.error('Server startup failed:', error.message);
+  process.exit(1);
+});

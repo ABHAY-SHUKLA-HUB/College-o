@@ -1,0 +1,997 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Control System - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .admin-control-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 20px;
+      min-height: 100vh;
+    }
+
+    .control-side {
+      background: var(--surface-1, #0f172a);
+      border-radius: 16px;
+      padding: 16px;
+      position: sticky;
+      top: 16px;
+      height: calc(100vh - 32px);
+      overflow: auto;
+    }
+
+    .control-main {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .control-tab {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      border: 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: transparent;
+      color: #cbd5e1;
+      cursor: pointer;
+      text-align: left;
+      margin-bottom: 6px;
+    }
+
+    .control-tab.active {
+      background: #2f6fed;
+      color: #fff;
+    }
+
+    .control-panel {
+      background: var(--surface-0, #ffffff);
+      border-radius: 16px;
+      padding: 18px;
+      border: 1px solid var(--border-color, #dbe4ef);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+      display: none;
+    }
+
+    .control-panel.active {
+      display: block;
+    }
+
+    .control-title {
+      margin: 0 0 6px;
+      font-size: 20px;
+      color: var(--text-primary, #0f172a);
+    }
+
+    .control-subtitle {
+      margin: 0 0 14px;
+      color: var(--text-secondary, #475569);
+      font-size: 14px;
+    }
+
+    .control-filters {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(120px, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .control-filters input,
+    .control-filters select,
+    .control-filters textarea {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 9px 10px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #fff;
+    }
+
+    .control-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 10px 0 12px;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(140px, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .kpi-card {
+      border: 1px solid #dbe4ef;
+      border-radius: 10px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .kpi-label {
+      color: #64748b;
+      font-size: 12px;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .kpi-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .status-badge {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: capitalize;
+      border: 1px solid transparent;
+    }
+
+    .status-badge.ok { background: #dcfce7; color: #166534; border-color: #86efac; }
+    .status-badge.warn { background: #fff7ed; color: #9a3412; border-color: #fdba74; }
+    .status-badge.info { background: #eff6ff; color: #1d4ed8; border-color: #93c5fd; }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .experience-block {
+      border: 1px solid #dbe4ef;
+      border-radius: 12px;
+      padding: 12px;
+      background: #f8fbff;
+      margin-top: 10px;
+    }
+
+    .experience-block h4 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      color: #0f172a;
+    }
+
+    .drag-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 6px;
+    }
+
+    .drag-item {
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #fff;
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: move;
+      font-size: 13px;
+    }
+
+    .drag-item.dragging {
+      opacity: 0.55;
+      border-color: #2f6fed;
+      box-shadow: 0 8px 18px rgba(47, 111, 237, 0.2);
+    }
+
+    .toggle-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(140px, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .toggle-item {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid #dbe4ef;
+      border-radius: 8px;
+      padding: 8px;
+      background: #fff;
+      font-size: 13px;
+    }
+
+    @media (max-width: 1100px) {
+      .admin-control-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .control-side {
+        position: static;
+        height: auto;
+      }
+
+      .control-filters {
+        grid-template-columns: repeat(2, minmax(120px, 1fr));
+      }
+
+      .kpi-grid {
+        grid-template-columns: repeat(2, minmax(120px, 1fr));
+      }
+
+      .toggle-grid {
+        grid-template-columns: repeat(2, minmax(120px, 1fr));
+      }
+    }
+  </style>
+</head>
+<body class="admin-portal">
+  <div class="co-admin-shell">
+    <aside class="co-admin-aside">
+      <div class="co-admin-brand">
+        <span class="co-admin-brand-mark"><i class="fa-solid fa-shield-halved"></i></span>
+        <div>
+          <h1>College OS Admin</h1>
+          <p>Full platform control with role-aware governance and audit-safe operations.</p>
+        </div>
+      </div>
+      <section class="co-admin-nav-section">
+        <p class="co-admin-nav-label">Admin Navigation</p>
+        <nav class="co-admin-nav">
+          <a class="co-admin-nav-link" href="admin-dashboard.html"><i class="fa-solid fa-chart-pie"></i><span>Overview</span></a>
+          <a class="co-admin-nav-link active" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control System</span></a>
+          <a class="co-admin-nav-link" href="admin-academics.html#contributions"><i class="fa-solid fa-upload"></i><span>Contribution Control</span></a>
+          <a class="co-admin-nav-link" href="admin-support-governance.html"><i class="fa-solid fa-shield-halved"></i><span>Support Governance</span></a>
+          <a class="co-admin-nav-link" href="admin-notes.html"><i class="fa-solid fa-file-lines"></i><span>Notes</span></a>
+          <a class="co-admin-nav-link" href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i><span>Papers</span></a>
+          <a class="co-admin-nav-link" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i><span>Materials</span></a>
+          <a class="co-admin-nav-link" href="admin-quizzes.html"><i class="fa-solid fa-clipboard-question"></i><span>Quizzes</span></a>
+          <a class="co-admin-nav-link" href="admin-certificates.html"><i class="fa-solid fa-graduation-cap"></i><span>Certificates</span></a>
+          <a class="co-admin-nav-link" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Roadmaps</span></a>
+          <a class="co-admin-nav-link" href="admin-mock-tests.html"><i class="fa-solid fa-flask-vial"></i><span>Mock Test Studio</span></a>
+          <a class="co-admin-nav-link" href="admin-ai-tools.html"><i class="fa-solid fa-sparkles"></i><span>AI Tools</span></a>
+          <a class="co-admin-nav-link" href="admin-campus-feed.html"><i class="fa-solid fa-newspaper"></i><span>Campus Feed</span></a>
+        </nav>
+      </section>
+    </aside>
+
+    <main class="co-admin-main">
+      <header class="co-admin-topbar">
+        <div class="co-admin-topbar-title">
+          <h2>Full Admin Control System</h2>
+          <p>Production-grade command center for students, payments, content, moderation, analytics, roles, and settings.</p>
+        </div>
+        <div class="co-admin-topbar-actions">
+          <a class="co-admin-chip" href="admin-dashboard.html"><i class="fa-solid fa-arrow-left"></i><span>Back to Dashboard</span></a>
+          <a class="co-admin-chip" href="admin-login.html"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+        </div>
+      </header>
+
+      <div class="admin-control-grid">
+        <section class="control-side">
+          <button class="control-tab active" data-panel="panel-analytics"><i class="fa-solid fa-chart-line"></i> Analytics</button>
+          <button class="control-tab" data-panel="panel-students"><i class="fa-solid fa-users-gear"></i> Student Management</button>
+          <button class="control-tab" data-panel="panel-payments"><i class="fa-solid fa-wallet"></i> Membership & Payments</button>
+          <button class="control-tab" data-panel="panel-content"><i class="fa-solid fa-box-archive"></i> Content Bulk Actions</button>
+          <button class="control-tab" data-panel="panel-branches"><i class="fa-solid fa-code-branch"></i> Branch Management</button>
+          <button class="control-tab" data-panel="panel-universities"><i class="fa-solid fa-building-columns"></i> University Management</button>
+          <button class="control-tab" data-panel="panel-onboarding"><i class="fa-solid fa-compass-drafting"></i> Onboarding Personalization</button>
+          <button class="control-tab" data-panel="panel-mocktests"><i class="fa-solid fa-flask-vial"></i> Mock Tests</button>
+          <button class="control-tab" data-panel="panel-roadmaps"><i class="fa-solid fa-route"></i> Roadmap Management</button>
+          <button class="control-tab" data-panel="panel-notify"><i class="fa-solid fa-bell"></i> Notifications & Announcements</button>
+          <button class="control-tab" data-panel="panel-moderation"><i class="fa-solid fa-gavel"></i> Forum & Feedback Moderation</button>
+          <button class="control-tab" data-panel="panel-referrals"><i class="fa-solid fa-user-group"></i> Referrals & Rewards</button>
+          <button class="control-tab" data-panel="panel-roles"><i class="fa-solid fa-user-shield"></i> Roles & Permissions</button>
+          <button class="control-tab" data-panel="panel-settings"><i class="fa-solid fa-sliders"></i> Platform Settings</button>
+          <button class="control-tab" data-panel="panel-audit"><i class="fa-solid fa-scroll"></i> Audit Logs</button>
+          <button class="control-tab" data-panel="panel-company"><i class="fa-solid fa-building"></i> Company &amp; Support</button>
+          <p id="controlPermissionInfo" class="muted" style="margin-top:10px;"></p>
+        </section>
+
+        <section class="control-main">
+          <article id="panel-analytics" class="control-panel active">
+            <h3 class="control-title">Analytics Dashboard</h3>
+            <p class="control-subtitle">Comprehensive platform KPI board with revenue, branch, activity, roadmap, referral, and support metrics.</p>
+            <div class="control-actions"><button class="btn primary" id="refreshAnalyticsBtn"><i class="fa-solid fa-rotate"></i> Refresh Analytics</button></div>
+            <div class="kpi-grid" id="analyticsKpis"></div>
+            <div class="co-admin-table-wrap">
+              <table class="co-admin-data-table">
+                <thead><tr><th>Category</th><th>Branch</th><th>Students</th></tr></thead>
+                <tbody id="analyticsBranchTable"><tr><td colspan="3" class="co-admin-table-empty">Loading branch analytics...</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article id="panel-students" class="control-panel">
+            <h3 class="control-title">Student Management</h3>
+            <p class="control-subtitle">Search, profile inspection, edit academic mapping, reset passwords, suspend/block, delete/restore, and membership override.</p>
+            <div class="control-filters">
+              <input id="studentSearchInput" placeholder="Search by name, email, UID" />
+              <select id="studentMembershipFilter"><option value="">All memberships</option><option value="free">Free</option><option value="premium">Premium</option></select>
+              <select id="studentStatusFilter"><option value="">All statuses</option><option value="active">Active</option><option value="suspended">Suspended</option><option value="blocked">Blocked</option></select>
+              <select id="studentBulkAction"><option value="">Bulk action</option><option value="activate">Activate</option><option value="suspend">Suspend</option><option value="block">Block</option><option value="delete">Soft Delete</option></select>
+            </div>
+            <div class="control-actions">
+              <button class="btn primary" id="loadStudentsBtn"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
+              <button class="btn secondary" id="bulkStudentsBtn"><i class="fa-solid fa-layer-group"></i> Run Bulk Action</button>
+              <button class="btn warn" id="showDeletedStudentsBtn"><i class="fa-solid fa-recycle"></i> Show Deleted</button>
+            </div>
+            <div class="co-admin-table-wrap">
+              <table class="co-admin-data-table">
+                <thead>
+                  <tr>
+                    <th><input type="checkbox" id="studentsSelectAll" /></th>
+                    <th>Student</th>
+                    <th>UID</th>
+                    <th>Branch</th>
+                    <th>Membership</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="studentsTableBody"><tr><td colspan="7" class="co-admin-table-empty">Loading students...</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article id="panel-payments" class="control-panel">
+            <h3 class="control-title">Membership & Payment Management</h3>
+            <p class="control-subtitle">Verify payment queue, execute bulk status updates, auto-deactivate expired subscriptions, and monitor premium revenue.</p>
+            <div class="control-filters">
+              <select id="paymentStatusFilter"><option value="all">All</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select>
+              <select id="paymentBulkStatus"><option value="">Bulk status</option><option value="approved">Approve</option><option value="rejected">Reject</option><option value="pending">Mark Pending</option></select>
+              <input id="paymentIdsInput" placeholder="Payment IDs (comma separated)" />
+              <input id="paymentReasonInput" placeholder="Optional reason" />
+            </div>
+            <div class="control-actions">
+              <button class="btn primary" id="loadPaymentsBtn">Load Payments</button>
+              <button class="btn secondary" id="bulkPaymentsBtn">Bulk Update Status</button>
+              <button class="btn warn" id="expireMembershipsBtn">Deactivate Expired</button>
+            </div>
+            <div class="kpi-grid" id="paymentSummaryKpis"></div>
+            <div class="co-admin-table-wrap">
+              <table class="co-admin-data-table">
+                <thead><tr><th>ID</th><th>Student</th><th>Transaction</th><th>Status</th><th>Screenshot</th><th>Submitted</th><th>Action</th></tr></thead>
+                <tbody id="paymentsTableBody"><tr><td colspan="7" class="co-admin-table-empty">Loading payments...</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article id="panel-content" class="control-panel">
+            <h3 class="control-title">Content Management Bulk Control</h3>
+            <p class="control-subtitle">Bulk publish, unpublish, soft delete, and restore across notes, materials, papers, quizzes, mock tests, roadmaps, certificates, notifications, and announcements.</p>
+            <div class="control-filters">
+              <select id="contentTypeSelect"><option value="notes">Notes</option><option value="materials">Materials</option><option value="papers">Papers</option><option value="quizzes">Quizzes</option><option value="mockTests">Mock Tests</option><option value="roadmaps">Roadmaps</option><option value="certificates">Certificates</option><option value="notifications">Notifications</option><option value="announcements">Announcements</option></select>
+              <select id="contentBulkAction"><option value="publish">Publish</option><option value="unpublish">Unpublish</option><option value="delete">Soft Delete</option><option value="restore">Restore</option></select>
+              <input id="contentIdsInput" placeholder="Content IDs (comma separated)" />
+              <button class="btn primary" id="runContentBulkBtn">Run Bulk Action</button>
+            </div>
+            <div class="kpi-grid" id="contentOverviewKpis"></div>
+          </article>
+
+          <article id="panel-branches" class="control-panel">
+            <h3 class="control-title">Branch and Course Management</h3>
+            <p class="control-subtitle">Create, edit, delete branches and assign resources/tests/roadmaps/AI tools to branch-specific audiences.</p>
+            <div class="control-filters">
+              <input id="branchIdInput" type="number" placeholder="Branch ID (for update/delete)" />
+              <input id="branchCategoryIdInput" type="number" placeholder="Category ID" />
+              <input id="branchCodeInput" placeholder="Branch code (CS, BCOM...)" />
+              <input id="branchNameInput" placeholder="Branch name" />
+              <input id="branchLabelInput" placeholder="Label (optional)" />
+              <input id="branchDisplayOrderInput" type="number" placeholder="Display order" />
+              <input id="branchDescriptionInput" placeholder="Description (optional)" />
+            </div>
+            <div class="control-actions">
+              <button class="btn primary" id="loadBranchesBtn">Load Branches</button>
+              <button class="btn secondary" id="createBranchBtn">Create Branch</button>
+              <button class="btn secondary" id="updateBranchBtn">Update Branch</button>
+              <button class="btn danger" id="deleteBranchBtn">Delete Branch</button>
+            </div>
+
+            <h4 class="control-title" style="font-size:16px; margin-top:10px;">Assign Content to Branch</h4>
+            <div class="control-filters">
+              <select id="assignContentType">
+                <option value="notes">Notes</option>
+                <option value="quizzes">Quizzes</option>
+                <option value="mock_tests">Mock Tests</option>
+                <option value="roadmaps">Roadmaps</option>
+                <option value="ai_tools">AI Tools</option>
+              </select>
+              <input id="assignContentId" type="number" placeholder="Content ID" />
+              <input id="assignBranchId" type="number" placeholder="Branch ID" />
+              <input id="assignCategoryId" type="number" placeholder="Category ID (optional)" />
+              <input id="assignSemesterId" type="number" placeholder="Semester ID (optional)" />
+              <button class="btn primary" id="assignBranchContentBtn">Assign</button>
+            </div>
+
+            <div class="co-admin-table-wrap">
+              <table class="co-admin-data-table">
+                <thead><tr><th>ID</th><th>Category</th><th>Code</th><th>Branch</th><th>Students</th><th>Notes</th><th>Quizzes</th><th>Mocks</th><th>Roadmaps</th><th>AI Tools</th></tr></thead>
+                <tbody id="branchesTableBody"><tr><td colspan="10" class="co-admin-table-empty">No branches loaded.</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article id="panel-universities" class="control-panel">
+            <h3 class="control-title">University Management</h3>
+            <p class="control-subtitle">Manage searchable university catalog used in student signup with featured order, availability controls, and custom entry support.</p>
+            <div class="control-filters">
+              <input id="uniSearchInput" placeholder="Search universities" />
+              <input id="uniIdInput" type="number" placeholder="University ID (for update/delete)" />
+              <input id="uniNameInput" placeholder="University name" />
+              <input id="uniPriorityInput" type="number" placeholder="Priority rank" />
+              <input id="uniCampusInput" placeholder="Campus (optional)" />
+              <input id="uniCityInput" placeholder="City (optional)" />
+              <input id="uniStateInput" placeholder="State (optional)" />
+              <input id="uniCountryCodeInput" placeholder="Country code" value="IN" />
+              <select id="uniFeaturedSelect"><option value="true">Featured</option><option value="false">Not featured</option></select>
+              <select id="uniEnabledSelect"><option value="true">Enabled</option><option value="false">Disabled</option></select>
+              <input id="uniOrderedIdsInput" placeholder="Ordered IDs (comma separated, optional)" />
+            </div>
+            <div class="control-actions">
+              <button class="btn primary" id="loadUniversitiesBtn">Load Universities</button>
+              <button class="btn secondary" id="createUniversityBtn">Add University</button>
+              <button class="btn secondary" id="updateUniversityBtn">Update University</button>
+              <button class="btn warn" id="reorderUniversitiesBtn">Save Reorder</button>
+              <button class="btn danger" id="deleteUniversityBtn">Delete University</button>
+            </div>
+            <div class="co-admin-table-wrap">
+              <table class="co-admin-data-table">
+                <thead><tr><th>ID</th><th>University</th><th>Location</th><th>Featured</th><th>Status</th><th>Priority</th><th>Users</th></tr></thead>
+                <tbody id="universitiesTableBody"><tr><td colspan="7" class="co-admin-table-empty">No universities loaded.</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article id="panel-onboarding" class="control-panel">
+            <h3 class="control-title">Onboarding and Recommendation Logic</h3>
+            <p class="control-subtitle">Control onboarding wizard enablement, edit option catalogs, and define branch/membership recommendation rules.</p>
+
+            <div class="control-filters">
+              <select id="onboardingEnabledSelect"><option value="true">Onboarding Enabled</option><option value="false">Onboarding Disabled</option></select>
+              <input id="onboardingVersionInput" type="number" min="1" value="1" placeholder="Wizard version" />
+              <input id="onboardingStepsInput" placeholder="Step keys comma-separated" value="academic_profile,career_interest,learning_goals,dashboard_setup" />
+              <button class="btn primary" id="saveOnboardingConfigBtn">Save Wizard Config</button>
+            </div>
+
+            <h4 class="control-title" style="font-size:16px; margin-top:10px;">Manage Onboarding Option</h4>
+            <div class="control-filters">
+              <select id="onboardingOptionGroup"><option value="career_interest">Career Interest</option><option value="learning_goal">Learning Goal</option><option value="study_mode">Study Mode</option></select>
+              <input id="onboardingOptionValue" placeholder="Option value" />
+              <input id="onboardingOptionLabel" placeholder="Option label" />
+              <input id="onboardingOptionOrder" type="number" placeholder="Display order" />
+              <button class="btn secondary" id="createOnboardingOptionBtn">Add Option</button>
+              <button class="btn secondary" id="loadOnboardingConfigBtn">Reload Config</button>
+            </div>
+
+            <div class="co-admin-table-wrap" style="margin-bottom:12px;">
+              <table class="co-admin-data-table">
+                <thead><tr><th>ID</th><th>Group</th><th>Value</th><th>Label</th><th>Order</th><th>Enabled</th></tr></thead>
+                <tbody id="onboardingOptionTableBody"><tr><td colspan="6" class="co-admin-table-empty">No onboarding options loaded.</td></tr></tbody>
+              </table>
+            </div>
+
+            <h4 class="control-title" style="font-size:16px; margin-top:10px;">Recommendation Rules</h4>
+            <div class="control-filters">
+              <select id="ruleContentType"><option value="roadmap">Roadmap</option><option value="mock_test">Mock Test</option><option value="quiz">Quiz</option><option value="note">Note</option><option value="ai_tool">AI Tool</option></select>
+              <input id="ruleContentId" type="number" placeholder="Content ID" />
+              <input id="ruleTitle" placeholder="Rule title" />
+              <input id="ruleBranchId" type="number" placeholder="Branch ID (optional)" />
+              <select id="ruleMembershipTier"><option value="">All tiers</option><option value="free">Free</option><option value="premium">Premium</option></select>
+              <select id="ruleIsFeatured"><option value="false">Not Featured</option><option value="true">Featured</option></select>
+              <input id="rulePositionOrder" type="number" placeholder="Position" />
+              <button class="btn secondary" id="createRecommendationRuleBtn">Create Rule</button>
+              <button class="btn secondary" id="loadRecommendationRulesBtn">Load Rules</button>
+            </div>
+            <div class="co-admin-table-wrap">
+              <table class="co-admin-data-table">
+                <thead><tr><th>ID</th><th>Title</th><th>Type</th><th>Content ID</th><th>Branch</th><th>Tier</th><th>Featured</th></tr></thead>
+                <tbody id="recommendationRuleTableBody"><tr><td colspan="7" class="co-admin-table-empty">No recommendation rules loaded.</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article id="panel-mocktests" class="control-panel">
+            <h3 class="control-title">Mock Test Management</h3>
+            <p class="control-subtitle">Create, edit, soft-delete/restore, publish workflows, and branch-aware assignment for mock tests.</p>
+            <div class="control-filters">
+              <input id="mockTitle" placeholder="Title" />
+              <input id="mockSubject" placeholder="Subject" />
+              <input id="mockTopic" placeholder="Topic" />
+              <input id="mockDuration" type="number" placeholder="Duration (min)" />
+              <input id="mockMarks" type="number" placeholder="Total marks" />
+              <input id="mockCategoryId" type="number" placeholder="Category ID" />
+              <input id="mockBranchId" type="number" placeholder="Branch ID" />
+              <input id="mockSemesterId" type="number" placeholder="Semester ID" />
+            </div>
+            <div class="control-actions">
+              <button class="btn primary" id="createMockBtn">Create Mock Test</button>
+              <button class="btn secondary" id="loadMockBtn">Load Mock Tests</button>
+              <a class="btn secondary" href="admin-mock-tests.html">Open Mock Test Studio</a>
+            </div>
+            <div class="co-admin-table-wrap">
+              <table class="co-admin-data-table">
+                <thead><tr><th>ID</th><th>Title</th><th>Branch</th><th>Duration</th><th>Status</th><th>Attempts</th></tr></thead>
+                <tbody id="mockTableBody"><tr><td colspan="6" class="co-admin-table-empty">Loading mock tests...</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article id="panel-roadmaps" class="control-panel">
+            <h3 class="control-title">Roadmap Management</h3>
+            <p class="control-subtitle">Create and sequence branch-wise roadmaps, update milestones, publish or hide roadmap modules, and jump into the dedicated AI tools workspace when you need product-level AI control.</p>
+            <div class="control-filters">
+              <input id="roadmapTitle" placeholder="Roadmap title" />
+              <input id="roadmapCategoryId" type="number" placeholder="Category ID" />
+              <input id="roadmapBranchId" type="number" placeholder="Branch ID" />
+              <input id="roadmapSemesterId" type="number" placeholder="Semester ID" />
+              <input id="roadmapSequence" type="number" placeholder="Sequence" />
+            </div>
+            <div class="control-actions">
+              <button class="btn primary" id="createRoadmapBtn">Create Roadmap</button>
+              <button class="btn secondary" id="loadRoadmapsBtn">Load Roadmaps</button>
+              <a class="btn secondary" href="admin-roadmaps.html">Open Roadmap Studio</a>
+              <a class="btn secondary" href="admin-ai-tools.html">Open AI Tools Studio</a>
+            </div>
+            <div class="co-admin-table-wrap">
+              <table class="co-admin-data-table">
+                <thead><tr><th>ID</th><th>Title</th><th>Branch</th><th>Published</th><th>Progress</th><th>Milestones</th></tr></thead>
+                <tbody id="roadmapTableBody"><tr><td colspan="6" class="co-admin-table-empty">Loading roadmaps...</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article id="panel-notify" class="control-panel">
+            <h3 class="control-title">Notifications and Announcements</h3>
+            <p class="control-subtitle">Send targeted notifications (all or branch/course specific), membership reminders, and announcement management.</p>
+            <div class="control-filters">
+              <input id="notifyTitle" placeholder="Title" />
+              <textarea id="notifyMessage" placeholder="Message"></textarea>
+              <input id="notifyCategoryId" type="number" placeholder="Category ID" />
+              <input id="notifyBranchId" type="number" placeholder="Branch ID" />
+              <input id="notifySemesterId" type="number" placeholder="Semester ID" />
+              <select id="notifyOnlyPremium"><option value="false">All users</option><option value="true">Only premium users</option></select>
+            </div>
+            <div class="control-actions">
+              <button class="btn primary" id="sendNotificationBtn">Send Notification</button>
+              <button class="btn secondary" id="sendReminderBtn">Send Membership Reminder</button>
+              <button class="btn secondary" id="createAnnouncementBtn">Create Announcement</button>
+              <button class="btn secondary" id="loadAnnouncementsBtn">Load Announcements</button>
+            </div>
+            <div class="co-admin-table-wrap">
+              <table class="co-admin-data-table">
+                <thead><tr><th>ID</th><th>Title</th><th>Branch</th><th>Status</th><th>Created</th><th>Action</th></tr></thead>
+                <tbody id="announcementTableBody"><tr><td colspan="6" class="co-admin-table-empty">No announcements loaded.</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article id="panel-moderation" class="control-panel">
+            <h3 class="control-title">Forum and Feedback Moderation</h3>
+            <p class="control-subtitle">Moderate forum discussions, hide/delete abusive threads, reply to feedback, and resolve support issues.</p>
+            <div class="control-actions">
+              <button class="btn primary" id="loadForumBtn">Load Forum Posts</button>
+              <button class="btn secondary" id="loadFeedbackBtn">Load Feedback</button>
+            </div>
+            <div class="co-admin-table-wrap" style="margin-bottom:12px;">
+              <table class="co-admin-data-table">
+                <thead><tr><th>ID</th><th>Title</th><th>User</th><th>Replies</th><th>Action</th></tr></thead>
+                <tbody id="forumTableBody"><tr><td colspan="5" class="co-admin-table-empty">No forum data loaded.</td></tr></tbody>
+              </table>
+            </div>
+            <div class="co-admin-table-wrap">
+              <table class="co-admin-data-table">
+                <thead><tr><th>ID</th><th>User</th><th>Rating</th><th>Status</th><th>Message</th><th>Action</th></tr></thead>
+                <tbody id="feedbackTableBody"><tr><td colspan="6" class="co-admin-table-empty">No feedback data loaded.</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article id="panel-referrals" class="control-panel">
+            <h3 class="control-title">Referral and Reward Management</h3>
+            <p class="control-subtitle">Track referral history, identify top referrers, assign rewards, and block invalid referrals.</p>
+            <div class="control-filters">
+              <input id="rewardReferralId" type="number" placeholder="Referral ID" />
+              <input id="rewardPoints" type="number" placeholder="Reward points" />
+              <input id="rewardNote" placeholder="Reward note" />
+              <button class="btn primary" id="assignRewardBtn">Assign Reward</button>
+            </div>
+            <div class="control-actions">
+              <button class="btn secondary" id="loadReferralHistoryBtn">Load History</button>
+              <button class="btn secondary" id="loadTopReferrersBtn">Load Top Referrers</button>
+            </div>
+            <div class="co-admin-table-wrap" style="margin-bottom:12px;">
+              <table class="co-admin-data-table">
+                <thead><tr><th>ID</th><th>Referrer</th><th>Referred</th><th>Status</th><th>Rewards</th><th>Action</th></tr></thead>
+                <tbody id="referralHistoryBody"><tr><td colspan="6" class="co-admin-table-empty">No referral data loaded.</td></tr></tbody>
+              </table>
+            </div>
+            <div class="co-admin-table-wrap">
+              <table class="co-admin-data-table">
+                <thead><tr><th>Student</th><th>Email</th><th>Total Referrals</th><th>Reward Points</th></tr></thead>
+                <tbody id="topReferrerBody"><tr><td colspan="4" class="co-admin-table-empty">No leaderboard loaded.</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article id="panel-roles" class="control-panel">
+            <h3 class="control-title">Roles and Permissions</h3>
+            <p class="control-subtitle">Configure Super Admin, Content Admin, Payment Admin, and Support Admin role assignments and permission sets.</p>
+            <div class="control-filters">
+              <input id="roleAdminId" type="number" placeholder="Admin user ID" />
+              <select id="roleNameSelect"><option value="super_admin">Super Admin</option><option value="content_admin">Content Admin</option><option value="payment_admin">Payment Admin</option><option value="support_admin">Support Admin</option></select>
+              <input id="permissionRoleInput" placeholder="Role name for permission update" />
+              <textarea id="permissionListInput" placeholder='Permissions JSON e.g. ["students.view","reports.view"]'></textarea>
+            </div>
+            <div class="control-actions">
+              <button class="btn primary" id="assignRoleBtn">Assign Role</button>
+              <button class="btn secondary" id="updatePermissionsBtn">Update Permission List</button>
+              <button class="btn secondary" id="loadRolesBtn">Load Roles</button>
+            </div>
+            <div class="co-admin-table-wrap">
+              <table class="co-admin-data-table">
+                <thead><tr><th>Admin ID</th><th>Name</th><th>Email</th><th>Role</th></tr></thead>
+                <tbody id="rolesTableBody"><tr><td colspan="4" class="co-admin-table-empty">No role data loaded.</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article id="panel-settings" class="control-panel">
+            <h3 class="control-title">Platform Settings</h3>
+            <p class="control-subtitle">Manage app branding, feature toggles, pricing, maintenance mode, and global system notices.</p>
+            <div class="control-filters">
+              <input id="settingAppName" placeholder="App name" />
+              <input id="settingPrimaryColor" placeholder="Primary color (hex)" />
+              <input id="settingMonthlyPrice" type="number" placeholder="Monthly pricing" />
+              <select id="settingMaintenanceEnabled"><option value="false">Maintenance OFF</option><option value="true">Maintenance ON</option></select>
+              <textarea id="settingSystemNotice" placeholder="System notice"></textarea>
+              <textarea id="settingFeatureToggles" placeholder='Feature toggles JSON e.g. {"forum":true,"roadmaps":true}'></textarea>
+            </div>
+            <div class="control-actions">
+              <button class="btn primary" id="saveSettingsBtn">Save Settings</button>
+              <button class="btn secondary" id="loadSettingsBtn">Load Settings</button>
+            </div>
+
+            <div class="experience-block">
+              <h4>Contribution Visibility Control</h4>
+              <p class="control-subtitle" style="margin-bottom:8px;">Global kill switch for student contribution uploads and contribution hub visibility. Existing contribution data remains unchanged.</p>
+              <div class="control-filters">
+                <select id="settingContributionEnabled">
+                  <option value="true">Contribution system enabled</option>
+                  <option value="false">Contribution system disabled</option>
+                </select>
+                <select id="settingContributionHubVisible">
+                  <option value="true">Student contribution hub visible</option>
+                  <option value="false">Student contribution hub hidden</option>
+                </select>
+              </div>
+              <div class="control-actions">
+                <button class="btn primary" id="saveContributionVisibilityBtn">Save Contribution Visibility</button>
+                <button class="btn secondary" id="loadContributionVisibilityBtn">Load Contribution Visibility</button>
+                <a class="btn secondary" href="admin-academics.html#governance">Open Academics Governance</a>
+              </div>
+              <p id="contributionVisibilityStatus" class="muted"></p>
+            </div>
+
+            <div class="experience-block">
+              <h4>Membership Center Configuration</h4>
+              <div class="control-filters">
+                <input id="memHeroTitle" placeholder="Membership hero title" />
+                <input id="memHeroSubtitle" placeholder="Membership hero subtitle" />
+                <input id="memPlanFreeName" placeholder="Free plan name" />
+                <input id="memPlanPremiumName" placeholder="Premium plan name" />
+                <input id="memPlanPremiumPrice" type="number" min="0" placeholder="Premium price (INR)" />
+                <input id="memPlanDurationDays" type="number" min="1" placeholder="Billing duration (days)" />
+                <input id="memPlanFreeDesc" placeholder="Free plan description" />
+                <input id="memPlanPremiumDesc" placeholder="Premium plan description" />
+                <input id="memUpiId" placeholder="UPI ID" />
+                <input id="memQrUrl" placeholder="QR Code image URL" />
+                <textarea id="memPaymentInstructions" placeholder="Payment instructions (one step per line)"></textarea>
+                <textarea id="memHeroHighlights" placeholder="Hero highlights (one per line)"></textarea>
+                <input id="memNotesAccessFree" placeholder="Notes access (free)" />
+                <input id="memNotesAccessPremium" placeholder="Notes access (premium)" />
+                <input id="memMockTestsFree" placeholder="Mock test limits (free)" />
+                <input id="memMockTestsPremium" placeholder="Mock test limits (premium)" />
+                <input id="memRoadmapDepthFree" placeholder="Roadmap depth (free)" />
+                <input id="memRoadmapDepthPremium" placeholder="Roadmap depth (premium)" />
+                <select id="memAiToolsPremiumEnabled"><option value="true">AI tools for premium: ON</option><option value="false">AI tools for premium: OFF</option></select>
+                <select id="memCertificatesPremiumEnabled"><option value="true">Certificates for premium: ON</option><option value="false">Certificates for premium: OFF</option></select>
+                <select id="memDownloadsPremiumEnabled"><option value="true">Downloads for premium: ON</option><option value="false">Downloads for premium: OFF</option></select>
+              </div>
+              <div class="control-actions">
+                <button class="btn primary" id="saveMembershipConfigBtn">Save Membership Center Config</button>
+                <button class="btn secondary" id="loadMembershipConfigBtn">Load Membership Center Config</button>
+              </div>
+            </div>
+
+            <div class="experience-block">
+              <h4>Home Page Content Control</h4>
+              <div class="control-filters">
+                <input id="expHomeHeroTitle" placeholder="Hero title" />
+                <input id="expHomeHeroDescription" placeholder="Hero description" />
+                <input id="expHomeCtaPrimaryLabel" placeholder="CTA 1 Label" />
+                <input id="expHomeCtaPrimaryHref" placeholder="CTA 1 Link" />
+                <input id="expHomeCtaSecondaryLabel" placeholder="CTA 2 Label" />
+                <input id="expHomeCtaSecondaryHref" placeholder="CTA 2 Link" />
+                <input id="expHomeBannerGraphicUrl" placeholder="Hero banner graphic URL (optional)" />
+              </div>
+            </div>
+
+            <div class="experience-block">
+              <h4>Authentication Experience Control</h4>
+              <div class="control-filters">
+                <input id="expAuthBrandKicker" placeholder="Auth left kicker text" />
+                <input id="expAuthBrandHeadline" placeholder="Auth left headline" />
+                <input id="expAuthBrandDescription" placeholder="Auth left short description" />
+                <textarea id="expAuthFeatures" placeholder="Left panel highlights (one line each, max 6)"></textarea>
+                <textarea id="expAuthTrustPoints" placeholder="Trust points (one line each, max 3)"></textarea>
+                <input id="expAuthStatValue" placeholder="Stat value (example: 10k+)" />
+                <input id="expAuthStatLabel" placeholder="Stat label (example: active learners)" />
+              </div>
+            </div>
+
+            <div class="experience-block">
+              <h4>Authentication Text and Support</h4>
+              <div class="control-filters">
+                <input id="expAuthBrandName" placeholder="Auth header brand name" />
+                <input id="expAuthBrandSubtext" placeholder="Auth header subtext" />
+                <input id="expAuthLoginTitle" placeholder="Login title" />
+                <input id="expAuthLoginDescription" placeholder="Login description" />
+                <input id="expAuthSignupTitle" placeholder="Signup title" />
+                <input id="expAuthSignupDescription" placeholder="Signup description" />
+                <input id="expAuthSupportLinkLabel" placeholder="Support link label" />
+                <input id="expAuthFooterConsentText" placeholder="Footer consent prefix (example: By continuing, you agree to)" />
+                <input id="expAuthSupportEmail" placeholder="Support email" />
+                <input id="expAuthSupportWhatsapp" placeholder="Support WhatsApp" />
+                <textarea id="expAuthSupportHelpText" placeholder="Support popup help text"></textarea>
+              </div>
+            </div>
+
+            <div class="experience-block">
+              <h4>Authentication Terms and Privacy Popup</h4>
+              <div class="control-filters">
+                <input id="expAuthTermsTitle" placeholder="Terms title" />
+                <textarea id="expAuthTermsText" placeholder="Terms content"></textarea>
+                <input id="expAuthPrivacyTitle" placeholder="Privacy title" />
+                <textarea id="expAuthPrivacyText" placeholder="Privacy content"></textarea>
+                <input id="expAuthLegalUpdatedAt" placeholder="Updated at label (example: March 2026)" />
+              </div>
+            </div>
+
+            <div class="experience-block">
+              <h4>Authentication Module Toggles</h4>
+              <div class="toggle-grid" id="expAuthModuleGrid"></div>
+            </div>
+
+            <div class="experience-block">
+              <h4>Signup Field Visibility</h4>
+              <div class="toggle-grid" id="expAuthSignupFieldGrid"></div>
+            </div>
+
+            <div class="experience-block">
+              <h4>Dashboard Section Visibility</h4>
+              <div class="toggle-grid" id="expDashboardVisibilityGrid"></div>
+            </div>
+
+            <div class="experience-block">
+              <h4>Feature Flags</h4>
+              <div class="toggle-grid" id="expFeatureFlagsGrid"></div>
+            </div>
+
+            <div class="experience-block">
+              <h4>Gamification Settings</h4>
+              <div class="control-filters">
+                <input id="expXpMultiplier" type="number" min="0.1" step="0.1" placeholder="XP Multiplier" />
+                <input id="expStreakMinActions" type="number" min="1" placeholder="Min actions/day for streak" />
+                <input id="expBadgeStreak7" type="number" min="1" placeholder="Badge: Streak 7 threshold" />
+                <input id="expBadgeStreak14" type="number" min="1" placeholder="Badge: Streak 14 threshold" />
+                <input id="expBadgeStreak30" type="number" min="1" placeholder="Badge: Streak 30 threshold" />
+                <input id="expBadgeXp500" type="number" min="1" placeholder="Badge: XP 500 threshold" />
+                <input id="expBadgeXp1000" type="number" min="1" placeholder="Badge: XP 1000 threshold" />
+              </div>
+            </div>
+
+            <div class="experience-block">
+              <h4>Dashboard Layout Order (Drag And Drop)</h4>
+              <ul class="drag-list" id="expDashboardOrderList"></ul>
+            </div>
+
+            <div class="control-actions">
+              <button class="btn primary" id="saveExperienceConfigBtn">Save Home/Dashboard Experience</button>
+              <button class="btn secondary" id="loadExperienceConfigBtn">Load Home/Dashboard Experience</button>
+            </div>
+          </article>
+
+          <article id="panel-audit" class="control-panel">
+            <h3 class="control-title">Audit Logs</h3>
+            <p class="control-subtitle">Track critical admin actions including student deletion, payment approvals, content deletion, role changes, and settings updates.</p>
+            <div class="control-filters">
+              <input id="auditLimitInput" type="number" min="1" max="500" value="100" />
+              <button class="btn primary" id="loadAuditBtn">Load Logs</button>
+            </div>
+            <div class="co-admin-table-wrap">
+              <table class="co-admin-data-table">
+                <thead><tr><th>Time</th><th>Actor</th><th>Role</th><th>Action</th><th>Target</th><th>Metadata</th></tr></thead>
+                <tbody id="auditTableBody"><tr><td colspan="6" class="co-admin-table-empty">No logs loaded.</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+
+          <!-- Company & Support Panel -->
+          <article id="panel-company" class="control-panel">
+            <h3 class="control-title">Company &amp; Support Management</h3>
+            <p class="control-subtitle">Edit About Us, Contact Us, Help Center FAQs, and manage student support tickets — all from here.</p>
+
+            <!-- Sub-tabs -->
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px;" id="companySubTabs">
+              <button class="btn primary" data-company-tab="tab-about" id="companyTabAbout">About Us</button>
+              <button class="btn secondary" data-company-tab="tab-contact" id="companyTabContact">Contact Us</button>
+              <button class="btn secondary" data-company-tab="tab-help" id="companyTabHelp">Help Center</button>
+              <button class="btn secondary" data-company-tab="tab-tickets" id="companyTabTickets">Support Tickets</button>
+            </div>
+
+            <!-- About Us Editor -->
+            <div id="tab-about" class="company-tab-panel">
+              <h4 style="margin:0 0 16px;">About Us Page Editor</h4>
+              <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+                <div><label>Tagline (top badge)</label><input id="aboutTagline" placeholder="Building the Future of College Education" /></div>
+                <div><label>Page Headline</label><input id="aboutHeadline" placeholder="About College OS" /></div>
+              </div>
+              <div style="margin-bottom:14px;"><label>Hero Description</label><textarea id="aboutHeroDesc" rows="3"></textarea></div>
+              <h5 style="margin:16px 0 10px;">Mission</h5>
+              <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div><label>Mission Title</label><input id="aboutMissionTitle" /></div>
+                <div><label>Mission Icon (FA class e.g. fa-rocket)</label><input id="aboutMissionIcon" placeholder="fa-rocket" /></div>
+              </div>
+              <div style="margin-bottom:14px;"><label>Mission Description</label><textarea id="aboutMissionDesc" rows="3"></textarea></div>
+              <h5 style="margin:16px 0 10px;">Vision</h5>
+              <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div><label>Vision Title</label><input id="aboutVisionTitle" /></div>
+                <div><label>Vision Icon</label><input id="aboutVisionIcon" placeholder="fa-eye" /></div>
+              </div>
+              <div style="margin-bottom:14px;"><label>Vision Description</label><textarea id="aboutVisionDesc" rows="3"></textarea></div>
+              <h5 style="margin:16px 0 10px;">Story</h5>
+              <div style="margin-bottom:14px;"><label>Story Title</label><input id="aboutStoryTitle" /></div>
+              <div style="margin-bottom:14px;"><label>Story Paragraphs (one per line)</label><textarea id="aboutStoryParagraphs" rows="6" placeholder="Paragraph 1&#10;Paragraph 2&#10;Paragraph 3"></textarea></div>
+              <div class="control-actions">
+                <button class="btn primary" id="saveAboutBtn"><i class="fa-solid fa-floppy-disk"></i> Save About Us</button>
+                <span id="aboutSaveStatus" class="muted" style="margin-left:10px;"></span>
+              </div>
+            </div>
+
+            <!-- Contact Us Editor -->
+            <div id="tab-contact" class="company-tab-panel" style="display:none;">
+              <h4 style="margin:0 0 16px;">Contact Us Page Editor</h4>
+              <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+                <div><label>Hero Title</label><input id="contactHeroTitleEdit" placeholder="Get in Touch" /></div>
+                <div><label>Hero Description</label><input id="contactHeroDescEdit" /></div>
+              </div>
+              <h5 style="margin:16px 0 10px;">Support Hours</h5>
+              <div style="margin-bottom:14px;"><label>Hours (one line each)</label><textarea id="contactHoursEdit" rows="4" placeholder="Monday – Friday: 9:00 AM – 9:00 PM IST&#10;Saturday: 10:00 AM – 6:00 PM IST"></textarea></div>
+              <div style="margin-bottom:14px;"><label>SLA Note</label><input id="contactSlaEdit" placeholder="Most tickets resolved within 4–24 hours." /></div>
+              <h5 style="margin:16px 0 10px;">Channels</h5>
+              <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div><label>Email</label><input id="contactEmailEdit" placeholder="support@collegeos.in" /></div>
+                <div><label>WhatsApp Number (with country code)</label><input id="contactWhatsappEdit" placeholder="+919000000000" /></div>
+              </div>
+              <div style="margin-bottom:14px;"><label>Form Categories (comma-separated)</label><input id="contactCategoriesEdit" placeholder="General Query, Technical Bug, Billing &amp; Payment, Feature Request" /></div>
+              <div class="control-actions">
+                <button class="btn primary" id="saveContactBtn"><i class="fa-solid fa-floppy-disk"></i> Save Contact Us</button>
+                <span id="contactSaveStatus" class="muted" style="margin-left:10px;"></span>
+              </div>
+            </div>
+
+            <!-- Help Center Editor -->
+            <div id="tab-help" class="company-tab-panel" style="display:none;">
+              <h4 style="margin:0 0 16px;">Help Center FAQ Editor</h4>
+              <p class="muted" style="margin-bottom:16px;">Select a category to manage its articles. Changes save to the live Help Center immediately.</p>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;" id="helpCatButtons">
+                <!-- Generated by JS -->
+              </div>
+              <div id="helpArticleEditor" style="display:none;">
+                <h5 id="helpEditorCatTitle" style="margin:0 0 14px;"></h5>
+                <div id="helpArticlesList" style="margin-bottom:14px;"></div>
+                <div class="card" style="padding:18px;margin-bottom:14px;">
+                  <h5 style="margin:0 0 12px;">Add New Article</h5>
+                  <div style="margin-bottom:10px;"><label>Article Title</label><input id="newArticleTitle" placeholder="e.g. How to reset your password" /></div>
+                  <div style="margin-bottom:10px;"><label>Article Body</label><textarea id="newArticleBody" rows="4" placeholder="Explain step by step..."></textarea></div>
+                  <button class="btn primary" id="addArticleBtn"><i class="fa-solid fa-plus"></i> Add Article</button>
+                </div>
+                <div class="control-actions">
+                  <button class="btn primary" id="saveHelpBtn"><i class="fa-solid fa-floppy-disk"></i> Save Help Center</button>
+                  <span id="helpSaveStatus" class="muted" style="margin-left:10px;"></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Support Tickets -->
+            <div id="tab-tickets" class="company-tab-panel" style="display:none;">
+              <h4 style="margin:0 0 12px;">Support Ticket Management</h4>
+              <div class="control-filters" style="margin-bottom:14px;">
+                <input id="ticketSearchInput" placeholder="Search by subject, student name, email" />
+                <select id="ticketStatusFilter">
+                  <option value="all">All Statuses</option>
+                  <option value="open">Open</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="resolved">Resolved</option>
+                  <option value="closed">Closed</option>
+                </select>
+                <select id="ticketPriorityFilter">
+                  <option value="all">All Priorities</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+                <button class="btn primary" id="loadTicketsBtn"><i class="fa-solid fa-rotate"></i> Refresh</button>
+              </div>
+              <div id="adminTicketsWrap">
+                <div class="co-admin-table-wrap">
+                  <table class="co-admin-data-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Student</th>
+                        <th>Subject</th>
+                        <th>Category</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="adminTicketsTableBody">
+                      <tr><td colspan="8" class="co-admin-table-empty">Click Refresh to load tickets.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Ticket Detail Modal (inline) -->
+              <div id="ticketDetailModal" style="display:none;margin-top:20px;">
+                <div class="card" style="padding:22px;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                    <h4 id="ticketDetailTitle" style="margin:0;">Ticket Detail</h4>
+                    <button class="btn secondary" id="closeTicketDetailBtn">Close</button>
+                  </div>
+                  <div id="ticketDetailBody"></div>
+                  <div style="margin-top:18px;">
+                    <h5 style="margin:0 0 10px;">Reply &amp; Update</h5>
+                    <div style="margin-bottom:12px;">
+                      <label>Update Status</label>
+                      <select id="ticketDetailStatus">
+                        <option value="open">Open</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="closed">Closed</option>
+                      </select>
+                    </div>
+                    <div style="margin-bottom:12px;">
+                      <label>Admin Reply (optional)</label>
+                      <textarea id="ticketDetailReply" rows="4" placeholder="Type your reply to the student..."></textarea>
+                    </div>
+                    <div class="control-actions">
+                      <button class="btn primary" id="submitTicketUpdateBtn"><i class="fa-solid fa-check"></i> Save Update</button>
+                      <span id="ticketUpdateStatus" class="muted" style="margin-left:10px;"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </article>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/admin-control.js"></script>
+  <script src="assets/js/admin-company-support.js"></script>
+</body>
+</html>

@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>College OS - My Notes</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .notes-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .notes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .note-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.75rem;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e9ecef;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .note-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #0f7b6c, #1a9d8a);
+    }
+
+    .note-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+    }
+
+    .note-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 1rem;
+    }
+
+    .note-card h3 {
+      margin: 0 0 0.5rem 0;
+      color: #212529;
+      font-size: 1.25rem;
+      font-weight: 600;
+      word-break: break-word;
+    }
+
+    .note-card .note-subject {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      background: #e9ecef;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      color: #495057;
+      margin-bottom: 0.75rem;
+    }
+
+    .note-card .note-content {
+      color: #6c757d;
+      line-height: 1.6;
+      margin-bottom: 1rem;
+      max-height: 100px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      line-clamp: 4;
+      -webkit-box-orient: vertical;
+    }
+
+    .note-card .note-date {
+      font-size: 0.85rem;
+      color: #adb5bd;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .note-actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .note-actions button,
+    .note-actions a {
+      flex: 1;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      border: none;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .note-actions .edit-btn {
+      background: #0f7b6c;
+      color: white;
+    }
+
+    .note-actions .edit-btn:hover {
+      background: #0d6a5d;
+    }
+
+    .note-actions .delete-btn {
+      background: #dc3545;
+      color: white;
+    }
+
+    .note-actions .delete-btn:hover {
+      background: #c82333;
+    }
+
+    .empty-notes {
+      text-align: center;
+      padding: 4rem 2rem;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    }
+
+    .empty-notes i {
+      font-size: 4rem;
+      color: #adb5bd;
+      margin-bottom: 1.5rem;
+    }
+
+    .empty-notes h2 {
+      color: #495057;
+      margin-bottom: 1rem;
+    }
+
+    .empty-notes p {
+      color: #6c757d;
+      margin-bottom: 2rem;
+    }
+
+    .search-filter {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .search-filter input {
+      flex: 1;
+      min-width: 250px;
+      padding: 0.75rem 1rem;
+      border: 1px solid #ced4da;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+
+    .search-filter select {
+      padding: 0.75rem 1rem;
+      border: 1px solid #ced4da;
+      border-radius: 8px;
+      font-size: 1rem;
+      background: white;
+    }
+
+    @media (max-width: 768px) {
+      .notes-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .notes-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <section class="hero">
+      <h1 data-page-title><i class="fa-solid fa-pen-to-square"></i> My Notes</h1>
+      <p>Create, organize, and manage your personal study notes and summaries.</p>
+    </section>
+
+    <div class="notes-header">
+      <div class="search-filter">
+        <input type="text" id="searchInput" placeholder="Search notes by title or subject..." />
+        <select id="subjectFilter">
+          <option value="">All Subjects</option>
+          <option value="AI">AI</option>
+          <option value="Cloud">Cloud</option>
+          <option value="Programming">Programming</option>
+          <option value="Data Science">Data Science</option>
+          <option value="Personal">Personal</option>
+        </select>
+      </div>
+      <a href="note-editor.html" class="btn primary">
+        <i class="fa-solid fa-plus"></i> Create New Note
+      </a>
+    </div>
+
+    <div id="notesContainer" class="notes-grid">
+      <!-- Notes will be dynamically loaded here -->
+    </div>
+
+    <div id="emptyState" class="empty-notes" style="display: none;">
+      <i class="fa-solid fa-folder-open"></i>
+      <h2>No Notes Yet</h2>
+      <p>Start creating your personal study notes to keep track of your learning journey.</p>
+      <a href="note-editor.html" class="btn primary">
+        <i class="fa-solid fa-plus"></i> Create Your First Note
+      </a>
+    </div>
+  </template>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const container = document.getElementById('notesContainer');
+      const emptyState = document.getElementById('emptyState');
+      const searchInput = document.getElementById('searchInput');
+      const subjectFilter = document.getElementById('subjectFilter');
+      let allNotes = [];
+
+      function stripHtml(html) {
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        return tmp.textContent || tmp.innerText || '';
+      }
+
+      function formatDate(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diff = now - date;
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        
+        if (days === 0) return 'Today';
+        if (days === 1) return 'Yesterday';
+        if (days < 7) return `${days} days ago`;
+        return date.toLocaleDateString();
+      }
+
+      function renderNotes(notes) {
+        if (!notes || notes.length === 0) {
+          container.style.display = 'none';
+          emptyState.style.display = 'block';
+          return;
+        }
+
+        container.style.display = 'grid';
+        emptyState.style.display = 'none';
+
+        container.innerHTML = notes.map(note => {
+          const content = stripHtml(note.content || note.user_notes || '');
+          const preview = content.length > 150 ? content.substring(0, 150) + '...' : content;
+          
+          return `
+            <div class="note-card" data-note-id="${note.id}">
+              <div class="note-card-header">
+                <div>
+                  <span class="note-subject">${note.subject || 'General'}</span>
+                  <h3>${note.chapter || 'Untitled Note'}</h3>
+                </div>
+              </div>
+              <div class="note-content">${preview}</div>
+              <div class="note-date">
+                <i class="fa-solid fa-clock"></i>
+                <span>${formatDate(note.created_at)}</span>
+              </div>
+              <div class="note-actions">
+                <a href="note-editor.html?id=${note.id}" class="edit-btn">
+                  <i class="fa-solid fa-edit"></i> Edit
+                </a>
+                <button class="delete-btn" data-note-id="${note.id}">
+                  <i class="fa-solid fa-trash"></i> Delete
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // Attach delete handlers
+        container.querySelectorAll('.delete-btn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const noteId = e.currentTarget.dataset.noteId;
+            if (confirm('Are you sure you want to delete this note?')) {
+              try {
+                await window.CollegeOSApi.deleteNote(noteId);
+                await loadNotes();
+              } catch (error) {
+                alert('Failed to delete note: ' + error.message);
+              }
+            }
+          });
+        });
+      }
+
+      function filterNotes() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const subject = subjectFilter.value;
+
+        const filtered = allNotes.filter(note => {
+          const matchesSearch = !searchTerm || 
+            (note.chapter && note.chapter.toLowerCase().includes(searchTerm)) ||
+            (note.subject && note.subject.toLowerCase().includes(searchTerm)) ||
+            (note.content && stripHtml(note.content).toLowerCase().includes(searchTerm));
+          
+          const matchesSubject = !subject || note.subject === subject;
+
+          return matchesSearch && matchesSubject;
+        });
+
+        renderNotes(filtered);
+      }
+
+      async function loadNotes() {
+        try {
+          const response = await window.CollegeOSApi.getMyNotes();
+          allNotes = response.notes || [];
+          filterNotes();
+        } catch (error) {
+          container.innerHTML = `
+            <div class="empty-notes">
+              <i class="fa-solid fa-exclamation-triangle"></i>
+              <h2>Error Loading Notes</h2>
+              <p>${error.message}</p>
+            </div>
+          `;
+        }
+      }
+
+      searchInput.addEventListener('input', filterNotes);
+      subjectFilter.addEventListener('change', filterNotes);
+
+      await loadNotes();
+    });
+  </script>
+</body>
+</html>
+
+
+
+

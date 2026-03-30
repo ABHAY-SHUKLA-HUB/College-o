@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>College OS - Certificates</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/css/print.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .cert-dashboard {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .toolbar {
+      display: grid;
+      gap: 0.75rem;
+      background: var(--surface);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 0.95rem;
+    }
+
+    .search-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 12px;
+      background: #fff;
+      padding: 0.7rem 0.8rem;
+    }
+
+    .search-wrap input {
+      border: 0;
+      outline: 0;
+      width: 100%;
+      font: inherit;
+      background: transparent;
+    }
+
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .filter-chip {
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 999px;
+      background: #fff;
+      padding: 0.4rem 0.75rem;
+      font-weight: 700;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 120ms ease;
+    }
+
+    .filter-chip.active {
+      border-color: var(--primary);
+      color: #fff;
+      background: var(--primary);
+      box-shadow: 0 8px 18px rgba(15, 123, 108, 0.2);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 0.8rem;
+    }
+
+    .stat-card label {
+      color: var(--muted);
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      display: block;
+    }
+
+    .stat-card strong {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.4rem;
+    }
+
+    .cert-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: 0.85rem;
+    }
+
+    .cert-card {
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 14px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      padding: 0.85rem;
+      display: grid;
+      gap: 0.7rem;
+      transition: transform 130ms ease, box-shadow 130ms ease;
+    }
+
+    .cert-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 16px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    .thumb {
+      border-radius: 10px;
+      border: 1px solid rgba(0, 0, 0, 0.09);
+      padding: 0.7rem;
+      background: linear-gradient(135deg, #fff8df, #edf8ff);
+      min-height: 110px;
+    }
+
+    .cert-meta {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.5rem;
+    }
+
+    .cert-meta .box {
+      border: 1px solid rgba(0, 0, 0, 0.09);
+      border-radius: 9px;
+      background: #fff;
+      padding: 0.45rem;
+      font-size: 0.84rem;
+    }
+
+    .cert-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.45rem;
+    }
+
+    .cert-actions .btn {
+      width: 100%;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .cert-preview {
+      border-radius: 16px;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      padding: 1.1rem;
+      background: linear-gradient(180deg, #fffef9, #fff8ed);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cert-preview.classic {
+      background: linear-gradient(180deg, #fffef9, #fff8ed);
+    }
+
+    .cert-preview.modern {
+      background: linear-gradient(135deg, #f2faff, #eef6ff);
+    }
+
+    .cert-preview.premium {
+      background: linear-gradient(135deg, #fff8df, #fff0c8);
+    }
+
+    .cert-preview.college {
+      background: linear-gradient(135deg, #eef8f2, #edf8ff);
+    }
+
+    .preview-head {
+      text-align: center;
+      margin-bottom: 0.6rem;
+    }
+
+    .preview-logo {
+      width: 58px;
+      height: 58px;
+      margin: 0 auto 0.4rem;
+      border-radius: 50%;
+      background: #0f7b6c;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.35rem;
+    }
+
+    .preview-title {
+      font-size: 2rem;
+      font-family: 'Space Grotesk', sans-serif;
+      letter-spacing: 0.02em;
+      color: #11342f;
+      margin: 0;
+    }
+
+    .recipient {
+      font-size: 1.8rem;
+      text-align: center;
+      margin: 0.55rem 0;
+      font-family: 'Space Grotesk', sans-serif;
+      color: #8b6f00;
+    }
+
+    .preview-meta {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.55rem;
+      margin-top: 0.8rem;
+    }
+
+    .preview-meta .box {
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+      background: #fff;
+      padding: 0.55rem;
+    }
+
+    .preview-signature {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 0.95rem;
+      align-items: end;
+      gap: 0.8rem;
+    }
+
+    .sign-box {
+      flex: 1;
+      border-top: 1px dashed rgba(0, 0, 0, 0.35);
+      padding-top: 0.4rem;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .seal {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 3px double #b14b00;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #b14b00;
+      font-size: 0.76rem;
+      text-align: center;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.75);
+      transform: rotate(-12deg);
+    }
+
+    .verify-panel {
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 12px;
+      background: #fff;
+      padding: 0.8rem;
+      display: grid;
+      gap: 0.55rem;
+    }
+
+    .recent-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 0.65rem;
+    }
+
+    .recent-card {
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 11px;
+      background: #fff;
+      padding: 0.65rem;
+    }
+
+    .empty-state-modern {
+      border: 1px dashed rgba(0, 0, 0, 0.16);
+      border-radius: 12px;
+      background: #fff;
+      text-align: center;
+      padding: 1rem;
+      color: var(--muted);
+    }
+
+    .preview-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(5, 8, 15, 0.55);
+      z-index: 1200;
+      padding: 1rem;
+    }
+
+    .preview-modal.open {
+      display: flex;
+    }
+
+    .preview-modal-content {
+      width: min(980px, 100%);
+      max-height: calc(100vh - 2rem);
+      overflow: auto;
+      background: var(--surface);
+      border-radius: 14px;
+      border: 1px solid rgba(0, 0, 0, 0.14);
+      box-shadow: 0 18px 38px rgba(0, 0, 0, 0.25);
+      padding: 1rem;
+    }
+
+    .preview-modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.6rem;
+    }
+
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.55rem;
+    }
+
+    .history-table th,
+    .history-table td {
+      padding: 0.65rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      text-align: left;
+    }
+
+    .history-table tbody tr:hover {
+      background: #f7fbff;
+    }
+
+    @media (max-width: 980px) {
+      .stats-grid,
+      .preview-meta,
+      .cert-actions,
+      .cert-meta {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <section class="hero"><h1 data-page-title>My Certificates</h1><p>Achievements & certificates issued by admin/system. View, download, verify, and share your credentials.</p></section>
+
+    <section class="cert-dashboard">
+      <article class="toolbar">
+        <div class="search-wrap">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input id="certSearchInput" placeholder="Search by certificate name, ID, or achievement type" />
+        </div>
+        <div class="filter-row" id="certTypeFilters">
+          <button class="filter-chip active" data-filter="all">All Certificates</button>
+          <button class="filter-chip" data-filter="course">Course Completion</button>
+          <button class="filter-chip" data-filter="subject">Subject Mastery</button>
+          <button class="filter-chip" data-filter="mock">Mock Test Awards</button>
+          <button class="filter-chip" data-filter="streak">Streak Achievements</button>
+        </div>
+      </article>
+
+      <section class="stats-grid">
+        <article class="stat-card"><label>Total Certificates Earned</label><strong id="statTotalCertificates">0</strong></article>
+        <article class="stat-card"><label>Courses Completed</label><strong id="statCoursesCompleted">0</strong></article>
+        <article class="stat-card"><label>Mock Test Awards</label><strong id="statMockAwards">0</strong></article>
+        <article class="stat-card"><label>Learning Achievements</label><strong id="statLearningAchievements">0</strong></article>
+      </section>
+
+      <article class="card">
+        <h3><i class="fa-solid fa-medal"></i> My Certificates</h3>
+        <div id="myCertificatesGrid" class="cert-grid">
+          <div class="empty-state-modern">Loading certificates...</div>
+        </div>
+      </article>
+
+      <article class="card">
+        <h3><i class="fa-solid fa-circle-check"></i> Certificate Verification</h3>
+        <div class="verify-panel">
+          <div><label>Certificate ID</label><input id="verifyIdField" readonly /></div>
+          <div><label>Verification Status</label><div class="badge" id="verifyStatusBadge">Valid</div></div>
+          <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+            <img id="certQr" alt="QR code" width="96" height="96" />
+            <div class="actions">
+              <button id="verifyCertBtn" class="btn primary">Verify Certificate</button>
+              <button id="copyVerifyLinkBtn" class="btn secondary">Copy Verification Link</button>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <h3><i class="fa-solid fa-clock"></i> Recent Achievements</h3>
+        <div class="recent-grid" id="recentAchievementsGrid">
+          <div class="empty-state-modern">No recent achievements yet.</div>
+        </div>
+      </article>
+    </section>
+
+    <div class="preview-modal" id="certificateModal">
+      <div class="preview-modal-content">
+        <div class="preview-modal-head">
+          <h3 style="margin:0;">Certificate Preview</h3>
+          <button class="btn secondary" id="closeCertModalBtn">Close</button>
+        </div>
+
+        <div id="certificatePreview" class="cert-preview college">
+        <div class="preview-head">
+          <div class="preview-logo"><i class="fa-solid fa-graduation-cap"></i></div>
+          <h2 class="preview-title" data-cert-org>College OS Academy</h2>
+          <p class="muted" style="margin:0.2rem 0;">Official Certificate of Achievement</p>
+        </div>
+
+        <p style="text-align:center; margin:0.4rem 0;">This certificate is proudly awarded to</p>
+        <div class="recipient" data-cert-name>Student Name</div>
+        <p style="text-align:center; margin:0;">For successfully achieving <strong data-cert-achievement>Course Completion</strong></p>
+
+        <div class="preview-meta">
+          <div class="box"><label>Certificate Type</label><strong data-cert-type>Course Completion</strong></div>
+          <div class="box"><label>Score / Rank</label><strong data-cert-score>N/A</strong></div>
+          <div class="box"><label>Issue Date</label><strong data-cert-date>-</strong></div>
+          <div class="box"><label>Verification ID</label><strong data-cert-id>-</strong></div>
+          <div class="box"><label>Signatory</label><strong data-cert-signatory>Academic Director</strong></div>
+          <div class="box"><label>QR Verification</label><img id="certQrInline" alt="QR code" width="76" height="76" /></div>
+        </div>
+
+        <div class="preview-signature">
+          <div class="sign-box">Authorized Signature<br><strong data-cert-signatory-line>Academic Director</strong></div>
+          <div class="seal">OFFICIAL<br/>SEAL</div>
+        </div>
+      </div>
+        <canvas id="certificateCanvas" width="1100" height="620" style="width: 100%; margin-top: 14px; border: 1px solid #ddd; border-radius: 12px; background: #fff;"></canvas>
+
+        <div class="cert-actions" style="margin-top:0.7rem;">
+          <button id="downloadPdfBtn" class="btn secondary"><i class="fa-solid fa-file-pdf"></i> Download PDF</button>
+          <button id="downloadImageBtn" class="btn secondary"><i class="fa-solid fa-image"></i> Download Image</button>
+          <button id="shareLinkedInBtn" class="btn warn"><i class="fa-brands fa-linkedin"></i> Share on LinkedIn</button>
+          <button id="copyLinkBtn" class="btn secondary"><i class="fa-regular fa-copy"></i> Copy Link</button>
+        </div>
+        <p class="muted" id="certActionStatus"></p>
+      </div>
+    </div>
+  </template>
+  <script src="assets/vendor/jspdf/jspdf.umd.min.js"></script>
+  <script src="assets/vendor/qrcode/qrcode-generator.js"></script>
+  <script src="assets/js/qrcode-shim.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/certificates.js"></script>
+</body>
+</html>
+
+
+

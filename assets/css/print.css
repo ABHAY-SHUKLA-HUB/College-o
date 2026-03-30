@@ -1,0 +1,28 @@
+@media print {
+  .sidebar,
+  .topbar,
+  .mobile-nav,
+  .actions,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  .app-shell,
+  .main-area,
+  .content {
+    display: block;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .card,
+  .certificate-canvas {
+    box-shadow: none;
+    border: 1px solid #999;
+    break-inside: avoid;
+  }
+}

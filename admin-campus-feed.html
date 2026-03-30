@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Campus Feed Moderation - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .admin-feed-wrap { display:grid; gap:1rem; }
+    .admin-feed-card { background:#fff; border:1px solid #dbe6f2; border-radius:14px; box-shadow:0 8px 22px rgba(32,52,75,.08); padding:1rem; }
+    .stats-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:.65rem; margin-top:.6rem; }
+    .stat-card { border:1px solid #d8e3ef; border-radius:12px; padding:.7rem; background:#fbfdff; }
+    .stat-card .k { font-size:.78rem; color:#647a91; }
+    .stat-card .v { font-size:1.3rem; font-weight:700; color:#21384f; margin-top:.2rem; }
+    .admin-feed-toolbar { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:.6rem; }
+    .admin-feed-toolbar input, .admin-feed-toolbar select { border:1px solid #d1deeb; border-radius:10px; padding:.58rem .7rem; }
+    .queue-list { display:grid; gap:.65rem; margin-top:.75rem; }
+    .queue-item { border:1px solid #d8e3ef; border-radius:12px; padding:.75rem; background:#fbfdff; }
+    .queue-meta { display:flex; flex-wrap:wrap; gap:.4rem; font-size:.76rem; color:#5a6f84; margin-top:.35rem; }
+    .chip { border-radius:999px; border:1px solid #ccdaea; padding:.16rem .52rem; }
+    .risk-high { background:#ffe8e8; border-color:#f6c3c3; color:#9d2e2e; }
+    .risk-medium { background:#fff4df; border-color:#f0dbab; color:#7d5c00; }
+    .risk-low { background:#e7f8ee; border-color:#b8eacb; color:#1f6d3f; }
+    .queue-actions { display:flex; flex-wrap:wrap; gap:.45rem; margin-top:.6rem; }
+    .official-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.6rem; }
+    .official-grid .full { grid-column:1 / -1; }
+    .official-grid input, .official-grid select, .official-grid textarea { border:1px solid #d1deeb; border-radius:10px; padding:.6rem .7rem; }
+    .empty-state { border:1px dashed #c8d8ea; border-radius:10px; padding:1rem .75rem; text-align:center; color:#5a6f84; background:#f8fbff; }
+    .report-card { border:1px solid #dbe6f2; border-radius:10px; padding:.6rem; background:#fbfdff; }
+    .analytics-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:.65rem; margin-top:.6rem; }
+    .analytics-grid ul { margin:.2rem 0 0; padding-left:1rem; color:#40586f; font-size:.86rem; }
+    @media (max-width: 980px) { .admin-feed-toolbar, .official-grid, .stats-grid, .analytics-grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body class="admin-portal">
+  <div class="co-admin-shell">
+    <aside class="co-admin-aside">
+      <div class="co-admin-brand">
+        <span class="co-admin-brand-mark"><i class="fa-solid fa-shield-halved"></i></span>
+        <div>
+          <h1>College OS Admin</h1>
+          <p>Unified command center for academics, governance, and platform operations.</p>
+        </div>
+      </div>
+      <section class="co-admin-nav-section">
+        <p class="co-admin-nav-label">Admin Navigation</p>
+        <nav class="co-admin-nav">
+          <a class="co-admin-nav-link" href="admin-dashboard.html"><i class="fa-solid fa-chart-pie"></i><span>Overview</span></a>
+          <a class="co-admin-nav-link" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control System</span></a>
+          <a class="co-admin-nav-link" href="admin-academics.html#contributions"><i class="fa-solid fa-upload"></i><span>Contribution Control</span></a>
+          <a class="co-admin-nav-link" href="admin-support-governance.html"><i class="fa-solid fa-shield-halved"></i><span>Support Governance</span></a>
+          <a class="co-admin-nav-link" href="admin-notes.html"><i class="fa-solid fa-file-lines"></i><span>Notes</span></a>
+          <a class="co-admin-nav-link" href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i><span>Papers</span></a>
+          <a class="co-admin-nav-link" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i><span>Materials</span></a>
+          <a class="co-admin-nav-link" href="admin-quizzes.html"><i class="fa-solid fa-clipboard-question"></i><span>Quizzes</span></a>
+          <a class="co-admin-nav-link" href="admin-certificates.html"><i class="fa-solid fa-graduation-cap"></i><span>Certificates</span></a>
+          <a class="co-admin-nav-link" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Roadmaps</span></a>
+          <a class="co-admin-nav-link" href="admin-mock-tests.html"><i class="fa-solid fa-flask-vial"></i><span>Mock Test Studio</span></a>
+          <a class="co-admin-nav-link" href="admin-ai-tools.html"><i class="fa-solid fa-sparkles"></i><span>AI Tools</span></a>
+          <a class="co-admin-nav-link active" href="admin-campus-feed.html"><i class="fa-solid fa-newspaper"></i><span>Campus Feed</span></a>
+        </nav>
+      </section>
+    </aside>
+
+    <main class="co-admin-main co-admin-page-block">
+      <header class="co-admin-topbar">
+        <div class="co-admin-topbar-title">
+          <h2>Campus Feed Moderation</h2>
+          <p>Approve student content, review abuse reports, assign campus roles, and publish official college updates.</p>
+        </div>
+        <div class="co-admin-topbar-actions">
+          <a class="co-admin-chip" href="admin-dashboard.html"><i class="fa-solid fa-arrow-left"></i><span>Back to Dashboard</span></a>
+        </div>
+      </header>
+
+      <section style="padding: 20px;">
+      <article class="admin-feed-card">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:.6rem;">
+          <h3 style="margin:0;">Moderation Control Analytics</h3>
+          <button class="btn secondary" type="button" id="analyticsRefreshBtn"><i class="fa-solid fa-chart-line"></i> Refresh Analytics</button>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="k">Pending Posts</div><div class="v" id="metricPending">0</div></div>
+          <div class="stat-card"><div class="k">Approved Posts</div><div class="v" id="metricApproved">0</div></div>
+          <div class="stat-card"><div class="k">Rejected Posts</div><div class="v" id="metricFlagged">0</div></div>
+          <div class="stat-card"><div class="k">Points Distributed</div><div class="v" id="metricPoints">0</div></div>
+        </div>
+        <div class="analytics-grid">
+          <div class="stat-card">
+            <strong>Top Posts</strong>
+            <ul id="analyticsTopPosts"><li>Loading...</li></ul>
+          </div>
+          <div class="stat-card">
+            <strong>Top Creators</strong>
+            <ul id="analyticsTopCreators"><li>Loading...</li></ul>
+          </div>
+          <div class="stat-card">
+            <strong>Suspicious Signals</strong>
+            <ul id="analyticsSuspicious"><li>Loading...</li></ul>
+          </div>
+        </div>
+      </article>
+
+      <article class="admin-feed-card">
+        <h3 style="margin-top:0;">Moderation Queue</h3>
+        <div class="admin-feed-toolbar">
+          <select id="moderationStatusFilter">
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="featured">Featured</option>
+            <option value="flagged">Flagged</option>
+            <option value="all">All</option>
+          </select>
+          <select id="moderationCollegeFilter"><option value="">All Colleges</option></select>
+          <input id="moderationSearch" placeholder="Search title, author, college" />
+          <button class="btn secondary" id="moderationRefreshBtn" type="button"><i class="fa-solid fa-rotate"></i> Refresh</button>
+        </div>
+        <p class="muted" id="moderationStatusText" style="margin:.55rem 0 0;"></p>
+        <div id="moderationQueueList" class="queue-list"></div>
+      </article>
+
+      <article class="admin-feed-card">
+        <h3 style="margin-top:0;">Abuse Reports Queue</h3>
+        <div style="display:flex; gap:.6rem; flex-wrap:wrap; align-items:center;">
+          <select id="reportStatusFilter" style="border:1px solid #d1deeb; border-radius:10px; padding:.48rem .65rem;">
+            <option value="pending">Pending</option>
+            <option value="resolved">Resolved</option>
+            <option value="dismissed">Dismissed</option>
+          </select>
+          <button class="btn secondary" id="refreshReportsBtn" type="button">Refresh Reports</button>
+        </div>
+        <div id="reportQueueList" class="queue-list" style="margin-top:.7rem;"></div>
+      </article>
+
+      <article class="admin-feed-card">
+        <h3 style="margin-top:0;">Publish Official Post</h3>
+        <form id="officialPostForm" class="official-grid">
+          <select id="officialCollegeId" required>
+            <option value="">Select college</option>
+          </select>
+          <select id="officialPostType" required>
+            <option value="official">Official Update</option>
+            <option value="event">Event</option>
+            <option value="achievement">Achievement</option>
+            <option value="alert">Alert</option>
+            <option value="poll">Poll</option>
+            <option value="announcement">Announcement</option>
+            <option value="lost_found">Lost & Found</option>
+            <option value="placement_update">Placement Update</option>
+            <option value="event_coverage">Event Coverage</option>
+            <option value="image">Image</option>
+            <option value="video">Video</option>
+            <option value="text">Text</option>
+          </select>
+          <select id="officialCategory" required>
+            <option value="official">Official</option>
+            <option value="events">Events</option>
+            <option value="achievements">Achievements</option>
+            <option value="alerts">Alerts</option>
+            <option value="placements">Placements</option>
+            <option value="lost_found">Lost & Found</option>
+            <option value="announcements">Announcements</option>
+            <option value="latest">Latest</option>
+          </select>
+          <input id="officialTags" placeholder="comma tags" />
+          <input class="full" id="officialTitle" required placeholder="Official title" />
+          <textarea class="full" id="officialDescription" rows="4" required placeholder="Official announcement or update"></textarea>
+          <textarea class="full" id="officialPollOptions" rows="3" placeholder="Poll options (JSON array or one per line)"></textarea>
+          <input id="officialPollEndsAt" type="datetime-local" />
+          <input id="officialEventAt" type="datetime-local" />
+          <input id="officialEventVenue" placeholder="Event venue" />
+          <input id="officialMedia" class="full" type="file" accept="image/*,video/*" />
+          <label class="full" style="display:flex; align-items:center; gap:.5rem;"><input id="officialUrgent" type="checkbox" /> Mark urgent</label>
+          <button class="btn primary full" type="submit"><i class="fa-solid fa-bullhorn"></i> Publish Official Post</button>
+        </form>
+        <p class="muted" id="officialPostStatus" style="margin:.55rem 0 0;"></p>
+      </article>
+    </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/admin-campus-feed.js"></script>
+</body>
+</html>

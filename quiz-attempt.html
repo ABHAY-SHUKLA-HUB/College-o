@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quiz Attempt - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .quiz-wrap {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .quiz-main {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .quiz-info-bar {
+      background: var(--surface);
+      border-radius: 14px;
+      padding: 1rem;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+
+    .quiz-info-item {
+      background: linear-gradient(180deg, #ffffff, #f7fbff);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+      padding: 0.7rem;
+    }
+
+    .quiz-info-item label {
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-weight: 600;
+    }
+
+    .quiz-info-item strong {
+      display: block;
+      margin-top: 0.35rem;
+      font-size: 1.1rem;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .quiz-progress {
+      background: var(--surface);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 0.9rem 1rem;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .quiz-progress .progress {
+      height: 12px;
+      margin-top: 0.45rem;
+    }
+
+    .question-card {
+      background: var(--surface);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      padding: 1.3rem;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .question-title {
+      font-size: 1.3rem;
+      line-height: 1.45;
+      font-weight: 700;
+    }
+
+    .question-meta {
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .question-meta .badge {
+      background: #e9f3ff;
+      color: #0c4976;
+      border: 1px solid #c8ddf3;
+    }
+
+    .options-grid {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .option-card {
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 12px;
+      padding: 0.95rem;
+      cursor: pointer;
+      background: #fff;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.7rem;
+      transition: all 140ms ease;
+    }
+
+    .option-card:hover {
+      transform: translateY(-1px);
+      border-color: rgba(15, 123, 108, 0.45);
+      box-shadow: 0 8px 20px rgba(15, 123, 108, 0.12);
+    }
+
+    .option-card .option-key {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid #d4d8de;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.82rem;
+      flex-shrink: 0;
+      background: #fff;
+    }
+
+    .option-card.selected {
+      border-color: #0f7b6c;
+      background: #eef9f6;
+    }
+
+    .option-card.selected .option-key {
+      border-color: #0f7b6c;
+      color: #0f7b6c;
+    }
+
+    .option-card.correct {
+      border-color: #198754;
+      background: #e9f8ef;
+    }
+
+    .option-card.correct .option-key {
+      border-color: #198754;
+      color: #198754;
+    }
+
+    .option-card.incorrect {
+      border-color: #dc3545;
+      background: #fdecee;
+    }
+
+    .option-card.incorrect .option-key {
+      border-color: #dc3545;
+      color: #dc3545;
+    }
+
+    .feedback-panel {
+      border-radius: 12px;
+      padding: 0.95rem;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      background: #f8f9fb;
+      display: none;
+    }
+
+    .feedback-panel.correct {
+      background: #edf9f1;
+      border-color: rgba(25, 135, 84, 0.3);
+      display: block;
+    }
+
+    .feedback-panel.incorrect {
+      background: #fdeff2;
+      border-color: rgba(220, 53, 69, 0.25);
+      display: block;
+    }
+
+    .quiz-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-group {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .timer-pill {
+      border-radius: 999px;
+      padding: 0.35rem 0.7rem;
+      background: #e8f7f3;
+      color: #0f7b6c;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .timer-pill.warning {
+      background: #fff2db;
+      color: #a66107;
+    }
+
+    .palette-card,
+    .stats-card {
+      background: var(--surface);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      padding: 1rem;
+    }
+
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 0.45rem;
+      margin-top: 0.8rem;
+    }
+
+    .palette-btn {
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      background: #fff;
+      border-radius: 9px;
+      padding: 0.45rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .palette-btn.current {
+      background: #0f7b6c;
+      color: #fff;
+      border-color: #0f7b6c;
+    }
+
+    .palette-btn.attempted {
+      background: #eaf8ef;
+      color: #1f7f55;
+      border-color: #a8d9b9;
+    }
+
+    .palette-btn.skipped {
+      background: #fff4d6;
+      color: #8f5b00;
+      border-color: #f0d79b;
+    }
+
+    .palette-legend {
+      display: grid;
+      gap: 0.4rem;
+      margin-top: 0.75rem;
+      font-size: 0.86rem;
+    }
+
+    .legend-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      color: var(--muted);
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.6rem;
+      margin-top: 0.8rem;
+    }
+
+    .stat-chip {
+      border-radius: 10px;
+      padding: 0.65rem;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      background: #fff;
+    }
+
+    .stat-chip label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-weight: 600;
+    }
+
+    .stat-chip strong {
+      font-size: 1.05rem;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    @media (max-width: 1080px) {
+      .quiz-wrap {
+        grid-template-columns: 1fr;
+      }
+
+      .quiz-info-bar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .palette-grid {
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 720px) {
+      .quiz-info-bar {
+        grid-template-columns: 1fr;
+      }
+
+      .palette-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <section class="hero">
+      <h1 data-page-title>Quiz Attempt</h1>
+      <p>Real-time assessment mode with timer, question palette, and instant learning feedback.</p>
+    </section>
+
+    <section class="quiz-wrap" id="quizAttemptRoot">
+      <div class="quiz-main">
+        <div class="quiz-info-bar">
+          <div class="quiz-info-item"><label>Current Question</label><strong id="qiCurrent">1</strong></div>
+          <div class="quiz-info-item"><label>Total Questions</label><strong id="qiTotal">0</strong></div>
+          <div class="quiz-info-item"><label>Timer</label><strong><span class="timer-pill" id="quizTimerPill"><i class="fa-regular fa-clock"></i><span id="qiTimer">00:00</span></span></strong></div>
+          <div class="quiz-info-item"><label>Current Score</label><strong id="qiScore">0%</strong></div>
+          <div class="quiz-info-item"><label>Quiz Progress</label><strong id="qiProgressText">0%</strong></div>
+        </div>
+
+        <div class="quiz-progress">
+          <div class="muted">Completion Progress</div>
+          <div class="progress"><span id="quizProgressFill" style="width: 0%"></span></div>
+        </div>
+
+        <article class="question-card" id="questionCard">
+          <div class="question-meta">
+            <span class="badge" id="questionTypeBadge">MCQ</span>
+            <span class="muted" id="questionTagText">Question 1</span>
+          </div>
+          <div class="question-title" id="questionTitle">Loading question...</div>
+          <div class="options-grid" id="optionGrid"></div>
+          <div class="feedback-panel" id="feedbackPanel"></div>
+
+          <div class="quiz-nav">
+            <div class="nav-group">
+              <button class="btn secondary" id="prevQuestionBtn"><i class="fa-solid fa-arrow-left"></i> Previous</button>
+              <button class="btn secondary" id="nextQuestionBtn">Next <i class="fa-solid fa-arrow-right"></i></button>
+              <button class="btn warn" id="skipQuestionBtn"><i class="fa-solid fa-forward"></i> Skip</button>
+            </div>
+            <div class="nav-group">
+              <button class="btn primary" id="submitQuizBtn"><i class="fa-solid fa-check"></i> Submit Quiz</button>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <aside>
+        <section class="palette-card">
+          <h3>Question Palette</h3>
+          <div class="palette-grid" id="paletteGrid"></div>
+          <div class="palette-legend">
+            <span class="legend-chip"><span class="legend-dot" style="background:#0f7b6c"></span>Current</span>
+            <span class="legend-chip"><span class="legend-dot" style="background:#1f7f55"></span>Attempted</span>
+            <span class="legend-chip"><span class="legend-dot" style="background:#d2a03f"></span>Skipped</span>
+            <span class="legend-chip"><span class="legend-dot" style="background:#d6d9de"></span>Unattempted</span>
+          </div>
+        </section>
+
+        <section class="stats-card" style="margin-top:1rem;">
+          <h3>Quiz Stats</h3>
+          <div class="stats-grid">
+            <div class="stat-chip"><label>Attempted</label><strong id="qsAttempted">0</strong></div>
+            <div class="stat-chip"><label>Correct</label><strong id="qsCorrect">0</strong></div>
+            <div class="stat-chip"><label>Wrong</label><strong id="qsWrong">0</strong></div>
+            <div class="stat-chip"><label>Remaining</label><strong id="qsRemaining">0</strong></div>
+            <div class="stat-chip" style="grid-column:1 / -1;"><label>Accuracy</label><strong id="qsAccuracy">0%</strong></div>
+          </div>
+        </section>
+      </aside>
+    </section>
+  </template>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/learning.js"></script>
+</body>
+</html>
+
+
+

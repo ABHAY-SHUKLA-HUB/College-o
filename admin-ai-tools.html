@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin - AI Tools</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .co-admin-page-block {
+      display: grid;
+      gap: 18px;
+    }
+
+    .co-admin-tool-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .co-admin-showcase-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .co-admin-showcase-card {
+      border-radius: 22px;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+      box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+      padding: 18px;
+    }
+
+    .co-admin-showcase-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    @media (max-width: 1100px) {
+      .co-admin-tool-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body class="admin-portal">
+  <div class="co-admin-shell">
+    <aside class="co-admin-aside">
+      <div class="co-admin-brand">
+        <span class="co-admin-brand-mark"><i class="fa-solid fa-shield-halved"></i></span>
+        <div>
+          <h1>College OS Admin</h1>
+          <p>Configure AI study assistants, premium tooling, and branch-targeted learning accelerators.</p>
+        </div>
+      </div>
+      <section class="co-admin-nav-section">
+        <p class="co-admin-nav-label">Admin Navigation</p>
+        <nav class="co-admin-nav">
+          <a class="co-admin-nav-link" href="admin-dashboard.html"><i class="fa-solid fa-chart-pie"></i><span>Overview</span></a>
+          <a class="co-admin-nav-link" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control System</span></a>
+          <a class="co-admin-nav-link" href="admin-academics.html#contributions"><i class="fa-solid fa-upload"></i><span>Contribution Control</span></a>
+          <a class="co-admin-nav-link" href="admin-support-governance.html"><i class="fa-solid fa-shield-halved"></i><span>Support Governance</span></a>
+          <a class="co-admin-nav-link" href="admin-notes.html"><i class="fa-solid fa-file-lines"></i><span>Notes</span></a>
+          <a class="co-admin-nav-link" href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i><span>Papers</span></a>
+          <a class="co-admin-nav-link" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i><span>Materials</span></a>
+          <a class="co-admin-nav-link" href="admin-quizzes.html"><i class="fa-solid fa-clipboard-question"></i><span>Quizzes</span></a>
+          <a class="co-admin-nav-link" href="admin-certificates.html"><i class="fa-solid fa-graduation-cap"></i><span>Certificates</span></a>
+          <a class="co-admin-nav-link" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Roadmaps</span></a>
+          <a class="co-admin-nav-link" href="admin-mock-tests.html"><i class="fa-solid fa-flask-vial"></i><span>Mock Test Studio</span></a>
+          <a class="co-admin-nav-link active" href="admin-ai-tools.html"><i class="fa-solid fa-sparkles"></i><span>AI Tools</span></a>
+          <a class="co-admin-nav-link" href="admin-campus-feed.html"><i class="fa-solid fa-newspaper"></i><span>Campus Feed</span></a>
+        </nav>
+      </section>
+    </aside>
+
+    <main class="co-admin-main co-admin-page-block">
+      <header class="co-admin-topbar">
+        <div class="co-admin-topbar-title">
+          <h2>AI Tools Studio</h2>
+          <p>Manage which AI tools students can see, who gets access, and how each tool is positioned inside the portal.</p>
+        </div>
+        <div class="co-admin-topbar-actions">
+          <a class="co-admin-chip" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Manage Roadmaps</span></a>
+          <a class="co-admin-chip" href="admin-dashboard.html"><i class="fa-solid fa-arrow-left"></i><span>Back to Dashboard</span></a>
+        </div>
+      </header>
+
+      <section class="co-admin-hero">
+        <div class="co-admin-hero-grid">
+          <div>
+            <div class="co-admin-hero-tags">
+              <span class="co-admin-chip-soft"><i class="fa-solid fa-wand-magic-sparkles"></i><span>AI workbench control</span></span>
+              <span class="co-admin-chip-soft"><i class="fa-solid fa-user-lock"></i><span>Membership-aware access</span></span>
+              <span class="co-admin-chip-soft"><i class="fa-solid fa-building-columns"></i><span>Academic targeting</span></span>
+            </div>
+            <h1>AI learning products management</h1>
+            <p>Publish high-value study assistants such as Notes Summary, Quiz Generator, Flashcards, Resume Builder, Career Suggestion, and Roadmap Recommender with clean access governance.</p>
+          </div>
+          <div class="kpi-grid" id="aiToolMetrics"></div>
+        </div>
+      </section>
+
+      <section class="co-admin-tool-grid">
+        <section class="co-admin-panel">
+          <div class="co-admin-section-head">
+            <div>
+              <h3>AI Tool Builder</h3>
+              <p>Set messaging, targeting, membership access, and default prompt behavior for each student-facing AI tool.</p>
+            </div>
+          </div>
+          <form id="aiToolAdminForm" class="co-admin-form">
+            <div class="co-admin-form-grid">
+              <div class="co-admin-field"><label>Tool title</label><input name="title" placeholder="AI Quiz Generator" required /></div>
+              <div class="co-admin-field"><label>Tool key</label><input name="toolKey" placeholder="ai-quiz-generator" /></div>
+              <div class="co-admin-field full"><label>Tagline</label><input name="tagline" placeholder="Generate branch-aware practice questions in seconds." /></div>
+              <div class="co-admin-field full"><label>Description</label><textarea name="description" rows="3"></textarea></div>
+              <div class="co-admin-field"><label>Icon name</label><input name="iconName" value="fa-sparkles" /></div>
+              <div class="co-admin-field"><label>Accent color</label><input name="accentColor" type="color" value="#0f766e" /></div>
+              <div class="co-admin-field"><label>Access type</label><select name="accessType"><option value="free">Free</option><option value="premium">Premium</option></select></div>
+              <div class="co-admin-field"><label>Status</label><select name="status"><option value="published">Published</option><option value="disabled">Disabled</option><option value="hidden">Hidden</option></select></div>
+              <div class="co-admin-field"><label>Enabled</label><select name="isEnabled"><option value="true">Yes</option><option value="false">No</option></select></div>
+              <div class="co-admin-field"><label>Visible in portal</label><select name="isVisible"><option value="true">Yes</option><option value="false">No</option></select></div>
+              <div class="co-admin-field"><label>Featured</label><select name="isFeatured"><option value="false">No</option><option value="true">Yes</option></select></div>
+              <div class="co-admin-field"><label>Sort order</label><input name="sortOrder" type="number" value="0" /></div>
+              <div class="co-admin-field"><label>Category target</label><select id="aiToolCategoryId" name="categoryId"></select></div>
+              <div class="co-admin-field"><label>Branch target</label><select id="aiToolBranchId" name="branchId"><option value="">All branches</option></select></div>
+              <div class="co-admin-field"><label>Semester target</label><select id="aiToolSemesterId" name="semesterId"></select></div>
+              <div class="co-admin-field full"><label>Benefits</label><textarea name="benefits" rows="3" placeholder="Comma separated student benefits"></textarea></div>
+              <div class="co-admin-field full"><label>Suggested prompt template</label><textarea name="promptTemplate" rows="4" placeholder="Default prompt shown in the AI workbench"></textarea></div>
+            </div>
+            <div class="control-actions" style="margin-top:16px;">
+              <button class="btn primary" id="aiToolSubmitBtn" type="submit"><i class="fa-solid fa-floppy-disk"></i> Save AI tool</button>
+              <button class="btn secondary" id="aiToolResetBtn" type="button">Reset</button>
+            </div>
+            <p class="muted" id="aiToolAdminStatus"></p>
+          </form>
+        </section>
+
+        <section class="co-admin-panel">
+          <div class="co-admin-section-head">
+            <div>
+              <h3>AI Tools Catalog</h3>
+              <p>See all configured tools, edit them, or quickly enable and disable access.</p>
+            </div>
+          </div>
+          <div class="co-admin-showcase-grid" id="aiToolAdminGrid"></div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/admin-ai-tools.js"></script>
+</body>
+</html>

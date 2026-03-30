@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Previous Year Papers - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <section class="hero"><h1 data-page-title>Previous Year Papers</h1><p>Live papers feed uploaded by admins, with college-aware filtering and revision actions.</p></section>
+
+    <section class="card">
+      <div class="form-grid">
+        <div><label>College Filter</label><select id="papersCollegeFilter"><option value="">My College</option></select></div>
+        <div><label>Search Exam</label><input id="paperSearch" placeholder="Search by exam name or subject" /></div>
+      </div>
+      <div class="actions"><button class="btn secondary" id="refreshPapersBtn">Refresh Papers</button><a class="btn warn" href="pricing.html">Upgrade</a></div>
+      <p class="muted" id="papersStatus"></p>
+    </section>
+
+    <section class="card">
+      <h3>Uploaded Previous Papers</h3>
+      <div id="papersFeed" class="resource-list"><div class="empty-state">Loading papers...</div></div>
+    </section>
+  </template>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/content-pages.js"></script>
+</body>
+</html>
+
+
+

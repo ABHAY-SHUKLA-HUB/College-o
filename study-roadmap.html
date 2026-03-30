@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>College OS - Career Roadmap</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .career-hero {
+      position: relative;
+      overflow: hidden;
+      padding: 28px;
+      border-radius: 26px;
+      background:
+        radial-gradient(circle at top right, rgba(255,255,255,0.2), transparent 34%),
+        linear-gradient(135deg, #0f172a 0%, #1d4ed8 48%, #0f766e 100%);
+      color: #fff;
+      box-shadow: 0 28px 50px rgba(15, 23, 42, 0.2);
+      margin-bottom: 20px;
+    }
+
+    .career-hero h1 {
+      margin: 0 0 10px;
+      font-size: clamp(2rem, 4vw, 3rem);
+      line-height: 1.05;
+    }
+
+    .career-hero p {
+      margin: 0 0 18px;
+      max-width: 64ch;
+      color: rgba(255,255,255,0.84);
+    }
+
+    .career-chip-row,
+    .career-stat-row,
+    .career-detail-meta,
+    .career-pill-list,
+    .career-support-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .career-chip,
+    .career-stat,
+    .career-meta-pill,
+    .career-pill {
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.16);
+      color: #fff;
+      font-size: 13px;
+    }
+
+    .career-stat-row {
+      margin-top: 18px;
+    }
+
+    .career-stat {
+      min-width: 150px;
+      background: rgba(255,255,255,0.14);
+    }
+
+    .career-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(350px, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .career-panel {
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+      border: 1px solid rgba(15,23,42,0.08);
+      box-shadow: 0 16px 38px rgba(15, 23, 42, 0.08);
+      padding: 20px;
+    }
+
+    .career-toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .career-toolbar input,
+    .career-toolbar select {
+      font: inherit;
+      padding: 11px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(15,23,42,0.1);
+      background: rgba(255,255,255,0.96);
+      color: inherit;
+    }
+
+    .career-toolbar input {
+      flex: 1;
+      min-width: 220px;
+    }
+
+    .career-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+
+    .career-card {
+      border-radius: 22px;
+      padding: 18px;
+      border: 1px solid rgba(15,23,42,0.08);
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+      box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+      transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+      cursor: pointer;
+      min-height: 240px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .career-card:hover,
+    .career-card.active {
+      transform: translateY(-4px);
+      box-shadow: 0 22px 42px rgba(15, 23, 42, 0.12);
+      border-color: rgba(37, 99, 235, 0.2);
+    }
+
+    .career-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .career-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1.25rem;
+    }
+
+    .career-badge {
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .career-badge.premium {
+      background: #fff7ed;
+      color: #c2410c;
+    }
+
+    .career-badge.locked {
+      background: #fef2f2;
+      color: #b91c1c;
+    }
+
+    .career-card h3,
+    .career-detail-head h2,
+    .career-stage-card h3 {
+      margin: 0 0 8px;
+    }
+
+    .career-card p,
+    .career-detail-head p,
+    .career-stage-card p,
+    .career-support-panel p,
+    .career-support-panel li {
+      color: var(--text-secondary, #475569);
+      line-height: 1.6;
+    }
+
+    .career-card p {
+      margin: 0 0 14px;
+    }
+
+    .career-card .career-pill-list {
+      margin-top: auto;
+    }
+
+    .career-detail-head {
+      margin-bottom: 16px;
+    }
+
+    .career-detail-meta {
+      margin: 10px 0 14px;
+    }
+
+    .career-meta-pill {
+      background: rgba(15, 23, 42, 0.06);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      color: #0f172a;
+    }
+
+    .career-lock-banner {
+      border-radius: 18px;
+      padding: 14px 16px;
+      background: linear-gradient(135deg, #fff7ed, #ffedd5);
+      border: 1px solid #fdba74;
+      color: #9a3412;
+      margin-bottom: 16px;
+    }
+
+    .career-stage-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .career-stage-card {
+      border-radius: 20px;
+      border: 1px solid rgba(15,23,42,0.08);
+      background: #fff;
+      padding: 18px;
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+    }
+
+    .career-stage-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .career-stage-index {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(37, 99, 235, 0.1);
+      color: #1d4ed8;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .career-stage-status {
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .career-stage-status.done {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .career-stage-status.todo {
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .career-stage-grid,
+    .career-support-grid {
+      display: grid;
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    .career-stage-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .career-support-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .career-support-panel {
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+      border: 1px solid rgba(15,23,42,0.08);
+      box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+      padding: 20px;
+    }
+
+    .career-support-panel h3 {
+      margin: 0 0 10px;
+    }
+
+    .career-support-panel ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .career-progress-ring {
+      width: 120px;
+      height: 120px;
+      margin: 4px auto 18px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: conic-gradient(#2563eb var(--pct, 0%), rgba(15,23,42,0.08) 0);
+    }
+
+    .career-progress-ring span {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      background: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .career-empty {
+      text-align: center;
+      color: var(--text-secondary, #64748b);
+      padding: 24px 10px;
+    }
+
+    @media (max-width: 1120px) {
+      .career-layout,
+      .career-support-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .career-stage-grid,
+      .career-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <section class="career-hero">
+      <div class="career-chip-row" id="careerHeroChips">
+        <span class="career-chip"><i class="fa-solid fa-compass-drafting"></i> Career OS journey</span>
+      </div>
+      <h1 data-page-title id="careerHeroTitle">Career Roadmaps that match your branch and goals</h1>
+      <p id="careerHeroSubtitle">Choose a track, follow stage-by-stage milestones, and use project, certification, interview, and placement guidance to move from learning to offers.</p>
+      <div class="career-stat-row" id="careerStatRow">
+        <span class="career-stat">Loading roadmap stats...</span>
+      </div>
+    </section>
+
+    <section class="career-layout">
+      <article class="career-panel">
+        <div class="section-header">
+          <i class="fa-solid fa-route"></i>
+          <h2>Career Tracks</h2>
+        </div>
+        <div class="career-toolbar">
+          <input id="roadmapSearchInput" type="search" placeholder="Search by title, role, or use case" />
+          <select id="roadmapFilterSelect">
+            <option value="all">All tracks</option>
+            <option value="free">Free</option>
+            <option value="premium">Premium</option>
+            <option value="featured">Featured</option>
+          </select>
+        </div>
+        <div class="career-grid" id="careerRoadmapGrid"></div>
+      </article>
+
+      <aside class="career-panel">
+        <div id="careerLockBanner" class="career-lock-banner" style="display:none;"></div>
+        <div class="career-detail-head">
+          <h2 id="roadmapDetailTitle">Select a roadmap</h2>
+          <p id="roadmapDetailDescription">Choose a career path from the left to see its milestones, required skills, project ideas, and interview plan.</p>
+          <div class="career-detail-meta" id="roadmapDetailMeta"></div>
+          <div class="career-support-links">
+            <button class="btn primary" id="roadmapSaveProgressBtn"><i class="fa-solid fa-bookmark"></i> Save Progress</button>
+            <a class="btn secondary" href="ai-tools.html"><i class="fa-solid fa-sparkles"></i> Open AI Tools</a>
+          </div>
+        </div>
+        <div class="career-stage-list" id="roadmapStageList">
+          <div class="career-empty">Roadmap stages will appear here.</div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="career-support-grid">
+      <article class="career-support-panel">
+        <div class="section-header">
+          <i class="fa-solid fa-gauge-high"></i>
+          <h2>My Progress</h2>
+        </div>
+        <div class="career-progress-ring" id="careerProgressRing" style="--pct: 0%;"><span id="careerProgressPct">0%</span></div>
+        <p id="careerProgressCopy">Pick a roadmap and start completing milestones to build your progress history.</p>
+        <div class="career-pill-list" id="careerProgressFacts"></div>
+      </article>
+
+      <article class="career-support-panel">
+        <div class="section-header">
+          <i class="fa-solid fa-toolbox"></i>
+          <h2>Skills and Tools</h2>
+        </div>
+        <div class="career-stage-grid">
+          <div>
+            <h3>Required Skills</h3>
+            <ul id="careerSkillList"></ul>
+          </div>
+          <div>
+            <h3>Tools to Learn</h3>
+            <ul id="careerToolList"></ul>
+          </div>
+          <div>
+            <h3>Projects to Build</h3>
+            <ul id="careerProjectList"></ul>
+          </div>
+          <div>
+            <h3>Certifications</h3>
+            <ul id="careerCertList"></ul>
+          </div>
+        </div>
+      </article>
+
+      <article class="career-support-panel">
+        <div class="section-header">
+          <i class="fa-solid fa-briefcase"></i>
+          <h2>Placement Readiness</h2>
+        </div>
+        <p id="careerInterviewPrep">Open a roadmap to view interview preparation guidance.</p>
+        <p id="careerPlacementReadiness">Placement readiness cues will appear here with the selected track.</p>
+        <div class="career-grid" id="careerRecommendedGrid"></div>
+      </article>
+    </section>
+  </template>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/roadmap.js"></script>
+</body>
+</html>
+
+
+

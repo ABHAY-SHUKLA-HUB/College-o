@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Certificate Management - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+
+    .preview-head {
+      text-align: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .preview-logo {
+      width: 52px;
+      height: 52px;
+      border-radius: 999px;
+      margin: 0 auto 0.35rem;
+      display: grid;
+      place-items: center;
+      background: #0f6d62;
+      color: #fff;
+    }
+
+    .preview-title {
+      margin: 0;
+      font-size: 1.55rem;
+      color: #123a5d;
+      font-family: Georgia, serif;
+    }
+
+    .preview-name {
+      margin: 0.85rem 0;
+      text-align: center;
+      font-size: 1.65rem;
+      color: #9e6500;
+      font-family: Georgia, serif;
+    }
+
+    .preview-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.45rem;
+      font-size: 0.83rem;
+      color: #35485a;
+    }
+
+    .preview-meta strong {
+      color: #0d2943;
+    }
+
+    .preview-bottom {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 0.5rem;
+    }
+
+    .sign {
+      border-top: 1px solid #567;
+      padding-top: 0.4rem;
+      min-width: 140px;
+      font-size: 0.77rem;
+      color: #35485a;
+    }
+
+    .seal {
+      width: 84px;
+      height: 84px;
+      border-radius: 999px;
+      border: 2px solid #b14915;
+      color: #b14915;
+      display: grid;
+      place-items: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-align: center;
+      transform: rotate(-12deg);
+      background: rgba(255, 239, 230, 0.7);
+    }
+
+    .verify-block {
+      margin-top: 0.9rem;
+      border: 1px solid var(--c-border);
+      border-radius: 12px;
+      padding: 0.8rem;
+      background: #f8fbff;
+    }
+
+    .verify-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.55rem;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      padding: 0.2rem 0.55rem;
+      font-weight: 700;
+      background: #ecf1f8;
+      color: #324a66;
+    }
+
+    .history-wrap {
+      grid-column: 1 / -1;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--c-border);
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 1040px;
+      font-size: 0.85rem;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid #ebf0f6;
+      padding: 0.65rem 0.55rem;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f2f7fc;
+      color: #33506b;
+      font-weight: 700;
+    }
+
+    .row-actions {
+      display: flex;
+      gap: 0.3rem;
+      flex-wrap: wrap;
+    }
+
+    .tiny {
+      font-size: 0.74rem;
+      padding: 0.34rem 0.54rem;
+      border-radius: 8px;
+    }
+
+    .status-text {
+      margin-top: 0.75rem;
+      font-size: 0.84rem;
+      color: var(--c-muted);
+      min-height: 20px;
+    }
+
+    @media (max-width: 1180px) {
+      .admin-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .form-grid,
+      .template-grid,
+      .verify-grid,
+      .preview-meta {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body class="admin-portal">
+  <div class="co-admin-shell">
+    <aside class="co-admin-aside">
+      <div class="co-admin-brand">
+        <span class="co-admin-brand-mark"><i class="fa-solid fa-shield-halved"></i></span>
+        <div>
+          <h1>College OS Admin</h1>
+          <p>Unified command center for academics, governance, and platform operations.</p>
+        </div>
+      </div>
+      <section class="co-admin-nav-section">
+        <p class="co-admin-nav-label">Admin Navigation</p>
+        <nav class="co-admin-nav">
+          <a class="co-admin-nav-link" href="admin-dashboard.html"><i class="fa-solid fa-chart-pie"></i><span>Overview</span></a>
+          <a class="co-admin-nav-link" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control System</span></a>
+          <a class="co-admin-nav-link" href="admin-academics.html#contributions"><i class="fa-solid fa-upload"></i><span>Contribution Control</span></a>
+          <a class="co-admin-nav-link" href="admin-support-governance.html"><i class="fa-solid fa-shield-halved"></i><span>Support Governance</span></a>
+          <a class="co-admin-nav-link" href="admin-notes.html"><i class="fa-solid fa-file-lines"></i><span>Notes</span></a>
+          <a class="co-admin-nav-link" href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i><span>Papers</span></a>
+          <a class="co-admin-nav-link" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i><span>Materials</span></a>
+          <a class="co-admin-nav-link" href="admin-quizzes.html"><i class="fa-solid fa-clipboard-question"></i><span>Quizzes</span></a>
+          <a class="co-admin-nav-link active" href="admin-certificates.html"><i class="fa-solid fa-graduation-cap"></i><span>Certificates</span></a>
+          <a class="co-admin-nav-link" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Roadmaps</span></a>
+          <a class="co-admin-nav-link" href="admin-mock-tests.html"><i class="fa-solid fa-flask-vial"></i><span>Mock Test Studio</span></a>
+          <a class="co-admin-nav-link" href="admin-ai-tools.html"><i class="fa-solid fa-sparkles"></i><span>AI Tools</span></a>
+          <a class="co-admin-nav-link" href="admin-campus-feed.html"><i class="fa-solid fa-newspaper"></i><span>Campus Feed</span></a>
+        </nav>
+      </section>
+    </aside>
+
+    <main class="co-admin-main co-admin-page-block">
+      <header class="co-admin-topbar">
+        <div class="co-admin-topbar-title">
+          <h2>Certificate Management</h2>
+          <p>Create, assign, issue, verify, and revoke student certificates with complete lifecycle control.</p>
+        </div>
+        <div class="co-admin-topbar-actions">
+          <a class="co-admin-chip" href="admin-dashboard.html"><i class="fa-solid fa-arrow-left"></i><span>Back to Dashboard</span></a>
+        </div>
+      </header>
+
+      <div id="adminCertificateRoot" style="padding: 20px;">
+        <section class="stats-grid">
+      <article class="stat-card"><div class="v" id="statAll">0</div><div class="k">All Certificates</div></article>
+      <article class="stat-card"><div class="v" id="statDraft">0</div><div class="k">Draft</div></article>
+      <article class="stat-card"><div class="v" id="statIssued">0</div><div class="k">Issued</div></article>
+      <article class="stat-card"><div class="v" id="statVerified">0</div><div class="k">Verified</div></article>
+      <article class="stat-card"><div class="v" id="statRevoked">0</div><div class="k">Revoked</div></article>
+    </section>
+
+    <section class="toolbar card">
+      <div class="search-row">
+        <input id="historySearch" class="search-input" type="search" placeholder="Search by student name, certificate ID, type, issue date" />
+        <button class="btn secondary" id="refreshHistoryBtn"><i class="fa-solid fa-rotate"></i> Refresh</button>
+      </div>
+      <div class="chips" id="statusFilters">
+        <button class="chip active" data-status="all">All Certificates</button>
+        <button class="chip" data-status="Draft">Draft</button>
+        <button class="chip" data-status="Issued">Issued</button>
+        <button class="chip" data-status="Verified">Verified</button>
+        <button class="chip" data-status="Revoked">Revoked</button>
+      </div>
+      <div class="search-row">
+        <select id="typeFilter" class="search-input" style="max-width: 260px;">
+          <option value="">By Certificate Type</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 style="margin-top:0;">Certificate Builder</h2>
+      <form id="adminCertificateForm">
+        <input type="hidden" id="editingCertificateId" />
+        <div class="form-grid">
+          <div class="field">
+            <label>Certificate Type</label>
+            <input id="certificateType" required placeholder="Course Completion" />
+          </div>
+          <div class="field">
+            <label>Course / Achievement Name</label>
+            <input id="achievementName" required placeholder="Advanced Data Structures" />
+          </div>
+          <div class="field">
+            <label>Score / Rank</label>
+            <input id="scoreRank" placeholder="92% / Rank 4" />
+          </div>
+          <div class="field">
+            <label>Issue Date</label>
+            <input id="issueDate" type="date" required />
+          </div>
+          <div class="field">
+            <label>Certificate ID</label>
+            <input id="certificateRefId" placeholder="Auto-generated" />
+          </div>
+          <div class="field">
+            <label>Organization Name</label>
+            <input id="organizationName" value="College OS Academy" />
+          </div>
+          <div class="field">
+            <label>Signatory Name</label>
+            <input id="signatoryName" value="Academic Director" />
+          </div>
+          <div class="field">
+            <label>Assignment Mode</label>
+            <select id="issueMode">
+              <option value="selected">Selected Students</option>
+              <option value="all">All Eligible Students</option>
+            </select>
+          </div>
+          <div class="field full">
+            <label>Certificate Description</label>
+            <textarea id="description" placeholder="Describe why this certificate is awarded."></textarea>
+          </div>
+        </div>
+
+        <div class="field full" style="margin-top:0.85rem;">
+          <label>Template Selection</label>
+          <input type="hidden" id="templateName" value="Classic" />
+          <div class="template-grid" id="templateCards">
+            <article class="template-card active" data-template="Classic"><h4>Classic</h4><p>Traditional serif style with formal seals.</p></article>
+            <article class="template-card" data-template="Modern"><h4>Modern</h4><p>Minimal clean layout for tech cohorts.</p></article>
+            <article class="template-card" data-template="Premium"><h4>Premium</h4><p>Luxury accent style for top performers.</p></article>
+            <article class="template-card" data-template="College Branded"><h4>College Branded</h4><p>Campus-themed framing and insignia highlights.</p></article>
+          </div>
+        </div>
+
+        <div class="field full" style="margin-top:0.9rem;">
+          <label>Student Selection</label>
+          <div class="student-picker" id="studentPicker">
+            <input id="studentSearchInput" class="search-input" type="search" placeholder="Search student by name, email, or ID" />
+            <div class="student-results" id="studentResults"></div>
+            <div class="selected-wrap" id="selectedStudents"></div>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="btn secondary" type="button" id="previewBtn"><i class="fa-regular fa-eye"></i> Preview Certificate</button>
+          <button class="btn secondary" type="button" id="generateBtn"><i class="fa-solid fa-gears"></i> Generate Certificate</button>
+          <button class="btn secondary" type="button" id="saveDraftBtn"><i class="fa-regular fa-floppy-disk"></i> Save Draft</button>
+          <button class="btn primary" type="button" id="updateCertBtn"><i class="fa-solid fa-pen-to-square"></i> Update Certificate</button>
+          <button class="btn primary" type="button" id="issueCertBtn"><i class="fa-solid fa-award"></i> Issue Certificate</button>
+          <button class="btn warn" type="button" id="downloadPdfBtn"><i class="fa-solid fa-file-pdf"></i> Download PDF</button>
+          <button class="btn warn" type="button" id="downloadImageBtn"><i class="fa-solid fa-image"></i> Download Image</button>
+          <button class="btn secondary" type="button" id="copyVerificationBtn"><i class="fa-regular fa-copy"></i> Copy Verification Link</button>
+        </div>
+        <p class="status-text" id="portalStatusText"></p>
+      </form>
+    </section>
+
+    <section class="card">
+      <h3 style="margin-top:0;">Live Certificate Preview</h3>
+      <div class="preview-card" id="previewCard">
+        <div class="preview-head">
+          <div class="preview-logo"><i class="fa-solid fa-building-columns"></i></div>
+          <h4 style="margin:0; color:#0f6d62;" id="previewOrg">College OS Academy</h4>
+          <p class="preview-title" id="previewTitle">Certificate of Excellence</p>
+        </div>
+        <p style="text-align:center; margin:0; color:#4f5b6a;">This certificate is proudly awarded to</p>
+        <p class="preview-name" id="previewStudentName">Selected Student(s)</p>
+        <p style="text-align:center; margin:0; color:#334a63;" id="previewAchievement">For outstanding achievement</p>
+
+        <div class="preview-meta">
+          <div><strong>Certificate Type:</strong> <span id="previewType">Course Completion</span></div>
+          <div><strong>Score / Rank:</strong> <span id="previewScore">N/A</span></div>
+          <div><strong>Issue Date:</strong> <span id="previewDate">-</span></div>
+          <div><strong>Certificate ID:</strong> <span id="previewId">-</span></div>
+        </div>
+
+        <div class="preview-bottom">
+          <div class="sign">Signatory: <span id="previewSignatory">Academic Director</span></div>
+          <div class="seal">OFFICIAL<br>SEAL</div>
+          <div>
+            <img id="previewQr" alt="QR verification code" style="width:86px;height:86px;border:1px solid #c9d7e8;border-radius:8px;background:#fff;" />
+          </div>
+        </div>
+      </div>
+
+      <canvas id="certificateCanvas" width="1200" height="800" style="display:none;"></canvas>
+
+      <section class="verify-block">
+        <h4 style="margin:0 0 0.5rem;">Certificate Verification Management</h4>
+        <div class="verify-grid">
+          <div class="field">
+            <label>Verification ID</label>
+            <input id="verificationIdField" readonly />
+          </div>
+          <div class="field">
+            <label>Certificate Status</label>
+            <div><span class="status-pill" id="verificationStatusPill">Draft</span></div>
+          </div>
+        </div>
+        <div class="action-row">
+          <button class="btn secondary" type="button" id="verifyCertBtn"><i class="fa-solid fa-shield"></i> Verify Certificate</button>
+          <button class="btn danger" type="button" id="revokeCertBtn"><i class="fa-solid fa-ban"></i> Revoke Certificate</button>
+          <button class="btn secondary" type="button" id="copyVerifyLinkBtn"><i class="fa-regular fa-copy"></i> Copy Verification Link</button>
+        </div>
+      </section>
+    </section>
+
+    <section class="card history-wrap">
+      <h3 style="margin-top:0;">Certificate History</h3>
+      <div class="bulk-row">
+        <button class="btn secondary" type="button" id="bulkIssueBtn"><i class="fa-solid fa-bolt"></i> Bulk Issue Certificates</button>
+        <button class="btn secondary" type="button" id="bulkDownloadBtn"><i class="fa-solid fa-download"></i> Bulk Download</button>
+        <button class="btn secondary" type="button" id="bulkVerifyBtn"><i class="fa-solid fa-circle-check"></i> Bulk Verify</button>
+        <button class="btn danger" type="button" id="bulkRevokeBtn"><i class="fa-solid fa-triangle-exclamation"></i> Bulk Revoke</button>
+      </div>
+
+      <div class="table-wrap" style="margin-top:0.8rem;">
+        <table>
+          <thead>
+            <tr>
+              <th><input id="selectAllRows" type="checkbox" /></th>
+              <th>Student Name</th>
+              <th>Certificate Type</th>
+              <th>Certificate ID</th>
+              <th>Issue Date</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody">
+            <tr><td colspan="7" style="text-align:center; padding:1.2rem;">Loading certificate history...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="assets/vendor/jspdf/jspdf.umd.min.js"></script>
+  <script src="assets/vendor/qrcode/qrcode-generator.js"></script>
+  <script src="assets/js/qrcode-shim.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/admin-certificates.js"></script>
+</body>
+</html>
+
+
+
+

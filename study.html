@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Study & Learning Hub - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .study-hero {
+      background: linear-gradient(135deg, #1e3a8a 0%, #0ea5e9 50%, #06b6d4 100%);
+      color: #fff;
+      border-radius: 24px;
+      padding: 40px;
+      margin-bottom: 24px;
+      box-shadow: 0 24px 48px rgba(15, 23, 42, 0.25);
+      display: grid;
+      gap: 16px;
+    }
+
+    .study-hero h1 {
+      margin: 0;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      line-height: 1.1;
+      font-weight: 700;
+    }
+
+    .study-hero p {
+      margin: 0;
+      font-size: 1.05rem;
+      opacity: 0.95;
+      max-width: 70ch;
+      line-height: 1.5;
+    }
+
+    .study-kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .study-kpi {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 12px;
+      padding: 12px;
+      backdrop-filter: blur(8px);
+      text-align: center;
+    }
+
+    .study-kpi .value {
+      display: block;
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .study-kpi .label {
+      display: block;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
+
+    .study-layout {
+      display: grid;
+      gap: 20px;
+    }
+
+    .study-section {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .study-section-header {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .study-section-header h2 {
+      margin: 0;
+      font-size: 1.4rem;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .study-section-header p {
+      margin: 0;
+      color: #64748b;
+      font-size: 0.95rem;
+    }
+
+    .study-subject-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .subject-card {
+      background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+      border: 2px solid #bae6fd;
+      border-radius: 14px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 180ms ease;
+      display: grid;
+      gap: 10px;
+      align-content: center;
+    }
+
+    .subject-card:hover {
+      transform: translateY(-4px);
+      background: linear-gradient(135deg, #e0f2fe, #cffafe);
+      border-color: #0ea5e9;
+      box-shadow: 0 12px 28px rgba(15, 118, 110, 0.15);
+    }
+
+    .subject-icon {
+      font-size: 2.2rem;
+    }
+
+    .subject-name {
+      margin: 0;
+      font-weight: 600;
+      color: #1e293b;
+      font-size: 0.95rem;
+    }
+
+    .subject-count {
+      margin: 0;
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+
+    .resources-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px;
+    }
+
+    .resource-preview {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px;
+      display: grid;
+      gap: 10px;
+      transition: all 140ms ease;
+    }
+
+    .resource-preview:hover {
+      border-color: #0ea5e9;
+      box-shadow: 0 8px 20px rgba(15, 118, 110, 0.1);
+    }
+
+    .resource-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      width: fit-content;
+    }
+
+    .resource-badge.book {
+      background: #f3e8ff;
+      color: #7c3aed;
+    }
+
+    .resource-badge.ppt {
+      background: #fef3c7;
+      color: #d97706;
+    }
+
+    .resource-title {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #1e293b;
+      line-height: 1.3;
+    }
+
+    .resource-meta {
+      font-size: 0.8rem;
+      color: #64748b;
+      display: grid;
+      gap: 4px;
+    }
+
+    .study-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #94a3b8;
+    }
+
+    .empty-icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+      opacity: 0.4;
+    }
+
+    @media (max-width: 768px) {
+      .study-hero {
+        padding: 24px;
+      }
+
+      .study-section {
+        padding: 20px;
+      }
+
+      .study-subject-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      }
+
+      .resources-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <section class="study-hero">
+      <div>
+        <h1><i class="fa-solid fa-lightbulb"></i> Learning Hub</h1>
+        <p>Master your curriculum with structured learning resources, expert materials, and subject-wise discovery.</p>
+      </div>
+      <div class="study-kpis">
+        <div class="study-kpi">
+          <span class="value" id="studyMaterialCount">0</span>
+          <span class="label">Materials</span>
+        </div>
+        <div class="study-kpi">
+          <span class="value" id="studyBookCount">0</span>
+          <span class="label">Books</span>
+        </div>
+        <div class="study-kpi">
+          <span class="value" id="studyPptCount">0</span>
+          <span class="label">PPTs</span>
+        </div>
+        <div class="study-kpi">
+          <span class="value" id="studySubjectCount">0</span>
+          <span class="label">Subjects</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="study-layout">
+      <section class="study-section">
+        <div class="study-section-header">
+          <h2><i class="fa-solid fa-book-open" style="color:#0ea5e9;"></i> Browse by Subject</h2>
+          <p>Select a subject to explore curated learning materials aligned with your curriculum.</p>
+        </div>
+        <div class="study-subject-grid" id="subjectsGrid">
+          <div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i> Loading subjects...</div>
+        </div>
+      </section>
+
+      <section class="study-section">
+        <div class="study-section-header">
+          <h2><i class="fa-solid fa-gems" style="color:#06b6d4;"></i> Featured Learning Materials</h2>
+          <p>Handpicked resources to boost your understanding and exam preparation.</p>
+        </div>
+        <div class="resources-grid" id="featuredResourcesGrid">
+          <div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i> Loading resources...</div>
+        </div>
+        <div class="study-actions">
+          <a href="materials-library.html" class="btn primary"><i class="fa-solid fa-arrow-right"></i> Browse All Materials</a>
+          <a href="notes-library.html" class="btn secondary"><i class="fa-solid fa-file-lines"></i> Quick Notes</a>
+        </div>
+      </section>
+
+      <section class="study-section">
+        <div class="study-section-header">
+          <h2><i class="fa-solid fa-square-check" style="color:#22c55e;"></i> Learning Tips</h2>
+          <p>Optimize your study approach with these proven strategies.</p>
+        </div>
+        <div style="display: grid; gap: 12px;">
+          <div style="display: grid; gap: 8px; padding: 14px; background: #f0fdf4; border-radius: 10px; border-left: 3px solid #22c55e;">
+            <strong style="color: #15803d;">📚 Structured Learning</strong>
+            <p style="margin: 0; font-size: 0.9rem; color: #4b5563;">Start with books to build foundational concepts, supplement with presentations for visual learning.</p>
+          </div>
+          <div style="display: grid; gap: 8px; padding: 14px; background: #f0f9ff; border-radius: 10px; border-left: 3px solid #0ea5e9;">
+            <strong style="color: #0369a1;">⏰ Active Revision</strong>
+            <p style="margin: 0; font-size: 0.9rem; color: #4b5563;">Use notes for quick revision before exams. Review important diagrams from presentations regularly.</p>
+          </div>
+          <div style="display: grid; gap: 8px; padding: 14px; background: #fff7ed; border-radius: 10px; border-left: 3px solid #f59e0b;">
+            <strong style="color: #b45309;">🎯 Practice & Test</strong>
+            <p style="margin: 0; font-size: 0.9rem; color: #4b5563;">After studying materials, test your knowledge with mock tests to identify weak areas.</p>
+          </div>
+        </div>
+      </section>
+    </section>
+  </template>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    async function loadStudyHub() {
+      try {
+        const [materialsResp, categoriesResp] = await Promise.all([
+          fetch('/api/student/library/materials?limit=100', { credentials: 'include' }).then(r => r.json()),
+          fetch('/api/student/library/materials/categories', { credentials: 'include' }).then(r => r.json())
+        ]);
+
+        const materials = materialsResp.materials || [];
+        const categories = categoriesResp.categories || [];
+
+        // Update KPIs
+        document.getElementById('studyMaterialCount').textContent = materials.length;
+        document.getElementById('studyBookCount').textContent = materials.filter(m => m.material_type === 'book').length;
+        document.getElementById('studyPptCount').textContent = materials.filter(m => m.material_type === 'ppt').length;
+        document.getElementById('studySubjectCount').textContent = new Set(materials.map(m => m.category_id)).size;
+
+        // Render subjects
+        const subjectsGrid = document.getElementById('subjectsGrid');
+        if (categories.length > 0) {
+          subjectsGrid.innerHTML = categories.map(cat => {
+            const catMaterials = materials.filter(m => m.category_id === cat.id);
+            return `
+              <div class="subject-card" onclick="window.location.href='materials-library.html?subject=${cat.id}'">
+                <div class="subject-icon">${getSubjectIcon(cat.name)}</div>
+                <h3 class="subject-name">${cat.name}</h3>
+                <p class="subject-count">${catMaterials.length} materials</p>
+              </div>
+            `;
+          }).join('');
+        } else {
+          subjectsGrid.innerHTML = '<div class="empty-state"><p>No subjects available yet.</p></div>';
+        }
+
+        // Render featured resources (top 6)
+        const featuredResourcesGrid = document.getElementById('featuredResourcesGrid');
+        const featured = materials.slice(0, 6);
+        if (featured.length > 0) {
+          featuredResourcesGrid.innerHTML = featured.map(material => {
+            const isBook = material.material_type === 'book';
+            const isPpt = material.material_type === 'ppt';
+            const badge = isBook ? 'book' : isPpt ? 'ppt' : '';
+            const badgeText = isBook ? '📚 Book' : isPpt ? '🎯 PPT' : '📄 Material';
+            
+            return `
+              <div class="resource-preview">
+                <span class="resource-badge ${badge}">${badgeText}</span>
+                <h4 class="resource-title">${material.title}</h4>
+                <div class="resource-meta">
+                  ${material.category_name ? `<div><i class="fa-solid fa-tag"></i> ${material.category_name}</div>` : ''}
+                  ${material.semester_label ? `<div><i class="fa-solid fa-calendar"></i> ${material.semester_label}</div>` : ''}
+                </div>
+                <a href="${material.file_url}" target="_blank" class="btn secondary sm" style="margin-top:8px;"><i class="fa-solid fa-download"></i> View</a>
+              </div>
+            `;
+          }).join('');
+        } else {
+          featuredResourcesGrid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><p>No materials available yet.</p></div>';
+        }
+      } catch (error) {
+        console.error('Error loading study hub:', error);
+        document.getElementById('subjectsGrid').innerHTML = `<div class="empty-state"><i class="fa-solid fa-exclamation-triangle"></i> ${error.message}</div>`;
+      }
+    }
+
+    function getSubjectIcon(subjectName) {
+      const name = subjectName.toLowerCase();
+      const iconMap = {
+        'mathematics': '🔢',
+        'physics': '⚛️',
+        'chemistry': '🧪',
+        'biology': '🧬',
+        'english': '📖',
+        'history': '📜',
+        'geography': '🌍',
+        'economics': '💹',
+        'computer science': '💻',
+        'programming': '👨‍💻',
+        'database': '🗄️',
+        'networks': '🌐',
+        'management': '🎯',
+        'accounting': '📊',
+        'law': '⚖️'
+      };
+      
+      for (const [key, icon] of Object.entries(iconMap)) {
+        if (name.includes(key)) return icon;
+      }
+      return '📚';
+    }
+
+    document.addEventListener('DOMContentLoaded', loadStudyHub);
+  </script>
+</body>
+</html>

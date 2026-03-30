@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Referral Program - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+
+    <!-- Hero Banner -->
+    <section class="hero ref-hero">
+      <div class="ref-hero-inner">
+        <div>
+          <h1 data-page-title>Referral Program</h1>
+          <p>Invite friends to College OS and earn exclusive rewards. Unlock the <strong>Referral Ambassador Certificate</strong> at 25 successful referrals!</p>
+        </div>
+        <div class="ref-code-chip" id="refCodeChip" title="Your unique referral code">
+          <i class="fa-solid fa-tag"></i>
+          <span class="ref-code-label">Your Code</span>
+          <strong id="refCode">Loading…</strong>
+        </div>
+      </div>
+    </section>
+
+    <!-- Summary Stats Strip -->
+    <div class="ref-stats-grid">
+      <div class="ref-stat-card">
+        <div class="ref-stat-icon" style="background:#e8f7f1;color:#1f7f55;"><i class="fa-solid fa-users"></i></div>
+        <div>
+          <div class="ref-stat-value" id="refCount">0</div>
+          <div class="ref-stat-label">Successful Referrals</div>
+        </div>
+      </div>
+      <div class="ref-stat-card">
+        <div class="ref-stat-icon" style="background:#fff4e0;color:#b45309;"><i class="fa-solid fa-clock"></i></div>
+        <div>
+          <div class="ref-stat-value" id="refPending">0</div>
+          <div class="ref-stat-label">Pending Referrals</div>
+        </div>
+      </div>
+      <div class="ref-stat-card">
+        <div class="ref-stat-icon" style="background:#f0eeff;color:#5553a9;"><i class="fa-solid fa-bullseye"></i></div>
+        <div>
+          <div class="ref-stat-value" id="refGoalStat">25</div>
+          <div class="ref-stat-label">Referral Goal</div>
+        </div>
+      </div>
+      <div class="ref-stat-card">
+        <div class="ref-stat-icon" style="background:#fde8e8;color:#c6342d;"><i class="fa-solid fa-percent"></i></div>
+        <div>
+          <div class="ref-stat-value" id="refProgress">0%</div>
+          <div class="ref-stat-label">Reward Progress</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress Tracker -->
+    <section class="card">
+      <div class="ref-progress-header">
+        <div>
+          <h3><i class="fa-solid fa-chart-line" style="color:#0f7b6c;margin-right:8px;"></i>Progress to Reward</h3>
+          <p class="muted" style="margin-top:4px;font-size:0.9rem;">
+            <span id="refProgressText">0 / 25 referrals completed</span> &mdash; Unlock <strong>Referral Ambassador Certificate</strong> at 25 referrals
+          </p>
+        </div>
+        <span class="ref-milestone-badge" id="refMilestageBadge">🎯 In Progress</span>
+      </div>
+      <div class="progress" style="height:14px;margin-top:14px;">
+        <span id="refProgressBar" style="width:0%;"></span>
+      </div>
+      <div class="ref-milestone-row">
+        <div class="ref-milestone" id="ms5"><i class="fa-solid fa-medal"></i><span>5</span></div>
+        <div class="ref-milestone" id="ms10"><i class="fa-solid fa-gem"></i><span>10</span></div>
+        <div class="ref-milestone" id="ms25"><i class="fa-solid fa-graduation-cap"></i><span>25</span></div>
+      </div>
+    </section>
+
+    <!-- Share & Invite Actions -->
+    <section class="card">
+      <h3><i class="fa-solid fa-share-nodes" style="color:#0f7b6c;margin-right:8px;"></i>Share Your Referral Link</h3>
+      <p class="muted" style="margin-top:4px;font-size:0.9rem;">Every friend who signs up using your link counts as a successful referral.</p>
+      <div class="actions ref-actions" style="margin-top:16px;">
+        <button class="btn primary" id="copyRefLink">
+          <i class="fa-solid fa-copy"></i> Copy Referral Link
+        </button>
+        <a class="btn ref-btn-whatsapp" id="shareWhatsApp" href="#" target="_blank" rel="noopener noreferrer">
+          <i class="fa-brands fa-whatsapp"></i> WhatsApp
+        </a>
+        <a class="btn ref-btn-telegram" id="shareTelegram" href="#" target="_blank" rel="noopener noreferrer">
+          <i class="fa-brands fa-telegram"></i> Telegram
+        </a>
+        <a class="btn ref-btn-linkedin" id="shareLinkedIn" href="#" target="_blank" rel="noopener noreferrer">
+          <i class="fa-brands fa-linkedin"></i> LinkedIn
+        </a>
+        <a class="btn ref-btn-email" id="shareEmail" href="#" target="_blank" rel="noopener noreferrer">
+          <i class="fa-solid fa-envelope"></i> Invite by Email
+        </a>
+      </div>
+      <p class="ref-copy-status muted" id="copyStatus" style="display:none;margin-top:10px;font-size:0.85rem;color:#1f7f55;"><i class="fa-solid fa-check"></i> Referral link copied to clipboard!</p>
+    </section>
+
+    <!-- Two-column: Rewards + How It Works -->
+    <div class="grid cols-2">
+
+      <!-- Rewards Milestones -->
+      <section class="card">
+        <h3><i class="fa-solid fa-trophy" style="color:#b45309;margin-right:8px;"></i>Reward Milestones</h3>
+        <p class="muted" style="margin-top:4px;font-size:0.88rem;">Unlock perks as you refer more friends.</p>
+        <div class="ref-milestones-list" style="margin-top:16px;">
+          <div class="ref-reward-row" id="reward5">
+            <div class="ref-reward-icon" style="background:#fff4e0;color:#b45309;"><i class="fa-solid fa-medal"></i></div>
+            <div class="ref-reward-info">
+              <strong>5 Referrals</strong>
+              <p>Earn the <em>Rising Star</em> badge on your profile.</p>
+            </div>
+            <span class="ref-reward-status badge" id="badge5">Locked</span>
+          </div>
+          <div class="ref-reward-row" id="reward10">
+            <div class="ref-reward-icon" style="background:#f0eeff;color:#5553a9;"><i class="fa-solid fa-gem"></i></div>
+            <div class="ref-reward-info">
+              <strong>10 Referrals</strong>
+              <p>Unlock <em>Premium Study Notes</em> access for 30 days.</p>
+            </div>
+            <span class="ref-reward-status badge" id="badge10">Locked</span>
+          </div>
+          <div class="ref-reward-row" id="reward25">
+            <div class="ref-reward-icon" style="background:#e8f7f1;color:#1f7f55;"><i class="fa-solid fa-graduation-cap"></i></div>
+            <div class="ref-reward-info">
+              <strong>25 Referrals</strong>
+              <p>Earn the <em>Referral Ambassador Certificate</em> — downloadable and verifiable.</p>
+            </div>
+            <span class="ref-reward-status badge" id="badge25">Locked</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- How It Works -->
+      <section class="card">
+        <h3><i class="fa-solid fa-circle-info" style="color:#2f6fed;margin-right:8px;"></i>How It Works</h3>
+        <p class="muted" style="margin-top:4px;font-size:0.88rem;">Start earning rewards in just a few steps.</p>
+        <div class="ref-how-list" style="margin-top:16px;">
+          <div class="ref-how-step">
+            <div class="ref-how-num">1</div>
+            <div>
+              <strong>Copy your referral link</strong>
+              <p>Click the "Copy Referral Link" button to get your unique invite URL.</p>
+            </div>
+          </div>
+          <div class="ref-how-step">
+            <div class="ref-how-num">2</div>
+            <div>
+              <strong>Share with friends</strong>
+              <p>Send your link via WhatsApp, Telegram, LinkedIn, Email, or any platform.</p>
+            </div>
+          </div>
+          <div class="ref-how-step">
+            <div class="ref-how-num">3</div>
+            <div>
+              <strong>Friends sign up</strong>
+              <p>Your friend registers on College OS using your referral link.</p>
+            </div>
+          </div>
+          <div class="ref-how-step">
+            <div class="ref-how-num">4</div>
+            <div>
+              <strong>Earn rewards</strong>
+              <p>Your referral count goes up and you unlock milestone rewards automatically.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Two-column: Referral History + Top Referrers -->
+    <div class="grid cols-2">
+
+      <!-- Referral History -->
+      <section class="card">
+        <h3><i class="fa-solid fa-list-ul" style="color:#7b3f00;margin-right:8px;"></i>Referral History</h3>
+        <p class="muted" style="margin-top:4px;font-size:0.88rem;">People who joined using your referral link.</p>
+        <div style="margin-top:16px;" id="refHistoryWrap">
+          <div class="empty-state" id="refHistoryEmpty">
+            <i class="fa-solid fa-user-plus" style="font-size:2rem;color:#bbb;margin-bottom:10px;"></i>
+            <p><strong>No referrals yet</strong></p>
+            <p class="muted" style="font-size:0.85rem;">Share your link and watch this list grow!</p>
+          </div>
+          <div class="ref-history-list" id="refHistoryList" style="display:none;"></div>
+        </div>
+      </section>
+
+      <!-- Top Referrers Leaderboard -->
+      <section class="card">
+        <h3><i class="fa-solid fa-ranking-star" style="color:#8c2ad8;margin-right:8px;"></i>Top Referrers</h3>
+        <p class="muted" style="margin-top:4px;font-size:0.88rem;">See where you stand in the referral community.</p>
+        <div style="margin-top:16px;" id="refLeaderboardWrap">
+          <div class="empty-state" id="refLeaderboardEmpty">
+            <i class="fa-solid fa-chart-bar" style="font-size:2rem;color:#bbb;margin-bottom:10px;"></i>
+            <p><strong>Leaderboard loading…</strong></p>
+          </div>
+          <div class="ref-lb-list" id="refLeaderboardList" style="display:none;"></div>
+        </div>
+      </section>
+
+    </div>
+
+  </template>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/page-data.js"></script>
+</body>
+</html>
+
+
+

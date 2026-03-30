@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Support Governance - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .governance-shell { padding: 18px; display: grid; gap: 14px; }
+    .gov-hero {
+      background: linear-gradient(120deg, #0f172a, #1e40af);
+      color: #fff;
+      border-radius: 16px;
+      padding: 18px;
+      display: grid;
+      gap: 10px;
+    }
+    .gov-hero h1 { margin: 0; font-size: 24px; }
+    .gov-hero p { margin: 0; opacity: 0.9; }
+    .gov-link-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .gov-link-row a {
+      color: #dbeafe;
+      text-decoration: none;
+      border: 1px solid rgba(219, 234, 254, 0.35);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+
+    .gov-kpis {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(120px, 1fr));
+      gap: 10px;
+    }
+    .gov-kpi {
+      background: #fff;
+      border: 1px solid #dbe4ef;
+      border-radius: 12px;
+      padding: 10px;
+    }
+    .gov-kpi small { color: #64748b; text-transform: uppercase; font-size: 11px; }
+    .gov-kpi strong { display: block; font-size: 22px; color: #0f172a; margin-top: 4px; }
+
+    .gov-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    .gov-card {
+      background: #fff;
+      border: 1px solid #dbe4ef;
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .gov-card h3 { margin: 0 0 8px; }
+
+    .gov-filters {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(120px, 1fr));
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .gov-filters input,
+    .gov-filters select,
+    .gov-filters button,
+    .gov-form input,
+    .gov-form select,
+    .gov-form textarea {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-family: inherit;
+      background: #fff;
+    }
+    .gov-filters button,
+    .gov-form button {
+      cursor: pointer;
+      background: #1d4ed8;
+      color: #fff;
+      border: 1px solid #1d4ed8;
+      font-weight: 600;
+    }
+
+    .gov-table-wrap { overflow: auto; border: 1px solid #dbe4ef; border-radius: 10px; }
+    .gov-table { width: 100%; border-collapse: collapse; min-width: 980px; }
+    .gov-table th, .gov-table td { border-bottom: 1px solid #e2e8f0; padding: 8px; font-size: 12px; vertical-align: top; }
+    .gov-table th { background: #f8fafc; text-transform: uppercase; letter-spacing: 0.04em; color: #475569; }
+
+    .gov-chip {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 11px;
+      border: 1px solid #cbd5e1;
+      margin-right: 4px;
+      margin-bottom: 4px;
+      background: #f8fafc;
+      color: #1e293b;
+    }
+
+    .gov-actions { display: flex; gap: 5px; flex-wrap: wrap; }
+    .gov-actions button {
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      color: #0f172a;
+      border-radius: 6px;
+      font-size: 11px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+    .gov-actions button.danger { border-color: #fecaca; color: #b91c1c; background: #fff5f5; }
+    .gov-actions button.warn { border-color: #fde68a; color: #92400e; background: #fffbeb; }
+
+    .gov-form { display: grid; gap: 8px; margin-top: 8px; }
+    .gov-form .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    .gov-list { display: grid; gap: 8px; max-height: 320px; overflow: auto; }
+    .gov-list-item {
+      border: 1px solid #dbe4ef;
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 12px;
+      background: #f8fafc;
+    }
+
+    @media (max-width: 1280px) {
+      .gov-kpis { grid-template-columns: repeat(3, minmax(120px, 1fr)); }
+      .gov-grid { grid-template-columns: 1fr; }
+      .gov-filters { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
+      .gov-form .row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body class="admin-portal">
+  <div class="co-admin-shell">
+    <aside class="co-admin-aside">
+      <div class="co-admin-brand">
+        <span class="co-admin-brand-mark"><i class="fa-solid fa-shield-halved"></i></span>
+        <div>
+          <h1>College OS Admin</h1>
+          <p>Unified command center for academics, governance, and platform operations.</p>
+        </div>
+      </div>
+      <section class="co-admin-nav-section">
+        <p class="co-admin-nav-label">Admin Navigation</p>
+        <nav class="co-admin-nav">
+          <a class="co-admin-nav-link" href="admin-dashboard.html"><i class="fa-solid fa-chart-pie"></i><span>Overview</span></a>
+          <a class="co-admin-nav-link" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control System</span></a>
+          <a class="co-admin-nav-link" href="admin-academics.html#contributions"><i class="fa-solid fa-upload"></i><span>Contribution Control</span></a>
+          <a class="co-admin-nav-link active" href="admin-support-governance.html"><i class="fa-solid fa-shield-halved"></i><span>Support Governance</span></a>
+          <a class="co-admin-nav-link" href="admin-notes.html"><i class="fa-solid fa-file-lines"></i><span>Notes</span></a>
+          <a class="co-admin-nav-link" href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i><span>Papers</span></a>
+          <a class="co-admin-nav-link" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i><span>Materials</span></a>
+          <a class="co-admin-nav-link" href="admin-quizzes.html"><i class="fa-solid fa-clipboard-question"></i><span>Quizzes</span></a>
+          <a class="co-admin-nav-link" href="admin-certificates.html"><i class="fa-solid fa-graduation-cap"></i><span>Certificates</span></a>
+          <a class="co-admin-nav-link" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Roadmaps</span></a>
+          <a class="co-admin-nav-link" href="admin-mock-tests.html"><i class="fa-solid fa-flask-vial"></i><span>Mock Test Studio</span></a>
+          <a class="co-admin-nav-link" href="admin-ai-tools.html"><i class="fa-solid fa-sparkles"></i><span>AI Tools</span></a>
+          <a class="co-admin-nav-link" href="admin-campus-feed.html"><i class="fa-solid fa-newspaper"></i><span>Campus Feed</span></a>
+        </nav>
+      </section>
+    </aside>
+
+    <main class="co-admin-main co-admin-page-block">
+      <header class="co-admin-topbar">
+        <div class="co-admin-topbar-title">
+          <h2>Support Governance</h2>
+          <p>Moderation, trust controls, rewards governance, fraud safety, and feature visibility controls for the Student Support Hub.</p>
+        </div>
+        <div class="co-admin-topbar-actions">
+          <a class="co-admin-chip" href="admin-dashboard.html"><i class="fa-solid fa-arrow-left"></i><span>Back to Dashboard</span></a>
+          <a class="co-admin-chip" href="support-hub.html" target="_blank" rel="noopener"><i class="fa-solid fa-external-link"></i><span>Open Support Hub</span></a>
+        </div>
+      </header>
+
+      <section style="padding: 20px;">
+
+    <section class="gov-kpis" id="govKpis"></section>
+
+    <section class="gov-grid">
+      <article class="gov-card">
+        <h3>Moderation Queue</h3>
+        <div class="gov-filters">
+          <select id="threadStatusFilter">
+            <option value="">All Status</option>
+            <option value="open">Open</option>
+            <option value="in_progress">In Progress</option>
+            <option value="solved">Solved</option>
+          </select>
+          <input id="threadSearch" placeholder="Search title/topic" />
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;"><input type="checkbox" id="flaggedOnly" />Flagged only</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;"><input type="checkbox" id="urgentOnly" />Urgent only</label>
+          <button id="threadFilterBtn">Apply</button>
+        </div>
+        <div class="gov-table-wrap">
+          <table class="gov-table">
+            <thead>
+              <tr>
+                <th>Thread</th>
+                <th>Scope</th>
+                <th>Signals</th>
+                <th>Requester / Helpers</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="threadRows"></tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="gov-card">
+        <h3>Feature Visibility Controls</h3>
+        <form class="gov-form" id="featureConfigForm">
+          <label><input type="checkbox" id="cfgEnabled" /> Support system enabled</label>
+          <label><input type="checkbox" id="cfgVisible" /> Support module visible to students</label>
+          <label><input type="checkbox" id="cfgRequest" /> Allow request creation</label>
+          <label><input type="checkbox" id="cfgAnswer" /> Allow answer creation</label>
+          <label><input type="checkbox" id="cfgMeet" /> Allow meet links</label>
+          <label><input type="checkbox" id="cfgAttach" /> Allow attachments</label>
+          <label><input type="checkbox" id="cfgReward" /> Allow automatic rewarding</label>
+          <label><input type="checkbox" id="cfgSolved" /> Allow solved flow</label>
+          <button type="submit">Save Support Feature Controls</button>
+        </form>
+
+        <h3 style="margin-top:14px;">Reward Governance</h3>
+        <form class="gov-form" id="rewardForm">
+          <div class="row">
+            <input id="rewardHelperId" placeholder="Helper user ID" />
+            <input id="rewardDelta" placeholder="Points delta (e.g. 25 or -10)" />
+          </div>
+          <div class="row">
+            <select id="rewardEventType">
+              <option value="admin_manual">Admin manual</option>
+              <option value="fraud_penalty">Fraud penalty</option>
+              <option value="quality_bonus">Quality bonus</option>
+              <option value="reward_override">Reward override</option>
+            </select>
+            <input id="rewardReason" placeholder="Reason" />
+          </div>
+          <button type="submit">Apply Reward Change</button>
+        </form>
+
+        <h3 style="margin-top:14px;">Helper Trust Controls</h3>
+        <form class="gov-form" id="trustForm">
+          <input id="trustHelperId" placeholder="Helper user ID" />
+          <select id="trustLevel">
+            <option value="new_helper">New Helper</option>
+            <option value="trusted_helper">Trusted Helper</option>
+            <option value="top_academic_helper">Top Academic Helper</option>
+            <option value="verified_support_contributor">Verified Support Contributor</option>
+          </select>
+          <label><input type="checkbox" id="trustVerified" /> Verified contributor</label>
+          <label><input type="checkbox" id="trustSuspend" /> Suspend support participation</label>
+          <input id="trustSuspendUntil" type="datetime-local" />
+          <textarea id="trustSuspendReason" placeholder="Suspension/upgrade note"></textarea>
+          <button type="submit">Save Helper Trust Control</button>
+        </form>
+      </article>
+    </section>
+
+    <section class="gov-grid">
+      <article class="gov-card">
+        <h3>Isolation, Safety, and Fraud Signals</h3>
+        <div class="gov-list" id="riskList"></div>
+      </article>
+      <article class="gov-card">
+        <h3>Governance Audit Trail</h3>
+        <div class="gov-list" id="auditList"></div>
+      </article>
+    </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/admin-support-governance.js"></script>
+</body>
+</html>

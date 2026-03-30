@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mock Test Attempt - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .exam-shell { display: grid; gap: 1rem; }
+
+    .exam-head {
+      background: linear-gradient(135deg, #172d56, #115d55);
+      color: #fff;
+      border-radius: 16px;
+      padding: 1rem;
+      display: grid;
+      gap: 0.8rem;
+      box-shadow: 0 16px 36px rgba(14, 35, 80, 0.28);
+    }
+
+    .exam-head-top { display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
+    .exam-head-top h1 { margin: 0; font-size: 1.2rem; }
+
+    .exam-timer {
+      border-radius: 999px;
+      padding: 0.38rem 0.7rem;
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      font-weight: 700;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .exam-stats {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 0.6rem;
+    }
+
+    .exam-stats .stat {
+      border-radius: 12px;
+      padding: 0.55rem;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    .exam-stats .stat label {
+      display: block;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      opacity: 0.88;
+    }
+
+    .exam-stats .stat strong {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.03rem;
+    }
+
+    .exam-body {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .exam-question {
+      background: var(--surface);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 1rem;
+      display: grid;
+      gap: 0.9rem;
+      min-height: 480px;
+    }
+
+    .exam-question-meta { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+    .exam-question-text {
+      font-size: 1.14rem;
+      line-height: 1.5;
+      font-weight: 700;
+      color: #1f2f3d;
+    }
+
+    .exam-option-grid { display: grid; gap: 0.65rem; }
+
+    .exam-option {
+      width: 100%;
+      text-align: left;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 12px;
+      background: #fff;
+      padding: 0.8rem;
+      display: flex;
+      gap: 0.65rem;
+      align-items: flex-start;
+      cursor: pointer;
+      transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+    }
+
+    .exam-option:hover {
+      transform: translateY(-1px);
+      border-color: rgba(15, 123, 108, 0.45);
+      box-shadow: 0 10px 22px rgba(15, 123, 108, 0.1);
+    }
+
+    .exam-option.selected {
+      background: #ecf8f5;
+      border-color: #0f7b6c;
+    }
+
+    .opt-key {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 2px solid #cfd7e0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .exam-option.selected .opt-key { border-color: #0f7b6c; color: #0f7b6c; }
+
+    .exam-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      justify-content: space-between;
+      margin-top: auto;
+    }
+
+    .exam-side {
+      display: grid;
+      gap: 0.8rem;
+      position: sticky;
+      top: 84px;
+    }
+
+    .palette-card,
+    .legend-card {
+      background: var(--surface);
+      border-radius: 14px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      box-shadow: var(--shadow);
+      padding: 0.9rem;
+    }
+
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 0.45rem;
+      margin-top: 0.6rem;
+    }
+
+    .palette-btn {
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 8px;
+      background: #fff;
+      padding: 0.4rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .palette-btn.current { background: #0f7b6c; color: #fff; border-color: #0f7b6c; }
+    .palette-btn.answered { background: #eaf8ef; color: #1f7f55; border-color: #acd9bd; }
+    .palette-btn.skipped { background: #fff3dd; color: #8a5605; border-color: #edcf95; }
+    .palette-btn.review { background: #f8ebff; color: #7a2aad; border-color: #dcbdf2; }
+
+    .legend-list { display: grid; gap: 0.35rem; margin-top: 0.55rem; }
+
+    .legend-item { display: inline-flex; align-items: center; gap: 0.45rem; color: var(--muted); font-size: 0.88rem; }
+
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+    .dot.current { background: #0f7b6c; }
+    .dot.answered { background: #1f7f55; }
+    .dot.skipped { background: #d89016; }
+    .dot.review { background: #8b2fd4; }
+    .dot.not { background: #9aa8b8; }
+
+    @media (max-width: 1100px) {
+      .exam-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .exam-body { grid-template-columns: 1fr; }
+      .exam-side { position: static; }
+      .palette-grid { grid-template-columns: repeat(10, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 760px) {
+      .exam-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .palette-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <section class="exam-shell" id="mockAttemptRoot">
+      <header class="exam-head">
+        <div class="exam-head-top">
+          <h1 data-page-title id="examTitle">Mock Test</h1>
+          <div class="exam-timer"><i class="fa-regular fa-clock"></i> <span id="examTimer">00:00</span></div>
+        </div>
+        <div class="exam-stats">
+          <div class="stat"><label>Total Questions</label><strong id="examTotalQuestions">0</strong></div>
+          <div class="stat"><label>Current</label><strong id="examCurrentQuestion">1</strong></div>
+          <div class="stat"><label>Attempted</label><strong id="examAttemptedCount">0</strong></div>
+          <div class="stat"><label>Remaining</label><strong id="examRemainingCount">0</strong></div>
+          <div class="stat"><label>Section</label><strong id="examCurrentSection">General</strong></div>
+          <div class="stat"><label>Exam Mode</label><strong>Focused</strong></div>
+        </div>
+      </header>
+
+      <section class="exam-body">
+        <article class="exam-question">
+          <div class="exam-question-meta" id="examQuestionMeta"></div>
+          <div class="exam-question-text" id="examQuestionText">Loading question...</div>
+          <div class="exam-option-grid" id="examOptionGrid"></div>
+
+          <div class="exam-nav">
+            <div class="nav-group">
+              <button class="btn secondary" id="examPrevBtn" type="button">Previous</button>
+              <button class="btn secondary" id="examNextBtn" type="button">Next</button>
+              <button class="btn secondary" id="examSkipBtn" type="button">Skip</button>
+            </div>
+            <div class="nav-group">
+              <button class="btn warn" id="examReviewBtn" type="button">Mark for Review</button>
+              <button class="btn primary" id="examSaveNextBtn" type="button">Save & Next</button>
+              <button class="btn danger" id="examSubmitBtn" type="button">Submit Test</button>
+            </div>
+          </div>
+        </article>
+
+        <aside class="exam-side">
+          <section class="palette-card">
+            <h3>Question Palette</h3>
+            <div class="palette-grid" id="examPaletteGrid"></div>
+          </section>
+          <section class="legend-card">
+            <h3>Legend</h3>
+            <div class="legend-list">
+              <span class="legend-item"><span class="dot current"></span> Current</span>
+              <span class="legend-item"><span class="dot answered"></span> Answered</span>
+              <span class="legend-item"><span class="dot skipped"></span> Skipped</span>
+              <span class="legend-item"><span class="dot review"></span> Marked Review</span>
+              <span class="legend-item"><span class="dot not"></span> Not Visited</span>
+            </div>
+          </section>
+        </aside>
+      </section>
+    </section>
+  </template>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/mock-tests.js"></script>
+</body>
+</html>

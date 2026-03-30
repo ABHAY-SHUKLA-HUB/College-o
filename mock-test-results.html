@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mock Test Results - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .result-wrap { display: grid; gap: 1rem; }
+
+    .result-hero {
+      border-radius: 18px;
+      padding: 1.1rem;
+      color: #fff;
+      background: linear-gradient(135deg, #1a3765, #0f7b6c 50%, #e19d2f);
+      box-shadow: 0 18px 40px rgba(18, 43, 95, 0.28);
+      display: grid;
+      gap: 0.55rem;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      gap: 0.65rem;
+    }
+
+    .summary-card {
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      padding: 0.62rem;
+    }
+
+    .summary-card label {
+      display: block;
+      font-size: 0.7rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      opacity: 0.9;
+    }
+
+    .summary-card strong {
+      display: block;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.05rem;
+      margin-top: 0.2rem;
+    }
+
+    .analysis-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+      gap: 1rem;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 0.85rem;
+      display: grid;
+      gap: 0.7rem;
+    }
+
+    .metric-list {
+      display: grid;
+      gap: 0.58rem;
+    }
+
+    .metric-list > div {
+      border-radius: 10px;
+      border: 1px solid rgba(0, 0, 0, 0.09);
+      background: #fff;
+      padding: 0.62rem;
+    }
+
+    .metric-list label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      font-weight: 700;
+      margin-bottom: 0.22rem;
+    }
+
+    .metric-list strong {
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .metric-bar {
+      height: 10px;
+      border-radius: 999px;
+      background: #edf1f6;
+      border: 1px solid #dbe3ee;
+      overflow: hidden;
+      margin: 0.3rem 0;
+    }
+
+    .metric-bar span {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, #0f7b6c, #2f6fed);
+    }
+
+    .topic-columns {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.6rem;
+    }
+
+    .topic-columns ul {
+      margin: 0;
+      padding-left: 1rem;
+      display: grid;
+      gap: 0.3rem;
+    }
+
+    .review-list {
+      display: grid;
+      gap: 0.65rem;
+      max-height: 420px;
+      overflow: auto;
+      padding-right: 0.2rem;
+    }
+
+    .review-item {
+      border-radius: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      background: #fff;
+      padding: 0.72rem;
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .review-item.correct { border-color: #9fd2b1; background: #f1faf4; }
+    .review-item.wrong { border-color: #e6b6be; background: #fef2f4; }
+
+    .actions-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      justify-content: flex-end;
+    }
+
+    @media (max-width: 1120px) {
+      .result-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .analysis-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 760px) {
+      .result-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .topic-columns { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <section class="result-wrap" id="mockResultRoot">
+      <section class="result-hero">
+        <h1 data-page-title>Mock Test Result & Analytics</h1>
+        <p>Your complete performance report with score, rank, sectional analysis, topic insights, and AI suggestions.</p>
+        <div class="result-grid">
+          <article class="summary-card"><label>Score</label><strong id="resScore">0/0</strong></article>
+          <article class="summary-card"><label>Correct</label><strong id="resCorrect">0</strong></article>
+          <article class="summary-card"><label>Wrong</label><strong id="resWrong">0</strong></article>
+          <article class="summary-card"><label>Skipped</label><strong id="resSkipped">0</strong></article>
+          <article class="summary-card"><label>Accuracy</label><strong id="resAccuracy">0%</strong></article>
+          <article class="summary-card"><label>Percentile</label><strong id="resPercentile">0%</strong></article>
+          <article class="summary-card"><label>Rank</label><strong id="resRank">--</strong></article>
+          <article class="summary-card"><label>Status</label><strong>Submitted</strong></article>
+        </div>
+      </section>
+
+      <section class="analysis-grid">
+        <section class="panel">
+          <h3>Performance Charts</h3>
+          <div class="metric-list" id="chartScoreBreakdown"></div>
+          <div class="metric-list" id="chartSectionWise"></div>
+          <div class="metric-list" id="chartTopicWise"></div>
+        </section>
+
+        <section class="panel">
+          <h3>Comparison Insights</h3>
+          <div class="metric-list">
+            <div><label>Your Score</label><strong id="compareYourScore">0</strong></div>
+            <div><label>Average Score</label><strong id="compareAvgScore">0</strong></div>
+            <div><label>Top Score</label><strong id="compareTopScore">0</strong></div>
+            <div><label>Branch Rank</label><strong id="compareBranchRank">--</strong></div>
+            <div><label>Overall Rank</label><strong id="compareOverallRank">--</strong></div>
+          </div>
+        </section>
+      </section>
+
+      <section class="analysis-grid">
+        <section class="panel">
+          <h3>Strong vs Weak Areas</h3>
+          <div class="topic-columns">
+            <article>
+              <h4>Strong Topics</h4>
+              <ul id="strongTopics"></ul>
+            </article>
+            <article>
+              <h4>Weak Topics</h4>
+              <ul id="weakTopics"></ul>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h3>AI Performance Analysis</h3>
+          <ul id="aiSuggestions"></ul>
+        </section>
+      </section>
+
+      <section class="panel">
+        <h3>Test Review</h3>
+        <div class="review-list" id="reviewList"></div>
+      </section>
+
+      <section class="panel">
+        <h3>Next Actions</h3>
+        <div class="actions-row">
+          <a class="btn secondary" id="actionRetry" href="mock-tests.html">Retry Test</a>
+          <a class="btn secondary" id="actionTopic" href="mock-tests.html">Start Suggested Topic Test</a>
+          <a class="btn secondary" id="actionNotes" href="notes-library.html">Open Related Notes</a>
+          <a class="btn primary" id="actionRoadmap" href="study-roadmap.html">Continue Roadmap</a>
+        </div>
+      </section>
+    </section>
+  </template>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/mock-tests.js"></script>
+</body>
+</html>

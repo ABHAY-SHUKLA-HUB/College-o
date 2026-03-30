@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Previous Year Papers - Admin</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+</head>
+<body class="admin-portal">
+  <div class="co-admin-shell">
+    <aside class="co-admin-aside">
+      <div class="co-admin-brand">
+        <span class="co-admin-brand-mark"><i class="fa-solid fa-shield-halved"></i></span>
+        <div>
+          <h1>College OS Admin</h1>
+          <p>Academic operations for archived papers, semester resources, and exam-readiness content.</p>
+        </div>
+      </div>
+      <section class="co-admin-nav-section">
+        <p class="co-admin-nav-label">Admin Navigation</p>
+        <nav class="co-admin-nav">
+          <a class="co-admin-nav-link" href="admin-dashboard.html"><i class="fa-solid fa-chart-pie"></i><span>Overview</span></a>
+          <a class="co-admin-nav-link" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control System</span></a>
+          <a class="co-admin-nav-link" href="admin-academics.html#contributions"><i class="fa-solid fa-upload"></i><span>Contribution Control</span></a>
+          <a class="co-admin-nav-link" href="admin-support-governance.html"><i class="fa-solid fa-shield-halved"></i><span>Support Governance</span></a>
+          <a class="co-admin-nav-link" href="admin-notes.html"><i class="fa-solid fa-file-lines"></i><span>Notes</span></a>
+          <a class="co-admin-nav-link active" href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i><span>Papers</span></a>
+          <a class="co-admin-nav-link" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i><span>Materials</span></a>
+          <a class="co-admin-nav-link" href="admin-quizzes.html"><i class="fa-solid fa-clipboard-question"></i><span>Quizzes</span></a>
+          <a class="co-admin-nav-link" href="admin-certificates.html"><i class="fa-solid fa-graduation-cap"></i><span>Certificates</span></a>
+          <a class="co-admin-nav-link" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Roadmaps</span></a>
+          <a class="co-admin-nav-link" href="admin-mock-tests.html"><i class="fa-solid fa-flask-vial"></i><span>Mock Test Studio</span></a>
+          <a class="co-admin-nav-link" href="admin-ai-tools.html"><i class="fa-solid fa-sparkles"></i><span>AI Tools</span></a>
+          <a class="co-admin-nav-link" href="admin-campus-feed.html"><i class="fa-solid fa-newspaper"></i><span>Campus Feed</span></a>
+        </nav>
+      </section>
+    </aside>
+
+    <main class="co-admin-main co-admin-page-block">
+      <header class="co-admin-topbar">
+        <div class="co-admin-topbar-title">
+          <h2>Previous Year Papers</h2>
+          <p>Archive and distribute exam papers using the same premium admin language as the main dashboard.</p>
+        </div>
+        <div class="co-admin-topbar-actions">
+          <a class="co-admin-chip" href="admin-dashboard.html"><i class="fa-solid fa-arrow-left"></i><span>Back to Dashboard</span></a>
+        </div>
+      </header>
+
+      <section class="co-admin-subhero">
+        <h1>Exam Archive Workspace</h1>
+        <p>Manage previous year question papers with stronger metadata structure, cleaner forms, and a more polished distribution workflow.</p>
+        <div class="co-admin-subnav">
+          <a href="admin-notes.html"><i class="fa-solid fa-file-lines"></i> Notes</a>
+          <a class="active" href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i> Papers</a>
+          <a href="admin-materials.html"><i class="fa-solid fa-folder-open"></i> Materials</a>
+        </div>
+      </section>
+
+      <section class="co-admin-panel">
+        <div class="co-admin-section-head"><div><h3>Upload Question Paper</h3><p>Modernized upload form for paper management across subjects, years, and campuses.</p></div></div>
+        <form id="uploadPaperForm" enctype="multipart/form-data" class="co-admin-form">
+          <div class="co-admin-form-grid">
+            <div class="co-admin-field"><label>Subject *</label><input name="subject" required /></div>
+            <div class="co-admin-field"><label>Exam Name *</label><input name="examName" required /></div>
+            <div class="co-admin-field"><label>Year *</label><input name="year" type="number" min="2000" max="2030" required /></div>
+            <div class="co-admin-field"><label>College</label><select name="collegeName"><option value="">All Colleges</option><option>Chandigarh University Mohali</option><option>Chandigarh University UP</option></select></div>
+            <div class="co-admin-field"><label>Academic Category *</label><select id="paperCategoryId" name="categoryId" required><option value="">Select category</option></select></div>
+            <div class="co-admin-field"><label>Branch / Course *</label><select id="paperBranchId" name="branchId" required disabled><option value="">Select branch or course</option></select></div>
+            <div class="co-admin-field"><label>Semester *</label><select id="paperSemesterId" name="semesterId" required><option value="">Select semester</option></select></div>
+            <div class="co-admin-field"><label>Access</label><select name="accessType"><option value="free">Free</option><option value="premium">Premium</option></select></div>
+            <div class="co-admin-field"><label>Status</label><select name="status"><option value="published">Published</option><option value="draft">Draft</option></select></div>
+            <div class="co-admin-field"><label>PDF File *</label><input type="file" name="file" accept="application/pdf" required /></div>
+            <div class="co-admin-field full"><label><input type="checkbox" name="isCommon" /> Common for all branches/courses</label></div>
+          </div>
+          <div class="actions" style="margin-top:16px;"><button class="btn primary" type="submit"><i class="fa-solid fa-upload"></i> Upload Paper</button></div>
+          <p class="muted" id="uploadStatus" style="margin-top:12px;"></p>
+        </form>
+      </section>
+
+      <section class="co-admin-panel">
+        <div class="co-admin-section-head"><div><h3>Paper Library</h3><p>Archived papers displayed with a cleaner table, improved alignment, and more realistic admin actions.</p></div></div>
+        <div class="co-admin-table-wrap">
+          <div class="co-admin-form-grid" style="margin-bottom:16px;">
+            <div class="co-admin-field"><label>Filter Category</label><select id="papersFilterCategoryId"><option value="">All categories</option></select></div>
+            <div class="co-admin-field"><label>Filter Branch / Course</label><select id="papersFilterBranchId" disabled><option value="">All branches/courses</option></select></div>
+            <div class="co-admin-field"><label>Filter Semester</label><select id="papersFilterSemesterId"><option value="">All semesters</option></select></div>
+            <div class="co-admin-field"><label>Filter Status</label><select id="papersFilterStatus"><option value="published">Published</option><option value="draft">Draft</option></select></div>
+          </div>
+          <table class="co-admin-data-table">
+            <thead><tr><th>Subject</th><th>Exam Name</th><th>Year</th><th>Branch / Course</th><th>Semester</th><th>PDF</th><th>Actions</th></tr></thead>
+            <tbody id="papersTableBody"><tr><td colspan="7" class="co-admin-table-empty">Loading papers...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/admin-papers.js"></script>
+</body>
+</html>

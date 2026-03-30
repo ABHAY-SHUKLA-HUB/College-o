@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quiz Results - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <section class="hero"><h1 data-page-title>Quiz Results</h1><p>Analyze weak areas and map to roadmap milestones.</p></section>
+    <section class="grid cols-3">
+      <article class="card"><h3>Score</h3><p id="resultScore">0%</p></article>
+      <article class="card"><h3>Accuracy</h3><p id="resultAccuracy">0%</p></article>
+      <article class="card"><h3>XP Earned</h3><p id="resultXp">+0</p></article>
+    </section>
+    <section class="card"><a class="btn secondary" href="study-roadmap.html">Add Weak Topics To Roadmap</a></section>
+  </template>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/learning.js"></script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Discussion Forum - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .forum-layout { display:grid; grid-template-columns: 1.35fr 0.8fr; gap:1rem; }
+    .forum-card { background:#fff; border:1px solid #dce5f0; border-radius:14px; box-shadow:0 8px 22px rgba(35,56,83,.09); padding:1rem; }
+    .forum-toolbar { display:grid; gap:.7rem; }
+    .forum-search { width:100%; border:1px solid #d2deeb; border-radius:10px; padding:.68rem .8rem; }
+    .chips { display:flex; flex-wrap:wrap; gap:.45rem; }
+    .chip { border:1px solid #d2deeb; background:#fff; border-radius:999px; padding:.36rem .72rem; cursor:pointer; font-size:.83rem; }
+    .chip.active { background:#dff4ef; border-color:#88d1c2; color:#0c5a4f; font-weight:700; }
+    .thread-form-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:.55rem; }
+    .thread-form-grid .full { grid-column:1/-1; }
+    .field { display:flex; flex-direction:column; gap:.3rem; }
+    .field label { font-size:.8rem; color:#5f6f82; font-weight:700; }
+    .field input, .field textarea, .field select { border:1px solid #d2deeb; border-radius:10px; padding:.62rem .72rem; }
+    .tag-pool { display:flex; flex-wrap:wrap; gap:.45rem; }
+    .tag-item { border:1px dashed #abc7e8; background:#f2f8ff; color:#284e72; border-radius:999px; padding:.22rem .6rem; font-size:.77rem; cursor:pointer; }
+    .tag-item.active { background:#d8ebff; border-style:solid; border-color:#6ca7e8; }
+    .thread-list { display:grid; gap:.72rem; }
+    .thread-item { border:1px solid #dce5f0; border-radius:12px; padding:.78rem; transition:.2s ease; background:#fff; cursor:pointer; }
+    .thread-item:hover { transform:translateY(-1px); box-shadow:0 8px 22px rgba(35,56,83,.09); border-color:#bfd3ea; }
+    .thread-meta { display:flex; flex-wrap:wrap; gap:.4rem; font-size:.77rem; color:#62768f; margin-top:.35rem; }
+    .tiny-pill { border-radius:999px; background:#edf3fb; color:#2e4b6b; padding:.14rem .52rem; font-size:.72rem; }
+    .author { display:flex; align-items:center; gap:.45rem; }
+    .avatar { width:30px; height:30px; border-radius:999px; display:grid; place-items:center; color:#fff; font-size:.75rem; font-weight:700; }
+    .reply-tree { display:grid; gap:.55rem; }
+    .reply { border:1px solid #dce5f0; border-radius:10px; padding:.6rem; background:#fbfdff; }
+    .reply.level-1 { margin-left:1.1rem; border-left:3px solid #d8e6f5; }
+    .reply-head { display:flex; justify-content:space-between; gap:.4rem; }
+    .reply-actions { display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.45rem; }
+    .btn-mini { border:none; border-radius:8px; padding:.3rem .54rem; cursor:pointer; font-size:.74rem; }
+    .btn-mini.secondary { background:#e9f0f8; color:#264765; }
+    .btn-mini.good { background:#e0f5e8; color:#23683b; }
+    .empty-state { border:1px dashed #c9d9ea; border-radius:12px; background:#f8fbff; text-align:center; color:#536b86; padding:1.2rem .8rem; }
+    @media (max-width: 1050px) { .forum-layout { grid-template-columns:1fr; } .thread-form-grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <section class="hero">
+      <h1 data-page-title>Discussion Forum</h1>
+      <p>Ask doubts, discuss concepts, and learn faster with your College OS community.</p>
+    </section>
+
+    <section class="forum-layout">
+      <div class="forum-card">
+        <div class="forum-toolbar">
+          <input id="forumSearchInput" class="forum-search" type="search" placeholder="Search discussions by title, content, or category" />
+          <div class="chips" id="forumFilterChips">
+            <button class="chip active" data-filter="latest">Latest</button>
+            <button class="chip" data-filter="trending">Trending</button>
+            <button class="chip" data-filter="unanswered">Unanswered</button>
+            <button class="chip" data-filter="myposts">My Posts</button>
+          </div>
+          <div class="chips" id="forumCategoryChips">
+            <button class="chip active" data-category="all">All Categories</button>
+            <button class="chip" data-category="Study Doubts">Study Doubts</button>
+            <button class="chip" data-category="Concept Discussions">Concept Discussions</button>
+            <button class="chip" data-category="Mock Test Discussions">Mock Test Discussions</button>
+            <button class="chip" data-category="Notes Help">Notes Help</button>
+            <button class="chip" data-category="Career Guidance">Career Guidance</button>
+          </div>
+        </div>
+
+        <form id="newThreadForm" style="margin-top:.9rem;">
+          <div class="thread-form-grid">
+            <div class="field">
+              <label>Thread Title</label>
+              <input id="threadTitle" required placeholder="Example: DP state transition confusion" />
+            </div>
+            <div class="field">
+              <label>Category</label>
+              <select id="threadCategory">
+                <option>Study Doubts</option>
+                <option selected>Concept Discussions</option>
+                <option>Mock Test Discussions</option>
+                <option>Notes Help</option>
+                <option>Career Guidance</option>
+              </select>
+            </div>
+            <div class="field full">
+              <label>Discussion</label>
+              <textarea id="threadBody" rows="4" required placeholder="Share your doubt or discussion context here"></textarea>
+            </div>
+          </div>
+          <div style="margin-top:.6rem;">
+            <div style="font-size:.8rem;color:#5f6f82;font-weight:700;margin-bottom:.35rem;">Tags</div>
+            <div class="tag-pool" id="tagPool">
+              <button type="button" class="tag-item" data-tag="#DSA">#DSA</button>
+              <button type="button" class="tag-item" data-tag="#Python">#Python</button>
+              <button type="button" class="tag-item" data-tag="#AI">#AI</button>
+              <button type="button" class="tag-item" data-tag="#Cloud">#Cloud</button>
+            </div>
+          </div>
+          <div class="actions" style="margin-top:.7rem;"><button class="btn primary" type="submit"><i class="fa-solid fa-paper-plane"></i> Post Discussion</button></div>
+          <p id="forumStatus" class="muted" style="margin-top:.45rem;"></p>
+        </form>
+
+        <div id="threadList" class="thread-list" style="margin-top:.95rem;"></div>
+      </div>
+
+      <aside class="forum-card" style="height:fit-content;">
+        <h3 style="margin-top:0;">Trending Discussions</h3>
+        <div id="trendingList" class="thread-list"></div>
+        <hr style="border:none;border-top:1px solid #e4ebf4;margin:.85rem 0;" />
+        <h3 style="margin:0 0 .45rem;">Thread Detail</h3>
+        <div id="threadDetail" class="empty-state">Open a discussion card to view replies and continue the thread.</div>
+      </aside>
+    </section>
+  </template>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/forum.js"></script>
+</body>
+</html>
+
+
+
+

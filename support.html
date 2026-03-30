@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Support - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <section class="hero"><h1 data-page-title>Support Center</h1><p>Get help with platform issues, payment, and study planning.</p></section>
+    <section class="grid cols-2">
+      <article class="card">
+        <h3>24/7 Peer Support Hub</h3>
+        <p>Ask academic doubts, receive structured peer help, and track accepted answers with helper points.</p>
+        <div class="actions">
+          <a class="btn primary" href="support-hub.html">Open Support Hub</a>
+          <a class="btn secondary" href="support-dashboard.html">My Support Dashboard</a>
+          <a class="btn secondary" href="top-helpers.html">Top Helpers</a>
+        </div>
+      </article>
+      <article class="card"><h3>Academic Help Scope</h3><p>Peer support is visible only inside your college + branch/course + semester group by default.</p><p>Use this for doubts, coding issues, assignments, practicals, and urgent revision support.</p></article>
+    </section>
+    <section class="grid cols-2">
+      <article class="card">
+        <h3>Raise Ticket</h3>
+        <form id="supportForm">
+          <div class="form-grid">
+            <div><label>Issue Type</label><select id="supportIssue"><option>Technical Bug</option><option>Billing</option><option>Roadmap Guidance</option></select></div>
+            <div><label>Priority</label><select id="supportPriority"><option>Low</option><option>Medium</option><option>High</option></select></div>
+          </div>
+          <textarea id="supportDescription" rows="5" placeholder="Describe your issue"></textarea>
+          <div class="actions"><button class="btn primary" type="submit">Submit Ticket</button></div>
+          <p class="muted" id="supportFeedback"></p>
+        </form>
+      </article>
+      <article class="card"><h3>Quick Contact</h3><p>Email: support@collegeos.in</p><p>WhatsApp: +91 90000 00000</p><p>Response SLA: 24 hours</p><div class="actions"><a class="btn secondary" href="feedback.html">Submit Product Feedback</a></div></article>
+    </section>
+  </template>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/content-pages.js"></script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>24/7 Student Support Hub - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css">
+  <style>
+    .support-container {
+      max-width: 1200px; margin: 0 auto; padding: 20px;
+    }
+    .support-hero {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white; padding: 40px 20px; border-radius: 12px; margin-bottom: 30px;
+      text-align: center;
+    }
+    .support-hero h1 { font-size: 2.5em; margin: 0 0 10px 0; font-weight: 700; }
+    .support-hero p { font-size: 1.1em; margin: 0 0 20px 0; opacity: 0.9; }
+    .hero-actions {
+      display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;
+    }
+    .btn-primary, .btn-secondary {
+      padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer;
+      font-size: 1em; font-weight: 600; transition: all 0.3s ease;
+      text-decoration: none; display: inline-block;
+    }
+    .btn-primary {
+      background: white; color: #667eea;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+    .btn-secondary {
+      background: rgba(255,255,255,0.2); color: white; border: 2px solid white;
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.3); }
+    
+    .support-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 40px;
+    }
+    .support-card {
+      background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      transition: all 0.3s ease;
+    }
+    .support-card:hover {
+      transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    }
+    .card-icon { font-size: 2.5em; margin-bottom: 15px; color: #667eea; }
+    .card-title { font-size: 1.3em; font-weight: 700; margin-bottom: 10px; color: #222; }
+    .card-desc { color: #666; font-size: 0.95em; line-height: 1.6; margin-bottom: 15px; }
+    .card-stat { display: flex; align-items: center; gap: 10px; color: #667eea; font-weight: 600; margin: 10px 0; }
+    
+    .filters-section {
+      background: white; padding: 25px; border-radius: 12px; margin-bottom: 30px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .filters-row {
+      display: flex; gap: 15px; flex-wrap: wrap; align-items: center;
+    }
+    .filter-group {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .filter-group label { font-weight: 600; color: #222; min-width: 80px; }
+    .filter-group select, .search-box {
+      padding: 10px 15px; border: 1.5px solid #ddd; border-radius: 8px;
+      font-size: 0.95em; transition: border-color 0.3s;
+    }
+    .filter-group select:focus, .search-box:focus {
+      outline: none; border-color: #667eea;
+    }
+    .search-box { flex: 1; min-width: 250px; }
+    
+    .requests-list {
+      display: flex; flex-direction: column; gap: 15px;
+    }
+    .request-item {
+      background: white; border-left: 5px solid #667eea; padding: 20px;
+      border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      transition: all 0.3s ease; cursor: pointer;
+    }
+    .request-item:hover {
+      transform: translateX(5px); box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    }
+    .request-item.urgent { border-left-color: #ff6b6b; }
+    .request-item.solved { border-left-color: #51cf66; }
+    
+    .request-header {
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; margin-bottom: 12px;
+    }
+    .request-title { font-size: 1.2em; font-weight: 700; color: #222; margin: 0; cursor: pointer; }
+    .request-title:hover { color: #667eea; }
+    
+    .request-badges {
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .badge {
+      display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 0.85em;
+      font-weight: 600;
+    }
+    .badge-urgent { background: #ffe0e0; color: #d63031; }
+    .badge-medium { background: #fff3cd; color: #856404; }
+    .badge-low { background: #d4edda; color: #155724; }
+    .badge-solved { background: #d4edda; color: #155724; }
+    .badge-open { background: #cfe2ff; color: #084298; }
+    
+    .request-meta {
+      display: flex; gap: 20px; flex-wrap: wrap; color: #666; font-size: 0.9em;
+    }
+    .meta-item { display: flex; align-items: center; gap: 8px; }
+    .meta-item i { color: #667eea; }
+    
+    .request-desc {
+      color: #555; font-size: 0.95em; line-height: 1.6; margin: 12px 0;
+    }
+    
+    .pagination {
+      display: flex; justify-content: center; gap: 10px; margin-top: 30px;
+    }
+    .page-btn {
+      padding: 10px 15px; border: 1.5px solid #ddd; border-radius: 8px;
+      background: white; cursor: pointer; font-weight: 600; color: #222;
+      transition: all 0.3s;
+    }
+    .page-btn:hover { border-color: #667eea; color: #667eea; }
+    .page-btn.active { background: #667eea; color: white; border-color: #667eea; }
+    
+    .empty-state {
+      text-align: center; padding: 60px 20px;
+    }
+    .empty-icon { font-size: 4em; color: #ddd; margin-bottom: 20px; }
+    .empty-title { font-size: 1.5em; font-weight: 700; color: #222; margin-bottom: 10px; }
+    .empty-desc { color: #666; font-size: 1.05em; margin-bottom: 25px; }
+    
+    @media (max-width: 768px) {
+      .support-hero h1 { font-size: 1.8em; }
+      .support-grid { grid-template-columns: 1fr; }
+      .filters-row { flex-direction: column; align-items: stretch; }
+      .hero-actions { flex-direction: column; }
+      .btn-primary, .btn-secondary { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+  <div class="support-container">
+    <!-- Hero Section -->
+    <div class="support-hero">
+      <h1 data-page-title><i class="fas fa-life-ring"></i> 24/7 Student Support Hub</h1>
+      <p>Get help from peer experts in your academic group • Share knowledge • Earn points</p>
+      <div class="hero-actions">
+        <button class="btn-primary" id="askHelpBtn" type="button">
+          <i class="fas fa-plus"></i> Ask for Help
+        </button>
+        <button class="btn-secondary" id="mySupportDashboardBtn" type="button">
+          <i class="fas fa-chart-line"></i> My Dashboard
+        </button>
+      </div>
+    </div>
+    
+    <!-- Quick Stats Cards -->
+    <div class="support-grid">
+      <div class="support-card">
+        <div class="card-icon"><i class="fas fa-question-circle"></i></div>
+        <h3 class="card-title">Open Requests</h3>
+        <p class="card-desc">Questions waiting for answers from your academic group</p>
+        <div class="card-stat"><i class="fas fa-arrow-up"></i> <span id="open-count">0</span> active requests</div>
+        <button class="btn-secondary" id="browseOpenBtn" type="button" style="width: 100%;">
+          Browse Open <i class="fas fa-arrow-right"></i>
+        </button>
+      </div>
+      
+      <div class="support-card">
+        <div class="card-icon"><i class="fas fa-check-circle"></i></div>
+        <h3 class="card-title">Solved Requests</h3>
+        <p class="card-desc">Successfully answered questions with accepted solutions</p>
+        <div class="card-stat"><i class="fas fa-star"></i> <span id="solved-count">0</span> solved</div>
+        <button class="btn-secondary" id="browseSolvedBtn" type="button" style="width: 100%;">
+          Browse Solved <i class="fas fa-arrow-right"></i>
+        </button>
+      </div>
+      
+      <div class="support-card">
+        <div class="card-icon"><i class="fas fa-fire"></i></div>
+        <h3 class="card-title">Urgent Help</h3>
+        <p class="card-desc">Requests needing immediate assistance</p>
+        <div class="card-stat"><i class="fas fa-exclamation"></i> <span id="urgent-count">0</span> urgent</div>
+        <button class="btn-secondary" id="browseUrgentBtn" type="button" style="width: 100%;">
+          Browse Urgent <i class="fas fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="filters-section">
+      <h3 style="margin-top: 0;">Find Help</h3>
+      <div class="filters-row">
+        <input type="text" class="search-box" id="search-box" placeholder="Search by title, subject, or topic...">
+        <div class="filter-group">
+          <label>Status:</label>
+          <select id="status-filter">
+            <option value="">All Status</option>
+            <option value="open">Open</option>
+            <option value="in_progress">In Progress</option>
+            <option value="solved">Solved</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Urgency:</label>
+          <select id="urgency-filter">
+            <option value="">All Levels</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Sort:</label>
+          <select id="sort-filter">
+            <option value="">Latest</option>
+            <option value="urgent">Most Urgent</option>
+            <option value="unanswered">Unanswered</option>
+            <option value="most_active">Most Active</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Requests List -->
+    <div class="requests-list" id="requests-container">
+      <div class="empty-state">
+        <div class="empty-icon"><i class="fas fa-inbox"></i></div>
+        <h3 class="empty-title">Loading requests...</h3>
+      </div>
+    </div>
+    
+    <!-- Pagination -->
+    <div class="pagination" id="pagination"></div>
+  </div>
+  </template>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/support-hub.js"></script>
+</body>
+</html>

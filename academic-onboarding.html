@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Academic Setup — College OS</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+    .wizard-card {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.22);
+      width: 100%;
+      max-width: 520px;
+      padding: 40px 40px 32px;
+      animation: rise 0.45s cubic-bezier(0.22,0.61,0.36,1) both;
+    }
+    @keyframes rise { from{opacity:0;transform:translateY(32px)} to{opacity:1;transform:translateY(0)} }
+    .wizard-brand { text-align:center; margin-bottom:32px; }
+    .logo-chip {
+      display:inline-flex; align-items:center; gap:7px;
+      background:linear-gradient(135deg,#667eea,#764ba2); color:#fff;
+      border-radius:50px; padding:6px 16px; font-size:12px; font-weight:700;
+      letter-spacing:.5px; margin-bottom:14px;
+    }
+    .wizard-brand h1 { font-size:25px; font-weight:800; color:#1a1a2e; margin-bottom:6px; }
+    .wizard-brand p  { color:#888; font-size:13.5px; }
+    .stepper { display:flex; align-items:center; margin-bottom:30px; }
+    .stepper-step { display:flex; flex-direction:column; align-items:center; gap:6px; flex:1; }
+    .stepper-circle {
+      width:36px; height:36px; border-radius:50%; border:2px solid #e0e0e0;
+      display:flex; align-items:center; justify-content:center;
+      font-size:13px; font-weight:700; color:#bbb; background:#f7f7f9;
+      transition:all .3s; flex-shrink:0;
+    }
+    .stepper-circle.done   { background:#22c55e; border-color:#22c55e; color:#fff; }
+    .stepper-circle.active { background:linear-gradient(135deg,#667eea,#764ba2); border-color:transparent; color:#fff; box-shadow:0 4px 14px rgba(102,126,234,.45); }
+    .stepper-label { font-size:10px; color:#bbb; font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+    .stepper-label.active { color:#667eea; }
+    .stepper-label.done   { color:#22c55e; }
+    .stepper-line { flex:1; height:2px; background:#eee; margin:0 6px; margin-bottom:22px; border-radius:2px; transition:background .3s; }
+    .stepper-line.done { background:#22c55e; }
+    .step-pane { display:none; }
+    .step-pane.active { display:block; animation:fadeIn .3s ease both; }
+    @keyframes fadeIn { from{opacity:0;transform:translateX(14px)} to{opacity:1;transform:translateX(0)} }
+    .step-heading { font-size:16px; font-weight:700; color:#1a1a2e; margin-bottom:4px; }
+    .step-sub { font-size:13px; color:#999; margin-bottom:20px; }
+    .cat-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .cat-card {
+      border:2px solid #ebebeb; border-radius:12px; padding:18px 12px 14px;
+      cursor:pointer; transition:all .2s; text-align:center; user-select:none;
+    }
+    .cat-card:hover { border-color:#b8acf6; background:#fafaff; transform:translateY(-2px); box-shadow:0 6px 18px rgba(102,126,234,.12); }
+    .cat-card.selected { border-color:#667eea; background:#f0efff; box-shadow:0 4px 16px rgba(102,126,234,.2); }
+    .cat-icon { font-size:30px; margin-bottom:8px; line-height:1; }
+    .cat-name { font-size:14px; font-weight:700; color:#1a1a2e; margin-bottom:3px; }
+    .cat-desc { font-size:11px; color:#aaa; }
+    .cat-card.selected .cat-name { color:#667eea; }
+    .branch-search {
+      width:100%; padding:10px 14px; border:2px solid #ebebeb; border-radius:10px;
+      font-size:14px; font-family:inherit; margin-bottom:12px; transition:border-color .2s; background:#fafaff;
+    }
+    .branch-search:focus { outline:none; border-color:#667eea; background:#fff; }
+    .branch-list { display:flex; flex-direction:column; gap:7px; max-height:268px; overflow-y:auto; padding-right:4px; }
+    .branch-list::-webkit-scrollbar { width:4px; }
+    .branch-list::-webkit-scrollbar-track { background:#f0f0f0; border-radius:4px; }
+    .branch-list::-webkit-scrollbar-thumb { background:#c4b5fd; border-radius:4px; }
+    .branch-item {
+      display:flex; align-items:center; gap:12px; padding:11px 14px;
+      border:2px solid #ebebeb; border-radius:10px; cursor:pointer; transition:all .18s; user-select:none;
+    }
+    .branch-item:hover { border-color:#b8acf6; background:#fafaff; }
+    .branch-item.selected { border-color:#667eea; background:#f0efff; }
+    .branch-radio {
+      width:18px; height:18px; border-radius:50%; border:2px solid #d0d0d0;
+      display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .2s;
+    }
+    .branch-item.selected .branch-radio { border-color:#667eea; background:#667eea; box-shadow:0 0 0 3px rgba(102,126,234,.2); }
+    .branch-radio-dot { width:7px; height:7px; border-radius:50%; background:#fff; opacity:0; transition:opacity .2s; }
+    .branch-item.selected .branch-radio-dot { opacity:1; }
+    .branch-name { font-size:14px; font-weight:600; color:#333; }
+    .branch-item.selected .branch-name { color:#667eea; }
+    .sem-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); gap:10px; }
+    .sem-pill {
+      padding:14px 8px 10px; border:2px solid #ebebeb; border-radius:12px;
+      text-align:center; cursor:pointer; transition:all .2s; user-select:none;
+    }
+    .sem-pill:hover { border-color:#b8acf6; background:#fafaff; transform:translateY(-2px); box-shadow:0 5px 14px rgba(102,126,234,.12); }
+    .sem-pill.selected { border-color:#667eea; background:#f0efff; box-shadow:0 4px 14px rgba(102,126,234,.22); }
+    .sem-num { font-size:20px; font-weight:800; color:#1a1a2e; line-height:1; }
+    .sem-pill.selected .sem-num { color:#667eea; }
+    .sem-tag { font-size:10px; color:#aaa; margin-top:4px; font-weight:600; text-transform:uppercase; letter-spacing:.4px; }
+    .sem-pill.selected .sem-tag { color:#a29fe6; }
+    .skeleton {
+      background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%);
+      background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:10px; height:78px;
+    }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    .field-error { margin-top:10px; font-size:12px; color:#ef4444; display:none; align-items:center; gap:5px; }
+    .field-error.show { display:flex; }
+    .btn-row { display:flex; gap:10px; margin-top:28px; }
+    .btn-back {
+      padding:12px 22px; border:2px solid #ebebeb; background:#fff; border-radius:10px;
+      font-size:14px; font-weight:600; color:#666; cursor:pointer; transition:all .2s; flex-shrink:0;
+    }
+    .btn-back:hover { border-color:#ccc; background:#f9f9f9; }
+    .btn-next {
+      flex:1; padding:13px; border:none; background:linear-gradient(135deg,#667eea,#764ba2);
+      border-radius:10px; font-size:14px; font-weight:700; color:#fff; cursor:pointer;
+      transition:all .25s; display:flex; align-items:center; justify-content:center; gap:8px;
+    }
+    .btn-next:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 7px 22px rgba(102,126,234,.42); }
+    .btn-next:disabled { opacity:.55; cursor:not-allowed; transform:none; box-shadow:none; }
+    .spinner { width:16px; height:16px; border:2px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    .success-wrap { text-align:center; padding:16px 0 8px; }
+    .success-ring {
+      width:80px; height:80px; border-radius:50%;
+      background:linear-gradient(135deg,#22c55e,#16a34a); display:flex; align-items:center;
+      justify-content:center; margin:0 auto 22px; box-shadow:0 8px 28px rgba(34,197,94,.35);
+      animation:pop .5s cubic-bezier(.17,.89,.32,1.49) both;
+    }
+    @keyframes pop { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
+    .success-ring svg { width:36px; height:36px; }
+    .success-wrap h2 { font-size:23px; font-weight:800; color:#1a1a2e; margin-bottom:8px; }
+    .success-wrap .sub { color:#888; font-size:14px; margin-bottom:22px; line-height:1.5; }
+    .chip-row { display:flex; justify-content:center; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
+    .chip { background:#f0efff; color:#667eea; border:1.5px solid #c4b5fd; border-radius:50px; padding:5px 16px; font-size:13px; font-weight:600; }
+    .redirect-note { font-size:12px; color:#c0c0c0; }
+    @media(max-width:480px) { .wizard-card{padding:28px 18px 22px} .sem-grid{grid-template-columns:repeat(3,1fr)} }
+  </style>
+</head>
+<body>
+<div class="wizard-card" id="wizardCard">
+  <div class="wizard-brand">
+    <div class="logo-chip">
+      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5zm0 7v-7m0 0L3 9m9 5 9-5"/>
+      </svg>
+      College OS
+    </div>
+    <h1>Set up your profile</h1>
+    <p>Takes under a minute &middot; Personalises everything for you</p>
+  </div>
+  <div class="stepper">
+    <div class="stepper-step">
+      <div class="stepper-circle active" id="sc1">1</div>
+      <span class="stepper-label active" id="sl1">Category</span>
+    </div>
+    <div class="stepper-line" id="sline1"></div>
+    <div class="stepper-step">
+      <div class="stepper-circle" id="sc2">2</div>
+      <span class="stepper-label" id="sl2">Branch</span>
+    </div>
+    <div class="stepper-line" id="sline2"></div>
+    <div class="stepper-step">
+      <div class="stepper-circle" id="sc3">3</div>
+      <span class="stepper-label" id="sl3">Semester</span>
+    </div>
+  </div>
+  <!-- Step 1 -->
+  <div class="step-pane active" id="pane1">
+    <p class="step-heading">What's your academic stream?</p>
+    <p class="step-sub">We'll tailor quizzes, notes &amp; roadmaps to your stream.</p>
+    <div class="cat-grid" id="catGrid">
+      <div class="skeleton"></div><div class="skeleton"></div>
+    </div>
+    <div class="field-error" id="catError">Please select a category to continue.</div>
+  </div>
+  <!-- Step 2 -->
+  <div class="step-pane" id="pane2">
+    <p class="step-heading" id="branchHeading">Which branch are you in?</p>
+    <p class="step-sub" id="branchSub">Select your specialisation or course.</p>
+    <input class="branch-search" id="branchSearch" type="search" placeholder="Search branch&hellip;" autocomplete="off" />
+    <div class="branch-list" id="branchList">
+      <div class="skeleton" style="height:46px"></div>
+      <div class="skeleton" style="height:46px"></div>
+      <div class="skeleton" style="height:46px"></div>
+    </div>
+    <div class="field-error" id="branchError">Please select a branch to continue.</div>
+  </div>
+  <!-- Step 3 -->
+  <div class="step-pane" id="pane3">
+    <p class="step-heading">Which semester / year are you in?</p>
+    <p class="step-sub">Content will be filtered for your current level.</p>
+    <div class="sem-grid" id="semGrid">
+      <div class="skeleton"></div><div class="skeleton"></div>
+      <div class="skeleton"></div><div class="skeleton"></div>
+    </div>
+    <div class="field-error" id="semError">Please select your semester to continue.</div>
+  </div>
+  <div class="btn-row">
+    <button class="btn-back" id="btnBack" style="display:none">&#8592; Back</button>
+    <button class="btn-next" id="btnNext">Continue &#8594;</button>
+  </div>
+</div>
+<script>
+  var step = 1;
+  var state = { categoryId:null, categoryName:'', branchId:null, branchName:'', semesterId:null, semesterLabel:'' };
+  var catGrid     = document.getElementById('catGrid');
+  var branchList  = document.getElementById('branchList');
+  var semGrid     = document.getElementById('semGrid');
+  var branchSearch= document.getElementById('branchSearch');
+  var btnBack     = document.getElementById('btnBack');
+  var btnNext     = document.getElementById('btnNext');
+
+  function escHtml(s){ return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+
+  function catIcon(name){
+    var n=name.toLowerCase();
+    if(n.indexOf('engineer')>=0)return'&#9881;&#65039;';
+    if(n.indexOf('commerce')>=0||n.indexOf('business')>=0)return'&#128202;';
+    if(n.indexOf('management')>=0||n.indexOf('mba')>=0)return'&#128200;';
+    if(n.indexOf('computer')>=0||n.indexOf('information technology')>=0)return'&#128187;';
+    if(n.indexOf('medical')>=0||n.indexOf('pharma')>=0||n.indexOf('health')>=0)return'&#129754;';
+    if(n.indexOf('law')>=0||n.indexOf('legal')>=0)return'&#9878;&#65039;';
+    if(n.indexOf('science')>=0)return'&#128300;';
+    if(n.indexOf('art')>=0||n.indexOf('design')>=0)return'&#127912;';
+    return'&#127891;';
+  }
+
+  function catDesc(name){
+    var n=name.toLowerCase();
+    if(n.indexOf('engineer')>=0)return'B.Tech / B.E / Diploma';
+    if(n.indexOf('commerce')>=0)return'B.Com / CA / CMA';
+    if(n.indexOf('management')>=0)return'BBA / MBA / PGDM';
+    if(n.indexOf('science')>=0)return'B.Sc / M.Sc / Research';
+    if(n.indexOf('medical')>=0)return'MBBS / BDS / Nursing';
+    if(n.indexOf('law')>=0)return'BA LLB / LLM';
+    if(n.indexOf('art')>=0)return'BA / B.Fine Arts';
+    return'Academic programs';
+  }
+
+  async function loadCategories(){
+    try{
+      var data=await fetch('/api/academics/categories').then(function(r){return r.json();});
+      catGrid.innerHTML=data.categories.map(function(c){
+        return'<div class="cat-card" data-id="'+c.id+'" data-name="'+escHtml(c.name)+'"><div class="cat-icon">'+catIcon(c.name)+'</div><div class="cat-name">'+escHtml(c.name)+'</div><div class="cat-desc">'+catDesc(c.name)+'</div></div>';
+      }).join('');
+      catGrid.querySelectorAll('.cat-card').forEach(function(el){
+        el.addEventListener('click',function(){
+          catGrid.querySelectorAll('.cat-card').forEach(function(c){c.classList.remove('selected');});
+          el.classList.add('selected');
+          state.categoryId=el.dataset.id; state.categoryName=el.dataset.name;
+          hideErr('catError');
+        });
+      });
+    }catch(e){
+      catGrid.innerHTML='<p style="color:#ef4444;font-size:13px;grid-column:1/-1">Failed to load. Please refresh.</p>';
+    }
+  }
+
+  var allBranches=[];
+  async function loadBranches(categoryId){
+    branchList.innerHTML='<div class="skeleton" style="height:46px"></div>'.repeat(3);
+    branchSearch.value='';
+    try{
+      var data=await fetch('/api/academics/branches?categoryId='+categoryId).then(function(r){return r.json();});
+      allBranches=data.branches;
+      renderBranches(data.branches);
+      var isEng=state.categoryName.toLowerCase().indexOf('engineer')>=0;
+      document.getElementById('branchHeading').textContent=isEng?'Which branch are you in?':'Which course are you studying?';
+      document.getElementById('branchSub').textContent=isEng?'Select your engineering specialisation.':'Choose your degree programme.';
+    }catch(e){
+      branchList.innerHTML='<p style="color:#ef4444;font-size:13px;padding:6px 0">Failed to load. Please refresh.</p>';
+    }
+  }
+
+  function renderBranches(list){
+    if(!list.length){ branchList.innerHTML='<p style="color:#aaa;font-size:13px;padding:6px 0">No branches found.</p>'; return; }
+    branchList.innerHTML=list.map(function(b){
+      return'<div class="branch-item'+(state.branchId==b.id?' selected':'')+'" data-id="'+b.id+'" data-name="'+escHtml(b.name)+'"><div class="branch-radio"><div class="branch-radio-dot"></div></div><span class="branch-name">'+escHtml(b.name)+'</span></div>';
+    }).join('');
+    branchList.querySelectorAll('.branch-item').forEach(function(el){
+      el.addEventListener('click',function(){
+        branchList.querySelectorAll('.branch-item').forEach(function(i){i.classList.remove('selected');});
+        el.classList.add('selected');
+        state.branchId=el.dataset.id; state.branchName=el.dataset.name;
+        hideErr('branchError');
+      });
+    });
+  }
+
+  branchSearch.addEventListener('input',function(){
+    var q=branchSearch.value.toLowerCase();
+    renderBranches(allBranches.filter(function(b){return b.name.toLowerCase().indexOf(q)>=0;}));
+  });
+
+  async function loadSemesters(){
+    semGrid.innerHTML='<div class="skeleton"></div>'.repeat(4);
+    try{
+      var data=await fetch('/api/academics/semesters').then(function(r){return r.json();});
+      semGrid.innerHTML=data.semesters.map(function(s){
+        var num=s.label.match(/\d+/); num=num?num[0]:s.label.charAt(0).toUpperCase();
+        var tag=/year/i.test(s.label)?'Year':/semester/i.test(s.label)?'Sem':'';
+        return'<div class="sem-pill'+(state.semesterId==s.id?' selected':'')+'" data-id="'+s.id+'" data-label="'+escHtml(s.label)+'"><div class="sem-num">'+num+'</div><div class="sem-tag">'+tag+'</div></div>';
+      }).join('');
+      semGrid.querySelectorAll('.sem-pill').forEach(function(el){
+        el.addEventListener('click',function(){
+          semGrid.querySelectorAll('.sem-pill').forEach(function(p){p.classList.remove('selected');});
+          el.classList.add('selected');
+          state.semesterId=el.dataset.id; state.semesterLabel=el.dataset.label;
+          hideErr('semError');
+        });
+      });
+    }catch(e){
+      semGrid.innerHTML='<p style="color:#ef4444;font-size:13px;grid-column:1/-1">Failed to load. Please refresh.</p>';
+    }
+  }
+
+  function updateStepper(){
+    for(var i=1;i<=3;i++){
+      var circle=document.getElementById('sc'+i);
+      var label=document.getElementById('sl'+i);
+      circle.className='stepper-circle'; label.className='stepper-label';
+      if(i<step){ circle.classList.add('done'); circle.textContent='✓'; label.classList.add('done'); }
+      else if(i===step){ circle.classList.add('active'); circle.textContent=i; label.classList.add('active'); }
+      else{ circle.textContent=i; }
+      if(i<=2){ document.getElementById('sline'+i).className='stepper-line'+(i<step?' done':''); }
+    }
+    btnBack.style.display=step>1?'block':'none';
+    btnNext.textContent=step===3?'Complete Setup':'Continue \u2192';
+  }
+
+  function showPane(n){
+    document.querySelectorAll('.step-pane').forEach(function(p){p.classList.remove('active');});
+    document.getElementById('pane'+n).classList.add('active');
+  }
+
+  function showErr(id){ document.getElementById(id).classList.add('show'); }
+  function hideErr(id){ document.getElementById(id).classList.remove('show'); }
+
+  btnNext.addEventListener('click',async function(){
+    if(step===1){
+      if(!state.categoryId){ showErr('catError'); return; }
+      step=2; updateStepper(); showPane(2); await loadBranches(state.categoryId);
+    } else if(step===2){
+      if(!state.branchId){ showErr('branchError'); return; }
+      step=3; updateStepper(); showPane(3); await loadSemesters();
+    } else {
+      if(!state.semesterId){ showErr('semError'); return; }
+      await submitSetup();
+    }
+  });
+
+  btnBack.addEventListener('click',function(){ if(step>1){ step--; updateStepper(); showPane(step); } });
+
+  async function submitSetup(){
+    btnNext.disabled=true;
+    btnNext.innerHTML='<div class="spinner"></div> Setting up\u2026';
+    try{
+      var res=await fetch('/api/academics/onboarding/complete',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'include',
+        body:JSON.stringify({categoryId:parseInt(state.categoryId),branchId:parseInt(state.branchId),semesterId:parseInt(state.semesterId),weakSubjects:[]})
+      });
+      if(!res.ok){ var e=await res.json(); throw new Error(e.error||'Setup failed'); }
+      showSuccess();
+      setTimeout(function(){ window.location.href='dashboard.html'; },2400);
+    }catch(err){
+      btnNext.disabled=false;
+      btnNext.textContent='Complete Setup';
+      document.getElementById('semError').textContent='Setup failed: '+(err.message||'Please try again.');
+      showErr('semError');
+    }
+  }
+
+  function showSuccess(){
+    document.getElementById('wizardCard').innerHTML=
+      '<div class="success-wrap">'+
+      '<div class="success-ring"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>'+
+      '<h2>You\'re all set! &#127881;</h2>'+
+      '<p class="sub">Your profile is saved.<br>Content is now personalised for you.</p>'+
+      '<div class="chip-row"><span class="chip">'+escHtml(state.categoryName)+'</span><span class="chip">'+escHtml(state.branchName)+'</span><span class="chip">'+escHtml(state.semesterLabel)+'</span></div>'+
+      '<p class="redirect-note">Taking you to your dashboard\u2026</p>'+
+      '</div>';
+  }
+
+  loadCategories();
+  updateStepper();
+</script>
+</body>
+</html>

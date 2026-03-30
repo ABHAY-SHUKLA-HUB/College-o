@@ -1,0 +1,1032 @@
+const CSRF_COOKIE_NAME = '_csrf';
+const CSRF_HEADER_NAME = 'X-CSRF-Token';
+const CSRF_PROTECTED_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const AUTH_TRANSITION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const AUTH_TRANSITION_PATHS = new Set([
+  '/api/auth/login',
+  '/api/auth/login/email-otp',
+  '/api/auth/signup',
+  '/api/auth/logout',
+  '/api/auth/logout-all',
+  '/api/auth/verification/verify'
+]);
+
+let csrfTokenCache = null;
+let csrfRefreshPromise = null;
+let telemetryDisabled = false;
+
+const requestInterceptors = [];
+const responseInterceptors = [];
+
+const rawFetch = window.fetch.bind(window);
+
+function isFormDataBody(body) {
+  return typeof FormData !== 'undefined' && body instanceof FormData;
+}
+
+function methodOf(options = {}) {
+  return (options.method || 'GET').toUpperCase();
+}
+
+function methodOfFetchInput(input, init) {
+  const initMethod = init?.method;
+  if (initMethod) {
+    return String(initMethod).toUpperCase();
+  }
+
+  if (typeof Request !== 'undefined' && input instanceof Request && input.method) {
+    return String(input.method).toUpperCase();
+  }
+
+  return 'GET';
+}
+
+function shouldAttachCsrf(method) {
+  return CSRF_PROTECTED_METHODS.has(method);
+}
+
+function normalizePathname(path) {
+  if (typeof path === 'string') {
+    if (path.startsWith('/')) {
+      return path.split('?')[0];
+    }
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      try {
+        return new URL(path).pathname;
+      } catch {
+        return '';
+      }
+    }
+    return '';
+  }
+
+  if (typeof URL !== 'undefined' && path instanceof URL) {
+    return path.pathname;
+  }
+
+  if (typeof Request !== 'undefined' && path instanceof Request) {
+    try {
+      return new URL(path.url).pathname;
+    } catch {
+      return '';
+    }
+  }
+
+  return '';
+}
+
+function isAuthTransitionRequest(path, method) {
+  if (!AUTH_TRANSITION_METHODS.has(method)) {
+    return false;
+  }
+  const pathname = normalizePathname(path);
+  return AUTH_TRANSITION_PATHS.has(pathname);
+}
+
+function isLearnerTelemetryPath(path) {
+  return normalizePathname(path) === '/api/intelligence/events';
+}
+
+function isApiRequestUrl(path) {
+  if (typeof path === 'string') {
+    if (path.startsWith('/api/')) return true;
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      try {
+        const url = new URL(path);
+        return url.origin === window.location.origin && url.pathname.startsWith('/api/');
+      } catch {
+        return false;
+      }
+    }
+  }
+
+  if (typeof URL !== 'undefined' && path instanceof URL) {
+    return path.origin === window.location.origin && path.pathname.startsWith('/api/');
+  }
+
+  if (typeof Request !== 'undefined' && path instanceof Request) {
+    return path.url.startsWith(window.location.origin + '/api/');
+  }
+
+  return false;
+}
+
+function getCookie(name) {
+  if (typeof document === 'undefined' || !document.cookie) return null;
+
+  const encodedName = encodeURIComponent(name) + '=';
+  const pairs = document.cookie.split(';');
+  for (const pairRaw of pairs) {
+    const pair = pairRaw.trim();
+    if (pair.startsWith(encodedName)) {
+      return decodeURIComponent(pair.slice(encodedName.length));
+    }
+  }
+  return null;
+}
+
+function getCsrfTokenFromCookie() {
+  return getCookie(CSRF_COOKIE_NAME);
+}
+
+async function refreshCsrfToken() {
+  if (csrfRefreshPromise) {
+    return csrfRefreshPromise;
+  }
+
+  csrfRefreshPromise = (async () => {
+    try {
+      // Any authenticated GET endpoint will trigger csrfInit and refresh cookie token.
+      await rawFetch('/api/auth/me', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          Accept: 'application/json'
+        }
+      });
+    } catch {
+      // Ignore network/auth errors here; cookie read below will decide availability.
+    }
+
+    const token = getCsrfTokenFromCookie();
+    csrfTokenCache = token || null;
+    return csrfTokenCache;
+  })();
+
+  try {
+    return await csrfRefreshPromise;
+  } finally {
+    csrfRefreshPromise = null;
+  }
+}
+
+async function ensureCsrfToken(forceRefresh = false) {
+  const cookieToken = getCsrfTokenFromCookie();
+
+  if (!forceRefresh && cookieToken) {
+    csrfTokenCache = cookieToken;
+    return csrfTokenCache;
+  }
+
+  // If cookie is missing, do not trust stale in-memory token from a prior auth session.
+  if (!cookieToken) {
+    csrfTokenCache = null;
+  }
+
+  return refreshCsrfToken();
+}
+
+async function parseResponsePayload(response) {
+  const contentType = response.headers.get('content-type') || '';
+
+  if (contentType.includes('application/json')) {
+    try {
+      return await response.json();
+    } catch {
+      return null;
+    }
+  }
+
+  try {
+    const text = await response.text();
+    return text || null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeHeaders(inputHeaders) {
+  if (inputHeaders instanceof Headers) {
+    return Object.fromEntries(inputHeaders.entries());
+  }
+  return { ...(inputHeaders || {}) };
+}
+
+function hasHeader(headers, name) {
+  const target = String(name).toLowerCase();
+  return Object.keys(headers || {}).some((key) => String(key).toLowerCase() === target);
+}
+
+function isCsrfErrorResponse(response, payload) {
+  if (response.status !== 403 || !payload || typeof payload !== 'object') {
+    return false;
+  }
+  return typeof payload.code === 'string' && payload.code.startsWith('CSRF_');
+}
+
+function runRequestInterceptors(ctx) {
+  let current = ctx;
+  for (const interceptor of requestInterceptors) {
+    try {
+      const next = interceptor(current);
+      if (next) current = next;
+    } catch {
+      // Interceptors are best-effort and must not break requests.
+    }
+  }
+  return current;
+}
+
+function runResponseInterceptors(ctx) {
+  let current = ctx;
+  for (const interceptor of responseInterceptors) {
+    try {
+      const next = interceptor(current);
+      if (next) current = next;
+    } catch {
+      // Interceptors are best-effort and must not break responses.
+    }
+  }
+  return current;
+}
+
+async function request(path, options = {}) {
+  const method = methodOf(options);
+  const isAuthTransition = isAuthTransitionRequest(path, method);
+
+  if (isAuthTransition) {
+    // Prevent reuse of old token across login/logout/signup boundaries.
+    csrfTokenCache = null;
+  }
+
+  const headers = normalizeHeaders(options.headers);
+
+  const requestOptions = {
+    ...options,
+    method,
+    credentials: options.credentials || 'include',
+    headers
+  };
+
+  if (!isFormDataBody(requestOptions.body) && !hasHeader(requestOptions.headers, 'Content-Type')) {
+    requestOptions.headers['Content-Type'] = 'application/json';
+  }
+
+  if (!hasHeader(requestOptions.headers, 'Accept')) {
+    requestOptions.headers.Accept = 'application/json';
+  }
+
+  if (shouldAttachCsrf(method)) {
+    const token = await ensureCsrfToken(false);
+    if (token) {
+      requestOptions.headers[CSRF_HEADER_NAME] = token;
+    }
+  }
+
+  const interceptedRequest = runRequestInterceptors({ path, options: requestOptions });
+  const response = await rawFetch(interceptedRequest.path, interceptedRequest.options);
+  let payload = await parseResponsePayload(response);
+
+  if (shouldAttachCsrf(method) && isCsrfErrorResponse(response, payload)) {
+    const refreshedToken = await ensureCsrfToken(true);
+    if (refreshedToken) {
+      const retryOptions = {
+        ...interceptedRequest.options,
+        headers: {
+          ...normalizeHeaders(interceptedRequest.options.headers),
+          [CSRF_HEADER_NAME]: refreshedToken
+        }
+      };
+
+      const retryResponse = await rawFetch(interceptedRequest.path, retryOptions);
+      const retryPayload = await parseResponsePayload(retryResponse);
+      const interceptedResponse = runResponseInterceptors({
+        response: retryResponse,
+        payload: retryPayload,
+        path: interceptedRequest.path,
+        options: retryOptions
+      });
+
+      if (!interceptedResponse.response.ok) {
+        const message = interceptedResponse.payload?.error || `Request failed (${interceptedResponse.response.status})`;
+        const error = new Error(message);
+        error.status = interceptedResponse.response.status;
+        error.code = interceptedResponse.payload?.code;
+        error.payload = interceptedResponse.payload;
+        throw error;
+      }
+
+      return interceptedResponse.payload;
+    }
+  }
+
+  const interceptedResponse = runResponseInterceptors({
+    response,
+    payload,
+    path: interceptedRequest.path,
+    options: interceptedRequest.options
+  });
+
+  payload = interceptedResponse.payload;
+
+  const isTelemetryRequest = isLearnerTelemetryPath(interceptedRequest.path);
+
+  if (isAuthTransition && interceptedResponse.response.ok) {
+    await ensureCsrfToken(true);
+  }
+
+  if (!interceptedResponse.response.ok) {
+    if (interceptedResponse.response.status === 401 || interceptedResponse.response.status === 403) {
+      csrfTokenCache = null;
+
+      // Avoid noisy telemetry failures when auth/CSRF state is unavailable.
+      if (isTelemetryRequest) {
+        telemetryDisabled = true;
+        return {
+          ok: false,
+          skipped: true,
+          reason: 'telemetry_unavailable'
+        };
+      }
+    }
+
+    const message = payload?.error || `Request failed (${interceptedResponse.response.status})`;
+    const error = new Error(message);
+    error.status = interceptedResponse.response.status;
+    error.code = payload?.code;
+    error.payload = payload;
+
+    if (isApiRequestUrl(path) && !isTelemetryRequest) {
+      // Lightweight debug trail for failed API requests.
+      console.warn('API request failed', {
+        method,
+        path,
+        status: interceptedResponse.response.status,
+        code: error.code || null,
+        message: error.message
+      });
+    }
+
+    throw error;
+  }
+
+  return payload;
+}
+
+// Backward-compatible helper used by existing API methods.
+async function apiFetch(path, options = {}) {
+  return request(path, options);
+}
+
+window.CollegeOSApiClient = {
+  request,
+  ensureCsrfToken,
+  getCsrfToken: () => csrfTokenCache || getCsrfTokenFromCookie() || null,
+  setCsrfToken: (token) => {
+    csrfTokenCache = token || null;
+  },
+  addRequestInterceptor: (fn) => {
+    if (typeof fn === 'function') requestInterceptors.push(fn);
+  },
+  addResponseInterceptor: (fn) => {
+    if (typeof fn === 'function') responseInterceptors.push(fn);
+  }
+};
+
+// Global compatibility layer: direct fetch('/api/...') calls still get CSRF header.
+window.fetch = async function wrappedFetch(input, init = undefined) {
+  if (!isApiRequestUrl(input)) {
+    return rawFetch(input, init);
+  }
+
+  const method = methodOfFetchInput(input, init);
+
+  const incomingHeaders = normalizeHeaders(
+    init?.headers || ((typeof Request !== 'undefined' && input instanceof Request) ? input.headers : undefined)
+  );
+  const headers = {
+    ...incomingHeaders
+  };
+
+  if (shouldAttachCsrf(method)) {
+    const token = await ensureCsrfToken(false);
+    if (token && !hasHeader(headers, CSRF_HEADER_NAME)) {
+      headers[CSRF_HEADER_NAME] = token;
+    }
+  }
+
+  return rawFetch(input, {
+    ...(init || {}),
+    method,
+    credentials: 'include',
+    headers
+  });
+};
+
+async function safeTrackEvent(eventType, eventPayload = {}, source = 'web') {
+  if (telemetryDisabled) return;
+  if (!eventType || typeof eventType !== 'string') return;
+
+  // Skip telemetry if user context is unavailable (public pages or auth race).
+  if (!window.collegeOsCurrentUser) {
+    telemetryDisabled = true;
+    return;
+  }
+
+  // Avoid sending telemetry POSTs until CSRF token is available.
+  const csrfToken = getCsrfTokenFromCookie() || csrfTokenCache;
+  if (!csrfToken) {
+    telemetryDisabled = true;
+    return;
+  }
+
+  try {
+    await apiFetch('/api/intelligence/events', {
+      method: 'POST',
+      body: JSON.stringify({ eventType, source, eventPayload })
+    });
+  } catch {
+    // Keep user flow uninterrupted when telemetry fails.
+  }
+}
+
+window.CollegeOSApi = {
+  getAuthConfig: () => apiFetch('/api/auth/config'),
+  getCaptchaChallenge: () => apiFetch('/api/auth/captcha/challenge'),
+  getMe: () => apiFetch('/api/auth/me'),
+  login: (data) => apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+  loginWithEmailOtp: (data) => apiFetch('/api/auth/login/email-otp', { method: 'POST', body: JSON.stringify(data) }),
+  signup: (data) => apiFetch('/api/auth/signup', { method: 'POST', body: JSON.stringify(data) }),
+  requestVerificationCode: (data) => apiFetch('/api/auth/verification/request', { method: 'POST', body: JSON.stringify(data) }),
+  verifyCode: (data) => apiFetch('/api/auth/verification/verify', { method: 'POST', body: JSON.stringify(data) }),
+  forgotPassword: (data) => apiFetch('/api/auth/password/forgot', { method: 'POST', body: JSON.stringify(data) }),
+  resetPassword: (data) => apiFetch('/api/auth/password/reset', { method: 'POST', body: JSON.stringify(data) }),
+  logoutAllAuthDevices: () => apiFetch('/api/auth/logout-all', { method: 'POST' }),
+  logout: () => apiFetch('/api/auth/logout', { method: 'POST' }),
+  getColleges: () => apiFetch('/api/meta/colleges'),
+  getUniversities: (q = '', limit = 30) => apiFetch(`/api/meta/universities?q=${encodeURIComponent(q)}&limit=${encodeURIComponent(limit)}`),
+  getDashboardStats: () => apiFetch('/api/dashboard/stats'),
+  getPersonalizedDashboard: () => apiFetch('/api/dashboard/personalized'),
+  getStudentExperienceConfig: () => apiFetch('/api/dashboard/experience-config'),
+  getAiBrain: (horizonDays = 7) => apiFetch(`/api/intelligence/brain?horizonDays=${encodeURIComponent(horizonDays)}`),
+  getNextAction: () => apiFetch('/api/intelligence/next-action'),
+  getAdaptiveStudyPlan: (horizonDays = 7) => apiFetch(`/api/intelligence/study-plan?horizonDays=${encodeURIComponent(horizonDays)}`),
+  getAdvancedAnalytics: () => apiFetch('/api/intelligence/analytics'),
+  trackLearnerEvent: async (data = {}) => {
+    await safeTrackEvent(data.eventType, data.eventPayload || {}, data.source || 'web');
+    return { ok: true };
+  },
+  adminIntelligenceOverview: () => apiFetch('/api/admin/intelligence/overview'),
+  adminIntelligenceSegments: () => apiFetch('/api/admin/intelligence/segments'),
+  adminGenerateAutomatedResources: (data = {}) => apiFetch('/api/admin/intelligence/resource-automation/generate', { method: 'POST', body: JSON.stringify(data) }),
+  getProfile: () => apiFetch('/api/profile/me'),
+  updateProfile: (data) => apiFetch('/api/profile/me', { method: 'PUT', body: JSON.stringify(data) }),
+  changePassword: (data) => apiFetch('/api/profile/me/password', { method: 'PUT', body: JSON.stringify(data) }),
+  getLeaderboard: (options = {}) => {
+    const scope = options.scope || 'india';
+    const timeframe = options.timeframe || 'all';
+    const search = options.search || '';
+    const qs = new URLSearchParams({ scope, timeframe });
+    if (search) qs.set('search', search);
+    return apiFetch(`/api/leaderboard?${qs.toString()}`);
+  },
+  getRoadmap: () => apiFetch('/api/roadmaps/me'),
+  createRoadmap: async (data) => {
+    const payload = await apiFetch('/api/roadmaps/me', { method: 'POST', body: JSON.stringify(data) });
+    safeTrackEvent('roadmap_created', { roadmapId: payload?.roadmap?.id || null });
+    return payload;
+  },
+  updateRoadmap: async (id, data) => {
+    const payload = await apiFetch(`/api/roadmaps/me/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+    safeTrackEvent('roadmap_updated', { roadmapId: id, progress: data?.progress || null });
+    return payload;
+  },
+  getCareerRoadmaps: () => apiFetch('/api/career/roadmaps'),
+  getCareerRoadmap: (id) => apiFetch(`/api/career/roadmaps/${id}`),
+  getAiToolsCatalog: () => apiFetch('/api/career/ai-tools'),
+  generateAiToolOutput: (toolKey, inputs = {}) => apiFetch('/api/career/ai-tools/generate', {
+    method: 'POST',
+    body: JSON.stringify({ toolKey, inputs })
+  }),
+  getNotes: (search = '') => apiFetch(`/api/notes${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+  getMyNotes: () => apiFetch('/api/notes/mine'),
+  getNote: (id) => apiFetch(`/api/notes/${id}`),
+  createNote: async (data) => {
+    const payload = await apiFetch('/api/notes', { method: 'POST', body: JSON.stringify(data) });
+    safeTrackEvent('note_created', { noteId: payload?.note?.id || null, subject: data?.subject || null });
+    return payload;
+  },
+  updateNote: (id, data) => apiFetch(`/api/notes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteNote: (id) => apiFetch(`/api/notes/${id}`, { method: 'DELETE' }),
+  getCertificates: () => apiFetch('/api/certificates/mine'),
+  createCertificate: (data) => apiFetch('/api/certificates', { method: 'POST', body: JSON.stringify(data) }),
+  getReferrals: () => apiFetch('/api/referrals/mine'),
+  applyReferral: (code) => apiFetch('/api/referrals/apply', { method: 'POST', body: JSON.stringify({ code }) }),
+  getReferralDashboard: () => apiFetch('/api/referrals/mine'),
+  getSettingsIcons: () => apiFetch('/api/settings/icons'),
+  updateSettingsIcons: (data) => apiFetch('/api/settings/icons', { method: 'PUT', body: JSON.stringify(data) }),
+  getActiveSessions: () => apiFetch('/api/settings/sessions'),
+  logoutAllDevices: () => apiFetch('/api/settings/sessions/logout-all', { method: 'POST' }),
+  getNotifications: () => apiFetch('/api/notifications/mine'),
+  getUnreadNotificationCount: () => apiFetch('/api/notifications/unread-count'),
+  markNotificationRead: (id) => apiFetch(`/api/notifications/mine/${id}/read`, { method: 'PUT' }),
+  markAllNotificationsRead: () => apiFetch('/api/notifications/mine/read-all', { method: 'PUT' }),
+  deleteNotification: (id) => apiFetch(`/api/notifications/mine/${id}`, { method: 'DELETE' }),
+  getThreads: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.search) qs.set('search', params.search);
+    if (params.filter) qs.set('filter', params.filter);
+    if (params.category) qs.set('category', params.category);
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch(`/api/forum/threads${suffix}`);
+  },
+  getTrendingThreads: () => apiFetch('/api/forum/threads/trending'),
+  getThreadDetail: (id) => apiFetch(`/api/forum/threads/${id}`),
+  incrementThreadViews: (id) => apiFetch(`/api/forum/threads/${id}/view`, { method: 'POST' }),
+  createThread: (data) => apiFetch('/api/forum/threads', { method: 'POST', body: JSON.stringify(data) }),
+  createReply: (threadId, data) => apiFetch(`/api/forum/threads/${threadId}/replies`, { method: 'POST', body: JSON.stringify(data) }),
+  upvoteReply: (replyId) => apiFetch(`/api/forum/replies/${replyId}/upvote`, { method: 'POST' }),
+  markBestAnswer: (threadId, replyId) => apiFetch(`/api/forum/threads/${threadId}/best-answer/${replyId}`, { method: 'POST' }),
+  getCampusFeedSummary: () => apiFetch('/api/campus-feed/me/summary'),
+  getCampusFeedPosts: (tab = 'latest', limit = 25) => apiFetch(`/api/campus-feed/posts?tab=${encodeURIComponent(tab)}&limit=${encodeURIComponent(limit)}`),
+  getCampusTrending: (limit = 8) => apiFetch(`/api/campus-feed/posts/trending?limit=${encodeURIComponent(limit)}`),
+  getCampusMySubmissions: () => apiFetch('/api/campus-feed/posts/mine'),
+  getCampusPostComments: (postId) => apiFetch(`/api/campus-feed/posts/${postId}/comments`),
+  getCampusCreatorProfile: (userId) => apiFetch(`/api/campus-feed/creator/${userId}`),
+  getCampusShareLink: (postId) => apiFetch(`/api/campus-feed/posts/${postId}/share-link`),
+  submitCampusViewSignal: (postId, data) => apiFetch(`/api/campus-feed/posts/${postId}/signal`, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+  reportCampusPost: (postId, reason, details = '') => apiFetch(`/api/campus-feed/posts/${postId}/report`, {
+    method: 'POST',
+    body: JSON.stringify({ reason, details })
+  }),
+  voteCampusPoll: (postId, selectedIndex) => apiFetch(`/api/campus-feed/posts/${postId}/poll-vote`, {
+    method: 'POST',
+    body: JSON.stringify({ selectedIndex })
+  }),
+  getCampusCollections: () => apiFetch('/api/campus-feed/collections'),
+  createCampusCollection: (name) => apiFetch('/api/campus-feed/collections', {
+    method: 'POST',
+    body: JSON.stringify({ name })
+  }),
+  getCampusCollectionPosts: (collectionId) => apiFetch(`/api/campus-feed/collections/${collectionId}/posts`),
+  addCampusCollectionPost: (collectionId, postId) => apiFetch(`/api/campus-feed/collections/${collectionId}/posts/${postId}`, {
+    method: 'POST'
+  }),
+  removeCampusCollectionPost: (collectionId, postId) => apiFetch(`/api/campus-feed/collections/${collectionId}/posts/${postId}`, {
+    method: 'DELETE'
+  }),
+  getCampusRealtimeStreamUrl: () => '/api/campus-feed/stream',
+  getNotificationRealtimeStreamUrl: () => '/api/notifications/stream',
+  createCampusPost: async (formData) => {
+    const payload = await apiFetch('/api/campus-feed/posts', {
+      method: 'POST',
+      body: formData
+    });
+    safeTrackEvent('campus_post_submitted', {
+      postType: formData.get('postType') || null,
+      category: formData.get('category') || null
+    });
+    return payload;
+  },
+  engageCampusPost: (postId, type) => apiFetch(`/api/campus-feed/posts/${postId}/engagement`, {
+    method: 'POST',
+    body: JSON.stringify({ type })
+  }),
+  commentCampusPost: (postId, body) => apiFetch(`/api/campus-feed/posts/${postId}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ body })
+  }),
+  adminCampusFeedModeration: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.status) qs.set('status', params.status);
+    if (params.search) qs.set('search', params.search);
+    if (params.collegeId) qs.set('collegeId', String(params.collegeId));
+    if (params.limit) qs.set('limit', String(params.limit));
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch(`/api/admin/campus-feed/moderation${suffix}`);
+  },
+  adminCampusModeratePost: (postId, action, reason = '') => apiFetch(`/api/admin/campus-feed/posts/${postId}/moderate`, {
+    method: 'POST',
+    body: JSON.stringify({ action, reason })
+  }),
+  adminCampusFeaturePost: (postId, isFeatured = true) => apiFetch(`/api/admin/campus-feed/posts/${postId}/feature`, {
+    method: 'POST',
+    body: JSON.stringify({ isFeatured })
+  }),
+  adminCampusUpdatePost: (postId, data) => apiFetch(`/api/admin/campus-feed/posts/${postId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  }),
+  adminCampusMarkOfficial: (postId, isOfficial = true, isImportant = false) => apiFetch(`/api/admin/campus-feed/posts/${postId}/mark-official`, {
+    method: 'POST',
+    body: JSON.stringify({ isOfficial, isImportant })
+  }),
+  adminCampusCreateOfficialPost: async (formData) => {
+    return apiFetch('/api/admin/campus-feed/official-posts', {
+      method: 'POST',
+      body: formData
+    });
+  },
+  adminCampusReports: (status = 'pending', limit = 120) => apiFetch(`/api/admin/campus-feed/reports?status=${encodeURIComponent(status)}&limit=${encodeURIComponent(limit)}`),
+  adminCampusResolveReport: (reportId, action = 'resolved', postAction = 'none', pointsDelta = 0) => apiFetch(`/api/admin/campus-feed/reports/${reportId}/resolve`, {
+    method: 'POST',
+    body: JSON.stringify({ action, postAction, pointsDelta })
+  }),
+  adminCampusAssignCreatorRole: (userId, role) => apiFetch(`/api/admin/campus-feed/creators/${userId}/role`, {
+    method: 'POST',
+    body: JSON.stringify({ role })
+  }),
+  adminCampusUpdateCreatorTrust: (userId, trustLevel = '', campusRole = '') => apiFetch(`/api/admin/campus-feed/creators/${userId}/trust`, {
+    method: 'POST',
+    body: JSON.stringify({ trustLevel, campusRole })
+  }),
+  adminCampusSetCreatorSuspension: (userId, suspend, reason = '', until = '') => apiFetch(`/api/admin/campus-feed/creators/${userId}/suspension`, {
+    method: 'POST',
+    body: JSON.stringify({ suspend, reason, until })
+  }),
+  adminCampusAdjustCreatorPoints: (userId, amount, actionType = 'add', reason = '') => apiFetch(`/api/admin/campus-feed/creators/${userId}/points`, {
+    method: 'POST',
+    body: JSON.stringify({ amount, actionType, reason })
+  }),
+  adminCampusAnalytics: () => apiFetch('/api/admin/campus-feed/analytics'),
+  getQuizzes: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.branchId) qs.set('branchId', params.branchId);
+    if (params.semesterId) qs.set('semesterId', params.semesterId);
+    if (params.subject) qs.set('subject', params.subject);
+    const q = qs.toString();
+    return apiFetch('/api/quizzes' + (q ? '?' + q : ''));
+  },
+  getMyQuizAttempts: () => apiFetch('/api/quizzes/attempts/me'),
+  saveQuizAttempt: async (quizId, data) => {
+    const payload = await apiFetch(`/api/quizzes/${quizId}/attempts`, { method: 'POST', body: JSON.stringify(data) });
+    safeTrackEvent('quiz_attempt_submitted', {
+      quizId,
+      scorePercent: data?.scorePercent,
+      xpEarned: data?.xpEarned
+    });
+    return payload;
+  },
+  getMockTests: () => apiFetch('/api/mock-tests'),
+  getMockTestsDashboard: () => apiFetch('/api/mock-tests/dashboard'),
+  getMockTestsLeaderboard: () => apiFetch('/api/mock-tests/leaderboard'),
+  startMockTest: async (mockTestId) => {
+    const payload = await apiFetch(`/api/mock-tests/${mockTestId}/start`);
+    safeTrackEvent('mock_test_started', { mockTestId });
+    return payload;
+  },
+  submitMockTest: async (mockTestId, payload) => {
+    const response = await apiFetch(`/api/mock-tests/${mockTestId}/submit`, { method: 'POST', body: JSON.stringify(payload) });
+    safeTrackEvent('mock_test_submitted', {
+      mockTestId,
+      timeSpentSeconds: payload?.timeSpentSeconds,
+      responseCount: Array.isArray(payload?.responses) ? payload.responses.length : null
+    });
+    return response;
+  },
+  getMockTestResult: (attemptId) => apiFetch(`/api/mock-tests/results/${attemptId}`),
+  getSubscription: () => apiFetch('/api/subscriptions/me'),
+  getMembershipCenterConfig: () => apiFetch('/api/subscriptions/me').then((r) => ({ config: r.membershipConfig || null, subscription: r })),
+  getSubscriptionPayments: () => apiFetch('/api/subscriptions/payments'),
+  submitPaymentRequest: async (formData) => {
+    return apiFetch('/api/subscriptions/payment-request', {
+      method: 'POST',
+      body: formData
+    });
+  },
+  submitFeedback: (data) => apiFetch('/api/feedback', { method: 'POST', body: JSON.stringify(data) }),
+  getMyFeedback: () => apiFetch('/api/feedback/mine'),
+  getMyFeedbackByFilter: (filter = 'all') => apiFetch(`/api/feedback/mine?filter=${encodeURIComponent(filter)}`),
+  getFeedbackStats: () => apiFetch('/api/feedback/stats'),
+  updateFeedback: (id, data) => apiFetch(`/api/feedback/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteFeedback: (id) => apiFetch(`/api/feedback/${id}`, { method: 'DELETE' }),
+  uploadFeedbackScreenshot: async (file) => {
+    const formData = new FormData();
+    formData.append('screenshot', file);
+    return apiFetch('/api/feedback/upload-screenshot', {
+      method: 'POST',
+      body: formData
+    });
+  },
+  adminLogin: async (data) => {
+    try {
+      const payload = await apiFetch('/api/admin/login', { method: 'POST', body: JSON.stringify(data) });
+      if (payload?.user?.role && payload.user.role !== 'admin' && payload.user.role !== 'super_admin') {
+        throw new Error('Admin access required');
+      }
+      return payload;
+    } catch (error) {
+      const isStaleCsrfGuard = error?.status === 401
+        && String(error?.code || '').toUpperCase() === 'UNAUTHORIZED'
+        && /authentication required/i.test(String(error?.message || ''));
+
+      if (!isStaleCsrfGuard) {
+        throw error;
+      }
+
+      const fallbackPayload = await apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify(data) });
+      if (fallbackPayload?.user?.role !== 'admin' && fallbackPayload?.user?.role !== 'super_admin') {
+        throw new Error('Admin access required');
+      }
+      return fallbackPayload;
+    }
+  },
+  adminDashboard: () => apiFetch('/api/admin/dashboard'),
+  adminStudents: (college = '') => apiFetch(`/api/admin/students${college ? `?college=${encodeURIComponent(college)}` : ''}`),
+  adminCreateUser: (data) => apiFetch('/api/admin/users/admin', { method: 'POST', body: JSON.stringify(data) }),
+  adminTrends: () => apiFetch('/api/admin/trends'),
+  adminFeedback: () => apiFetch('/api/admin/feedback'),
+  adminReplyFeedback: (id, reply) => apiFetch(`/api/admin/feedback/${id}/reply`, { method: 'PUT', body: JSON.stringify({ reply }) }),
+  adminMembershipPayments: (status = 'all') => apiFetch(`/api/admin/membership-payments?status=${encodeURIComponent(status)}`),
+  adminUpdateMembershipPayment: (id, status, reason = '') => apiFetch(`/api/admin/membership-payments/${id}/status`, {
+    method: 'PUT',
+    body: JSON.stringify({ status, reason })
+  }),
+  adminSearchStudents: (q = '') => apiFetch(`/api/admin/students/search${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+  adminGetCertificates: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.status) qs.set('status', params.status);
+    if (params.type) qs.set('type', params.type);
+    if (params.search) qs.set('search', params.search);
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch(`/api/admin/certificates${suffix}`);
+  },
+  adminGetCertificate: (id) => apiFetch(`/api/admin/certificates/${id}`),
+  adminCreateCertificate: (data) => apiFetch('/api/admin/certificates', { method: 'POST', body: JSON.stringify(data) }),
+  adminUpdateCertificate: (id, data) => apiFetch(`/api/admin/certificates/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminDeleteCertificate: (id) => apiFetch(`/api/admin/certificates/${id}`, { method: 'DELETE' }),
+  adminIssueCertificate: (id) => apiFetch(`/api/admin/certificates/${id}/issue`, { method: 'POST' }),
+  adminReissueCertificate: (id) => apiFetch(`/api/admin/certificates/${id}/reissue`, { method: 'POST' }),
+  adminVerifyCertificate: (id) => apiFetch(`/api/admin/certificates/${id}/verify`, { method: 'POST' }),
+  adminRevokeCertificate: (id) => apiFetch(`/api/admin/certificates/${id}/revoke`, { method: 'POST' }),
+  adminBulkCertificates: (action, ids) => apiFetch('/api/admin/certificates/bulk', { method: 'POST', body: JSON.stringify({ action, ids }) }),
+
+  // Academic Profile & Onboarding APIs
+  getAcademicCategories: () => apiFetch('/api/academics/categories'),
+  getAcademicBranches: (categoryId) => apiFetch(`/api/academics/branches?categoryId=${categoryId}`),
+  getAcademicSemesters: () => apiFetch('/api/academics/semesters'),
+  getAcademicSubjects: (branchId, semesterId) => {
+    let url = `/api/academics/subjects?branchId=${branchId}`;
+    if (semesterId) url += `&semesterId=${semesterId}`;
+    return apiFetch(url);
+  },
+  getStudentAcademicProfile: () => apiFetch('/api/academics/profile'),
+  getOnboardingConfig: () => apiFetch('/api/academics/onboarding/config'),
+  completeAcademicOnboarding: (data) => apiFetch('/api/academics/onboarding/complete', { method: 'POST', body: JSON.stringify(data) }),
+  updateAcademicProfile: (data) => apiFetch('/api/academics/profile', { method: 'PUT', body: JSON.stringify(data) }),
+
+  // Admin Academic Content Management APIs
+  getAcademicContentOverview: () => apiFetch('/api/admin/academics/content-overview'),
+  adminCreateAcademicNote: (data) => apiFetch('/api/admin/academics/notes', { method: 'POST', body: JSON.stringify(data) }),
+  adminGetAcademicNotes: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.categoryId) qs.set('categoryId', params.categoryId);
+    if (params.branchId) qs.set('branchId', params.branchId);
+    if (params.semesterId) qs.set('semesterId', params.semesterId);
+    if (params.status) qs.set('status', params.status);
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch(`/api/admin/academics/notes${suffix}`);
+  },
+  adminUpdateAcademicNote: (id, data) => apiFetch(`/api/admin/academics/notes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminDeleteAcademicNote: (id) => apiFetch(`/api/admin/academics/notes/${id}`, { method: 'DELETE' }),
+  adminCreateAcademicQuiz: (data) => apiFetch('/api/admin/academics/quizzes', { method: 'POST', body: JSON.stringify(data) }),
+  adminGetAcademicQuizzes: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.categoryId) qs.set('categoryId', params.categoryId);
+    if (params.branchId) qs.set('branchId', params.branchId);
+    if (params.semesterId) qs.set('semesterId', params.semesterId);
+    if (params.status) qs.set('status', params.status);
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch(`/api/admin/academics/quizzes${suffix}`);
+  },
+  adminDeleteAcademicQuiz: (id) => apiFetch(`/api/admin/academics/quizzes/${id}`, { method: 'DELETE' }),
+  adminGetAcademicsDashboard: () => apiFetch('/api/admin/academics/dashboard'),
+
+  // Student Academic Contribution Hub APIs
+  getContributionConfig: () => apiFetch('/api/contributions/config'),
+  getContributionOptions: () => apiFetch('/api/contributions/options'),
+  getMyAcademicContributions: (status = '') => apiFetch(`/api/contributions/mine${status ? `?status=${encodeURIComponent(status)}` : ''}`),
+  getAcademicContributionDashboard: () => apiFetch('/api/contributions/dashboard'),
+  getAcademicContributionLibrary: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.branchId) qs.set('branchId', String(params.branchId));
+    if (params.semesterId) qs.set('semesterId', String(params.semesterId));
+    if (params.subject) qs.set('subject', params.subject);
+    if (params.resourceType) qs.set('resourceType', params.resourceType);
+    if (params.examType) qs.set('examType', params.examType);
+    if (params.search) qs.set('search', params.search);
+    if (params.sortBy) qs.set('sortBy', params.sortBy);
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch(`/api/contributions/library${suffix}`);
+  },
+  getAcademicContributionResourceDetail: (id) => apiFetch(`/api/contributions/resource/${id}`),
+  registerContributionDownload: (id) => apiFetch(`/api/contributions/${id}/download`, { method: 'POST' }),
+  resubmitAcademicContribution: async (id, formData) => {
+    return apiFetch(`/api/contributions/${id}/resubmit`, {
+      method: 'POST',
+      body: formData
+    });
+  },
+  submitContributionFeedback: (id, payload) => apiFetch(`/api/contributions/${id}/feedback`, { method: 'POST', body: JSON.stringify(payload) }),
+  getContributionCollections: () => apiFetch('/api/contributions/collections'),
+  createContributionCollection: (payload) => apiFetch('/api/contributions/collections', { method: 'POST', body: JSON.stringify(payload) }),
+  getContributionCollectionItems: (id) => apiFetch(`/api/contributions/collections/${id}/items`),
+  addContributionToCollection: (id, payload) => apiFetch(`/api/contributions/collections/${id}/items`, { method: 'POST', body: JSON.stringify(payload) }),
+  removeContributionFromCollection: (id, resourceId) => apiFetch(`/api/contributions/collections/${id}/items/${resourceId}`, { method: 'DELETE' }),
+  getContributionLeaderboard: (range = 'monthly') => apiFetch(`/api/contributions/leaderboard?range=${encodeURIComponent(range)}`),
+  getContributionContributorProfile: (userId) => apiFetch(`/api/contributions/contributor/${userId}/profile`),
+  getContributionSeasonMode: (windowDays = 30) => apiFetch(`/api/contributions/season-mode?windowDays=${encodeURIComponent(windowDays)}`),
+  getContributionUploadGuidance: () => apiFetch('/api/contributions/guidance'),
+  getContributionSearchSuggestions: (q) => apiFetch(`/api/contributions/search/suggestions?q=${encodeURIComponent(q || '')}`),
+  getContributionInstantSearch: (q) => apiFetch(`/api/contributions/search/instant?q=${encodeURIComponent(q || '')}`),
+  getContributionPreviewConfig: (id) => apiFetch(`/api/contributions/${id}/preview`),
+  pushContributionPreviewEvents: (id, events) => apiFetch(`/api/contributions/${id}/preview/events`, { method: 'POST', body: JSON.stringify({ events }) }),
+  getContributionPreviewInsights: (id) => apiFetch(`/api/contributions/${id}/preview/insights`),
+  getContributionCommunity: (id) => apiFetch(`/api/contributions/${id}/community`),
+  postContributionCommunity: (id, payload) => apiFetch(`/api/contributions/${id}/community`, { method: 'POST', body: JSON.stringify(payload) }),
+  upvoteContributionCommunityComment: (commentId) => apiFetch(`/api/contributions/community/${commentId}/upvote`, { method: 'POST' }),
+  resolveContributionCommunityComment: (commentId) => apiFetch(`/api/contributions/community/${commentId}/resolve`, { method: 'POST' }),
+  getContributionAiInsights: (id) => apiFetch(`/api/contributions/${id}/ai-insights`),
+  getContributionGrowthStatus: () => apiFetch('/api/contributions/growth/status'),
+  getContributionDownloadIntelligence: (windowDays = 30) => apiFetch(`/api/contributions/analytics/download-intelligence?windowDays=${encodeURIComponent(windowDays)}`),
+  submitAcademicContribution: async (formData) => {
+    return apiFetch('/api/contributions/submit', {
+      method: 'POST',
+      body: formData
+    });
+  },
+
+  // Admin moderation for student contributions
+  adminGetContributionConfig: () => apiFetch('/api/admin/contributions/config'),
+  adminUpdateContributionConfig: (config) => apiFetch('/api/admin/contributions/config', { method: 'PUT', body: JSON.stringify({ config }) }),
+  adminGetContributionModerationQueue: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.status) qs.set('status', params.status);
+    if (params.resourceType) qs.set('resourceType', params.resourceType);
+    if (params.college) qs.set('college', params.college);
+    if (params.branchId) qs.set('branchId', String(params.branchId));
+    if (params.issue) qs.set('issue', params.issue);
+    if (params.queueType) qs.set('queueType', params.queueType);
+    if (params.search) qs.set('search', params.search);
+    if (params.onlyFeatured) qs.set('onlyFeatured', 'true');
+    if (params.onlyHidden) qs.set('onlyHidden', 'true');
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch(`/api/admin/contributions/moderation${suffix}`);
+  },
+  adminBulkModerateContributions: (payload) => apiFetch('/api/admin/contributions/moderation/bulk-action', { method: 'POST', body: JSON.stringify(payload) }),
+  adminGetContributionModerationDetail: (id) => apiFetch(`/api/admin/contributions/moderation/${id}`),
+  adminRollbackContributionModeration: (id) => apiFetch(`/api/admin/contributions/moderation/${id}/rollback`, { method: 'POST' }),
+  adminUpdateContributionMetadata: (id, payload) => apiFetch(`/api/admin/contributions/${id}/metadata`, { method: 'PUT', body: JSON.stringify(payload) }),
+  adminModerateContribution: (id, payload) => apiFetch(`/api/admin/contributions/${id}/moderate`, { method: 'POST', body: JSON.stringify(payload) }),
+  adminContributionContributors: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.search) qs.set('search', params.search);
+    if (params.status) qs.set('status', params.status);
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch(`/api/admin/contributions/contributors${suffix}`);
+  },
+  adminControlContributionContributor: (userId, payload) => apiFetch(`/api/admin/contributions/contributors/${userId}/control`, { method: 'POST', body: JSON.stringify(payload) }),
+  adminBulkContributionContributorControl: (payload) => apiFetch('/api/admin/contributions/contributors/bulk-control', { method: 'POST', body: JSON.stringify(payload) }),
+  adminAdjustContributionPoints: (userId, payload) => apiFetch(`/api/admin/contributions/contributors/${userId}/points-adjust`, { method: 'POST', body: JSON.stringify(payload) }),
+  adminContributionContributorPerformance: () => apiFetch('/api/admin/contributions/contributors/performance'),
+  adminContributionArchiveIntelligence: () => apiFetch('/api/admin/contributions/archive/intelligence'),
+  adminContributionMergeDuplicates: (payload) => apiFetch('/api/admin/contributions/archive/merge-duplicates', { method: 'POST', body: JSON.stringify(payload) }),
+  adminContributionHighlightBestVersion: (id) => apiFetch('/api/admin/contributions/archive/highlight-best-version', { method: 'POST', body: JSON.stringify({ id }) }),
+  adminContributionRewardSuggestion: (id) => apiFetch(`/api/admin/contributions/rewards/suggest/${id}`),
+  adminContributionAnalyticsOverview: () => apiFetch('/api/admin/contributions/analytics/overview'),
+  adminContributionAnalyticsAdvanced: () => apiFetch('/api/admin/contributions/analytics/advanced'),
+  adminContributionAuditLogs: (limit = 120) => apiFetch(`/api/admin/contributions/audit/logs?limit=${encodeURIComponent(limit)}`),
+
+  // Unified Admin Control System APIs
+  adminControlPermissions: () => apiFetch('/api/admin/control/me/permissions'),
+  adminControlStudents: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.search) qs.set('search', params.search);
+    if (params.membership) qs.set('membership', params.membership);
+    if (params.status) qs.set('status', params.status);
+    if (params.branchId) qs.set('branchId', params.branchId);
+    if (params.includeDeleted) qs.set('includeDeleted', 'true');
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch(`/api/admin/control/students${suffix}`);
+  },
+  adminControlStudentDetail: (id) => apiFetch(`/api/admin/control/students/${id}`),
+  adminControlUpdateStudent: (id, data) => apiFetch(`/api/admin/control/students/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminControlResetStudentPassword: (id, newPassword) => apiFetch(`/api/admin/control/students/${id}/reset-password`, { method: 'POST', body: JSON.stringify({ newPassword }) }),
+  adminControlStudentStatus: (id, status) => apiFetch(`/api/admin/control/students/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) }),
+  adminControlStudentMembership: (id, data) => apiFetch(`/api/admin/control/students/${id}/membership`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminControlDeleteStudent: (id) => apiFetch(`/api/admin/control/students/${id}`, { method: 'DELETE' }),
+  adminControlRestoreStudent: (id) => apiFetch(`/api/admin/control/students/${id}/restore`, { method: 'POST' }),
+  adminControlBulkStudents: (payload) => apiFetch('/api/admin/control/students/bulk-action', { method: 'POST', body: JSON.stringify(payload) }),
+  adminControlBulkPaymentsStatus: (payload) => apiFetch('/api/admin/control/payments/bulk-status', { method: 'POST', body: JSON.stringify(payload) }),
+  adminControlDeactivateExpired: () => apiFetch('/api/admin/control/payments/deactivate-expired', { method: 'POST' }),
+  adminControlRevenueSummary: () => apiFetch('/api/admin/control/payments/revenue-summary'),
+  adminControlContentOverview: () => apiFetch('/api/admin/control/content/overview'),
+  adminControlBranches: () => apiFetch('/api/admin/control/branches'),
+  adminControlUniversities: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.q) qs.set('q', params.q);
+    if (params.includeDisabled) qs.set('includeDisabled', 'true');
+    if (params.limit) qs.set('limit', String(params.limit));
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch(`/api/admin/control/universities${suffix}`);
+  },
+  adminControlCreateUniversity: (data) => apiFetch('/api/admin/control/universities', { method: 'POST', body: JSON.stringify(data) }),
+  adminControlUpdateUniversity: (id, data) => apiFetch(`/api/admin/control/universities/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminControlDeleteUniversity: (id) => apiFetch(`/api/admin/control/universities/${id}`, { method: 'DELETE' }),
+  adminControlReorderUniversities: (orderedIds) => apiFetch('/api/admin/control/universities/reorder', { method: 'POST', body: JSON.stringify({ orderedIds }) }),
+  adminControlAcademicCategories: () => apiFetch('/api/admin/control/academic/categories'),
+  adminControlCreateAcademicCategory: (data) => apiFetch('/api/admin/control/academic/categories', { method: 'POST', body: JSON.stringify(data) }),
+  adminControlUpdateAcademicCategory: (id, data) => apiFetch(`/api/admin/control/academic/categories/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminControlAcademicSemesters: () => apiFetch('/api/admin/control/academic/semesters'),
+  adminControlCreateAcademicSemester: (data) => apiFetch('/api/admin/control/academic/semesters', { method: 'POST', body: JSON.stringify(data) }),
+  adminControlUpdateAcademicSemester: (id, data) => apiFetch(`/api/admin/control/academic/semesters/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminControlCreateBranch: (data) => apiFetch('/api/admin/control/branches', { method: 'POST', body: JSON.stringify(data) }),
+  adminControlUpdateBranch: (id, data) => apiFetch(`/api/admin/control/branches/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminControlDeleteBranch: (id) => apiFetch(`/api/admin/control/branches/${id}`, { method: 'DELETE' }),
+  adminControlAssignBranchContent: (data) => apiFetch('/api/admin/control/branches/assign', { method: 'POST', body: JSON.stringify(data) }),
+  adminControlOnboardingConfig: () => apiFetch('/api/admin/control/onboarding/config'),
+  adminControlUpdateOnboardingConfig: (data) => apiFetch('/api/admin/control/onboarding/config', { method: 'PUT', body: JSON.stringify(data) }),
+  adminControlOnboardingOptions: (group = '') => apiFetch(`/api/admin/control/onboarding/options${group ? `?group=${encodeURIComponent(group)}` : ''}`),
+  adminControlCreateOnboardingOption: (data) => apiFetch('/api/admin/control/onboarding/options', { method: 'POST', body: JSON.stringify(data) }),
+  adminControlUpdateOnboardingOption: (id, data) => apiFetch(`/api/admin/control/onboarding/options/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminControlDisableOnboardingOption: (id) => apiFetch(`/api/admin/control/onboarding/options/${id}`, { method: 'DELETE' }),
+  adminControlRecommendationRules: () => apiFetch('/api/admin/control/recommendation-rules'),
+  adminControlCreateRecommendationRule: (data) => apiFetch('/api/admin/control/recommendation-rules', { method: 'POST', body: JSON.stringify(data) }),
+  adminControlUpdateRecommendationRule: (id, data) => apiFetch(`/api/admin/control/recommendation-rules/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminControlDeleteRecommendationRule: (id) => apiFetch(`/api/admin/control/recommendation-rules/${id}`, { method: 'DELETE' }),
+  adminControlBulkContentAction: (type, payload) => apiFetch(`/api/admin/control/content/${type}/bulk`, { method: 'POST', body: JSON.stringify(payload) }),
+  adminControlResetQuizResults: (id) => apiFetch(`/api/admin/control/quizzes/${id}/reset-results`, { method: 'POST' }),
+  adminControlMockTests: (query = '') => apiFetch(`/api/admin/control/mock-tests${query || ''}`),
+  adminControlCreateMockTest: (data) => apiFetch('/api/admin/control/mock-tests', { method: 'POST', body: JSON.stringify(data) }),
+  adminControlUpdateMockTest: (id, data) => apiFetch(`/api/admin/control/mock-tests/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminControlDeleteMockTest: (id) => apiFetch(`/api/admin/control/mock-tests/${id}`, { method: 'DELETE' }),
+  adminControlRestoreMockTest: (id) => apiFetch(`/api/admin/control/mock-tests/${id}/restore`, { method: 'POST' }),
+  adminControlMockTestQuestions: (mockTestId) => apiFetch(`/api/admin/control/mock-tests/${mockTestId}/questions`),
+  adminControlCreateMockTestQuestion: (mockTestId, data) => apiFetch(`/api/admin/control/mock-tests/${mockTestId}/questions/manual`, { method: 'POST', body: JSON.stringify(data) }),
+  adminControlBulkUploadMockTestQuestions: (mockTestId, rows) => apiFetch(`/api/admin/control/mock-tests/${mockTestId}/questions/bulk`, { method: 'POST', body: JSON.stringify({ rows }) }),
+  adminControlDeleteMockTestQuestion: (mockTestId, questionId) => apiFetch(`/api/admin/control/mock-tests/${mockTestId}/questions/${questionId}`, { method: 'DELETE' }),
+  adminControlMockTestAnalytics: () => apiFetch('/api/admin/control/mock-tests/analytics/overview'),
+  adminControlRoadmaps: () => apiFetch('/api/admin/control/roadmaps'),
+  adminControlCreateRoadmap: (data) => apiFetch('/api/admin/control/roadmaps', { method: 'POST', body: JSON.stringify(data) }),
+  adminControlUpdateRoadmap: (id, data) => apiFetch(`/api/admin/control/roadmaps/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminControlRoadmapMilestones: (id, milestones) => apiFetch(`/api/admin/control/roadmaps/${id}/milestones`, { method: 'POST', body: JSON.stringify({ milestones }) }),
+  adminControlPublishRoadmap: (id) => apiFetch(`/api/admin/control/roadmaps/${id}/publish`, { method: 'POST' }),
+  adminControlHideRoadmap: (id) => apiFetch(`/api/admin/control/roadmaps/${id}/hide`, { method: 'POST' }),
+  adminControlBulkCertificates: (payload) => apiFetch('/api/admin/control/certificates/bulk-assign', { method: 'POST', body: JSON.stringify(payload) }),
+  adminControlRevokeCertificate: (id) => apiFetch(`/api/admin/control/certificates/${id}/revoke`, { method: 'POST' }),
+  adminControlVerifyCertificate: (code) => apiFetch(`/api/admin/control/certificates/verify/${encodeURIComponent(code)}`),
+  adminControlSendNotifications: (payload) => apiFetch('/api/admin/control/notifications/send', { method: 'POST', body: JSON.stringify(payload) }),
+  adminControlAnnouncements: () => apiFetch('/api/admin/control/announcements'),
+  adminControlCreateAnnouncement: (data) => apiFetch('/api/admin/control/announcements', { method: 'POST', body: JSON.stringify(data) }),
+  adminControlUpdateAnnouncement: (id, data) => apiFetch(`/api/admin/control/announcements/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminControlDeleteAnnouncement: (id) => apiFetch(`/api/admin/control/announcements/${id}`, { method: 'DELETE' }),
+  adminControlForumPosts: () => apiFetch('/api/admin/control/forum/posts'),
+  adminControlHideForumPost: (id, hidden = true) => apiFetch(`/api/admin/control/forum/posts/${id}/hide`, { method: 'POST', body: JSON.stringify({ hidden }) }),
+  adminControlDeleteForumPost: (id) => apiFetch(`/api/admin/control/forum/posts/${id}`, { method: 'DELETE' }),
+  adminControlFeedback: (status = '') => apiFetch(`/api/admin/control/feedback${status ? `?status=${encodeURIComponent(status)}` : ''}`),
+  adminControlResolveFeedback: (id) => apiFetch(`/api/admin/control/feedback/${id}/resolve`, { method: 'POST' }),
+  adminControlReplyFeedback: (id, reply) => apiFetch(`/api/admin/control/feedback/${id}/reply`, { method: 'POST', body: JSON.stringify({ reply }) }),
+  adminControlReferrals: () => apiFetch('/api/admin/control/referrals/history'),
+  adminControlTopReferrers: () => apiFetch('/api/admin/control/referrals/top'),
+  adminControlAssignReferralReward: (id, rewardPoints, note = '') => apiFetch(`/api/admin/control/referrals/${id}/reward`, { method: 'POST', body: JSON.stringify({ rewardPoints, note }) }),
+  adminControlBlockReferral: (id) => apiFetch(`/api/admin/control/referrals/${id}/block`, { method: 'POST' }),
+  adminGetCareerRoadmaps: () => apiFetch('/api/career/admin/roadmaps'),
+  adminGetCareerRoadmap: (id) => apiFetch(`/api/career/admin/roadmaps/${id}`),
+  adminCreateCareerRoadmap: (data) => apiFetch('/api/career/admin/roadmaps', { method: 'POST', body: JSON.stringify(data) }),
+  adminUpdateCareerRoadmap: (id, data) => apiFetch(`/api/career/admin/roadmaps/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminDeleteCareerRoadmap: (id) => apiFetch(`/api/career/admin/roadmaps/${id}`, { method: 'DELETE' }),
+  adminGetAiTools: () => apiFetch('/api/career/admin/ai-tools'),
+  adminCreateAiTool: (data) => apiFetch('/api/career/admin/ai-tools', { method: 'POST', body: JSON.stringify(data) }),
+  adminUpdateAiTool: (id, data) => apiFetch(`/api/career/admin/ai-tools/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminDeleteAiTool: (id) => apiFetch(`/api/career/admin/ai-tools/${id}`, { method: 'DELETE' }),
+  adminControlAnalytics: () => apiFetch('/api/admin/control/analytics/overview'),
+  adminControlRoles: () => apiFetch('/api/admin/control/roles'),
+  adminControlAssignRole: (adminId, adminRole) => apiFetch(`/api/admin/control/roles/${adminId}`, { method: 'PUT', body: JSON.stringify({ adminRole }) }),
+  adminControlSetRolePermissions: (role, permissions) => apiFetch(`/api/admin/control/roles/permissions/${encodeURIComponent(role)}`, { method: 'PUT', body: JSON.stringify({ permissions }) }),
+  adminControlSettings: () => apiFetch('/api/admin/control/settings'),
+  adminControlUpdateSettings: (payload) => apiFetch('/api/admin/control/settings', { method: 'PUT', body: JSON.stringify(payload) }),
+  adminControlExperienceConfig: () => apiFetch('/api/admin/control/experience-config'),
+  adminControlUpdateExperienceConfig: (payload) => apiFetch('/api/admin/control/experience-config', { method: 'PUT', body: JSON.stringify(payload) }),
+  adminControlMembershipConfig: () => apiFetch('/api/admin/control/membership-config'),
+  adminControlUpdateMembershipConfig: (payload) => apiFetch('/api/admin/control/membership-config', { method: 'PUT', body: JSON.stringify(payload) }),
+  adminSupportGovernanceConfig: () => apiFetch('/api/admin/support-governance/feature-config'),
+  adminSupportGovernanceUpdateConfig: (payload) => apiFetch('/api/admin/support-governance/feature-config', { method: 'PUT', body: JSON.stringify(payload) }),
+  adminSupportGovernanceDashboard: () => apiFetch('/api/admin/support-governance/dashboard'),
+  adminSupportGovernanceThreads: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.status) qs.set('status', params.status);
+    if (params.flaggedOnly) qs.set('flaggedOnly', 'true');
+    if (params.urgentOnly) qs.set('urgentOnly', 'true');
+    if (params.branchId) qs.set('branchId', String(params.branchId));
+    if (params.semesterId) qs.set('semesterId', String(params.semesterId));
+    if (params.search) qs.set('search', params.search);
+    if (params.limit) qs.set('limit', String(params.limit));
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch(`/api/admin/support-governance/threads${suffix}`);
+  },
+  adminSupportThreadAction: (requestId, payload) => apiFetch(`/api/admin/support-governance/threads/${requestId}/action`, { method: 'POST', body: JSON.stringify(payload) }),
+  adminSupportAnswerAction: (answerId, payload) => apiFetch(`/api/admin/support-governance/answers/${answerId}/action`, { method: 'POST', body: JSON.stringify(payload) }),
+  adminSupportRewardAdjust: (payload) => apiFetch('/api/admin/support-governance/rewards/adjust', { method: 'POST', body: JSON.stringify(payload) }),
+  adminSupportRewardHistory: (helperUserId = 0, limit = 80) => apiFetch(`/api/admin/support-governance/rewards/history?helperUserId=${encodeURIComponent(helperUserId)}&limit=${encodeURIComponent(limit)}`),
+  adminSupportHelperTrust: (helperUserId, payload) => apiFetch(`/api/admin/support-governance/helpers/${helperUserId}/trust`, { method: 'POST', body: JSON.stringify(payload) }),
+  adminSupportHelperHistory: (helperUserId) => apiFetch(`/api/admin/support-governance/helpers/${helperUserId}/history`),
+  adminSupportIsolationAnomalies: () => apiFetch('/api/admin/support-governance/isolation/anomalies'),
+  adminSupportSafetyRisk: () => apiFetch('/api/admin/support-governance/safety/link-risk'),
+  adminSupportAnalyticsOverview: () => apiFetch('/api/admin/support-governance/analytics/overview'),
+  adminSupportGovernanceAudit: (limit = 120) => apiFetch(`/api/admin/support-governance/activity/audit?limit=${encodeURIComponent(limit)}`),
+  submitSupportTicket: (data) => apiFetch('/api/company/tickets', { method: 'POST', body: JSON.stringify(data) }),
+  adminControlAuditLogs: (limit = 50) => apiFetch(`/api/admin/control/audit-logs?limit=${encodeURIComponent(limit)}`)
+};

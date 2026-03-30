@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Academic Content Management - College OS Admin</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+
+    .contrib-lane-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 14px 0 18px;
+    }
+
+    .contrib-lane-btn {
+      border: 1px solid #d4dcf2;
+      background: #f7f9ff;
+      color: #32436b;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .contrib-lane-btn.active {
+      background: #667eea;
+      color: #fff;
+      border-color: #667eea;
+      box-shadow: 0 4px 10px rgba(102, 126, 234, 0.28);
+    }
+
+    .inline-hint {
+      margin: 0;
+      color: #617089;
+      font-size: 13px;
+    }
+
+    @media (max-width: 1024px) {
+      .admin-container {
+        grid-template-columns: 1fr;
+      }
+
+      .admin-sidebar {
+        position: static;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .admin-content {
+        padding: 0;
+      }
+
+      .filter-bar {
+        flex-direction: column;
+      }
+
+      .form-control {
+        min-width: auto;
+      }
+    }
+  </style>
+</head>
+<body class="admin-portal">
+  <div class="co-admin-shell">
+    <aside class="co-admin-aside">
+      <div class="co-admin-brand">
+        <span class="co-admin-brand-mark"><i class="fa-solid fa-shield-halved"></i></span>
+        <div>
+          <h1>College OS Admin</h1>
+          <p>Unified command center for academics, governance, and platform operations.</p>
+        </div>
+      </div>
+      <section class="co-admin-nav-section">
+        <p class="co-admin-nav-label">Admin Navigation</p>
+        <nav class="co-admin-nav">
+          <a class="co-admin-nav-link" href="admin-dashboard.html"><i class="fa-solid fa-chart-pie"></i><span>Overview</span></a>
+          <a class="co-admin-nav-link" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control System</span></a>
+          <a class="co-admin-nav-link active" href="admin-academics.html#contributions"><i class="fa-solid fa-upload"></i><span>Contribution Control</span></a>
+          <a class="co-admin-nav-link" href="admin-support-governance.html"><i class="fa-solid fa-shield-halved"></i><span>Support Governance</span></a>
+          <a class="co-admin-nav-link" href="admin-notes.html"><i class="fa-solid fa-file-lines"></i><span>Notes</span></a>
+          <a class="co-admin-nav-link" href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i><span>Papers</span></a>
+          <a class="co-admin-nav-link" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i><span>Materials</span></a>
+          <a class="co-admin-nav-link" href="admin-quizzes.html"><i class="fa-solid fa-clipboard-question"></i><span>Quizzes</span></a>
+          <a class="co-admin-nav-link" href="admin-certificates.html"><i class="fa-solid fa-graduation-cap"></i><span>Certificates</span></a>
+          <a class="co-admin-nav-link" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Roadmaps</span></a>
+          <a class="co-admin-nav-link" href="admin-mock-tests.html"><i class="fa-solid fa-flask-vial"></i><span>Mock Test Studio</span></a>
+          <a class="co-admin-nav-link" href="admin-ai-tools.html"><i class="fa-solid fa-sparkles"></i><span>AI Tools</span></a>
+          <a class="co-admin-nav-link" href="admin-campus-feed.html"><i class="fa-solid fa-newspaper"></i><span>Campus Feed</span></a>
+        </nav>
+      </section>
+    </aside>
+
+    <main class="co-admin-main">
+      <header class="co-admin-topbar">
+        <div class="co-admin-topbar-title">
+          <h2>Academic Content Management</h2>
+          <p>Structured moderation workspace for student contributions with clean notes/papers pipelines and contribution analytics.</p>
+        </div>
+        <div class="co-admin-topbar-actions">
+          <a class="co-admin-chip" href="admin-dashboard.html"><i class="fa-solid fa-arrow-left"></i><span>Back to Dashboard</span></a>
+          <a class="co-admin-chip" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control System</span></a>
+          <a class="co-admin-chip" href="admin-login.html"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+        </div>
+      </header>
+
+      <div class="admin-header">
+        <h1>Student Contributions Moderation Dashboard</h1>
+        <p>Unified in-page moderation system for student notes and student question papers with structured pipelines and contribution analytics.</p>
+      </div>
+
+      <section id="contributions-section" class="menu-section" style="display:block;">
+        <div class="content-section">
+          <h2>Student Contributions Moderation</h2>
+          <p class="inline-hint">Structured moderation dashboard with independent pipelines for Student Notes and Student Question Papers.</p>
+
+          <div id="contributionOverview" class="stats-grid" style="margin-bottom: 20px;"></div>
+          <div id="contributionInsights" class="message" style="background:#f9f9ff; color:#333; margin-bottom:20px;"></div>
+
+          <div class="contrib-lane-bar" id="contributionDomainTabs" style="margin-bottom: 16px;">
+            <button type="button" class="contrib-lane-btn active" data-target="notesPipelinePanel">Student Notes</button>
+            <button type="button" class="contrib-lane-btn" data-target="papersPipelinePanel">Student Papers</button>
+          </div>
+
+          <div class="filter-bar" style="margin-top:12px;">
+            <label><input type="checkbox" id="contribSelectAll" /> Select all visible rows</label>
+            <button class="btn-primary" id="bulkApproveBtn" data-bulk-action="approve">Bulk Approve</button>
+            <button class="btn-primary" id="bulkRejectBtn" data-bulk-action="reject">Bulk Reject</button>
+            <button class="btn-primary" id="bulkFeatureBtn" data-bulk-action="feature">Bulk Feature</button>
+            <button class="btn-primary" id="bulkArchiveBtn" data-bulk-action="archive">Bulk Archive</button>
+          </div>
+
+          <div id="notesPipelinePanel" class="content-section" style="padding:18px; margin-top:18px;">
+            <h3>Student Notes Pipeline</h3>
+            <p class="inline-hint">Independent queue for notes moderation with dedicated status lanes and risk review.</p>
+
+            <div class="contrib-lane-bar" id="contributionLaneTabsNotes">
+              <button type="button" class="contrib-lane-btn active" data-domain="notes" data-lane="pending">Pending</button>
+              <button type="button" class="contrib-lane-btn" data-domain="notes" data-lane="approved">Approved</button>
+              <button type="button" class="contrib-lane-btn" data-domain="notes" data-lane="rejected">Rejected</button>
+              <button type="button" class="contrib-lane-btn" data-domain="notes" data-lane="needs_correction">Needs Correction</button>
+              <button type="button" class="contrib-lane-btn" data-domain="notes" data-lane="risk">Risk</button>
+            </div>
+
+            <div class="filter-bar">
+              <div class="form-control"><label>Status</label><select id="contributionStatusFilterNotes"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="needs_correction">Needs Correction</option><option value="all">All</option></select></div>
+              <div class="form-control"><label>Subject</label><input id="contributionSubjectFilterNotes" placeholder="Subject" /></div>
+              <div class="form-control"><label>Semester</label><input id="contributionSemesterFilterNotes" placeholder="Semester" /></div>
+              <div class="form-control"><label>Branch</label><input id="contributionBranchFilterNotes" placeholder="Branch" /></div>
+              <div class="form-control"><label>Uploader</label><input id="contributionUploaderFilterNotes" placeholder="Name or email" /></div>
+              <div class="form-control"><label>Risk</label><select id="contributionRiskFilterNotes"><option value="">All</option><option value="duplicate">Duplicate Risk</option><option value="quality">Quality Risk</option></select></div>
+              <button class="btn-primary" style="margin-top: 22px;" id="applyNotesFiltersBtn">Apply</button>
+            </div>
+
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Select</th>
+                    <th>Title</th>
+                    <th>Uploader</th>
+                    <th>College</th>
+                    <th>Academic Scope</th>
+                    <th>Status</th>
+                    <th>Risk/Flags</th>
+                    <th>Points</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="contributionsNotesTableBody">
+                  <tr><td colspan="9" class="loading">Loading student notes contributions...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="papersPipelinePanel" class="content-section" style="padding:18px; margin-top:18px; display:none;">
+            <h3>Student Question Papers Pipeline</h3>
+            <p class="inline-hint">Independent queue for question-paper moderation with dedicated status lanes and risk review.</p>
+
+            <div class="contrib-lane-bar" id="contributionLaneTabsPapers">
+              <button type="button" class="contrib-lane-btn active" data-domain="papers" data-lane="pending">Pending</button>
+              <button type="button" class="contrib-lane-btn" data-domain="papers" data-lane="approved">Approved</button>
+              <button type="button" class="contrib-lane-btn" data-domain="papers" data-lane="rejected">Rejected</button>
+              <button type="button" class="contrib-lane-btn" data-domain="papers" data-lane="needs_correction">Needs Correction</button>
+              <button type="button" class="contrib-lane-btn" data-domain="papers" data-lane="risk">Risk</button>
+            </div>
+
+            <div class="filter-bar">
+              <div class="form-control"><label>Status</label><select id="contributionStatusFilterPapers"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="needs_correction">Needs Correction</option><option value="all">All</option></select></div>
+              <div class="form-control"><label>Subject</label><input id="contributionSubjectFilterPapers" placeholder="Subject" /></div>
+              <div class="form-control"><label>Semester</label><input id="contributionSemesterFilterPapers" placeholder="Semester" /></div>
+              <div class="form-control"><label>Branch</label><input id="contributionBranchFilterPapers" placeholder="Branch" /></div>
+              <div class="form-control"><label>Uploader</label><input id="contributionUploaderFilterPapers" placeholder="Name or email" /></div>
+              <div class="form-control"><label>Risk</label><select id="contributionRiskFilterPapers"><option value="">All</option><option value="duplicate">Duplicate Risk</option><option value="quality">Quality Risk</option></select></div>
+              <button class="btn-primary" style="margin-top: 22px;" id="applyPapersFiltersBtn">Apply</button>
+            </div>
+
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Select</th>
+                    <th>Title</th>
+                    <th>Uploader</th>
+                    <th>College</th>
+                    <th>Academic Scope</th>
+                    <th>Status</th>
+                    <th>Risk/Flags</th>
+                    <th>Points</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="contributionsPapersTableBody">
+                  <tr><td colspan="9" class="loading">Loading student papers contributions...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/admin-academics.js"></script>
+</body>
+</html>
+

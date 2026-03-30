@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Support Dashboard - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css">
+  <style>
+    .dashboard-container {
+      max-width: 1200px; margin: 0 auto; padding: 20px;
+    }
+    
+    .dashboard-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white; padding: 30px 20px; border-radius: 12px; margin-bottom: 30px;
+    }
+    .dashboard-title { font-size: 2.5em; margin: 0 0 5px 0; font-weight: 700; }
+    .dashboard-subtitle { opacity: 0.9; margin: 0; }
+    
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px; margin-bottom: 40px;
+    }
+    
+    .stat-card {
+      background: white; padding: 25px; border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08); transition: all 0.3s;
+    }
+    .stat-card:hover {
+      transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    }
+    
+    .stat-icon { font-size: 2.5em; color: #667eea; margin-bottom: 15px; }
+    .stat-label { color: #666; font-size: 0.95em; margin-bottom: 8px; }
+    .stat-value { font-size: 2.2em; font-weight: 700; color: #222; }
+    .stat-description { color: #999; font-size: 0.85em; margin-top: 5px; }
+    
+    .helper-badge {
+      background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
+      color: white; padding: 15px 20px; border-radius: 12px;
+      text-align: center; margin-bottom: 20px;
+    }
+    .badge-level { font-size: 1.3em; font-weight: 700; }
+    .badge-description { font-size: 0.9em; opacity: 0.9; margin-top: 5px; }
+    
+    .section {
+      background: white; padding: 25px; border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 25px;
+    }
+    .section-title {
+      font-size: 1.5em; font-weight: 700; color: #222; margin: 0 0 20px 0;
+      padding-bottom: 15px; border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .activity-list {
+      display: flex; flex-direction: column; gap: 15px;
+    }
+    
+    .activity-item {
+      padding: 15px; background: #f9f9f9; border-radius: 8px;
+      border-left: 4px solid #667eea; transition: all 0.3s;
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      cursor: pointer;
+    }
+    .activity-item:hover { background: #f0f0f0; transform: translateX(5px); }
+    
+    .activity-title { font-weight: 700; color: #222; margin-bottom: 8px; }
+    .activity-meta { color: #999; font-size: 0.9em; }
+    .activity-stat { color: #667eea; font-weight: 600; margin-top: 10px; }
+    
+    .empty-state {
+      text-align: center; padding: 40px;
+    }
+    .empty-icon { font-size: 3em; color: #ddd; margin-bottom: 15px; }
+    .empty-title { font-size: 1.3em; font-weight: 700; color: #222; margin-bottom: 10px; }
+    .empty-desc { color: #666; margin-bottom: 20px; }
+    
+    .btn-primary {
+      display: inline-block; padding: 12px 25px; background: #667eea;
+      color: white; border: none; border-radius: 8px; cursor: pointer;
+      font-weight: 700; text-decoration: none; transition: all 0.3s;
+    }
+    .btn-primary:hover { background: #5568d3; transform: translateY(-2px); }
+    
+    .progress-bar {
+      background: #f0f0f0; border-radius: 8px; height: 20px; overflow: hidden;
+      margin: 10px 0;
+    }
+    .progress-fill {
+      background: linear-gradient(90deg, #667eea, #764ba2); height: 100%;
+      transition: width 0.3s;
+    }
+    
+    @media (max-width: 768px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .dashboard-title { font-size: 1.8em; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+  <div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
+      <h1 class="dashboard-title" data-page-title><i class="fas fa-chart-line"></i> My Support Dashboard</h1>
+      <p class="dashboard-subtitle">Track your helping contributions and academic growth</p>
+    </div>
+    
+    <!-- Helper Badge -->
+    <div id="helper-badge"></div>
+    
+    <!-- Stats Grid -->
+    <div class="stats-grid" id="stats-grid"></div>
+    
+    <!-- My Requests -->
+    <div class="section">
+      <h2 class="section-title"><i class="fas fa-question-circle"></i> My Requests</h2>
+      <div id="my-requests"></div>
+    </div>
+    
+    <!-- My Answers -->
+    <div class="section">
+      <h2 class="section-title"><i class="fas fa-lightbulb"></i> My Answers</h2>
+      <div id="my-answers"></div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="section" style="text-align: center;">
+      <h2 class="section-title"><i class="fas fa-bolt"></i> Quick Actions</h2>
+      <a class="btn-primary" href="create-support-request.html">
+        <i class="fas fa-plus"></i> Ask a New Question
+      </a>
+      <a class="btn-primary" style="margin-left: 10px; background: #764ba2;" href="support-hub.html">
+        <i class="fas fa-search"></i> Browse Help Hub
+      </a>
+    </div>
+  </div>
+  </template>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/support-dashboard.js"></script>
+</body>
+</html>

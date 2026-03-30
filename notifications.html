@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notification Center - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .notif-wrap { display:grid; gap:1rem; }
+    .notif-card { background:#fff; border:1px solid #dce5f0; border-radius:14px; box-shadow:0 8px 22px rgba(35,56,83,.09); padding:1rem; }
+    .notif-head { display:flex; justify-content:space-between; align-items:center; gap:.7rem; flex-wrap:wrap; }
+    .tabs { display:flex; flex-wrap:wrap; gap:.45rem; }
+    .tab { border:1px solid #d2deeb; background:#fff; border-radius:999px; padding:.36rem .72rem; cursor:pointer; font-size:.82rem; }
+    .tab.active { background:#dff4ef; border-color:#88d1c2; color:#0c5a4f; font-weight:700; }
+    .group-title { margin:.5rem 0 .4rem; color:#5f6f82; font-size:.82rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+    .notif-list { display:grid; gap:.58rem; }
+    .notif-item { border:1px solid #dce5f0; border-radius:12px; padding:.7rem; background:#fff; transition:.2s ease; }
+    .notif-item:hover { transform:translateY(-1px); box-shadow:0 8px 22px rgba(35,56,83,.09); border-color:#bfd3ea; }
+    .notif-item.unread { border-left:4px solid #0f7b6c; background:#f8fffd; }
+    .notif-row { display:flex; justify-content:space-between; gap:.6rem; }
+    .notif-main { display:flex; gap:.56rem; flex:1; }
+    .nicon { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; font-size:.9rem; }
+    .meta { font-size:.76rem; color:#64788f; display:flex; gap:.35rem; flex-wrap:wrap; }
+    .pill { border-radius:999px; background:#edf3fb; color:#2e4b6b; padding:.12rem .52rem; font-size:.7rem; }
+    .actions { display:flex; gap:.35rem; flex-wrap:wrap; margin-top:.45rem; }
+    .btn-mini { border:none; border-radius:8px; cursor:pointer; padding:.3rem .54rem; font-size:.74rem; }
+    .btn-mini.secondary { background:#e9f0f8; color:#264765; }
+    .btn-mini.warn { background:#fff0dd; color:#7a4700; }
+    .btn-mini.danger { background:#ffe7e7; color:#8e2222; }
+    .empty-state { border:1px dashed #c9d9ea; border-radius:12px; background:#f8fbff; text-align:center; color:#536b86; padding:1.2rem .8rem; }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <section class="hero">
+      <h1 data-page-title>Notification Center</h1>
+      <p>Your learning activity feed: study updates, roadmap progress, notes, tests, certificates, and system alerts.</p>
+    </section>
+
+    <section class="notif-wrap">
+      <article class="notif-card">
+        <div class="notif-head">
+          <div class="tabs" id="notificationTabs">
+            <button class="tab active" data-tab="all">All</button>
+            <button class="tab" data-tab="unread">Unread</button>
+            <button class="tab" data-tab="achievements">Achievements</button>
+            <button class="tab" data-tab="study">Study</button>
+            <button class="tab" data-tab="system">System</button>
+          </div>
+          <button class="btn secondary" id="markAllReadBtn"><i class="fa-regular fa-circle-check"></i> Mark All as Read</button>
+        </div>
+      </article>
+
+      <article class="notif-card">
+        <div id="notificationFeed"></div>
+      </article>
+    </section>
+  </template>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/notifications.js"></script>
+</body>
+</html>
+
+
+
+

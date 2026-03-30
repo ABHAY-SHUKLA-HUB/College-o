@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campus Feed - College OS</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .feed-layout { display:grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, .95fr); gap:1rem; }
+    .feed-card { background:#fff; border:1px solid #dbe6f2; border-radius:16px; box-shadow:0 10px 24px rgba(26,44,68,.08); padding:1rem; }
+    .feed-hero { background:linear-gradient(128deg, #0f172a, #1d4ed8 44%, #0f766e); color:#fff; }
+    .feed-meta { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.65rem; }
+    .feed-pill { border-radius:999px; padding:.25rem .6rem; border:1px solid #d3deea; font-size:.75rem; }
+    .feed-hero .feed-pill { border-color:rgba(255,255,255,.24); background:rgba(255,255,255,.08); color:#fff; }
+    .feed-tabs { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.75rem; }
+    .feed-tab { border:1px solid #cad8e7; border-radius:999px; background:#fff; color:#2b4662; padding:.35rem .72rem; font-size:.78rem; cursor:pointer; transition:all .16s ease; }
+    .feed-tab.active { background:#0f766e; color:#fff; border-color:#0f766e; }
+    .create-grid { display:grid; gap:.6rem; grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    .create-grid .full { grid-column:1 / -1; }
+    .field { display:grid; gap:.32rem; }
+    .field label { font-size:.8rem; color:#5b6f84; font-weight:700; }
+    .field input, .field select, .field textarea { border:1px solid #d1deeb; border-radius:10px; padding:.62rem .72rem; }
+    .feed-list { display:grid; gap:.8rem; margin-top:.8rem; }
+    .post-card { border:1px solid #dce6f2; border-radius:13px; padding:.78rem; background:#fff; transition:transform .16s ease, box-shadow .16s ease; }
+    .post-card:hover { transform:translateY(-2px); box-shadow:0 10px 22px rgba(22,39,58,.08); }
+    .post-head { display:flex; justify-content:space-between; gap:.7rem; align-items:flex-start; }
+    .post-title { margin:0; font-size:1rem; }
+    .post-meta { color:#5f7287; font-size:.78rem; display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.35rem; }
+    .post-media { margin-top:.7rem; border-radius:12px; overflow:hidden; border:1px solid #dce6f2; }
+    .post-media img, .post-media video { width:100%; max-height:320px; object-fit:cover; display:block; }
+    .post-actions { display:flex; flex-wrap:wrap; gap:.45rem; margin-top:.65rem; }
+    .post-actions button { border:1px solid #d1deeb; background:#fff; border-radius:999px; padding:.3rem .62rem; font-size:.77rem; cursor:pointer; transition:all .15s ease; }
+    .post-actions button.active { border-color:#0f766e; color:#0f766e; background:#e6f8f4; }
+    .comment-box { margin-top:.6rem; display:grid; gap:.45rem; }
+    .comment-row { display:flex; gap:.45rem; }
+    .comment-row input, .comment-row select { flex:1; border:1px solid #d1deeb; border-radius:8px; padding:.44rem .6rem; }
+    .comment-list { display:grid; gap:.38rem; max-height:180px; overflow:auto; }
+    .comment-item { border:1px solid #e5edf6; border-radius:9px; padding:.45rem .55rem; background:#f9fcff; }
+    .submission-list { display:grid; gap:.55rem; }
+    .submission-item { border:1px solid #dbe5f0; border-radius:10px; padding:.55rem .6rem; }
+    .status-badge { border-radius:999px; padding:.18rem .55rem; font-size:.72rem; font-weight:700; }
+    .status-pending { background:#fff4db; color:#7e5a00; }
+    .status-approved { background:#e3f8ec; color:#1a6b3e; }
+    .status-rejected { background:#ffe8e8; color:#9c2d2d; }
+    .empty-state { border:1px dashed #c8d8ea; border-radius:12px; text-align:center; color:#5a6f84; padding:1rem .75rem; background:#f8fbff; }
+    .skeleton { position:relative; overflow:hidden; background:#e9f0f8; border-radius:10px; }
+    .skeleton::after { content:''; position:absolute; inset:0; background:linear-gradient(110deg, transparent 0%, rgba(255,255,255,.6) 50%, transparent 100%); transform:translateX(-100%); animation:feed-shimmer 1.2s infinite; }
+    @keyframes feed-shimmer { 100% { transform:translateX(100%); } }
+    .creator-card { display:grid; gap:.5rem; }
+    .creator-badges { display:flex; flex-wrap:wrap; gap:.4rem; }
+    .creator-badge { border-radius:999px; padding:.2rem .5rem; border:1px solid #d0deec; font-size:.72rem; background:#f8fbff; color:#2f4c68; }
+    @media (max-width: 1080px) { .feed-layout { grid-template-columns: 1fr; } .create-grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <section class="hero">
+      <h1 data-page-title>Campus Feed</h1>
+      <p>Real-time college-specific updates, trusted creator content, and campus engagement with anti-fraud quality controls.</p>
+    </section>
+
+    <section class="feed-layout">
+      <main style="display:grid; gap:1rem;">
+        <article class="feed-card feed-hero">
+          <h2 style="margin:0;">Your College Feed</h2>
+          <p id="feedCollegeLine" style="margin:.35rem 0 0; color:rgba(255,255,255,.9);">Loading your campus context...</p>
+          <div class="feed-meta" id="feedMetaPills"></div>
+          <div class="feed-tabs" id="feedTabs">
+            <button class="feed-tab active" data-tab="latest">Latest</button>
+            <button class="feed-tab" data-tab="trending">Trending</button>
+            <button class="feed-tab" data-tab="official">Official</button>
+            <button class="feed-tab" data-tab="events">Events</button>
+            <button class="feed-tab" data-tab="achievements">Achievements</button>
+            <button class="feed-tab" data-tab="alerts">Alerts</button>
+            <button class="feed-tab" data-tab="placements">Placements</button>
+            <button class="feed-tab" data-tab="lost_found">Lost & Found</button>
+          </div>
+        </article>
+
+        <article class="feed-card">
+          <h3 style="margin-top:0;">Create Campus Post</h3>
+          <form id="createCampusPostForm" class="create-grid">
+            <div class="field">
+              <label>Post Type</label>
+              <select id="postType" required>
+                <option value="text">Text / News</option>
+                <option value="image">Image Post</option>
+                <option value="video">Video Post</option>
+                <option value="event">Event Post</option>
+                <option value="achievement">Achievement Post</option>
+                <option value="alert">Alert / Update</option>
+                <option value="poll">Poll</option>
+                <option value="announcement">Announcement</option>
+                <option value="lost_found">Lost & Found</option>
+                <option value="placement_update">Placement Update</option>
+                <option value="event_coverage">Event Coverage</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Category</label>
+              <select id="postCategory" required>
+                <option value="latest">Latest</option>
+                <option value="events">Events</option>
+                <option value="achievements">Achievements</option>
+                <option value="alerts">Alerts</option>
+                <option value="placements">Placements</option>
+                <option value="lost_found">Lost & Found</option>
+                <option value="announcements">Announcements</option>
+              </select>
+            </div>
+            <div class="field full">
+              <label>Title</label>
+              <input id="postTitle" maxlength="220" required placeholder="Give your post a clear title" />
+            </div>
+            <div class="field full">
+              <label>Description / Caption</label>
+              <textarea id="postDescription" rows="4" required placeholder="Share what matters to your campus community"></textarea>
+            </div>
+            <div class="field full" id="pollOptionsField" style="display:none;">
+              <label>Poll Options (one per line)</label>
+              <textarea id="postPollOptions" rows="3" placeholder="Option 1&#10;Option 2&#10;Option 3"></textarea>
+            </div>
+            <div class="field">
+              <label>Tags (comma separated)</label>
+              <input id="postTags" placeholder="placements, hackathon, exam" />
+            </div>
+            <div class="field">
+              <label>Media (image/video)</label>
+              <input id="postMedia" type="file" accept="image/*,video/*" />
+            </div>
+            <div class="field">
+              <label>Event Date/Time (optional)</label>
+              <input id="postEventAt" type="datetime-local" />
+            </div>
+            <div class="field">
+              <label>Event Venue (optional)</label>
+              <input id="postEventVenue" placeholder="Main campus auditorium" />
+            </div>
+            <div class="field">
+              <label>Poll End Date (optional)</label>
+              <input id="postPollEndsAt" type="datetime-local" />
+            </div>
+            <div class="field full">
+              <label style="display:flex; align-items:center; gap:.5rem;"><input id="postUrgent" type="checkbox" /> Mark as urgent</label>
+            </div>
+            <div class="field full">
+              <button class="btn primary" type="submit"><i class="fa-solid fa-paper-plane"></i> Submit for Approval</button>
+            </div>
+          </form>
+          <p class="muted" id="createCampusPostStatus" style="margin:.55rem 0 0;"></p>
+        </article>
+
+        <article class="feed-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:.7rem;">
+            <h3 style="margin:0;">Campus Feed</h3>
+            <button class="btn secondary" id="refreshCampusFeedBtn" type="button"><i class="fa-solid fa-rotate"></i> Refresh</button>
+          </div>
+          <p class="muted" id="campusFeedStatus" style="margin:.45rem 0 0;"></p>
+          <div class="feed-list" id="campusFeedList"></div>
+        </article>
+      </main>
+
+      <aside style="display:grid; gap:1rem; align-content:start;">
+        <article class="feed-card">
+          <h3 style="margin-top:0;">Trending in Your College</h3>
+          <div id="campusTrendingList" class="submission-list"></div>
+        </article>
+
+        <article class="feed-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:.5rem;">
+            <h3 style="margin:0;">Collections</h3>
+            <button class="btn secondary sm" id="refreshCollectionsBtn" type="button">Refresh</button>
+          </div>
+          <div style="display:flex; gap:.45rem; margin-top:.5rem;">
+            <input id="newCollectionName" placeholder="New collection" style="flex:1; border:1px solid #d1deeb; border-radius:8px; padding:.42rem .55rem;" />
+            <button class="btn secondary sm" id="createCollectionBtn" type="button">Add</button>
+          </div>
+          <div id="campusCollectionsList" class="submission-list" style="margin-top:.6rem;"></div>
+        </article>
+
+        <article class="feed-card">
+          <h3 style="margin-top:0;">Creator Spotlight</h3>
+          <div id="creatorProfilePanel" class="creator-card empty-state">Open a post creator to view profile and badges.</div>
+        </article>
+
+        <article class="feed-card">
+          <h3 style="margin-top:0;">My Submissions</h3>
+          <div id="myCampusSubmissions" class="submission-list"></div>
+        </article>
+      </aside>
+    </section>
+  </template>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/college-feed.js"></script>
+</body>
+</html>

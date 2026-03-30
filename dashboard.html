@@ -1,0 +1,1426 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>College OS - Dashboard</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    :root {
+      --dash-bg: #f4f7fb;
+      --dash-panel: rgba(255, 255, 255, 0.94);
+      --dash-text: #0f172a;
+      --dash-muted: #51627a;
+      --dash-primary: #2563eb;
+      --dash-border: #dbe5f1;
+      --dash-radius-sm: 12px;
+      --dash-radius-md: 18px;
+    }
+
+    .dash-page {
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 1rem 1rem 2rem;
+      display: grid;
+      gap: 1rem;
+      background:
+        radial-gradient(circle at 12% -10%, rgba(59, 130, 246, 0.14) 0%, rgba(59, 130, 246, 0) 36%),
+        radial-gradient(circle at 88% -10%, rgba(37, 99, 235, 0.12) 0%, rgba(37, 99, 235, 0) 34%),
+        linear-gradient(180deg, #f7fbff 0%, #eef4ff 100%);
+      border-radius: 22px;
+    }
+
+    .dash-card {
+      border-radius: var(--dash-radius-md);
+      border: 1px solid var(--dash-border);
+      background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(246, 251, 255, 0.94));
+      box-shadow: 0 10px 24px rgba(30, 64, 175, 0.08);
+      backdrop-filter: blur(6px);
+      transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+    }
+
+    .dash-card:hover {
+      transform: translateY(-2px);
+      border-color: #bfdbfe;
+      box-shadow: 0 16px 30px rgba(30, 64, 175, 0.12);
+    }
+
+    .dash-hero {
+      padding: 1.05rem 1.15rem;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(191, 219, 254, 0.2) 0%, rgba(191, 219, 254, 0) 35%),
+        radial-gradient(circle at 100% 0%, rgba(147, 197, 253, 0.16) 0%, rgba(147, 197, 253, 0) 34%),
+        linear-gradient(130deg, #1e3a8a 0%, #2563eb 52%, #3b82f6 100%);
+      position: relative;
+      overflow: hidden;
+      border-color: rgba(191, 219, 254, 0.28);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 14px 24px rgba(37, 99, 235, 0.18);
+    }
+
+    .dash-hero::after {
+      content: '';
+      position: absolute;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      right: -120px;
+      top: -170px;
+      background: radial-gradient(circle, rgba(191, 219, 254, 0.18) 0%, rgba(191, 219, 254, 0) 70%);
+      pointer-events: none;
+    }
+
+    .dash-hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.75fr) minmax(330px, 1fr);
+      gap: 0.8rem;
+      align-items: start;
+    }
+
+    .dash-hero h1 {
+      margin: 0;
+      font-size: clamp(1.2rem, 1.65vw, 1.7rem);
+      color: #f8fbff;
+      display: inline-flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .dash-hero h1 i {
+      color: #f59e0b;
+      font-size: 1.05rem;
+    }
+
+    .dash-hero p {
+      margin: 0.4rem 0 0;
+      color: rgba(239, 246, 255, 0.8);
+      line-height: 1.45;
+      max-width: 64ch;
+    }
+
+    .dash-hero-meta {
+      margin-top: 0.65rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.38rem;
+    }
+
+    .hero-meta-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.42rem;
+      border-radius: 999px;
+      border: 1px solid rgba(219, 234, 254, 0.34);
+      background: rgba(30, 58, 138, 0.22);
+      backdrop-filter: blur(5px);
+      color: #eff6ff;
+      padding: 0.26rem 0.6rem;
+      font-size: 0.74rem;
+      font-weight: 600;
+    }
+
+    .dash-hero-actions {
+      margin-top: 0.7rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.42rem;
+    }
+
+    .dash-hero-actions .btn {
+      border-radius: 10px;
+      padding: 0.48rem 0.82rem;
+      font-size: 0.92rem;
+      font-weight: 700;
+      box-shadow: 0 5px 12px rgba(15, 23, 42, 0.08);
+      transition: transform 160ms ease, box-shadow 160ms ease;
+    }
+
+    .dash-hero-actions .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 18px rgba(37, 99, 235, 0.2);
+    }
+
+    #dashPrimaryAction {
+      background: linear-gradient(135deg, #60a5fa, #3b82f6) !important;
+      border: 1px solid rgba(219, 234, 254, 0.32) !important;
+      color: #ffffff !important;
+    }
+
+    #dashSecondaryAction {
+      border: 1px solid rgba(219, 234, 254, 0.42) !important;
+      background: rgba(30, 58, 138, 0.2) !important;
+      color: #eff6ff !important;
+    }
+
+    #dashMarkActionDone {
+      background: rgba(255, 255, 255, 0.92) !important;
+      border: 1px solid rgba(255, 255, 255, 0.45) !important;
+      color: #1e3a8a !important;
+    }
+
+    #dashPrimaryAction:hover,
+    #dashSecondaryAction:hover,
+    #dashMarkActionDone:hover {
+      filter: brightness(1.06);
+    }
+
+    .dash-hero-summary {
+      border-radius: var(--dash-radius-sm);
+      border: 1px solid rgba(191, 219, 254, 0.38);
+      background: linear-gradient(155deg, rgba(30, 41, 59, 0.2), rgba(37, 99, 235, 0.18));
+      backdrop-filter: blur(10px);
+      padding: 0.78rem 0.82rem;
+      display: grid;
+      gap: 0.4rem;
+      align-content: start;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    }
+
+    .dash-hero-summary h3 {
+      margin: 0;
+      color: #f8fafc;
+      font-size: 0.86rem;
+    }
+
+    .hero-summary-line {
+      margin: 0;
+      font-size: 0.8rem;
+      color: rgba(239, 246, 255, 0.8);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .hero-next-chip {
+      margin-top: 0.1rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      width: fit-content;
+      border-radius: 999px;
+      padding: 0.2rem 0.5rem;
+      border: 1px solid rgba(191, 219, 254, 0.36);
+      background: rgba(219, 234, 254, 0.14);
+      color: #dbeafe;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .hero-progress-track {
+      margin-top: 0.18rem;
+      width: 100%;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(191, 219, 254, 0.14);
+      overflow: hidden;
+    }
+
+    .hero-progress-fill {
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+      transition: width 0.25s ease;
+    }
+
+    .dash-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+
+    .dash-stat-card {
+      padding: 0.95rem;
+      display: grid;
+      gap: 0.55rem;
+      min-height: 150px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dash-stat-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #2563eb, #60a5fa);
+      opacity: 0.85;
+    }
+
+    .dash-stats-grid .dash-stat-card:nth-child(1) {
+      background: linear-gradient(160deg, #f4f9ff, #e7f0ff);
+    }
+
+    .dash-stats-grid .dash-stat-card:nth-child(2) {
+      background: linear-gradient(160deg, #edf5ff, #dde9ff);
+    }
+
+    .dash-stats-grid .dash-stat-card:nth-child(3) {
+      background: linear-gradient(160deg, #eaf4ff, #dbeafe);
+    }
+
+    .dash-stats-grid .dash-stat-card:nth-child(4) {
+      background: linear-gradient(160deg, #eef5ff, #dfeaff);
+    }
+
+    .dash-stat-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .dash-stat-label {
+      margin: 0;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #64748b;
+      font-weight: 700;
+    }
+
+    .empty-state,
+    .dash-empty {
+      border-radius: var(--dash-radius-sm);
+      padding: 0.8rem;
+      border: 1px dashed #c8d8ea;
+      background: #f8fbff;
+      color: var(--dash-muted);
+      font-size: 0.86rem;
+      list-style: none;
+    }
+
+    .dash-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .content-item,
+    .recommend-item,
+    .continue-card,
+    .task-item,
+    .achievement-item,
+    .progress-row {
+      border-radius: var(--dash-radius-sm);
+      border: 1px solid var(--dash-border);
+      background: #f8fbff;
+      padding: 0.78rem;
+    }
+
+    .content-title,
+    .task-title {
+      margin: 0;
+      color: var(--dash-text);
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .content-note,
+    .task-note,
+    .continue-note,
+    .recommend-item p {
+      margin: 0.22rem 0 0;
+      color: var(--dash-muted);
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
+
+    .continue-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .continue-meta {
+      margin-top: 0.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.36rem;
+    }
+
+    .continue-chip {
+      border-radius: 999px;
+      border: 1px solid #c8d8ea;
+      background: #fff;
+      color: #375170;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+    }
+
+    .card-action-btn,
+    .hero-btn {
+      margin-top: 0.55rem;
+      display: inline-flex;
+      width: fit-content;
+      align-items: center;
+      border-radius: 999px;
+      border: 1px solid #c8d8ea;
+      color: #25435f;
+      background: #fff;
+      padding: 0.3rem 0.65rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .card-action-btn:hover,
+    .hero-btn:hover {
+      color: #2563eb;
+      border-color: #2563eb;
+    }
+
+    .task-item {
+      display: flex;
+      gap: 0.65rem;
+      align-items: flex-start;
+    }
+
+    .task-item .task-check {
+      margin-top: 0.05rem;
+    }
+
+    .task-item.completed {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+
+    .task-item.completed .task-title {
+      text-decoration: line-through;
+      color: #64748b;
+    }
+
+    .progress-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      color: #47607d;
+      margin-bottom: 0.33rem;
+      gap: 0.5rem;
+    }
+
+    .bar-track {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #60a5fa, #2563eb);
+    }
+
+    #dashContinueSection {
+      background: linear-gradient(160deg, #f8fbff, #edf4ff);
+    }
+
+    #dashRecommendedSection {
+      background: linear-gradient(160deg, #f8faff, #edf2ff);
+    }
+
+    #dashAnalyticsSection {
+      background: linear-gradient(160deg, #f5fbff, #eaf4ff);
+    }
+
+    #dashWeakTopicsSection {
+      background: linear-gradient(160deg, #f8fbff, #eaf2ff);
+    }
+
+    #dashRecommendedContentSection {
+      background: linear-gradient(160deg, #f8fbff, #eef5ff);
+    }
+
+    #dashStudyPlanSection {
+      background: linear-gradient(160deg, #f5faff, #e8f1ff);
+    }
+
+    #dashActivitySection {
+      background: linear-gradient(160deg, #f7fbff, #e9f2ff);
+    }
+
+    #dashQuickAccessSection {
+      background: linear-gradient(160deg, #f9fcff, #ecf5ff);
+    }
+
+    #dashAchievementsSection {
+      background: linear-gradient(160deg, #f5f9ff, #e8f1ff);
+    }
+
+    #dashLayoutSection {
+      align-items: start;
+    }
+
+    @media (min-width: 1400px) {
+      .dash-page {
+        padding: 1.15rem 1.5rem 2rem;
+      }
+    }
+
+    @media (max-width: 1120px) {
+      .dash-stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .dash-hero-grid {
+        grid-template-columns: 1fr;
+        gap: 0.7rem;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .dash-page {
+        width: 100%;
+        padding: 0.8rem 0.6rem 1.5rem;
+      }
+
+      .dash-stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .dash-hero-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .dash-hero-actions .btn {
+        width: 100%;
+      }
+    }
+
+    .dash-stat-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 1.05rem;
+    }
+
+    .dash-stat-icon.xp { background: linear-gradient(135deg, #b45309, #f59e0b); }
+    .dash-stat-icon.streak { background: linear-gradient(135deg, #dc2626, #fb7185); }
+    .dash-stat-icon.progress { background: linear-gradient(135deg, #2563eb, #60a5fa); }
+    .dash-stat-icon.certs { background: linear-gradient(135deg, #1d4ed8, #60a5fa); }
+
+    .dash-stat-value {
+      margin: 0;
+      font-size: 2.35rem;
+      color: var(--dash-text);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      font-family: 'Space Grotesk', sans-serif;
+      animation: countUp 0.8s ease-out;
+    }
+
+    @keyframes countUp {
+      from {
+        opacity: 0;
+        transform: translateY(-4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .dash-stat-foot {
+      margin-top: 0.35rem;
+      font-size: 0.85rem;
+      color: var(--dash-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .dash-progress-dots {
+      display: inline-flex;
+      gap: 3px;
+      margin-left: auto;
+    }
+
+    .dash-progress-dots span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #cbd5e1;
+    }
+
+    .dash-progress-dots span.active {
+      background: #2563eb;
+    }
+
+    .dash-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.62fr) minmax(0, 1fr);
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .dash-col {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .dash-page.is-loading {
+      position: relative;
+    }
+    .dash-page.is-loading > * {
+      opacity: 0.58;
+      pointer-events: none;
+    }
+    .dash-page.is-loading::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+      pointer-events: none;
+      background: linear-gradient(105deg, rgba(100, 116, 139, 0.08) 24%, rgba(255, 255, 255, 0.48) 40%, rgba(100, 116, 139, 0.08) 56%);
+      background-size: 220% 100%;
+      animation: dash-shimmer 1.1s linear infinite;
+    }
+    .dash-panel {
+      padding: 1rem;
+      border-radius: var(--dash-radius-md);
+      position: relative;
+    }
+
+    .dash-panel-title {
+      letter-spacing: -0.01em;
+      font-weight: 700;
+    }
+
+    .dash-panel-title i {
+      display: inline-grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+      color: #1d4ed8;
+    }
+    @keyframes dash-shimmer {
+      0% { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
+    }
+
+    .dash-panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.7rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .dash-panel-title {
+      margin: 0;
+      color: var(--dash-text);
+      font-size: 1.08rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+    }
+
+    .dash-panel-title i {
+      color: var(--dash-primary);
+    }
+
+    .dash-list {
+      display: grid;
+      gap: 0.7rem;
+    }
+
+    .dash-grid-3 {
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .dash-analytics-grid {
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .dash-chart-card {
+      border-radius: var(--dash-radius-sm);
+      border: 1px solid var(--dash-border);
+      background: linear-gradient(165deg, #ffffff, #f4f9ff);
+      padding: 0.8rem;
+      display: grid;
+      gap: 0.48rem;
+      min-height: 182px;
+      transition: transform 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    .dash-chart-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 26px rgba(30, 64, 175, 0.14);
+    }
+
+    .dash-chart-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .dash-chart-head h4 {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--dash-text);
+    }
+
+    .dash-chart-head span {
+      color: #64748b;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .dash-chart-bars {
+      min-height: 112px;
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      align-items: end;
+      gap: 0.36rem;
+    }
+
+    .dash-chart-bar {
+      min-height: 6px;
+      border-radius: 8px 8px 4px 4px;
+      background: linear-gradient(180deg, #0ea5e9, #1d4ed8);
+      opacity: 0.9;
+    }
+
+    .dash-chart-axis {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 0.36rem;
+      text-align: center;
+      color: #64748b;
+      font-size: 0.65rem;
+      letter-spacing: 0.01em;
+    }
+
+    .weak-topic-list {
+      display: grid;
+      gap: 0.58rem;
+    }
+
+    .weak-topic-item {
+      border: 1px solid #fbcfe8;
+      background: linear-gradient(145deg, #fff1f7, #fff8fb);
+      border-radius: var(--dash-radius-sm);
+      padding: 0.7rem;
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .weak-topic-item h4 {
+      margin: 0;
+      font-size: 0.88rem;
+      color: #831843;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .weak-topic-item p {
+      margin: 0;
+      color: #9f1239;
+      font-size: 0.78rem;
+    }
+
+    .dash-item {
+      border-radius: var(--dash-radius-sm);
+      border: 1px solid var(--dash-border);
+      background: #f8fbff;
+      padding: 0.85rem;
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .dash-item-main {
+      display: flex;
+      gap: 0.65rem;
+      align-items: flex-start;
+    }
+
+    .dash-item-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 0.88rem;
+      flex-shrink: 0;
+    }
+
+    .dash-item h3 {
+      margin: 0;
+      font-size: 0.95rem;
+      color: var(--dash-text);
+      line-height: 1.35;
+    }
+
+    .dash-item p {
+      margin: 0.18rem 0 0;
+      color: var(--dash-muted);
+      font-size: 0.86rem;
+      line-height: 1.35;
+    }
+
+    .dash-item-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .dash-mini-btn {
+      border: 1px solid #c9d7e6;
+      border-radius: 999px;
+      background: #fff;
+      color: #25435f;
+      padding: 0.28rem 0.62rem;
+      font-size: 0.78rem;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .dash-mini-btn:hover {
+      border-color: #2563eb;
+      color: #2563eb;
+    }
+
+    .dash-tasks .task-row {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      border-radius: var(--dash-radius-sm);
+      border: 1px solid var(--dash-border);
+      background: #fbfdff;
+      padding: 0.75rem;
+    }
+
+    .task-check {
+      width: 22px;
+      height: 22px;
+      border-radius: 7px;
+      border: 2px solid #3b82f6;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: #fff;
+      flex-shrink: 0;
+    }
+
+    .task-check.done {
+      background: #2563eb;
+    }
+
+    .task-row p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--dash-text);
+      flex: 1;
+    }
+
+    .task-row i {
+      color: #2563eb;
+    }
+
+    .dash-ai-card {
+      padding: 1rem;
+      color: #f8fafc;
+      background: linear-gradient(138deg, #0f172a 0%, #1e3a8a 45%, #2563eb 100%);
+      border-radius: var(--dash-radius-md);
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 20px 38px rgba(30, 58, 138, 0.28);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dash-ai-card::after {
+      content: '';
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      right: -88px;
+      bottom: -108px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(147, 197, 253, 0.34) 0%, rgba(147, 197, 253, 0) 70%);
+      pointer-events: none;
+    }
+
+    .dash-ai-card h3 {
+      margin: 0 0 0.35rem;
+      font-size: 1.08rem;
+    }
+
+    .dash-ai-card p {
+      margin: 0;
+      color: rgba(248,250,252,0.86);
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    .dash-ai-actions {
+      margin-top: 0.85rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .dash-ai-actions a {
+      text-decoration: none;
+      border-radius: 999px;
+      padding: 0.35rem 0.7rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border: 1px solid rgba(255,255,255,0.24);
+      color: #fff;
+      background: rgba(255,255,255,0.07);
+    }
+
+    .dash-ai-actions a:hover {
+      background: rgba(255,255,255,0.16);
+    }
+
+    .dash-ai-actions a.primary-action {
+      background: #f8fafc;
+      color: #0f172a;
+      border-color: rgba(255,255,255,0);
+    }
+
+    .dash-ai-actions a.primary-action:hover {
+      background: #e2e8f0;
+    }
+
+    .dash-membership {
+      padding: 1rem;
+      border-radius: var(--dash-radius-md);
+      background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 52%, #3b82f6 100%);
+      color: #fff;
+      box-shadow: 0 20px 36px rgba(29, 78, 216, 0.24);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dash-membership::after {
+      content: '';
+      position: absolute;
+      width: 220px;
+      height: 220px;
+      right: -90px;
+      top: -120px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0) 70%);
+      pointer-events: none;
+    }
+
+    .membership-badges {
+      display: flex;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.7rem;
+    }
+
+    .membership-badges span {
+      font-size: 0.76rem;
+      border-radius: 999px;
+      padding: 0.28rem 0.62rem;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.22);
+    }
+
+    .dash-membership h3 {
+      margin: 0 0 0.35rem;
+      font-size: 1.1rem;
+    }
+
+    .dash-membership p {
+      margin: 0;
+      color: rgba(255,255,255,0.88);
+      font-size: 0.88rem;
+      line-height: 1.4;
+    }
+
+    .dash-membership-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 0.8rem;
+    }
+
+    .dash-membership-actions a {
+      text-decoration: none;
+      border-radius: 999px;
+      padding: 0.38rem 0.75rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .dash-membership-actions .primary-link {
+      background: #fff;
+      color: #0f172a;
+    }
+
+    .dash-membership-actions .secondary-link {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: #fff;
+    }
+
+    .dash-quick-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.65rem;
+    }
+
+    .dash-feature-card {
+      padding: 0.8rem;
+      border-radius: var(--dash-radius-sm);
+      border: 1px solid var(--dash-border);
+      text-decoration: none;
+      color: var(--dash-text);
+      background: linear-gradient(165deg, #fff, #f6faff);
+      box-shadow: 0 9px 20px rgba(15, 23, 42, 0.06);
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .dash-feature-card:hover {
+      transform: translateY(-2px);
+      border-color: #2563eb;
+      box-shadow: 0 14px 24px rgba(37, 99, 235, 0.15);
+    }
+
+    .dash-feature-card i {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      margin-bottom: 0.45rem;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    }
+
+    .dash-feature-card h4 {
+      margin: 0;
+      font-size: 0.88rem;
+      color: var(--dash-text);
+    }
+
+    .dash-feature-card p {
+      margin: 0.22rem 0 0;
+      font-size: 0.78rem;
+      color: var(--dash-muted);
+      line-height: 1.35;
+    }
+
+    .dash-pill-row {
+      display: flex;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+      margin-top: 0.4rem;
+    }
+
+    .dash-pill {
+      border-radius: 999px;
+      font-size: 0.74rem;
+      padding: 0.24rem 0.54rem;
+      border: 1px solid #c8d8ea;
+      background: #fff;
+      color: #49627c;
+    }
+
+    .activity-timeline {
+      position: relative;
+      display: grid;
+      gap: 0.62rem;
+    }
+
+    .activity-timeline::before {
+      content: '';
+      position: absolute;
+      top: 8px;
+      left: 12px;
+      bottom: 8px;
+      width: 2px;
+      background: linear-gradient(180deg, #60a5fa, #2563eb);
+      opacity: 0.24;
+      border-radius: 2px;
+    }
+
+    .timeline-item {
+      position: relative;
+      padding-left: 1.9rem;
+      border-radius: var(--dash-radius-sm);
+      border: 1px solid var(--dash-border);
+      background: #f8fbff;
+      padding-top: 0.72rem;
+      padding-right: 0.72rem;
+      padding-bottom: 0.72rem;
+      transition: transform 0.16s ease;
+    }
+
+    .timeline-item:hover {
+      transform: translateX(2px);
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      top: 0.98rem;
+      left: 7px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #2563eb;
+      box-shadow: 0 0 0 4px #dbeafe;
+    }
+
+    .timeline-item h4 {
+      margin: 0;
+      color: var(--dash-text);
+      font-size: 0.86rem;
+    }
+
+    .timeline-item p {
+      margin: 0.22rem 0 0;
+      color: var(--dash-muted);
+      font-size: 0.79rem;
+    }
+
+    .dash-empty {
+      border-radius: var(--dash-radius-sm);
+      padding: 0.8rem;
+      border: 1px dashed #c8d8ea;
+      background: #f8fbff;
+      color: var(--dash-muted);
+      font-size: 0.86rem;
+    }
+
+    html[data-theme-mode="dark"] .dash-chart-card,
+    html[data-theme-mode="dark"] .timeline-item,
+    html[data-theme-mode="dark"] .dash-item,
+    html[data-theme-mode="dark"] .dash-feature-card,
+    html[data-theme-mode="dark"] .weak-topic-item {
+      background: linear-gradient(165deg, #162233, #1f2d40);
+      border-color: rgba(148, 163, 184, 0.28);
+      color: #e2e8f0;
+    }
+
+    html[data-theme-mode="dark"] .dash-chart-head h4,
+    html[data-theme-mode="dark"] .dash-item h3,
+    html[data-theme-mode="dark"] .timeline-item h4,
+    html[data-theme-mode="dark"] .dash-feature-card h4 {
+      color: #f1f5f9;
+    }
+
+    html[data-theme-mode="dark"] .dash-item p,
+    html[data-theme-mode="dark"] .timeline-item p,
+    html[data-theme-mode="dark"] .dash-feature-card p,
+    html[data-theme-mode="dark"] .dash-chart-head span,
+    html[data-theme-mode="dark"] .dash-chart-axis {
+      color: #a9b8cc;
+    }
+
+    html[data-theme-mode="dark"] .weak-topic-item h4,
+    html[data-theme-mode="dark"] .weak-topic-item p {
+      color: #fecdd3;
+    }
+
+    html[data-theme-mode="dark"] .weak-topic-item {
+      border-color: rgba(244, 114, 182, 0.35);
+      background: linear-gradient(150deg, #3b1025, #4a1233);
+    }
+
+    @media (max-width: 1120px) {
+      .dash-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .dash-grid-3,
+      .dash-analytics-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .dash-hero-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .dash-quick-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .dash-chart-card {
+        min-height: 164px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .dash-hero {
+        padding: 1.2rem;
+      }
+
+      .dash-hero h1 {
+        font-size: 1.35rem;
+      }
+
+      .dash-quick-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .dash-stat-value {
+        font-size: 1.65rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-shell></div>
+  <template data-page>
+    <main class="dash-page" id="dashboardPage">
+      <section class="dash-card dash-hero" id="dashHeroSection" data-exp-section="hero">
+        <div class="dash-hero-grid">
+          <div>
+            <h1 data-page-title id="dashboardGreeting"><i class="fa-solid fa-hand-wave"></i> Welcome back, Student</h1>
+            <p id="dashboardSubtitle">Track your roadmap, focus on the next milestone, and keep your learning streak moving.</p>
+            <div class="dash-hero-meta">
+              <span class="hero-meta-pill"><i class="fa-solid fa-building-columns"></i><span id="heroAcademicBadge">Course not set</span></span>
+              <span class="hero-meta-pill"><i class="fa-solid fa-calendar-days"></i><span id="heroSemesterBadge">Semester: Not set</span></span>
+              <span class="hero-meta-pill"><i class="fa-solid fa-route"></i><span id="heroRoadmapBadge">Roadmap progress: 0%</span></span>
+              <span class="hero-meta-pill"><i class="fa-solid fa-flag-checkered"></i><span id="heroMilestoneBadge">Next milestone: Start roadmap</span></span>
+            </div>
+            <div class="dash-hero-actions">
+              <a class="btn primary" id="dashPrimaryAction" href="notes-library.html"><i class="fa-solid fa-play"></i> Continue Learning</a>
+              <a class="btn secondary" id="dashSecondaryAction" href="study-roadmap.html"><i class="fa-solid fa-map-location-dot"></i> View Roadmap</a>
+              <button class="btn" id="dashMarkActionDone" type="button"><i class="fa-solid fa-check"></i> Mark Done</button>
+            </div>
+          </div>
+          <aside class="dash-hero-summary">
+            <h3>Progress Snapshot</h3>
+            <p class="hero-summary-line" id="heroNameLine">Student: Loading...</p>
+            <p class="hero-summary-line" id="heroBranchLine">Branch: Not configured</p>
+            <p class="hero-summary-line" id="heroNextActionLine">Next action: Resume notes and roadmap stage</p>
+            <span class="hero-next-chip" id="heroNextChip"><i class="fa-solid fa-bullseye"></i> Milestone in progress</span>
+            <div class="hero-progress-track"><div class="hero-progress-fill" id="heroProgressFill"></div></div>
+            <p class="hero-summary-line" id="heroProgressText">Roadmap completion: 0%</p>
+          </aside>
+        </div>
+      </section>
+
+      <section class="dash-stats-grid" id="dashStatsSection" data-exp-section="stats" aria-label="dashboard stats">
+        <article class="dash-card dash-stat-card">
+          <div class="dash-stat-top">
+            <p class="dash-stat-label">XP Points</p>
+            <span class="dash-stat-icon xp"><i class="fa-solid fa-star"></i></span>
+          </div>
+          <p class="dash-stat-value" data-stat="xp">0</p>
+          <div class="dash-stat-foot"><i class="fa-solid fa-arrow-trend-up"></i> Learning momentum is building <span class="dash-progress-dots" id="dotXp"><span class="active"></span><span></span><span></span></span></div>
+        </article>
+
+        <article class="dash-card dash-stat-card">
+          <div class="dash-stat-top">
+            <p class="dash-stat-label">Learning Streak</p>
+            <span class="dash-stat-icon streak"><i class="fa-solid fa-fire"></i></span>
+          </div>
+          <p class="dash-stat-value" data-stat="streak">0</p>
+          <div class="dash-stat-foot"><i class="fa-solid fa-calendar-days"></i> Consistency tracker <span class="dash-progress-dots" id="dotStreak"><span class="active"></span><span></span><span></span></span></div>
+        </article>
+
+        <article class="dash-card dash-stat-card">
+          <div class="dash-stat-top">
+            <p class="dash-stat-label">Roadmap Progress</p>
+            <span class="dash-stat-icon progress"><i class="fa-solid fa-route"></i></span>
+          </div>
+          <p class="dash-stat-value" data-stat="roadmapProgress">0%</p>
+          <div class="dash-stat-foot"><i class="fa-solid fa-flag"></i> Current career path completion <span class="dash-progress-dots" id="dotRoadmap"><span class="active"></span><span></span><span></span></span></div>
+        </article>
+
+        <article class="dash-card dash-stat-card">
+          <div class="dash-stat-top">
+            <p class="dash-stat-label">Certificates Earned</p>
+            <span class="dash-stat-icon certs"><i class="fa-solid fa-graduation-cap"></i></span>
+          </div>
+          <p class="dash-stat-value" data-stat="certificates">0</p>
+          <div class="dash-stat-foot"><i class="fa-solid fa-award"></i> Verified achievements unlocked <span class="dash-progress-dots" id="dotCerts"><span class="active"></span><span></span><span></span></span></div>
+        </article>
+      </section>
+
+      <section class="dash-layout" id="dashLayoutSection">
+        <div class="dash-col" id="dashMainCol">
+          <section class="dash-card dash-panel" id="dashContinueSection" data-exp-section="continue-learning">
+            <div class="dash-panel-head">
+              <h2 class="dash-panel-title"><i class="fa-solid fa-play-circle"></i> Continue Learning</h2>
+            </div>
+            <div class="dash-list" id="continueLearningList"></div>
+          </section>
+
+          <section class="dash-card dash-panel" id="dashRecommendedSection" data-exp-section="recommended-for-you">
+            <div class="dash-panel-head">
+              <h2 class="dash-panel-title"><i class="fa-solid fa-wand-magic-sparkles"></i> Recommended For You</h2>
+            </div>
+            <div class="dash-list" id="recommendedList"></div>
+          </section>
+
+          <section class="dash-card dash-panel" id="dashAnalyticsSection" data-exp-section="weekly-analytics">
+            <div class="dash-panel-head">
+              <h2 class="dash-panel-title"><i class="fa-solid fa-chart-line"></i> Weekly Progress Analytics</h2>
+            </div>
+            <div class="dash-analytics-grid">
+              <article class="dash-chart-card">
+                <div class="dash-chart-head"><h4>Study Time</h4><span>Hours / 7 days</span></div>
+                <div class="dash-chart-bars" id="studyTimeBars"></div>
+                <div class="dash-chart-axis" id="studyTimeAxis"></div>
+              </article>
+              <article class="dash-chart-card">
+                <div class="dash-chart-head"><h4>Quiz Accuracy</h4><span>Score %</span></div>
+                <div class="dash-chart-bars" id="quizAccuracyBars"></div>
+                <div class="dash-chart-axis" id="quizAccuracyAxis"></div>
+              </article>
+              <article class="dash-chart-card">
+                <div class="dash-chart-head"><h4>Roadmap Progress</h4><span>Weekly trend</span></div>
+                <div class="dash-chart-bars" id="roadmapTrendBars"></div>
+                <div class="dash-chart-axis" id="roadmapTrendAxis"></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="dash-card dash-panel" id="dashWeakTopicsSection" data-exp-section="weak-topics">
+            <div class="dash-panel-head">
+              <h2 class="dash-panel-title"><i class="fa-solid fa-triangle-exclamation"></i> Weak Topics</h2>
+            </div>
+            <div class="weak-topic-list" id="weakTopicsList"></div>
+          </section>
+
+          <section class="dash-card dash-panel" id="dashRecommendedContentSection" data-exp-section="recommended-content">
+            <div class="dash-panel-head">
+              <h2 class="dash-panel-title"><i class="fa-solid fa-layer-group"></i> Recommended Content</h2>
+            </div>
+            <div class="dash-grid-3">
+              <div id="dashRecommendedNotesColumn">
+                <h3 class="dash-panel-title" style="font-size:0.9rem; margin-bottom:0.45rem;"><i class="fa-solid fa-file-lines"></i> Notes</h3>
+                <div class="dash-list" id="recommendedNotesList"></div>
+              </div>
+              <div id="dashRecommendedQuizzesColumn">
+                <h3 class="dash-panel-title" style="font-size:0.9rem; margin-bottom:0.45rem;"><i class="fa-solid fa-clipboard-question"></i> Quizzes</h3>
+                <div class="dash-list" id="recommendedQuizzesList"></div>
+              </div>
+              <div id="dashRecommendedMocksColumn">
+                <h3 class="dash-panel-title" style="font-size:0.9rem; margin-bottom:0.45rem;"><i class="fa-solid fa-flask"></i> Mock Tests</h3>
+                <div class="dash-list" id="recommendedMocksList"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="dash-card dash-panel dash-tasks" id="dashStudyPlanSection" data-exp-section="study-plan">
+            <div class="dash-panel-head">
+              <h2 class="dash-panel-title"><i class="fa-solid fa-list-check"></i> Today's Learning Tasks</h2>
+            </div>
+            <div class="dash-list" id="dashboardTaskList"></div>
+          </section>
+
+          <section class="dash-card dash-panel" id="dashActivitySection" data-exp-section="activity-timeline">
+            <div class="dash-panel-head">
+              <h2 class="dash-panel-title"><i class="fa-solid fa-clock-rotate-left"></i> Recent Activity</h2>
+            </div>
+            <div class="activity-timeline" id="recentActivityList"></div>
+          </section>
+        </div>
+
+        <aside class="dash-col" id="dashSideCol">
+          <section class="dash-membership">
+            <div class="membership-badges">
+              <span id="membershipPlanLabel">Free Plan</span>
+              <span id="membershipStatusLabel">Active</span>
+              <span id="dashboardSavedNotesLabel">0 saved notes</span>
+            </div>
+            <h3 id="membershipHeadline">Your learning workspace is ready</h3>
+            <p id="membershipDescription">Upgrade to premium to unlock advanced AI tools and premium career roadmaps.</p>
+            <div class="dash-membership-actions">
+              <a class="primary-link" href="pricing.html">View Plans</a>
+              <a class="secondary-link" href="study-roadmap.html">Open Roadmaps</a>
+            </div>
+          </section>
+
+          <section class="dash-ai-card" id="dashAiSuggestionsSection" data-exp-section="ai-suggestions">
+            <h3><i class="fa-solid fa-robot"></i> AI Suggestions</h3>
+            <p id="aiSuggestionText">Suggested next topic: Data Structures basics for interview readiness.</p>
+            <div class="dash-ai-actions">
+              <a class="primary-action" href="ai-tools.html#explain">Explain Topic</a>
+              <a href="ai-tools.html#quiz">Generate Quiz</a>
+              <a href="ai-tools.html#flashcards">Create Flashcards</a>
+            </div>
+          </section>
+
+          <section class="dash-card dash-panel" id="dashQuickAccessSection" data-exp-section="quick-access">
+            <div class="dash-panel-head">
+              <h2 class="dash-panel-title"><i class="fa-solid fa-bolt"></i> Quick Access</h2>
+            </div>
+            <div class="dash-quick-grid">
+              <a href="notes-library.html" class="dash-feature-card">
+                <i class="fa-solid fa-file-lines"></i>
+                <h4>Notes</h4>
+                <p>Open branch-wise notes library</p>
+              </a>
+              <a href="mock-tests.html" class="dash-feature-card">
+                <i class="fa-solid fa-flask"></i>
+                <h4>Mock Tests</h4>
+                <p>Practice timed assessments</p>
+              </a>
+              <a href="study-roadmap.html" class="dash-feature-card">
+                <i class="fa-solid fa-map-location-dot"></i>
+                <h4>Roadmap</h4>
+                <p>Track your career milestones</p>
+              </a>
+              <a href="ai-tools.html" class="dash-feature-card">
+                <i class="fa-solid fa-sparkles"></i>
+                <h4>AI Tools</h4>
+                <p>Use smart learning assistants</p>
+              </a>
+              <a href="college-feed.html" class="dash-feature-card">
+                <i class="fa-solid fa-newspaper"></i>
+                <h4>Campus Feed</h4>
+                <p>Explore college-specific updates</p>
+              </a>
+              <a href="certificates.html" class="dash-feature-card">
+                <i class="fa-solid fa-graduation-cap"></i>
+                <h4>Certificates</h4>
+                <p>View earned credentials</p>
+              </a>
+            </div>
+          </section>
+
+          <section class="dash-card dash-panel" id="dashAchievementsSection" data-exp-section="achievements">
+            <div class="dash-panel-head">
+              <h2 class="dash-panel-title"><i class="fa-solid fa-award"></i> Achievements</h2>
+            </div>
+            <div class="dash-list" id="achievementList"></div>
+          </section>
+        </aside>
+      </section>
+    </main>
+  </template>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/dashboard-config.js"></script>
+  <script src="assets/js/dashboard-inline.js"></script>
+</body>
+</html>

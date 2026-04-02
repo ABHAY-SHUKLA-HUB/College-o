@@ -1,7 +1,11 @@
 const express = require('express');
 const { pool } = require('../db/pool');
 const { requireAuth, requireAdmin, resolveMembershipState } = require('../middleware/auth');
-const { generateToolOutput } = require('../services/aiToolEngine');
+const {
+  ensureAiOpsSchema,
+  executeManagedAiToolGeneration,
+  getStudentAiRuntimeConfig
+} = require('../services/aiOpsService');
 
 const router = express.Router();
 
@@ -656,6 +660,7 @@ async function loadAiToolsForUser(userId) {
 router.use(async (_req, _res, next) => {
   try {
     await ensureCareerSchema();
+    await ensureAiOpsSchema();
     next();
   } catch (error) {
     next(error);
@@ -710,7 +715,20 @@ router.get('/roadmaps/:id', requireAuth, async (req, res) => {
 
 router.get('/ai-tools', requireAuth, async (req, res) => {
   const data = await loadAiToolsForUser(req.session.userId);
-  res.json({ tools: data.tools, featured: data.tools.filter((tool) => tool.is_featured), profile: data.profile, membership: data.membership });
+  const runtime = await getStudentAiRuntimeConfig(req.session.userId, data.membership);
+  res.json({
+    tools: data.tools,
+    featured: data.tools.filter((tool) => tool.is_featured),
+    profile: data.profile,
+    membership: data.membership,
+    aiRuntime: runtime
+  });
+});
+
+router.get('/ai-tools/runtime', requireAuth, async (req, res) => {
+  const membership = await resolveMembershipState(req.session.userId);
+  const runtime = await getStudentAiRuntimeConfig(req.session.userId, membership);
+  res.json({ aiRuntime: runtime });
 });
 
 router.post('/ai-tools/generate', requireAuth, async (req, res) => {
@@ -746,14 +764,18 @@ router.post('/ai-tools/generate', requireAuth, async (req, res) => {
     ? (await loadRoadmapsForUser(userId)).roadmaps
     : [];
 
-  const generated = generateToolOutput({
+  const generated = await executeManagedAiToolGeneration({
+    userId,
     toolKey,
+    tool,
     inputs,
     profile: toolsPayload.profile,
     membership: toolsPayload.membership,
     roadmaps,
-    tool,
-    sessionMemory: req.session.aiToolMemory || {}
+    sessionMemory: req.session.aiToolMemory || {},
+    userMeta: {
+      full_name: req.session.full_name || req.session.name || 'Student'
+    }
   });
 
   if (!generated.ok) {

@@ -72,6 +72,26 @@
       color: #fff;
     }
 
+    .ai-runtime-row {
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .ai-runtime-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.18);
+      color: #fff;
+      font-size: 12px;
+      letter-spacing: 0.02em;
+    }
+
     .ai-hero-side {
       display: grid;
       gap: 12px;
@@ -292,6 +312,87 @@
       min-height: 220px;
     }
 
+    .ai-output-meta {
+      margin-top: 10px;
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    .ai-output-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .ai-history-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .ai-history-item {
+      display: grid;
+      gap: 4px;
+      text-align: left;
+      border-radius: 12px;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      background: #fff;
+      padding: 10px;
+      cursor: pointer;
+      color: inherit;
+    }
+
+    .ai-history-item strong {
+      font-size: 13px;
+    }
+
+    .ai-history-item span {
+      font-size: 12px;
+      color: #475569;
+      line-height: 1.4;
+    }
+
+    .ai-history-item small {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    .ai-skeleton {
+      position: relative;
+      overflow: hidden;
+      border-radius: 10px;
+      background: #e2e8f0;
+    }
+
+    .ai-skeleton::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      transform: translateX(-100%);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.75), transparent);
+      animation: shimmer 1.15s infinite;
+    }
+
+    .ai-skeleton-line {
+      height: 12px;
+      margin-bottom: 10px;
+    }
+
+    .ai-skeleton-card {
+      cursor: default;
+      pointer-events: none;
+    }
+
+    .ai-output-skeleton {
+      padding: 6px 0;
+    }
+
+    @keyframes shimmer {
+      100% {
+        transform: translateX(100%);
+      }
+    }
+
     .ai-output h3 {
       margin: 0 0 8px;
       font-size: 1rem;
@@ -368,6 +469,11 @@
             <span class="ai-chip"><i class="fa-solid fa-route"></i> Roadmap-aware workflows</span>
             <span class="ai-chip"><i class="fa-solid fa-crown"></i> Premium tool controls</span>
           </div>
+          <div class="ai-runtime-row">
+            <span class="ai-runtime-pill" id="aiRuntimeCredits"><i class="fa-solid fa-bolt"></i> AI Credits Left: --</span>
+            <span class="ai-runtime-pill" id="aiRuntimeUsage"><i class="fa-solid fa-gauge-high"></i> Uses Remaining: --</span>
+            <span class="ai-runtime-pill" id="aiRuntimeProvider"><i class="fa-solid fa-shield-heart"></i> Experience: fallback-ready</span>
+          </div>
         </div>
         <div class="ai-hero-side">
           <article class="ai-glass-card">
@@ -410,6 +516,11 @@
           <button class="btn primary" id="runAiToolBtn"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate</button>
           <button class="btn secondary" id="clearAiToolBtn"><i class="fa-solid fa-rotate-left"></i> Reset</button>
         </div>
+        <div class="ai-output-actions" id="aiOutputActions" style="display:none;">
+          <button class="btn secondary" id="aiCopyBtn" type="button"><i class="fa-solid fa-copy"></i> Copy</button>
+          <button class="btn secondary" id="aiRegenerateBtn" type="button"><i class="fa-solid fa-rotate-right"></i> Regenerate</button>
+          <button class="btn secondary" id="aiSaveBtn" type="button"><i class="fa-solid fa-bookmark"></i> Save</button>
+        </div>
         <div class="ai-output" id="aiOutput">
           <div class="ai-empty">
             <div>
@@ -418,6 +529,7 @@
             </div>
           </div>
         </div>
+        <div class="ai-output-meta" id="aiOutputMeta"></div>
       </aside>
     </section>
 
@@ -428,9 +540,18 @@
       </div>
       <div class="ai-tools-grid" id="aiRecommendationGrid"></div>
     </section>
+
+    <section class="ai-section-card">
+      <div class="section-header">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        <h2>Saved AI History</h2>
+      </div>
+      <div class="ai-history-list" id="aiHistoryList"></div>
+    </section>
   </template>
   <script src="assets/js/api.js"></script>
   <script src="assets/js/app.js"></script>
+  <script src="assets/js/ai-client.js"></script>
   <script src="assets/js/ai-tools.js"></script>
 </body>
 </html>

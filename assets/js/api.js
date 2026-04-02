@@ -469,6 +469,37 @@ window.CollegeOSApi = {
   adminIntelligenceOverview: () => apiFetch('/api/admin/intelligence/overview'),
   adminIntelligenceSegments: () => apiFetch('/api/admin/intelligence/segments'),
   adminGenerateAutomatedResources: (data = {}) => apiFetch('/api/admin/intelligence/resource-automation/generate', { method: 'POST', body: JSON.stringify(data) }),
+  adminAiOpsGlobalSettings: () => apiFetch('/api/admin/ai-ops/settings/global'),
+  adminAiOpsUpdateGlobalSettings: (payload) => apiFetch('/api/admin/ai-ops/settings/global', { method: 'PUT', body: JSON.stringify(payload) }),
+  adminAiOpsTestConnection: (payload = null) => apiFetch('/api/admin/ai-ops/settings/test-connection', { method: 'POST', body: JSON.stringify(payload || {}) }),
+  adminAiOpsFeatures: () => apiFetch('/api/admin/ai-ops/features'),
+  adminAiOpsFeature: (toolKey) => apiFetch(`/api/admin/ai-ops/features/${encodeURIComponent(toolKey)}`),
+  adminAiOpsUpdateFeature: (toolKey, payload) => apiFetch(`/api/admin/ai-ops/features/${encodeURIComponent(toolKey)}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  adminAiOpsPrompt: (toolKey) => apiFetch(`/api/admin/ai-ops/prompts/${encodeURIComponent(toolKey)}`),
+  adminAiOpsUpdatePrompt: (toolKey, payload) => apiFetch(`/api/admin/ai-ops/prompts/${encodeURIComponent(toolKey)}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  adminAiOpsRestorePromptVersion: (toolKey, versionId) => apiFetch(`/api/admin/ai-ops/prompts/${encodeURIComponent(toolKey)}/restore/${encodeURIComponent(versionId)}`, { method: 'POST' }),
+  adminAiOpsSimulate: (payload) => apiFetch('/api/admin/ai-ops/simulate', { method: 'POST', body: JSON.stringify(payload) }),
+  adminAiOpsAnalyticsOverview: (days = 30) => apiFetch(`/api/admin/ai-ops/analytics/overview?days=${encodeURIComponent(days)}`),
+  adminAiOpsRequestLogs: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.toolKey) qs.set('toolKey', params.toolKey);
+    if (params.provider) qs.set('provider', params.provider);
+    if (params.failedOnly) qs.set('failedOnly', 'true');
+    if (params.limit) qs.set('limit', String(params.limit));
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch(`/api/admin/ai-ops/logs/requests${suffix}`);
+  },
+  adminAiOpsAuditLogs: (limit = 120) => apiFetch(`/api/admin/ai-ops/logs/audit?limit=${encodeURIComponent(limit)}`),
+  adminAiOpsUserCredits: (userId) => apiFetch(`/api/admin/ai-ops/credits/users/${encodeURIComponent(userId)}`),
+  adminAiOpsResetUserCredits: (userId, payload) => apiFetch(`/api/admin/ai-ops/credits/users/${encodeURIComponent(userId)}/reset`, { method: 'POST', body: JSON.stringify(payload || {}) }),
+  adminAiOpsBonusUserCredits: (userId, payload) => apiFetch(`/api/admin/ai-ops/credits/users/${encodeURIComponent(userId)}/bonus`, { method: 'POST', body: JSON.stringify(payload || {}) }),
+  adminAiOpsUpdateUserOverride: (userId, payload) => apiFetch(`/api/admin/ai-ops/credits/users/${encodeURIComponent(userId)}/override`, { method: 'PUT', body: JSON.stringify(payload || {}) }),
+  adminAiOpsBlockUser: (userId, payload) => apiFetch(`/api/admin/ai-ops/credits/users/${encodeURIComponent(userId)}/block`, { method: 'POST', body: JSON.stringify(payload || {}) }),
+  adminAiOpsPlanEntitlements: () => apiFetch('/api/admin/ai-ops/plans/entitlements'),
+  adminAiOpsUpdatePlanEntitlements: (planCode, entitlements, campaignLabel = '') => apiFetch(`/api/admin/ai-ops/plans/entitlements/${encodeURIComponent(planCode)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ entitlements, campaignLabel })
+  }),
   getProfile: () => apiFetch('/api/profile/me'),
   updateProfile: (data) => apiFetch('/api/profile/me', { method: 'PUT', body: JSON.stringify(data) }),
   changePassword: (data) => apiFetch('/api/profile/me/password', { method: 'PUT', body: JSON.stringify(data) }),
@@ -494,6 +525,7 @@ window.CollegeOSApi = {
   getCareerRoadmaps: () => apiFetch('/api/career/roadmaps'),
   getCareerRoadmap: (id) => apiFetch(`/api/career/roadmaps/${id}`),
   getAiToolsCatalog: () => apiFetch('/api/career/ai-tools'),
+  getAiToolRuntime: () => apiFetch('/api/career/ai-tools/runtime'),
   generateAiToolOutput: (toolKey, inputs = {}) => apiFetch('/api/career/ai-tools/generate', {
     method: 'POST',
     body: JSON.stringify({ toolKey, inputs })

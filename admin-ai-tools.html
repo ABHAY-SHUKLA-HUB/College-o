@@ -3,47 +3,198 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin - AI Tools</title>
+  <title>Admin - AI Tools Studio</title>
   <script src="assets/js/theme-init.js"></script>
   <link rel="stylesheet" href="assets/css/styles.css" />
   <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
   <style>
-    .co-admin-page-block {
-      display: grid;
-      gap: 18px;
+    :root {
+      --ai-admin-ink: #0f172a;
+      --ai-admin-slate: #334155;
+      --ai-admin-soft: #e2e8f0;
+      --ai-admin-mint: #0f766e;
+      --ai-admin-mint-soft: rgba(15, 118, 110, 0.12);
+      --ai-admin-sky-soft: rgba(2, 132, 199, 0.14);
     }
-
+    .ai-ops-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 16px;
+    }
     .co-admin-tool-grid {
       display: grid;
       grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
       gap: 18px;
       align-items: start;
     }
-
-    .co-admin-showcase-grid {
+    .ai-ops-two {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 16px;
     }
-
-    .co-admin-showcase-card {
-      border-radius: 22px;
-      border: 1px solid rgba(15, 23, 42, 0.08);
-      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
-      box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
-      padding: 18px;
+    .ai-ops-three {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
     }
-
-    .co-admin-showcase-top {
+    .ai-ops-pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 12px;
+      border-radius: 12px;
+      overflow: auto;
+      max-height: 320px;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .co-admin-table-wrap {
+      overflow: auto;
+    }
+    .co-admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .co-admin-table th,
+    .co-admin-table td {
+      border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+      text-align: left;
+      padding: 9px;
+      vertical-align: top;
+      white-space: nowrap;
+    }
+    .ai-admin-command-bar {
       display: flex;
+      align-items: center;
       justify-content: space-between;
-      align-items: flex-start;
       gap: 12px;
+      background: linear-gradient(140deg, #ffffff 0%, #ecfeff 52%, #f8fafc 100%);
+      border: 1px solid rgba(15, 118, 110, 0.16);
+      border-radius: 14px;
+      padding: 12px 14px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+    }
+    .ai-admin-command-info h3 {
+      margin: 0;
+      color: var(--ai-admin-ink);
+      font-size: 15px;
+    }
+    .ai-admin-command-info p {
+      margin: 4px 0 0;
+      color: var(--ai-admin-slate);
+      font-size: 12px;
+    }
+    .ai-admin-command-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .ai-admin-pills {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .ai-admin-pill {
+      border-radius: 12px;
+      padding: 10px 12px;
+      border: 1px solid transparent;
+      background: var(--ai-admin-soft);
+    }
+    .ai-admin-pill .label {
+      display: block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #475569;
+      margin-bottom: 4px;
+    }
+    .ai-admin-pill .value {
+      font-weight: 700;
+      color: #0f172a;
+      font-size: 14px;
+    }
+    .ai-admin-pill.ok {
+      background: var(--ai-admin-mint-soft);
+      border-color: rgba(15, 118, 110, 0.25);
+    }
+    .ai-admin-pill.warn {
+      background: var(--ai-admin-sky-soft);
+      border-color: rgba(2, 132, 199, 0.24);
+    }
+    .ai-admin-section-nav {
+      position: sticky;
+      top: 8px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      background: rgba(248, 250, 252, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 12px;
+      padding: 10px;
+      backdrop-filter: blur(6px);
+    }
+    .ai-admin-section-link {
+      border: 1px solid rgba(15, 23, 42, 0.1);
+      background: #fff;
+      color: #334155;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .ai-admin-section-link.active {
+      background: #0f766e;
+      border-color: #0f766e;
+      color: #fff;
+      box-shadow: 0 8px 20px rgba(15, 118, 110, 0.25);
+    }
+    .ai-admin-section {
+      scroll-margin-top: 74px;
+    }
+    .co-admin-panel {
+      transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+    .co-admin-panel:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+    }
+    .ai-catalog-toolbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) minmax(130px, 170px) minmax(130px, 170px) auto;
+      gap: 10px;
       margin-bottom: 12px;
     }
-
-    @media (max-width: 1100px) {
-      .co-admin-tool-grid {
+    .ai-catalog-toolbar .co-admin-field {
+      margin-bottom: 0;
+    }
+    .ai-catalog-meta {
+      color: #64748b;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+    @media (max-width: 1200px) {
+      .co-admin-tool-grid,
+      .ai-ops-two,
+      .ai-ops-three {
+        grid-template-columns: 1fr;
+      }
+      .ai-admin-pills {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .ai-catalog-toolbar {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    @media (max-width: 760px) {
+      .ai-admin-command-bar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .ai-admin-pills,
+      .ai-catalog-toolbar {
         grid-template-columns: 1fr;
       }
     }
@@ -56,7 +207,7 @@
         <span class="co-admin-brand-mark"><i class="fa-solid fa-shield-halved"></i></span>
         <div>
           <h1>College OS Admin</h1>
-          <p>Configure AI study assistants, premium tooling, and branch-targeted learning accelerators.</p>
+          <p>AI provider control, prompts, feature policies, credits, plans, and analytics.</p>
         </div>
       </div>
       <section class="co-admin-nav-section">
@@ -71,47 +222,63 @@
           <a class="co-admin-nav-link" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i><span>Materials</span></a>
           <a class="co-admin-nav-link" href="admin-quizzes.html"><i class="fa-solid fa-clipboard-question"></i><span>Quizzes</span></a>
           <a class="co-admin-nav-link" href="admin-certificates.html"><i class="fa-solid fa-graduation-cap"></i><span>Certificates</span></a>
+          <a class="co-admin-nav-link active" href="admin-ai-tools.html"><i class="fa-solid fa-sparkles"></i><span>AI Tools Studio</span></a>
           <a class="co-admin-nav-link" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Roadmaps</span></a>
           <a class="co-admin-nav-link" href="admin-mock-tests.html"><i class="fa-solid fa-flask-vial"></i><span>Mock Test Studio</span></a>
-          <a class="co-admin-nav-link active" href="admin-ai-tools.html"><i class="fa-solid fa-sparkles"></i><span>AI Tools</span></a>
           <a class="co-admin-nav-link" href="admin-campus-feed.html"><i class="fa-solid fa-newspaper"></i><span>Campus Feed</span></a>
         </nav>
       </section>
     </aside>
 
-    <main class="co-admin-main co-admin-page-block">
+    <main class="co-admin-main ai-ops-grid">
       <header class="co-admin-topbar">
         <div class="co-admin-topbar-title">
-          <h2>AI Tools Studio</h2>
-          <p>Manage which AI tools students can see, who gets access, and how each tool is positioned inside the portal.</p>
-        </div>
-        <div class="co-admin-topbar-actions">
-          <a class="co-admin-chip" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Manage Roadmaps</span></a>
-          <a class="co-admin-chip" href="admin-dashboard.html"><i class="fa-solid fa-arrow-left"></i><span>Back to Dashboard</span></a>
+          <h2>AI Tools Studio + Ops Control</h2>
+          <p>Production-grade control for provider routing, fallback safety, prompt lifecycle, credits, plan entitlements, and operational analytics.</p>
         </div>
       </header>
 
       <section class="co-admin-hero">
         <div class="co-admin-hero-grid">
           <div>
-            <div class="co-admin-hero-tags">
-              <span class="co-admin-chip-soft"><i class="fa-solid fa-wand-magic-sparkles"></i><span>AI workbench control</span></span>
-              <span class="co-admin-chip-soft"><i class="fa-solid fa-user-lock"></i><span>Membership-aware access</span></span>
-              <span class="co-admin-chip-soft"><i class="fa-solid fa-building-columns"></i><span>Academic targeting</span></span>
-            </div>
-            <h1>AI learning products management</h1>
-            <p>Publish high-value study assistants such as Notes Summary, Quiz Generator, Flashcards, Resume Builder, Career Suggestion, and Roadmap Recommender with clean access governance.</p>
+            <h1>No hardcoded AI limits in code</h1>
+            <p>Configure all AI behavior from admin. Azure unavailable or disabled still keeps student tools functional through structured fallback paths.</p>
           </div>
-          <div class="kpi-grid" id="aiToolMetrics"></div>
+          <div id="aiAnalyticsSummary" class="kpi-grid"></div>
         </div>
       </section>
 
-      <section class="co-admin-tool-grid">
+      <section class="ai-admin-command-bar">
+        <div class="ai-admin-command-info">
+          <h3>AI Command Center</h3>
+          <p>Use quick controls to refresh telemetry, jump to sections, and monitor platform health.</p>
+        </div>
+        <div class="ai-admin-command-actions">
+          <button class="btn secondary" type="button" id="aiOpsRefreshBtn"><i class="fa-solid fa-rotate"></i> Refresh Data</button>
+          <button class="btn secondary" type="button" id="aiOpsJumpBuilderBtn"><i class="fa-solid fa-wand-magic-sparkles"></i> Open Tool Builder</button>
+          <button class="btn secondary" type="button" id="aiOpsJumpLogsBtn"><i class="fa-solid fa-scroll"></i> View Logs</button>
+        </div>
+      </section>
+
+      <section id="aiOpsHealthPills" class="ai-admin-pills"></section>
+
+      <section class="ai-admin-section-nav" id="aiAdminSectionNav">
+        <button class="ai-admin-section-link active" type="button" data-section-target="aiToolsSection">Tool Studio</button>
+        <button class="ai-admin-section-link" type="button" data-section-target="aiProviderSection">Provider</button>
+        <button class="ai-admin-section-link" type="button" data-section-target="aiPromptsSection">Prompts</button>
+        <button class="ai-admin-section-link" type="button" data-section-target="aiGovernanceSection">Governance</button>
+        <button class="ai-admin-section-link" type="button" data-section-target="aiAnalyticsSection">Analytics</button>
+        <button class="ai-admin-section-link" type="button" data-section-target="aiAuditSection">Audit</button>
+      </section>
+
+      <p id="aiOpsStatus" class="muted"></p>
+
+      <section class="co-admin-tool-grid ai-admin-section" id="aiToolsSection">
         <section class="co-admin-panel">
           <div class="co-admin-section-head">
             <div>
               <h3>AI Tool Builder</h3>
-              <p>Set messaging, targeting, membership access, and default prompt behavior for each student-facing AI tool.</p>
+              <p>Create/update student-facing AI tool cards with access, targeting, and positioning controls.</p>
             </div>
           </div>
           <form id="aiToolAdminForm" class="co-admin-form">
@@ -146,12 +313,207 @@
           <div class="co-admin-section-head">
             <div>
               <h3>AI Tools Catalog</h3>
-              <p>See all configured tools, edit them, or quickly enable and disable access.</p>
+              <p>Edit, enable/disable, and archive tools from one place.</p>
             </div>
           </div>
+          <div class="ai-catalog-toolbar">
+            <div class="co-admin-field">
+              <label>Search tool</label>
+              <input id="aiToolSearchInput" type="search" placeholder="Search by title, key, category" />
+            </div>
+            <div class="co-admin-field">
+              <label>Access filter</label>
+              <select id="aiToolAccessFilter"><option value="all">All</option><option value="free">Free</option><option value="premium">Premium</option></select>
+            </div>
+            <div class="co-admin-field">
+              <label>Status filter</label>
+              <select id="aiToolStatusFilter"><option value="all">All</option><option value="published">Published</option><option value="disabled">Disabled</option><option value="hidden">Hidden</option></select>
+            </div>
+            <div class="co-admin-field" style="display:flex; align-items:flex-end;">
+              <button class="btn secondary" type="button" id="aiToolFilterResetBtn">Reset Filters</button>
+            </div>
+          </div>
+          <p id="aiToolCatalogMeta" class="ai-catalog-meta"></p>
           <div class="co-admin-showcase-grid" id="aiToolAdminGrid"></div>
         </section>
       </section>
+
+      <section class="ai-ops-two ai-admin-section" id="aiProviderSection">
+        <article class="co-admin-panel">
+          <div class="co-admin-section-head">
+            <div>
+              <h3>Global Provider Control</h3>
+              <p>Enable/disable AI globally, choose provider mode, and manage Azure OpenAI credentials with masked key behavior.</p>
+            </div>
+          </div>
+          <form id="aiGlobalSettingsForm" class="co-admin-form">
+            <div class="co-admin-form-grid">
+              <div class="co-admin-field">
+                <label>AI Enabled</label>
+                <select name="aiEnabled"><option value="true">Enabled</option><option value="false">Disabled</option></select>
+              </div>
+              <div class="co-admin-field">
+                <label>Provider Mode</label>
+                <select name="providerMode"><option value="azure_openai">azure_openai</option><option value="fallback_only">fallback_only</option></select>
+              </div>
+              <div class="co-admin-field full"><label>Azure Endpoint</label><input name="azureEndpoint" placeholder="https://<resource>.openai.azure.com" /></div>
+              <div class="co-admin-field full"><label>Azure API Key (masked on load)</label><input name="azureApiKey" type="password" autocomplete="new-password" spellcheck="false" placeholder="Paste new key only when rotating" /></div>
+              <div class="co-admin-field"><label>Deployment / Model Name</label><input name="azureDeployment" placeholder="gpt-4o-mini" /></div>
+              <div class="co-admin-field"><label>API Version</label><input name="azureApiVersion" placeholder="2024-02-15-preview" /></div>
+            </div>
+            <div class="control-actions" style="margin-top: 10px;">
+              <button class="btn primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Save Global Settings</button>
+              <button class="btn secondary" type="button" id="aiConnectionTestBtn"><i class="fa-solid fa-plug-circle-check"></i> Test Connection</button>
+            </div>
+            <p id="aiConnectionTestStatus" class="muted"></p>
+          </form>
+        </article>
+
+        <article class="co-admin-panel">
+          <div class="co-admin-section-head">
+            <div>
+              <h3>Feature Policy Control</h3>
+              <p>Control access, costs, limits, quality settings, provider preference, retries, and maintenance mode per AI feature.</p>
+            </div>
+          </div>
+          <div class="co-admin-field" style="margin-bottom:12px;">
+            <label>Feature Tool Key</label>
+            <select id="aiFeatureToolKey"></select>
+          </div>
+          <form id="aiFeatureForm" class="co-admin-form">
+            <div class="co-admin-form-grid">
+              <div class="co-admin-field"><label>Feature Enabled</label><select name="featureEnabled"><option value="true">Enabled</option><option value="false">Disabled</option></select></div>
+              <div class="co-admin-field"><label>Maintenance Mode</label><select name="maintenanceMode"><option value="false">Off</option><option value="true">On</option></select></div>
+              <div class="co-admin-field"><label>Plan Access</label><select name="planAccess"><option value="free">free</option><option value="premium">premium</option><option value="custom">custom</option></select></div>
+              <div class="co-admin-field"><label>Free Tool?</label><select name="isFree"><option value="true">Yes</option><option value="false">No</option></select></div>
+              <div class="co-admin-field"><label>Monthly Credit Cost / use</label><input type="number" name="monthlyCreditCost" min="0" /></div>
+              <div class="co-admin-field"><label>Per Request Message Cost</label><input type="number" step="0.0001" name="perRequestMessageCost" min="0" /></div>
+              <div class="co-admin-field"><label>Daily Usage Limit</label><input type="number" name="dailyUsageLimit" min="1" /></div>
+              <div class="co-admin-field"><label>Monthly Usage Limit</label><input type="number" name="monthlyUsageLimit" min="1" /></div>
+              <div class="co-admin-field"><label>Max Output Tokens</label><input type="number" name="maxOutputTokens" min="50" /></div>
+              <div class="co-admin-field"><label>Response Mode</label><select name="responseMode"><option value="short">short</option><option value="medium">medium</option><option value="detailed">detailed</option></select></div>
+              <div class="co-admin-field"><label>Temperature</label><input type="number" name="temperature" min="0" max="1.2" step="0.05" /></div>
+              <div class="co-admin-field"><label>Timeout (ms)</label><input type="number" name="timeoutMs" min="1500" /></div>
+              <div class="co-admin-field"><label>Retry Count</label><input type="number" name="retryCount" min="0" max="5" /></div>
+              <div class="co-admin-field"><label>Provider Preference</label><select name="providerPreference"><option value="azure_openai">azure_openai</option><option value="fallback_only">fallback_only</option></select></div>
+              <div class="co-admin-field"><label>Allow Azure</label><select name="allowAzure"><option value="true">Yes</option><option value="false">No</option></select></div>
+              <div class="co-admin-field full"><label>Admin Notes</label><textarea name="adminNotes" rows="3"></textarea></div>
+            </div>
+            <div class="control-actions" style="margin-top: 10px;">
+              <button class="btn primary" type="submit">Save Feature Settings</button>
+            </div>
+          </form>
+        </article>
+      </section>
+
+      <section class="ai-ops-two ai-admin-section" id="aiPromptsSection">
+        <article class="co-admin-panel">
+          <div class="co-admin-section-head">
+            <div>
+              <h3>Prompt Management</h3>
+              <p>System prompt, user template with placeholders, fallback instructions, style rules, tone, and version restore flow.</p>
+            </div>
+          </div>
+          <form id="aiPromptForm" class="co-admin-form">
+            <div class="co-admin-form-grid">
+              <div class="co-admin-field full"><label>System Prompt</label><textarea name="systemPrompt" rows="4"></textarea></div>
+              <div class="co-admin-field full"><label>User Prompt Template</label><textarea name="userPromptTemplate" rows="4"></textarea></div>
+              <div class="co-admin-field full"><label>Fallback Prompt / Instructions</label><textarea name="fallbackPrompt" rows="3"></textarea></div>
+              <div class="co-admin-field full"><label>Output Style Rules</label><textarea name="outputStyleRules" rows="3"></textarea></div>
+              <div class="co-admin-field"><label>Tone</label><select name="tone"><option value="exam-oriented">exam-oriented</option><option value="beginner-friendly">beginner-friendly</option><option value="professional">professional</option><option value="hinglish">Hinglish</option><option value="concise">concise</option></select></div>
+            </div>
+            <div class="control-actions" style="margin-top: 10px;">
+              <button class="btn primary" type="submit">Save Prompt</button>
+              <button class="btn secondary" type="button" id="aiPromptTestBtn">Test Prompt</button>
+            </div>
+          </form>
+          <h4 style="margin-top: 12px;">Prompt Version History</h4>
+          <div id="aiPromptVersionList" class="control-actions"></div>
+        </article>
+
+        <article class="co-admin-panel">
+          <div class="co-admin-section-head">
+            <div>
+              <h3>Prompt Test Output</h3>
+              <p>Preview rendered placeholders and fallback simulation before publishing.</p>
+            </div>
+          </div>
+          <pre id="aiPromptTestOutput" class="ai-ops-pre">Run a prompt test to preview output.</pre>
+        </article>
+      </section>
+
+      <section class="ai-ops-two ai-admin-section" id="aiGovernanceSection">
+        <article class="co-admin-panel">
+          <div class="co-admin-section-head">
+            <div>
+              <h3>Credits, Overrides, Abuse Controls</h3>
+              <p>Reset credits, apply bonus, override usage limits, and block abuse users without exposing raw token details to students.</p>
+            </div>
+          </div>
+          <form id="aiWalletForm" class="co-admin-form">
+            <div class="co-admin-form-grid">
+              <div class="co-admin-field"><label>User ID</label><input name="userId" type="number" min="1" required /></div>
+              <div class="co-admin-field"><label>Action</label><select name="walletAction"><option value="lookup">Lookup</option><option value="reset">Reset Credits</option><option value="bonus">Add/Deduct Bonus</option><option value="override">Usage Override</option><option value="block">Block/Unblock Abuse</option></select></div>
+              <div class="co-admin-field"><label>Reset To</label><input name="resetTo" type="number" value="120" /></div>
+              <div class="co-admin-field"><label>Free Trial Credits</label><input name="freeTrialCredits" type="number" value="50" /></div>
+              <div class="co-admin-field"><label>Monthly Plan Credits</label><input name="monthlyPlanCredits" type="number" value="120" /></div>
+              <div class="co-admin-field"><label>Bonus Credits (+/-)</label><input name="bonusCredits" type="number" value="0" /></div>
+              <div class="co-admin-field"><label>Daily Limit Override</label><input name="dailyLimitOverride" type="number" value="0" /></div>
+              <div class="co-admin-field"><label>Monthly Limit Override</label><input name="monthlyLimitOverride" type="number" value="0" /></div>
+              <div class="co-admin-field"><label>Hidden Token Mode</label><select name="hiddenTokenMode"><option value="true">true</option><option value="false">false</option></select></div>
+              <div class="co-admin-field"><label>Visible Credits Left</label><select name="visibleCreditsLeft"><option value="true">true</option><option value="false">false</option></select></div>
+              <div class="co-admin-field"><label>Blocked</label><select name="blocked"><option value="false">false</option><option value="true">true</option></select></div>
+              <div class="co-admin-field full"><label>Note / Block Reason</label><textarea name="note" rows="2"></textarea><textarea name="blockReason" rows="2" placeholder="reason for block"></textarea></div>
+            </div>
+            <div class="control-actions" style="margin-top: 10px;">
+              <button class="btn primary" type="submit">Run Wallet Action</button>
+            </div>
+          </form>
+          <pre id="aiWalletOutput" class="ai-ops-pre">Wallet output will appear here.</pre>
+        </article>
+
+        <article class="co-admin-panel">
+          <div class="co-admin-section-head">
+            <div>
+              <h3>Plan Entitlements</h3>
+              <p>Map free and INR 49 plans to tool unlocks, monthly credits, and launch-campaign controls.</p>
+            </div>
+          </div>
+          <div id="aiPlanEditorWrap"></div>
+        </article>
+      </section>
+
+      <section class="ai-ops-three ai-admin-section" id="aiAnalyticsSection">
+        <article class="co-admin-panel co-admin-table-wrap">
+          <h3>Feature Usage</h3>
+          <table class="co-admin-table"><thead><tr><th>Tool</th><th>Uses</th><th>Failures</th><th>Credits</th></tr></thead><tbody id="aiFeatureUsageRows"></tbody></table>
+        </article>
+        <article class="co-admin-panel co-admin-table-wrap">
+          <h3>Provider Health</h3>
+          <table class="co-admin-table"><thead><tr><th>Provider</th><th>Requests</th><th>Success</th><th>Failures</th></tr></thead><tbody id="aiProviderUsageRows"></tbody></table>
+        </article>
+        <article class="co-admin-panel co-admin-table-wrap">
+          <h3>Top Users</h3>
+          <table class="co-admin-table"><thead><tr><th>User</th><th>Requests</th><th>Credits</th></tr></thead><tbody id="aiTopUsersRows"></tbody></table>
+        </article>
+      </section>
+
+      <section class="ai-ops-two">
+        <article class="co-admin-panel co-admin-table-wrap">
+          <h3>Suspicious Behavior</h3>
+          <table class="co-admin-table"><thead><tr><th>User</th><th>Requests</th><th>Failures</th><th>Credits</th></tr></thead><tbody id="aiSuspiciousUsersRows"></tbody></table>
+        </article>
+        <article class="co-admin-panel co-admin-table-wrap">
+          <h3>Request Logs</h3>
+          <table class="co-admin-table"><thead><tr><th>ID</th><th>Tool</th><th>Provider</th><th>Success</th><th>Error</th><th>Ms</th><th>Credits</th><th>At</th></tr></thead><tbody id="aiRequestLogsRows"></tbody></table>
+        </article>
+      </section>
+
+      <section class="co-admin-panel co-admin-table-wrap ai-admin-section" id="aiAuditSection">
+        <h3>Admin Audit Logs</h3>
+        <table class="co-admin-table"><thead><tr><th>ID</th><th>Actor</th><th>Action</th><th>Target Type</th><th>Target Key</th><th>At</th></tr></thead><tbody id="aiAuditLogsRows"></tbody></table>
+      </section>
+
     </main>
   </div>
 

@@ -6,6 +6,39 @@
 const fs = require('fs');
 const path = require('path');
 
+const SECRET_KEY_PATTERN = /(api[-_]?key|secret|token|password|authorization)/i;
+
+function redactSensitiveValue(value) {
+  const text = String(value || '');
+  if (!text) return text;
+  if (text.length <= 8) return '***';
+  return `${text.slice(0, 2)}${'*'.repeat(Math.max(4, text.length - 6))}${text.slice(-4)}`;
+}
+
+function sanitizeForLog(value, depth = 0) {
+  if (value == null) return value;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return value;
+  if (depth > 6) return '[Redacted]';
+
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeForLog(item, depth + 1));
+  }
+
+  if (typeof value === 'object') {
+    return Object.entries(value).reduce((acc, [key, entry]) => {
+      if (SECRET_KEY_PATTERN.test(key)) {
+        acc[key] = redactSensitiveValue(entry);
+      } else {
+        acc[key] = sanitizeForLog(entry, depth + 1);
+      }
+      return acc;
+    }, {});
+  }
+
+  return value;
+}
+
 class Logger {
   constructor(serviceName = 'college-os', options = {}) {
     this.serviceName = serviceName;
@@ -61,7 +94,7 @@ class Logger {
       service: this.serviceName,
       level: level.toUpperCase(),
       message,
-      ...context,
+      ...sanitizeForLog(context),
       pid: process.pid
     };
 

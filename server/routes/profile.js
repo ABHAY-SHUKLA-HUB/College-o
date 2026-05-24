@@ -5,15 +5,22 @@ const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
+let profileColumnsPromise = null;
+
 async function ensureProfileColumns() {
-  await pool.query('ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS course_branch VARCHAR(120)');
-  await pool.query('ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS semester VARCHAR(40)');
-  await pool.query('ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT');
+  if (!profileColumnsPromise) {
+    profileColumnsPromise = Promise.all([
+      pool.query('ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS course_branch VARCHAR(120)'),
+      pool.query('ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS semester VARCHAR(40)'),
+      pool.query('ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT')
+    ]);
+  }
+
+  return profileColumnsPromise;
 }
 
 router.get('/me', requireAuth, async (req, res) => {
   const userId = req.session.userId;
-  await ensureProfileColumns();
   const [
     userResult,
     certResult,
@@ -164,7 +171,6 @@ router.get('/me', requireAuth, async (req, res) => {
 
 router.put('/me', requireAuth, async (req, res) => {
   const userId = req.session.userId;
-  await ensureProfileColumns();
   const {
     fullName,
     collegeName,
@@ -218,3 +224,4 @@ router.put('/me/password', requireAuth, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.ensureProfileColumns = ensureProfileColumns;

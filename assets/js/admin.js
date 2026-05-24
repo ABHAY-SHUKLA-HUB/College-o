@@ -13,6 +13,58 @@ function formatCurrency(value) {
   return `Rs.${Number(value || 0).toLocaleString('en-IN')}`;
 }
 
+function formatPercent(value) {
+  return `${Number(value || 0).toFixed(0)}%`;
+}
+
+function renderAiOpsChart(aiAnalytics = {}) {
+  if (!window.Chart) return;
+
+  const rootStyles = window.getComputedStyle(document.documentElement);
+  const isDark = document.documentElement.dataset.themeMode === 'dark';
+  const gridColor = rootStyles.getPropertyValue('--ds-chart-grid').trim() || (isDark ? 'rgba(148,163,184,0.22)' : 'rgba(16,34,51,0.08)');
+  const axisColor = rootStyles.getPropertyValue('--ds-chart-axis').trim() || (isDark ? '#c7d3e5' : '#475569');
+  const seriesOne = rootStyles.getPropertyValue('--ds-chart-series-1').trim() || (isDark ? '#2dd4bf' : '#0f766e');
+  const seriesThree = rootStyles.getPropertyValue('--ds-chart-series-3').trim() || (isDark ? '#c084fc' : '#8c2ad8');
+  const labelText = isDark ? '#d8e4f5' : '#364152';
+  const aiLabels = (aiAnalytics?.trend || []).map((x) => x.day || 'Day');
+  const aiRequests = (aiAnalytics?.trend || []).map((x) => Number(x.requests || 0));
+  const aiSuccess = (aiAnalytics?.trend || []).map((x) => Number(x.successful_requests || x.requests || 0));
+
+  const aiOpsCanvas = byId('chartAiOps');
+  if (!aiOpsCanvas) return;
+
+  adminCharts.aiOps?.destroy();
+  adminCharts.aiOps = new Chart(aiOpsCanvas, {
+    type: 'bar',
+    data: {
+      labels: aiLabels,
+      datasets: [
+        {
+          label: 'AI Requests',
+          data: aiRequests,
+          backgroundColor: seriesOne,
+          borderRadius: 10
+        },
+        {
+          label: 'Successful Requests',
+          data: aiSuccess,
+          backgroundColor: seriesThree,
+          borderRadius: 10
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { color: labelText } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: axisColor } },
+        y: { beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor } }
+      }
+    }
+  });
+}
+
 function renderStudents(rows) {
   const body = byId('adminStudentsBody');
   if (!body) return;
@@ -139,7 +191,7 @@ function renderMembershipPayments(rows) {
   });
 }
 
-function renderCharts(trends) {
+function renderCharts(trends, analytics = {}) {
   if (!window.Chart) return;
 
   const rootStyles = window.getComputedStyle(document.documentElement);
@@ -158,6 +210,12 @@ function renderCharts(trends) {
   const revenueAmounts = trends.revenueTrend.map((x) => Number(x.amount));
   const collegeLabels = trends.collegeDistribution.map((x) => x.college_name || 'Unknown');
   const collegeCounts = trends.collegeDistribution.map((x) => Number(x.students));
+  const engagementLabels = (trends.quizTrend || []).map((x) => x.day);
+  const quizAttempts = (trends.quizTrend || []).map((x) => Number(x.attempts));
+  const avgScores = (trends.quizTrend || []).map((x) => Number(x.avg_score || 0));
+  const liveLabels = (trends.liveSessionTrend || []).map((x) => x.day);
+  const liveCounts = (trends.liveSessionTrend || []).map((x) => Number(x.live_sessions || 0));
+  const liveParticipants = (trends.liveSessionTrend || []).map((x) => Number(x.participant_total || 0));
 
   const signupCanvas = byId('chartSignups');
   if (signupCanvas) {
@@ -238,6 +296,80 @@ function renderCharts(trends) {
       }
     });
   }
+
+  const engagementCanvas = byId('chartEngagement');
+  if (engagementCanvas) {
+    adminCharts.engagement?.destroy();
+    adminCharts.engagement = new Chart(engagementCanvas, {
+      type: 'line',
+      data: {
+        labels: engagementLabels,
+        datasets: [
+          {
+            label: 'Quiz Attempts',
+            data: quizAttempts,
+            borderColor: seriesThree,
+            backgroundColor: isDark ? 'rgba(192,132,252,0.16)' : 'rgba(140,42,216,0.14)',
+            fill: true,
+            tension: 0.35,
+            pointRadius: 3
+          },
+          {
+            label: 'Average Score',
+            data: avgScores,
+            borderColor: seriesOne,
+            backgroundColor: 'transparent',
+            fill: false,
+            tension: 0.25,
+            pointRadius: 2
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom', labels: { color: labelText } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: axisColor } },
+          y: { beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor } }
+        }
+      }
+    });
+  }
+
+  const liveSessionsCanvas = byId('chartLiveSessions');
+  if (liveSessionsCanvas) {
+    adminCharts.liveSessions?.destroy();
+    adminCharts.liveSessions = new Chart(liveSessionsCanvas, {
+      type: 'bar',
+      data: {
+        labels: liveLabels,
+        datasets: [
+          {
+            label: 'Live Sessions',
+            data: liveCounts,
+            backgroundColor: seriesTwo,
+            borderRadius: 10
+          },
+          {
+            label: 'Participants',
+            data: liveParticipants,
+            backgroundColor: seriesFour,
+            borderRadius: 10
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom', labels: { color: labelText } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: axisColor } },
+          y: { beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor } }
+        }
+      }
+    });
+  }
+
+  renderAiOpsChart({ trend: trends.aiUsageTrend || [] });
 }
 
 function renderActivityFeed({ students = [], feedback = [], trends = null } = {}) {
@@ -257,6 +389,13 @@ function renderActivityFeed({ students = [], feedback = [], trends = null } = {}
       tone: 'info'
     },
     {
+      kicker: 'Live session signal',
+      title: `${Number(trends?.liveActiveUsers || 0).toLocaleString('en-IN')} users currently active in live sessions`,
+      body: 'This number is derived from live presence data and gives the team a real-time operating view.',
+      status: 'Online',
+      tone: Number(trends?.liveActiveUsers || 0) > 0 ? 'ok' : 'info'
+    },
+    {
       kicker: 'Top learner snapshot',
       title: topStudent ? `${topStudent.full_name} leads with ${Number(topStudent.xp || 0).toLocaleString('en-IN')} XP` : 'Student leaderboard insight will appear here',
       body: topStudent ? `${topStudent.college_name || 'Unknown college'} | ${Number(topStudent.quizzes_attempted || 0)} quizzes attempted` : 'Once student activity increases, this panel highlights standout performance.',
@@ -269,6 +408,13 @@ function renderActivityFeed({ students = [], feedback = [], trends = null } = {}
       body: latestFeedback ? latestFeedback.message : 'New feedback items will surface here for fast admin response.',
       status: latestFeedback ? `${latestFeedback.rating}/5` : 'Clear',
       tone: latestFeedback ? 'warn' : 'ok'
+    },
+    {
+      kicker: 'Host leaderboard',
+      title: Array.isArray(trends?.hostLeaderboard) && trends.hostLeaderboard.length ? `${trends.hostLeaderboard[0].host_name} is leading live sessions` : 'No host leaderboard data yet',
+      body: Array.isArray(trends?.hostLeaderboard) && trends.hostLeaderboard.length ? `${Number(trends.hostLeaderboard[0].sessions || 0)} sessions · ${Number(trends.hostLeaderboard[0].participants || 0)} participants` : 'Host activity will appear after sessions are scheduled and attended.',
+      status: Array.isArray(trends?.hostLeaderboard) && trends.hostLeaderboard.length ? 'Tracked' : 'Idle',
+      tone: Array.isArray(trends?.hostLeaderboard) && trends.hostLeaderboard.length ? 'info' : 'ok'
     }
   ];
 
@@ -312,6 +458,15 @@ async function loadAdminIntelligence() {
     window.CollegeOSApi.adminIntelligenceSegments()
   ]);
 
+  let aiAnalytics = null;
+  if (window.CollegeOSApi?.adminAiOpsAnalyticsOverview) {
+    try {
+      aiAnalytics = await window.CollegeOSApi.adminAiOpsAnalyticsOverview(30);
+    } catch {
+      aiAnalytics = null;
+    }
+  }
+
   const aiRuns = Number(overview?.aiOperations?.ai_runs_30d || 0);
   const aiTokens = Number(overview?.aiOperations?.ai_tokens_30d || 0);
   const paymentPending = Number(overview?.monetization?.payment_pending || 0);
@@ -323,6 +478,13 @@ async function loadAdminIntelligence() {
   setText('adminConversionDesc', `${paymentPending.toLocaleString('en-IN')} payment requests are pending. Prioritize high-intent premium conversions.`);
   setText('adminRetentionTitle', 'Retention Risk');
   setText('adminRetentionDesc', `${atRisk.toLocaleString('en-IN')} learners are currently at re-engagement risk.`);
+
+  if (aiAnalytics?.totals) {
+    setText('adminAiOpsStatus', `${Number(aiAnalytics.totals.totalRequests || 0).toLocaleString('en-IN')} AI runs monitored`);
+    setText('adminAiOpsTitle', `AI Operations (${Number(aiAnalytics.totals.totalRequests || 0).toLocaleString('en-IN')} runs/30d)`);
+    setText('adminAiOpsDesc', `Average response ${Number(aiAnalytics.totals.avgResponseMs || 0).toFixed(0)}ms, premium impact ${Number(aiAnalytics.totals.premiumConversionImpactPercent || 0)}%.`);
+    renderAiOpsChart({ trend: aiAnalytics.trend || [] });
+  }
 
   renderIntelligenceSegments(segmentPayload?.segments || []);
 
@@ -361,6 +523,9 @@ async function loadAdminDashboard() {
   setText('kpiPendingApprovals', Number(data.pendingApprovals || 0).toLocaleString('en-IN'));
   setText('kpiExpiredUsers', Number(data.expiredUsers || 0).toLocaleString('en-IN'));
   setText('kpiMonthlyRevenue', formatCurrency(data.monthlyRevenueInr || 0));
+  setText('kpiDailyActiveUsers', Number(data.dailyActiveUsers || 0).toLocaleString('en-IN'));
+  setText('kpiLiveSessions', Number(data.liveSessions?.live_sessions || 0).toLocaleString('en-IN'));
+  setText('kpiAttendanceRate', formatPercent(data.liveSessions?.attendance_rate || 0));
   setText('adminCollegesCovered', `${Number(data.collegesCovered || 0)} campuses`);
   setText('adminPlatformStatus', 'Platform healthy');
 
@@ -371,8 +536,11 @@ async function loadAdminDashboard() {
   setText('adminRevenuePulse', `${formatCurrency(data.revenueInr || 0)} active revenue`);
   setText('adminFeedbackPulse', `${Number(data.totalFeedback || 0)} total feedback items`);
   setText('adminStudentsTrend', `${students} active student accounts`);
+  setText('adminDAUPulse', `${Number(data.dailyActiveUsers || 0)} students active today`);
+  setText('adminLiveSessionsPulse', `${Number(data.liveSessions?.live_sessions || 0)} live / ${Number(data.liveSessions?.scheduled_sessions || 0)} scheduled`);
+  setText('adminAttendancePulse', `${formatPercent(data.liveSessions?.attendance_rate || 0)} attendance rate`);
 
-  renderCharts(trends);
+  renderCharts(trends, data);
   renderActivityFeed({ trends });
 }
 

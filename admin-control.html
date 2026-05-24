@@ -163,6 +163,116 @@
       color: #0f172a;
     }
 
+    .live-hub-admin-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .live-hub-admin-card {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 255, 0.94));
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+    }
+
+    .live-hub-admin-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .live-hub-admin-grid .full {
+      grid-column: 1 / -1;
+    }
+
+    .live-hub-admin-card label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #51627a;
+    }
+
+    .live-hub-admin-card input,
+    .live-hub-admin-card select,
+    .live-hub-admin-card textarea {
+      width: 100%;
+    }
+
+    .live-hub-admin-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .live-hub-admin-type {
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #2f6fed;
+      background: rgba(47, 111, 237, 0.1);
+      border: 1px solid rgba(47, 111, 237, 0.22);
+    }
+
+    .live-hub-admin-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 4px 11px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      border: 1px solid transparent;
+    }
+
+    .live-hub-admin-status .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      display: inline-block;
+    }
+
+    .live-hub-admin-status.scheduled {
+      color: #64748b;
+      background: #f1f5f9;
+      border-color: #dbe4ef;
+    }
+
+    .live-hub-admin-status.live {
+      color: #166534;
+      background: #dcfce7;
+      border-color: #86efac;
+    }
+
+    .live-hub-admin-status.live .dot {
+      animation: livePulse 1.5s ease-out infinite;
+    }
+
+    .live-hub-admin-status.ended {
+      color: #475569;
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+
+    .live-hub-admin-inline-actions {
+      display: grid;
+      grid-template-columns: minmax(160px, 1fr) auto auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .live-hub-admin-inline-actions .btn {
+      white-space: nowrap;
+    }
+
     .drag-list {
       margin: 0;
       padding: 0;
@@ -228,6 +338,10 @@
       .toggle-grid {
         grid-template-columns: repeat(2, minmax(120px, 1fr));
       }
+
+      .live-hub-admin-inline-actions {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -246,6 +360,7 @@
         <nav class="co-admin-nav">
           <a class="co-admin-nav-link" href="admin-dashboard.html"><i class="fa-solid fa-chart-pie"></i><span>Overview</span></a>
           <a class="co-admin-nav-link active" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control System</span></a>
+          <a class="co-admin-nav-link" href="admin-control.html#live-session-control"><i class="fa-solid fa-tower-broadcast"></i><span>Live Session Control</span></a>
           <a class="co-admin-nav-link" href="admin-academics.html#contributions"><i class="fa-solid fa-upload"></i><span>Contribution Control</span></a>
           <a class="co-admin-nav-link" href="admin-support-governance.html"><i class="fa-solid fa-shield-halved"></i><span>Support Governance</span></a>
           <a class="co-admin-nav-link" href="admin-notes.html"><i class="fa-solid fa-file-lines"></i><span>Notes</span></a>
@@ -289,6 +404,8 @@
           <button class="control-tab" data-panel="panel-referrals"><i class="fa-solid fa-user-group"></i> Referrals & Rewards</button>
           <button class="control-tab" data-panel="panel-roles"><i class="fa-solid fa-user-shield"></i> Roles & Permissions</button>
           <button class="control-tab" data-panel="panel-settings"><i class="fa-solid fa-sliders"></i> Platform Settings</button>
+          <button class="control-tab" data-panel="panel-experience"><i class="fa-solid fa-wand-magic-sparkles"></i> Experience Settings</button>
+          <button class="control-tab" data-panel="panel-live-sessions"><i class="fa-solid fa-tower-broadcast"></i> Live Session Control</button>
           <button class="control-tab" data-panel="panel-audit"><i class="fa-solid fa-scroll"></i> Audit Logs</button>
           <button class="control-tab" data-panel="panel-company"><i class="fa-solid fa-building"></i> Company &amp; Support</button>
           <p id="controlPermissionInfo" class="muted" style="margin-top:10px;"></p>
@@ -643,19 +760,20 @@
           </article>
 
           <article id="panel-settings" class="control-panel">
-            <h3 class="control-title">Platform Settings</h3>
-            <p class="control-subtitle">Manage app branding, feature toggles, pricing, maintenance mode, and global system notices.</p>
+            <h3 class="control-title">System Settings</h3>
+            <p class="control-subtitle">Manage global branding, feature toggles, pricing, maintenance mode, defaults, and system notices.</p>
             <div class="control-filters">
               <input id="settingAppName" placeholder="App name" />
               <input id="settingPrimaryColor" placeholder="Primary color (hex)" />
+              <select id="settingLiveDefaultProvider"><option value="jitsi">Default live provider: Jitsi</option><option value="agora">Default live provider: Agora</option></select>
               <input id="settingMonthlyPrice" type="number" placeholder="Monthly pricing" />
               <select id="settingMaintenanceEnabled"><option value="false">Maintenance OFF</option><option value="true">Maintenance ON</option></select>
               <textarea id="settingSystemNotice" placeholder="System notice"></textarea>
               <textarea id="settingFeatureToggles" placeholder='Feature toggles JSON e.g. {"forum":true,"roadmaps":true}'></textarea>
             </div>
             <div class="control-actions">
-              <button class="btn primary" id="saveSettingsBtn">Save Settings</button>
-              <button class="btn secondary" id="loadSettingsBtn">Load Settings</button>
+              <button class="btn primary" id="saveSettingsBtn">Save System Settings</button>
+              <button class="btn secondary" id="loadSettingsBtn">Load System Settings</button>
             </div>
 
             <div class="experience-block">
@@ -678,6 +796,11 @@
               </div>
               <p id="contributionVisibilityStatus" class="muted"></p>
             </div>
+          </article>
+
+          <article id="panel-experience" class="control-panel">
+            <h3 class="control-title">Experience Studio</h3>
+            <p class="control-subtitle">Shape membership, onboarding, home page, auth screen, dashboard layout, and gamification behavior.</p>
 
             <div class="experience-block">
               <h4>Membership Center Configuration</h4>
@@ -803,8 +926,51 @@
             </div>
 
             <div class="control-actions">
-              <button class="btn primary" id="saveExperienceConfigBtn">Save Home/Dashboard Experience</button>
-              <button class="btn secondary" id="loadExperienceConfigBtn">Load Home/Dashboard Experience</button>
+              <button class="btn primary" id="saveExperienceConfigBtn">Save Experience Studio</button>
+              <button class="btn secondary" id="loadExperienceConfigBtn">Load Experience Studio</button>
+            </div>
+          </article>
+
+          <article id="panel-live-sessions" class="control-panel">
+            <h3 class="control-title" id="liveSessionControlTitle">Live Session Control</h3>
+            <p class="control-subtitle">Dedicated command center for creating, configuring, and controlling mentorship/lab live sessions.</p>
+            <div class="experience-block" id="liveSessionControlBlock">
+              <h4>Live Session Workspace</h4>
+              <div class="experience-block" style="margin-bottom: 14px;">
+                <h4>Live Session Dashboard</h4>
+                <div class="dash-stats" id="liveSessionStatsGrid">
+                  <div class="stat-card"><span>Total Sessions</span><strong id="liveSessionTotalCount">0</strong></div>
+                  <div class="stat-card"><span>Scheduled</span><strong id="liveSessionScheduledCount">0</strong></div>
+                  <div class="stat-card"><span>Live</span><strong id="liveSessionLiveCount">0</strong></div>
+                  <div class="stat-card"><span>Participants</span><strong id="liveSessionParticipantCount">0</strong></div>
+                </div>
+                <div class="co-admin-table-wrap" style="margin-top: 14px;">
+                  <table class="co-admin-data-table">
+                    <thead>
+                      <tr><th>Session</th><th>Mentor</th><th>Provider</th><th>Status</th><th>Schedule</th><th>Participants</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody id="liveSessionMonitorBody"><tr><td colspan="7" class="co-admin-table-empty">No live sessions loaded.</td></tr></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="control-filters">
+                <select id="liveHubEnabled">
+                  <option value="true">Live session system enabled</option>
+                  <option value="false">Live session system disabled</option>
+                </select>
+                <input id="liveHubTitle" placeholder="Module title" />
+                <input id="liveHubSubtitle" placeholder="Module subtitle" />
+                <input id="liveHubSidebarLabel" placeholder="Student sidebar label" />
+                <input id="liveHubMentorshipDays" type="number" min="1" placeholder="Mentorship cycle days" />
+                <input id="liveHubLabDays" type="number" min="1" placeholder="Lab cycle days" />
+              </div>
+              <div class="control-actions" style="margin: 12px 0 14px;">
+                <button class="btn primary" id="saveLiveHubControlBtn">Save Live Session Control</button>
+                <button class="btn secondary" id="loadLiveHubControlBtn">Load Live Session Control</button>
+                <button class="btn secondary" id="addLiveHubSessionBtn">Create Session</button>
+                <button class="btn secondary" id="seedLiveHubSessionsBtn">Seed Demo Sessions</button>
+              </div>
+              <div class="live-hub-admin-list" id="liveHubSessionList"></div>
             </div>
           </article>
 

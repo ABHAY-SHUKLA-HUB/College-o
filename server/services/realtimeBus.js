@@ -2,6 +2,7 @@ const { EventEmitter } = require('events');
 
 const bus = new EventEmitter();
 bus.setMaxListeners(200);
+let broadcaster = null;
 
 function publishRealtimeEvent(type, payload = {}) {
   bus.emit('event', {
@@ -9,6 +10,13 @@ function publishRealtimeEvent(type, payload = {}) {
     payload,
     at: new Date().toISOString()
   });
+  try {
+    if (typeof broadcaster === 'function') {
+      broadcaster(type, payload);
+    }
+  } catch (e) {
+    // swallow
+  }
 }
 
 function subscribeRealtime(handler) {
@@ -19,4 +27,6 @@ function subscribeRealtime(handler) {
 module.exports = {
   publishRealtimeEvent,
   subscribeRealtime
+  ,
+  setBroadcaster: (fn) => { broadcaster = fn; }
 };

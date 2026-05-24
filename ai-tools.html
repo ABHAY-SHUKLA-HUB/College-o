@@ -434,6 +434,48 @@
       margin-top: 18px;
     }
 
+    .ai-studio-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+      gap: 16px;
+      align-items: start;
+      margin-top: 16px;
+    }
+
+    .ai-studio-panel {
+      border-radius: 20px;
+      padding: 18px;
+      background: linear-gradient(180deg, rgba(15,23,42,0.03), rgba(255,255,255,0.96));
+      border: 1px solid rgba(15, 23, 42, 0.08);
+    }
+
+    .ai-studio-panel label {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 12px;
+      font-weight: 600;
+      color: var(--text-primary, #0f172a);
+    }
+
+    .ai-studio-panel textarea,
+    .ai-studio-panel input,
+    .ai-studio-panel select {
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      background: rgba(255,255,255,0.96);
+      border-radius: 14px;
+      padding: 11px 14px;
+      font: inherit;
+    }
+
+    .ai-studio-panel textarea {
+      min-height: 140px;
+      resize: vertical;
+    }
+
+    .ai-studio-output {
+      min-height: 320px;
+    }
+
     .ai-upgrade {
       border-radius: 18px;
       padding: 16px;
@@ -531,6 +573,50 @@
         </div>
         <div class="ai-output-meta" id="aiOutputMeta"></div>
       </aside>
+    </section>
+
+    <section class="ai-section-card">
+      <div class="section-header">
+        <i class="fa-solid fa-diagram-project"></i>
+        <h2>AI Studio Phase</h2>
+      </div>
+      <p class="muted" style="margin-top:-4px; margin-bottom:0;">A product-style layer for chat, notes, sessions, attendance, predictions, and recommendations.</p>
+      <div class="ai-studio-grid">
+        <div class="ai-studio-panel">
+          <label>
+            Studio mode
+            <select id="aiStudioMode">
+              <option value="chat">Study assistant chat</option>
+              <option value="quiz">Quiz from notes</option>
+              <option value="summary">Session summary</option>
+              <option value="attendance">Attendance insights</option>
+              <option value="prediction">Performance prediction</option>
+              <option value="recommendation">Recommendation system</option>
+            </select>
+          </label>
+          <label>
+            Input
+            <textarea id="aiStudioInput" placeholder="Describe the topic, notes, session transcript, or learning problem you want the studio to process."></textarea>
+          </label>
+          <label>
+            Context
+            <input id="aiStudioContext" type="text" placeholder="Optional context, e.g. DSA, live lab, 85% attendance, semester 5" />
+          </label>
+          <div class="ai-workbench-actions" style="margin-bottom:0;">
+            <button class="btn primary" id="aiStudioRunBtn" type="button"><i class="fa-solid fa-wand-magic-sparkles"></i> Run Studio</button>
+            <button class="btn secondary" id="aiStudioExampleBtn" type="button"><i class="fa-solid fa-bolt"></i> Load Example</button>
+          </div>
+        </div>
+        <div class="ai-output ai-studio-output" id="aiStudioOutput">
+          <div class="ai-empty">
+            <div>
+              <i class="fa-solid fa-stars"></i>
+              <p>Pick a mode, add a little context, and the studio will return a structured startup-style output.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ai-output-meta" id="aiStudioMeta" style="margin-top:12px;"></div>
     </section>
 
     <section class="ai-section-card">

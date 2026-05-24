@@ -5,23 +5,25 @@
 
 async function initDashboardConfig() {
   try {
-    // Fetch user profile for branch and membership info
-    const userProfile = await Promise.all([
-      window.CollegeOSApi.getProfile(),
-      window.CollegeOSApi.getStudentAcademicProfile(),
-      window.CollegeOSApi.getSubscription()
-    ]);
+    const currentUser = window.collegeOsCurrentUser || null;
+    let user = currentUser;
+    let role = String(currentUser?.role || '').toLowerCase();
 
-    const user = userProfile[0] || {};
-    const academic = userProfile[1] || {};
-    const subscription = userProfile[2] || {};
+    if (!role) {
+      user = await window.CollegeOSApi.getProfile().catch(() => ({}));
+      role = String(user.role || user.user?.role || '').toLowerCase();
+    }
 
-    const role = String(user.role || user.user?.role || '').toLowerCase();
     const isAdmin = role === 'admin' || role === 'super_admin';
     if (!isAdmin) {
       // Learner dashboard should not hit admin-only config endpoints.
       return null;
     }
+
+    const [academic, subscription] = await Promise.all([
+      window.CollegeOSApi.getStudentAcademicProfile().catch(() => ({})),
+      window.CollegeOSApi.getSubscription().catch(() => ({}))
+    ]);
 
     const branch = academic.branch || academic.category || 'general';
     const tier = subscription.status === 'active' ? 'premium' : 'free';

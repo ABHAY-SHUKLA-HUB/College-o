@@ -67,15 +67,6 @@ async function ensureAcademicsSchema() {
   academicsSchemaReady = true;
 }
 
-router.use(async (_req, _res, next) => {
-  try {
-    await ensureAcademicsSchema();
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
-
 // ============================================
 // ACADEMIC ONBOARDING ENDPOINTS
 // ============================================
@@ -457,3 +448,4 @@ router.put('/profile', requireAuth, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.ensureAcademicsSchema = ensureAcademicsSchema;

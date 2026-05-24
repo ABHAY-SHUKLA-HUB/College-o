@@ -36,15 +36,6 @@ const upload = multer({
   }
 });
 
-router.use(async (_req, _res, next) => {
-  try {
-    await ensureSupportSchema();
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
-
 router.use(requireAuth, guardSupportFeature);
 
 async function getUserAcademicContext(userId) {

@@ -117,6 +117,16 @@ CREATE UNIQUE INDEX IF NOT EXISTS users_mobile_unique_idx
 ON users (mobile)
 WHERE mobile IS NOT NULL;
 
+CREATE TABLE IF NOT EXISTS session (
+  sid varchar NOT NULL COLLATE "default",
+  sess json NOT NULL,
+  expire timestamp(6) NOT NULL,
+  CONSTRAINT session_pkey PRIMARY KEY (sid)
+)
+WITH (OIDS=FALSE);
+
+CREATE INDEX IF NOT EXISTS IDX_session_expire ON session (expire);
+
 CREATE TABLE IF NOT EXISTS colleges (
   id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
   name VARCHAR(180) NOT NULL UNIQUE,
@@ -405,6 +415,85 @@ CREATE TABLE IF NOT EXISTS admin_certificate_issuances (
   UNIQUE (admin_certificate_id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS live_sessions (
+  id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  session_id VARCHAR(120) NOT NULL UNIQUE,
+  title VARCHAR(220) NOT NULL,
+  description TEXT,
+  mentor_id INTEGER REFERENCES users(id),
+  mentor_email VARCHAR(180),
+  mentor_name VARCHAR(180) NOT NULL,
+  session_type VARCHAR(40) NOT NULL DEFAULT 'mentorship',
+  provider VARCHAR(20) NOT NULL DEFAULT 'jitsi',
+  room_name VARCHAR(180) NOT NULL,
+  channel_name VARCHAR(180) NOT NULL,
+  host_code_hash VARCHAR(255) NOT NULL,
+  host_code_last4 VARCHAR(8),
+  host_code_attempts INTEGER NOT NULL DEFAULT 0,
+  host_code_locked_until TIMESTAMP,
+  scheduled_start TIMESTAMP NOT NULL,
+  scheduled_end TIMESTAMP NOT NULL,
+  actual_start TIMESTAMP,
+  actual_end TIMESTAMP,
+  status VARCHAR(20) NOT NULL DEFAULT 'scheduled',
+  mentor_status VARCHAR(20) NOT NULL DEFAULT 'scheduled',
+  created_by_admin INTEGER REFERENCES users(id),
+  max_participants INTEGER NOT NULL DEFAULT 100,
+  participant_count INTEGER NOT NULL DEFAULT 0,
+  cancelled_reason TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  cancelled_at TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS live_sessions_session_id_idx
+ON live_sessions (session_id);
+
+CREATE INDEX IF NOT EXISTS live_sessions_schedule_idx
+ON live_sessions (status, scheduled_start, scheduled_end);
+
+CREATE INDEX IF NOT EXISTS live_sessions_mentor_email_idx
+ON live_sessions (mentor_email, scheduled_start);
+
+CREATE INDEX IF NOT EXISTS live_sessions_mentor_id_idx
+ON live_sessions (mentor_id, scheduled_start);
+
+CREATE TABLE IF NOT EXISTS live_session_participants (
+  id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  live_session_id INTEGER NOT NULL REFERENCES live_sessions(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id),
+  user_email VARCHAR(180),
+  user_name VARCHAR(180),
+  role VARCHAR(20) NOT NULL DEFAULT 'student',
+  joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  left_at TIMESTAMP,
+  connection_state VARCHAR(20) NOT NULL DEFAULT 'joined',
+  meta JSONB,
+  UNIQUE (live_session_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS live_session_participants_session_idx
+ON live_session_participants (live_session_id, left_at);
+
+CREATE INDEX IF NOT EXISTS live_session_participants_user_idx
+ON live_session_participants (user_id, joined_at);
+
+CREATE TABLE IF NOT EXISTS live_session_logs (
+  id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  live_session_id INTEGER NOT NULL REFERENCES live_sessions(id) ON DELETE CASCADE,
+  actor_user_id INTEGER REFERENCES users(id),
+  actor_role VARCHAR(30),
+  action VARCHAR(50) NOT NULL,
+  metadata JSONB,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS live_session_logs_session_idx
+ON live_session_logs (live_session_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS live_session_logs_action_idx
+ON live_session_logs (action, created_at DESC);
+
 -- Dashboard Configuration Tables (New)
 -- Defines available dashboard sections and their default state
 CREATE TABLE IF NOT EXISTS dashboard_sections (
@@ -630,3 +719,15 @@ CREATE TABLE IF NOT EXISTS mock_test_questions (
 
 CREATE INDEX IF NOT EXISTS mock_test_questions_test_idx ON mock_test_questions(mock_test_id, order_no);
 CREATE INDEX IF NOT EXISTS mock_test_attempts_user_test_idx ON mock_test_attempts(user_id, mock_test_id, attempted_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_user_profiles_user_id ON user_profiles (user_id);
+CREATE INDEX IF NOT EXISTS idx_quiz_attempts_user_created ON quiz_attempts (user_id, attempted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notes_created_by_created_at ON notes (created_by, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_certificates_user_created ON certificates (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_roadmaps_user_updated ON roadmaps (user_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_membership_payments_status_submitted ON membership_payment_requests (status, submitted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_academic_categories_active_order ON academic_categories (is_active, display_order);
+CREATE INDEX IF NOT EXISTS idx_academic_branches_category_active_order ON academic_branches (category_id, is_active, display_order);
+CREATE INDEX IF NOT EXISTS idx_academic_semesters_active_order ON academic_semesters (is_active, display_order);
+CREATE INDEX IF NOT EXISTS idx_announcements_status_branch_created ON announcements (status, branch_id, created_at DESC);

@@ -831,6 +831,7 @@ function bindLoginMethodToggle() {
     setMethod('otp');
   });
 
+  window.__collegeOsSetLoginMethod = setMethod;
   setMethod('email');
 }
 
@@ -1421,7 +1422,17 @@ function bindEmailLogin() {
       setAuthMessages('login', '', 'Login successful. Preparing your dashboard...');
       await completePostLoginFlow();
     } catch (error) {
-      setAuthMessages('login', error.message || 'Login failed');
+      const message = error?.message || 'Login failed';
+      if (/too many failed attempts/i.test(message)) {
+        const otpInput = byId('mobileNumber');
+        if (otpInput) otpInput.value = email;
+        if (typeof window.__collegeOsSetLoginMethod === 'function') {
+          window.__collegeOsSetLoginMethod('otp');
+        }
+        setAuthMessages('login', 'Password login is temporarily locked. Use OTP Login to continue, or wait 15 minutes and try again.');
+      } else {
+        setAuthMessages('login', message);
+      }
       refreshCaptcha('login');
     } finally {
       setLoading(submitBtn, 'Sign In', false);

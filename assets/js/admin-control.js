@@ -89,6 +89,753 @@ function parseLines(value, fallback = []) {
   return rows.length ? rows : fallback;
 }
 
+function getLiveDefaultProvider() {
+  const provider = String(cById('settingLiveDefaultProvider')?.value || '').toLowerCase();
+  return provider === 'agora' ? 'agora' : 'jitsi';
+}
+
+function escapeHtml(value) {
+  return String(value || '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+}
+
+function escapeCssValue(value) {
+  return String(value || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+function toDateTimeLocalValue(value) {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return '';
+  const local = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
+  return local.toISOString().slice(0, 16);
+}
+
+function fromDateTimeLocalValue(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString();
+}
+
+function makeLiveHubSessionId(type, index) {
+  const stamp = Date.now().toString(36);
+  return `${type}-${index + 1}-${stamp}`;
+}
+
+function generateGoLiveAccessId() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const randomChars = [];
+  const length = 14;
+  if (window.crypto?.getRandomValues) {
+    const bytes = new Uint8Array(length);
+    window.crypto.getRandomValues(bytes);
+    for (let i = 0; i < bytes.length; i += 1) {
+      randomChars.push(alphabet[bytes[i] % alphabet.length]);
+    }
+  } else {
+    for (let i = 0; i < length; i += 1) {
+      randomChars.push(alphabet[Math.floor(Math.random() * alphabet.length)]);
+    }
+  }
+  return `GL-${randomChars.join('').replace(/(.{4})/g, '$1-').replace(/-$/, '')}`;
+}
+
+function normalizeGoLiveStatus(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (raw === 'live' || raw === 'active') return 'live';
+  if (raw === 'ended' || raw === 'completed') return 'ended';
+  if (raw === 'cancelled' || raw === 'canceled') return 'cancelled';
+  return 'scheduled';
+}
+
+function isActiveGoLiveStatus(status) {
+  const normalized = normalizeGoLiveStatus(status);
+  return normalized === 'live';
+}
+
+function dateRangeOverlaps(aStart, aEnd, bStart, bEnd) {
+  const aStartMs = aStart ? new Date(aStart).getTime() : NaN;
+  const aEndMs = aEnd ? new Date(aEnd).getTime() : NaN;
+  const bStartMs = bStart ? new Date(bStart).getTime() : NaN;
+  const bEndMs = bEnd ? new Date(bEnd).getTime() : NaN;
+  if (!Number.isFinite(aStartMs) || !Number.isFinite(aEndMs) || !Number.isFinite(bStartMs) || !Number.isFinite(bEndMs)) return true;
+  return aStartMs < bEndMs && bStartMs < aEndMs;
+}
+
+function goLiveStatusView(session) {
+  const status = normalizeGoLiveStatus(session?.status);
+  if (status === 'live') return { key: 'live', label: 'Live' };
+  if (status === 'ended') return { key: 'ended', label: 'Ended' };
+  if (status === 'cancelled') return { key: 'ended', label: 'Cancelled' };
+  return { key: 'scheduled', label: 'Scheduled' };
+}
+
+function validateLiveHubSessions(sessions) {
+  const rows = Array.isArray(sessions) ? sessions : [];
+  const errors = [];
+  const activeByAccessId = new Map();
+
+  rows.forEach((session, index) => {
+    const row = index + 1;
+    const status = normalizeGoLiveStatus(session.status);
+    const hostRef = String(session.assignedHostUserRef || session.assignedHostEmail || session.mentorProfileKey || '').trim();
+    if (status === 'live' && !hostRef) {
+      errors.push(`Session ${row}: Assigned Host User is required so the host code is mapped to the logged-in user.`);
+    }
+    const accessId = String(session.mentorAccessId || '').trim();
+    if (!isActiveGoLiveStatus(status) || !accessId) return;
+    const key = accessId.toUpperCase();
+    if (!activeByAccessId.has(key)) activeByAccessId.set(key, []);
+    activeByAccessId.get(key).push({ row, session });
+  });
+
+  activeByAccessId.forEach((group, accessId) => {
+    if (group.length < 2) return;
+    for (let i = 0; i < group.length; i += 1) {
+      for (let j = i + 1; j < group.length; j += 1) {
+        const left = group[i];
+        const right = group[j];
+        if (dateRangeOverlaps(left.session.startAt, left.session.endAt, right.session.startAt, right.session.endAt)) {
+          errors.push(`Go Live ID ${accessId} conflicts between sessions ${left.row} and ${right.row} (active windows overlap).`);
+        }
+      }
+    }
+  });
+
+  return errors;
+}
+
+function liveHubSeedSessions() {
+  const now = new Date();
+  const plusDays = (days, hours = 0) => {
+    const date = new Date(now);
+    date.setDate(date.getDate() + days);
+    date.setHours(date.getHours() + hours, 0, 0, 0);
+    return date.toISOString();
+  };
+
+  return [
+    {
+      id: makeLiveHubSessionId('mentorship', 0),
+      type: 'mentorship',
+      title: 'Resume Review and Interview Prep',
+      mentorName: 'Ananya Sharma',
+      mentorAccessId: 'MENTOR-RESUME-001',
+      mentorProfileKey: 'ananya.sharma@collegeos.in',
+      startAt: plusDays(1, 2),
+      endAt: plusDays(1, 3),
+      durationMinutes: 60,
+      provider: 'jitsi',
+      roomId: 'resume-review-room',
+      status: 'scheduled',
+      summary: 'Live feedback on resumes, projects, and interview confidence.'
+    },
+    {
+      id: makeLiveHubSessionId('mentorship', 1),
+      type: 'mentorship',
+      title: 'Placement Strategy Office Hours',
+      mentorName: 'Rohit Verma',
+      mentorAccessId: 'MENTOR-PLACEMENT-002',
+      mentorProfileKey: 'rohit.verma@collegeos.in',
+      startAt: plusDays(4, 1),
+      endAt: plusDays(4, 2),
+      durationMinutes: 75,
+      provider: 'jitsi',
+      roomId: 'placement-office-hours',
+      status: 'scheduled',
+      summary: 'Career planning and placement strategy for the next hiring cycle.'
+    },
+    {
+      id: makeLiveHubSessionId('lab', 2),
+      type: 'lab',
+      title: 'AZ-900 Cloud Fundamentals Lab',
+      mentorName: 'Priya Nair',
+      mentorAccessId: 'LAB-AZ900-003',
+      mentorProfileKey: 'priya.nair@collegeos.in',
+      startAt: plusDays(2, 5),
+      endAt: plusDays(2, 6),
+      durationMinutes: 90,
+      provider: 'jitsi',
+      roomId: 'az900-lab-room',
+      status: 'scheduled',
+      summary: 'Hands-on walkthrough of cloud concepts, pricing, and lab exercises.'
+    },
+    {
+      id: makeLiveHubSessionId('lab', 3),
+      type: 'lab',
+      title: 'AI-900 Applied AI Lab',
+      mentorName: 'Kunal Mehta',
+      mentorAccessId: 'LAB-AI900-004',
+      mentorProfileKey: 'kunal.mehta@collegeos.in',
+      startAt: plusDays(6, 4),
+      endAt: plusDays(6, 5),
+      durationMinutes: 90,
+      provider: 'jitsi',
+      roomId: 'ai900-lab-room',
+      status: 'scheduled',
+      summary: 'Practical AI-900 walkthrough with prompt, vision, and language demos.'
+    }
+  ];
+}
+
+function liveHubSessionCardHtml(session, index) {
+  const type = String(session.type || 'mentorship').toLowerCase() === 'lab' ? 'lab' : 'mentorship';
+  const typeLabel = type === 'lab' ? 'Hands-on Lab' : 'Mentorship';
+  const statusView = goLiveStatusView(session);
+  const codeGenerated = Boolean(session.codeGenerated || session.mentorAccessId);
+  const codeLabel = codeGenerated ? 'Code generated' : 'Code not generated';
+  const copyDisabled = !session.mentorAccessId;
+  return `
+    <article class="live-hub-admin-card" data-live-hub-session data-live-hub-index="${index}">
+      <input type="hidden" class="live-hub-session-id" value="${escapeHtml(session.id || '')}" />
+      <div class="live-hub-admin-head">
+        <span class="live-hub-admin-status ${statusView.key}"><span class="dot"></span>${statusView.label}</span>
+        <span class="live-hub-admin-type">${typeLabel}</span>
+      </div>
+      <div class="live-hub-admin-grid">
+        <div>
+          <label>Session Type</label>
+          <select class="live-hub-session-type">
+            <option value="mentorship"${type === 'mentorship' ? ' selected' : ''}>Mentorship</option>
+            <option value="lab"${type === 'lab' ? ' selected' : ''}>Hands-on Lab</option>
+          </select>
+        </div>
+        <div>
+          <label>Status Indicator</label>
+          <select class="live-hub-session-status">
+            <option value="scheduled"${normalizeGoLiveStatus(session.status) === 'scheduled' ? ' selected' : ''}>Scheduled</option>
+            <option value="live"${normalizeGoLiveStatus(session.status) === 'live' ? ' selected' : ''}>Live</option>
+            <option value="ended"${normalizeGoLiveStatus(session.status) === 'ended' ? ' selected' : ''}>Ended</option>
+            <option value="cancelled"${normalizeGoLiveStatus(session.status) === 'cancelled' ? ' selected' : ''}>Cancelled</option>
+          </select>
+        </div>
+        <div class="full">
+          <label>Title / Topic</label>
+          <input class="live-hub-session-title" value="${escapeHtml(session.title || '')}" placeholder="${typeLabel} title" />
+        </div>
+        <div>
+          <label>Mentor Name</label>
+          <input class="live-hub-session-mentor" value="${escapeHtml(session.mentorName || '')}" placeholder="Mentor name" />
+        </div>
+        <div>
+          <label>Assigned Host User (UID / Email / User ID)</label>
+          <input class="live-hub-session-host-user" value="${escapeHtml(session.assignedHostUserRef || session.assignedHostEmail || session.mentorProfileKey || '')}" placeholder="student.uid or student@email.com" />
+        </div>
+        <div class="full">
+          <label>Unique Mentor Go Live ID</label>
+          <div class="muted" style="margin-bottom: 8px;">${escapeHtml(codeLabel)}${session.lastGeneratedAt ? ` · Last generated ${escapeHtml(new Date(session.lastGeneratedAt).toLocaleString('en-IN'))}` : ''}</div>
+          <div class="live-hub-admin-inline-actions">
+            <input class="live-hub-session-access" value="${escapeHtml(session.mentorAccessId || '')}" placeholder="Auto-generate secure key" />
+            <button class="btn secondary sm" type="button" data-live-hub-generate-id>Auto-Generate</button>
+            <button class="btn secondary sm" type="button" data-live-hub-copy-id${copyDisabled ? ' disabled' : ''}>Copy Code</button>
+            <button class="btn secondary sm" type="button" data-live-hub-regenerate-id>Regenerate Code</button>
+          </div>
+        </div>
+        <div>
+          <label>Start Date &amp; Time</label>
+          <input class="live-hub-session-start" type="datetime-local" value="${toDateTimeLocalValue(session.startAt)}" />
+        </div>
+        <div>
+          <label>End Date &amp; Time</label>
+          <input class="live-hub-session-end" type="datetime-local" value="${toDateTimeLocalValue(session.endAt)}" />
+        </div>
+        <div>
+          <label>Duration (mins)</label>
+          <input class="live-hub-session-duration" type="number" min="15" value="${Number(session.durationMinutes || 60)}" />
+        </div>
+        <div>
+          <label>Provider</label>
+          <select class="live-hub-session-provider">
+            <option value="jitsi"${String(session.provider || '').toLowerCase() !== 'agora' ? ' selected' : ''}>Jitsi</option>
+            <option value="agora"${String(session.provider || '').toLowerCase() === 'agora' ? ' selected' : ''}>Agora</option>
+          </select>
+        </div>
+        <div>
+          <label>Room / Channel ID</label>
+          <input class="live-hub-session-room" value="${escapeHtml(session.roomId || '')}" placeholder="room-id" />
+        </div>
+        <div class="full">
+          <label>Room Label</label>
+          <input class="live-hub-session-room-label" value="${escapeHtml(session.roomLabel || '')}" placeholder="Optional room label" />
+        </div>
+        <div class="full">
+          <label>Summary</label>
+          <textarea class="live-hub-session-summary" rows="2" placeholder="Short session description">${escapeHtml(session.summary || '')}</textarea>
+        </div>
+      </div>
+      <div class="control-actions" style="margin-top: 0; justify-content: flex-end;">
+        <button class="btn primary sm" type="button" data-live-hub-save-session>Save Session</button>
+        <button class="btn warn sm" type="button" data-live-hub-start-session>Start Session</button>
+        <button class="btn secondary sm" type="button" data-live-hub-end-session>End Session</button>
+        <button class="btn secondary sm" type="button" data-live-hub-cancel-session>Cancel Session</button>
+        <button class="btn secondary sm" type="button" data-live-hub-duplicate>Duplicate</button>
+        <button class="btn danger sm" type="button" data-live-hub-delete>Delete</button>
+      </div>
+    </article>
+  `;
+}
+
+function liveSessionStatusLabel(status) {
+  const normalized = normalizeGoLiveStatus(status);
+  if (normalized === 'live') return 'Live';
+  if (normalized === 'ended') return 'Ended';
+  if (normalized === 'cancelled') return 'Cancelled';
+  return 'Scheduled';
+}
+
+function liveSessionStatusTone(status) {
+  const normalized = normalizeGoLiveStatus(status);
+  if (normalized === 'live') return 'ok';
+  if (normalized === 'ended' || normalized === 'cancelled') return 'warn';
+  return 'info';
+}
+
+function formatLiveSessionSchedule(session) {
+  const start = session.startAt ? new Date(session.startAt) : null;
+  const end = session.endAt ? new Date(session.endAt) : null;
+  const startText = start && !Number.isNaN(start.getTime()) ? start.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '-';
+  const endText = end && !Number.isNaN(end.getTime()) ? end.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '-';
+  return `${startText} → ${endText}`;
+}
+
+function renderLiveSessionMonitor(sessions = []) {
+  const rows = Array.isArray(sessions) ? sessions : [];
+  const totalNode = cById('liveSessionTotalCount');
+  const scheduledNode = cById('liveSessionScheduledCount');
+  const liveNode = cById('liveSessionLiveCount');
+  const participantNode = cById('liveSessionParticipantCount');
+  const tbody = cById('liveSessionMonitorBody');
+
+  const counts = rows.reduce((accumulator, session) => {
+    const status = normalizeGoLiveStatus(session.status);
+    accumulator.total += 1;
+    accumulator.participants += Number(session.participantCount || 0);
+    if (status === 'live') accumulator.live += 1;
+    if (status === 'scheduled') accumulator.scheduled += 1;
+    return accumulator;
+  }, { total: 0, scheduled: 0, live: 0, participants: 0 });
+
+  if (totalNode) totalNode.textContent = String(counts.total);
+  if (scheduledNode) scheduledNode.textContent = String(counts.scheduled);
+  if (liveNode) liveNode.textContent = String(counts.live);
+  if (participantNode) participantNode.textContent = String(counts.participants);
+
+  if (!tbody) return;
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="co-admin-table-empty">No live sessions loaded.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map((session) => {
+    const status = normalizeGoLiveStatus(session.status);
+    const statusView = goLiveStatusView(session);
+    const canStart = status !== 'live' && status !== 'ended' && status !== 'cancelled';
+    const canEnd = status === 'live';
+    const canCancel = status !== 'cancelled' && status !== 'ended';
+    return `
+      <tr data-live-session-monitor-row data-session-id="${escapeHtml(session.id || '')}">
+        <td>
+          <strong>${escapeHtml(session.title || '')}</strong>
+          <div class="muted mono">${escapeHtml(session.id || '')}</div>
+        </td>
+        <td>
+          <div><strong>${escapeHtml(session.mentorName || '-')}</strong></div>
+          <div class="muted mono">${escapeHtml(session.assignedHostEmail || session.assignedHostUserRef || session.mentorProfileKey || session.mentorEmail || '-')}</div>
+        </td>
+        <td>${escapeHtml(String(session.provider || 'jitsi').toUpperCase())}</td>
+        <td><span class="status-badge ${liveSessionStatusTone(status)}">${escapeHtml(statusView.label || liveSessionStatusLabel(status))}</span></td>
+        <td>${escapeHtml(formatLiveSessionSchedule(session))}</td>
+        <td><strong>${Number(session.participantCount || 0)}</strong></td>
+        <td>
+          <div class="control-actions" style="justify-content:flex-start;flex-wrap:wrap;gap:8px;">
+            <button class="btn secondary sm" type="button" data-live-session-edit="${escapeHtml(session.id || '')}">Edit</button>
+            <button class="btn primary sm" type="button" data-live-session-save="${escapeHtml(session.id || '')}">Save</button>
+            <button class="btn warn sm" type="button" data-live-session-start="${escapeHtml(session.id || '')}"${canStart ? '' : ' disabled'}>Start</button>
+            <button class="btn secondary sm" type="button" data-live-session-end="${escapeHtml(session.id || '')}"${canEnd ? '' : ' disabled'}>End</button>
+            <button class="btn danger sm" type="button" data-live-session-cancel="${escapeHtml(session.id || '')}"${canCancel ? '' : ' disabled'}>Cancel</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+let liveSessionRealtimeSource = null;
+let liveSessionRealtimeRetryTimer = null;
+let liveSessionRealtimeRetryMs = 2500;
+
+function bindLiveSessionRealtime() {
+  if (typeof window.EventSource !== 'function') return;
+  const streamUrl = window.CollegeOSApi.getLiveSessionRealtimeStreamUrl
+    ? window.CollegeOSApi.getLiveSessionRealtimeStreamUrl()
+    : '/api/live-sessions/stream';
+
+  const connect = () => {
+    try {
+      if (liveSessionRealtimeSource) {
+        liveSessionRealtimeSource.close();
+      }
+      liveSessionRealtimeSource = new EventSource(streamUrl, { withCredentials: true });
+      const refresh = () => loadLiveSessionControl().catch(() => null);
+
+      ['live_session_changed', 'live_session_created', 'live_session_started', 'live_session_ended', 'live_session_joined', 'live_session_left', 'live_session_cancelled', 'live_session_rescheduled']
+        .forEach((eventName) => liveSessionRealtimeSource.addEventListener(eventName, refresh));
+
+      liveSessionRealtimeSource.onopen = () => {
+        liveSessionRealtimeRetryMs = 2500;
+      };
+
+      liveSessionRealtimeSource.onerror = () => {
+        try {
+          liveSessionRealtimeSource?.close();
+        } catch {
+          // Ignore close failures.
+        }
+        liveSessionRealtimeSource = null;
+        if (liveSessionRealtimeRetryTimer) {
+          window.clearTimeout(liveSessionRealtimeRetryTimer);
+        }
+        liveSessionRealtimeRetryTimer = window.setTimeout(() => {
+          liveSessionRealtimeRetryMs = Math.min(liveSessionRealtimeRetryMs * 2, 30000);
+          connect();
+        }, liveSessionRealtimeRetryMs);
+      };
+    } catch {
+      // Realtime is best-effort.
+    }
+  };
+
+  connect();
+  window.addEventListener('beforeunload', () => {
+    try {
+      liveSessionRealtimeSource?.close();
+    } catch {
+      // no-op
+    }
+    if (liveSessionRealtimeRetryTimer) {
+      window.clearTimeout(liveSessionRealtimeRetryTimer);
+    }
+  });
+}
+
+async function persistLiveHubSessionFromCard(session) {
+  if (!session?.id) throw new Error('Missing session id');
+  const response = await window.CollegeOSApi.liveSessionReschedule(session.id, {
+    title: session.title,
+    description: session.summary || '',
+    mentorName: session.mentorName || '',
+    assignedHostUserRef: session.assignedHostUserRef || session.mentorProfileKey || '',
+    assignedHostEmail: session.assignedHostUserRef || session.assignedHostEmail || session.mentorProfileKey || '',
+    sessionType: session.type || 'mentorship',
+    provider: session.provider || getLiveDefaultProvider(),
+    roomName: session.roomId || '',
+    channelName: session.roomId || '',
+    scheduledStart: session.startAt,
+    scheduledEnd: session.endAt,
+    status: session.status,
+    maxParticipants: Number(session.maxParticipants || 100),
+    hostCode: session.mentorAccessId || undefined
+  });
+  return response?.session || null;
+}
+
+async function openLiveSessionAction(sessionId, action) {
+  const response = await window.CollegeOSApi.liveSessionGet(sessionId);
+  const session = response?.session;
+  if (!session) throw new Error('Live session not found');
+
+  if (action === 'save') {
+    await persistLiveHubSessionFromCard(mapLiveSessionApiToCard(session));
+  } else if (action === 'start') {
+    await window.CollegeOSApi.liveSessionStart(sessionId, {});
+  } else if (action === 'end') {
+    await window.CollegeOSApi.liveSessionEnd(sessionId, {});
+  } else if (action === 'cancel') {
+    await window.CollegeOSApi.liveSessionCancel(sessionId, { reason: 'Cancelled from admin live session dashboard' });
+  }
+
+  await loadLiveSessionControl();
+}
+
+function normalizeLiveHubSessionFromCard(card, index) {
+  const type = card.querySelector('.live-hub-session-type')?.value === 'lab' ? 'lab' : 'mentorship';
+  const mentorAccessId = card.querySelector('.live-hub-session-access')?.value.trim() || '';
+  const assignedHostUserRef = card.querySelector('.live-hub-session-host-user')?.value.trim() || '';
+  const status = normalizeGoLiveStatus(card.querySelector('.live-hub-session-status')?.value || 'scheduled');
+  return {
+    id: card.querySelector('.live-hub-session-id')?.value.trim() || makeLiveHubSessionId(type, index),
+    type,
+    title: card.querySelector('.live-hub-session-title')?.value.trim() || (type === 'lab' ? 'Hands-on Lab' : 'Mentorship Session'),
+    mentorName: card.querySelector('.live-hub-session-mentor')?.value.trim() || 'College Mentor',
+    assignedHostUserRef,
+    assignedHostEmail: assignedHostUserRef,
+    mentorProfileKey: assignedHostUserRef,
+    mentorAccessId,
+    startAt: fromDateTimeLocalValue(card.querySelector('.live-hub-session-start')?.value || ''),
+    endAt: fromDateTimeLocalValue(card.querySelector('.live-hub-session-end')?.value || ''),
+    durationMinutes: Number(card.querySelector('.live-hub-session-duration')?.value || 60),
+    provider: card.querySelector('.live-hub-session-provider')?.value || 'jitsi',
+    roomId: card.querySelector('.live-hub-session-room')?.value.trim() || '',
+    roomLabel: card.querySelector('.live-hub-session-room-label')?.value.trim() || '',
+    status,
+    summary: card.querySelector('.live-hub-session-summary')?.value.trim() || ''
+  };
+}
+
+function renderLiveHubSessions(sessions = []) {
+  const list = cById('liveHubSessionList');
+  if (!list) return;
+
+  const rows = Array.isArray(sessions) ? sessions : [];
+  if (!rows.length) {
+    list.innerHTML = '<div class="co-admin-table-empty" style="padding:14px;border-radius:12px;border:1px dashed #cbd5e1;background:#fff;">No live sessions configured yet. Use Create Session or Seed Demo Sessions.</div>';
+    return;
+  }
+
+  list.innerHTML = rows.map((session, index) => liveHubSessionCardHtml(session, index)).join('');
+
+  list.querySelectorAll('[data-live-hub-delete]').forEach((button) => {
+    button.addEventListener('click', () => {
+      button.closest('[data-live-hub-session]')?.remove();
+    });
+  });
+
+  list.querySelectorAll('[data-live-hub-duplicate]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const card = button.closest('[data-live-hub-session]');
+      if (!card) return;
+      const nextIndex = list.querySelectorAll('[data-live-hub-session]').length;
+      const data = normalizeLiveHubSessionFromCard(card, nextIndex);
+      const clone = document.createElement('div');
+      clone.innerHTML = liveHubSessionCardHtml({
+        ...data,
+        id: `${data.id}-copy`
+      }, nextIndex).trim();
+      card.insertAdjacentElement('afterend', clone.firstElementChild);
+      renderLiveHubSessions(readLiveHubSessions());
+    });
+  });
+
+  list.querySelectorAll('[data-live-hub-save-session]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const card = button.closest('[data-live-hub-session]');
+      if (!card) return;
+      const session = normalizeLiveHubSessionFromCard(card, Number(card.dataset.liveHubIndex || 0));
+      try {
+        await persistLiveHubSessionFromCard(session);
+        await loadLiveSessionControl();
+      } catch (error) {
+        window.alert(error?.message || 'Unable to save this session.');
+      }
+    });
+  });
+
+  list.querySelectorAll('[data-live-hub-start-session]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const card = button.closest('[data-live-hub-session]');
+      if (!card) return;
+      const session = normalizeLiveHubSessionFromCard(card, Number(card.dataset.liveHubIndex || 0));
+      try {
+        await persistLiveHubSessionFromCard(session);
+        await window.CollegeOSApi.liveSessionStart(session.id, {});
+        await loadLiveSessionControl();
+      } catch (error) {
+        window.alert(error?.message || 'Unable to start this session.');
+      }
+    });
+  });
+
+  list.querySelectorAll('[data-live-hub-end-session]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const card = button.closest('[data-live-hub-session]');
+      if (!card) return;
+      const session = normalizeLiveHubSessionFromCard(card, Number(card.dataset.liveHubIndex || 0));
+      try {
+        await window.CollegeOSApi.liveSessionEnd(session.id, {});
+        await loadLiveSessionControl();
+      } catch (error) {
+        window.alert(error?.message || 'Unable to end this session.');
+      }
+    });
+  });
+
+  list.querySelectorAll('[data-live-hub-cancel-session]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const card = button.closest('[data-live-hub-session]');
+      if (!card) return;
+      const session = normalizeLiveHubSessionFromCard(card, Number(card.dataset.liveHubIndex || 0));
+      try {
+        await window.CollegeOSApi.liveSessionCancel(session.id, { reason: 'Cancelled from admin live session dashboard' });
+        await loadLiveSessionControl();
+      } catch (error) {
+        window.alert(error?.message || 'Unable to cancel this session.');
+      }
+    });
+  });
+
+  list.querySelectorAll('[data-live-hub-generate-id]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const card = button.closest('[data-live-hub-session]');
+      const input = card?.querySelector('.live-hub-session-access');
+      if (!input) return;
+      input.value = generateGoLiveAccessId();
+      renderLiveHubSessions(readLiveHubSessions());
+    });
+  });
+
+  list.querySelectorAll('[data-live-hub-copy-id]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const card = button.closest('[data-live-hub-session]');
+      const accessId = card?.querySelector('.live-hub-session-access')?.value.trim() || '';
+      if (!accessId) {
+        window.alert('No host code found to copy.');
+        return;
+      }
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(accessId);
+        } else {
+          const helper = document.createElement('textarea');
+          helper.value = accessId;
+          helper.setAttribute('readonly', 'readonly');
+          helper.style.position = 'absolute';
+          helper.style.left = '-9999px';
+          document.body.appendChild(helper);
+          helper.select();
+          document.execCommand('copy');
+          document.body.removeChild(helper);
+        }
+        button.textContent = 'Copied';
+        window.setTimeout(() => {
+          button.textContent = 'Copy Code';
+        }, 1200);
+      } catch (_error) {
+        window.alert('Unable to copy right now. Please copy manually.');
+      }
+    });
+  });
+
+  list.querySelectorAll('[data-live-hub-regenerate-id]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const card = button.closest('[data-live-hub-session]');
+      if (!card) return;
+      const input = card.querySelector('.live-hub-session-access');
+      if (!input) return;
+      if (!window.confirm('Regenerate this code? The old code will stop working immediately.')) return;
+      input.value = generateGoLiveAccessId();
+      renderLiveHubSessions(readLiveHubSessions());
+    });
+  });
+
+  list.querySelectorAll('.live-hub-session-status').forEach((select) => {
+    select.addEventListener('change', () => {
+      renderLiveHubSessions(readLiveHubSessions());
+    });
+  });
+
+  list.querySelectorAll('[data-live-session-edit]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const sessionId = button.dataset.liveSessionEdit;
+      const card = list.querySelector(`[data-live-hub-session] input.live-hub-session-id[value="${escapeCssValue(sessionId)}"]`)?.closest('[data-live-hub-session]');
+      card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card?.classList.add('pulse-highlight');
+      window.setTimeout(() => card?.classList.remove('pulse-highlight'), 1400);
+    });
+  });
+
+  list.querySelectorAll('[data-live-session-save]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const sessionId = button.dataset.liveSessionSave;
+      const card = list.querySelector(`[data-live-hub-session] input.live-hub-session-id[value="${escapeCssValue(sessionId)}"]`)?.closest('[data-live-hub-session]');
+      if (!card) return;
+      try {
+        await persistLiveHubSessionFromCard(normalizeLiveHubSessionFromCard(card, Number(card.dataset.liveHubIndex || 0)));
+        await loadLiveSessionControl();
+      } catch (error) {
+        window.alert(error?.message || 'Unable to save this session.');
+      }
+    });
+  });
+
+  list.querySelectorAll('[data-live-session-start]').forEach((button) => {
+    button.addEventListener('click', () => {
+      openLiveSessionAction(button.dataset.liveSessionStart, 'start').catch((error) => window.alert(error?.message || 'Unable to start the session.'));
+    });
+  });
+
+  list.querySelectorAll('[data-live-session-end]').forEach((button) => {
+    button.addEventListener('click', () => {
+      openLiveSessionAction(button.dataset.liveSessionEnd, 'end').catch((error) => window.alert(error?.message || 'Unable to end the session.'));
+    });
+  });
+
+  list.querySelectorAll('[data-live-session-cancel]').forEach((button) => {
+    button.addEventListener('click', () => {
+      openLiveSessionAction(button.dataset.liveSessionCancel, 'cancel').catch((error) => window.alert(error?.message || 'Unable to cancel the session.'));
+    });
+  });
+}
+
+function readLiveHubSessions() {
+  return Array.from(cById('liveHubSessionList')?.querySelectorAll('[data-live-hub-session]') || [])
+    .map((card, index) => normalizeLiveHubSessionFromCard(card, index))
+    .filter((session) => Boolean(session.id));
+}
+
+function mapLiveSessionApiToCard(session = {}) {
+  return {
+    id: session.sessionId || session.id || '',
+    type: String(session.sessionType || session.type || 'mentorship').toLowerCase() === 'lab' ? 'lab' : 'mentorship',
+    title: session.title || '',
+    mentorName: session.mentorName || '',
+    assignedHostUserRef: session.assignedHostEmail || session.assignedHostUserId || session.mentorEmail || session.mentorProfileKey || '',
+    assignedHostEmail: session.assignedHostEmail || session.mentorEmail || '',
+    mentorProfileKey: session.assignedHostEmail || session.assignedHostUserId || session.mentorEmail || session.mentorProfileKey || '',
+    mentorAccessId: session.hostCode || session.hostCodePreview || session.hostCodePlain || session.mentorAccessId || '',
+    startAt: session.scheduledStart || session.startAt || '',
+    endAt: session.scheduledEnd || session.endAt || '',
+    durationMinutes: session.durationMinutes || 60,
+    provider: session.provider || getLiveDefaultProvider(),
+    roomId: session.roomName || session.roomId || session.channelName || '',
+    roomLabel: session.roomLabel || session.channelName || '',
+    status: normalizeGoLiveStatus(session.status || 'scheduled'),
+    summary: session.description || session.summary || '',
+    participantCount: session.participantCount || 0,
+    codeGenerated: Boolean(session.codeGenerated || session.hostCode || session.hostCodePreview || session.hostCodePlain),
+    lastGeneratedAt: session.lastGeneratedAt || session.hostCodeGeneratedAt || null
+  };
+}
+
+async function addLiveHubSession(session = {}) {
+  const list = cById('liveHubSessionList');
+  if (!list) return;
+
+  const response = await window.CollegeOSApi.liveSessionCreate({
+    title: session.title || 'New Live Session',
+    description: session.summary || '',
+    mentorName: session.mentorName || '',
+    assignedHostUserRef: session.assignedHostUserRef || session.mentorProfileKey || '',
+    assignedHostEmail: session.assignedHostUserRef || session.assignedHostEmail || session.mentorProfileKey || '',
+    sessionType: session.type || 'mentorship',
+    provider: session.provider || getLiveDefaultProvider(),
+    maxParticipants: Number(session.maxParticipants || 100),
+    scheduledStart: session.startAt || new Date().toISOString(),
+    scheduledEnd: session.endAt || new Date(Date.now() + 60 * 60000).toISOString(),
+    hostCode: session.mentorAccessId || undefined
+  });
+
+  const wrapper = document.createElement('div');
+  const index = list.querySelectorAll('[data-live-hub-session]').length;
+  wrapper.innerHTML = liveHubSessionCardHtml(mapLiveSessionApiToCard({
+    ...response.session,
+    hostCode: response.hostCode
+  }), index).trim();
+  list.appendChild(wrapper.firstElementChild);
+  renderLiveHubSessions(readLiveHubSessions());
+  if (response.hostCode) {
+    window.alert(`Session created. Host code: ${response.hostCode}`);
+  }
+  await loadLiveSessionControl();
+}
+
 async function ensureAdminSession() {
   try {
     const perm = await window.CollegeOSApi.adminControlPermissions();
@@ -99,14 +846,34 @@ async function ensureAdminSession() {
 }
 
 function bindTabs() {
+  const activatePanel = (panelId) => {
+    if (!panelId || !cById(panelId)) return;
+    document.querySelectorAll('.control-tab').forEach((node) => {
+      if (node.dataset.panel === panelId) node.classList.add('active');
+      else node.classList.remove('active');
+    });
+    document.querySelectorAll('.control-panel').forEach((panel) => panel.classList.remove('active'));
+    cById(panelId).classList.add('active');
+  };
+
   document.querySelectorAll('.control-tab').forEach((tab) => {
     tab.addEventListener('click', () => {
-      document.querySelectorAll('.control-tab').forEach((node) => node.classList.remove('active'));
-      tab.classList.add('active');
-      const panelId = tab.dataset.panel;
-      document.querySelectorAll('.control-panel').forEach((panel) => panel.classList.remove('active'));
-      cById(panelId).classList.add('active');
+      activatePanel(tab.dataset.panel);
     });
+  });
+
+  if (window.location.hash === '#live-session-control') {
+    window.setTimeout(() => {
+      activatePanel('panel-live-sessions');
+      cById('liveSessionControlBlock')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
+  }
+
+  window.addEventListener('hashchange', () => {
+    if (window.location.hash === '#live-session-control') {
+      activatePanel('panel-live-sessions');
+      cById('liveSessionControlBlock')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   });
 }
 
@@ -888,6 +1655,7 @@ async function loadSettings() {
   const settings = data.settings || {};
   cById('settingAppName').value = settings.app_branding?.appName || 'College OS';
   cById('settingPrimaryColor').value = settings.app_branding?.primaryColor || '#2f6fed';
+  cById('settingLiveDefaultProvider').value = settings.live_defaults?.defaultProvider || 'jitsi';
   cById('settingMonthlyPrice').value = settings.membership_pricing?.monthly || 49;
   cById('settingMaintenanceEnabled').value = settings.maintenance_mode?.enabled ? 'true' : 'false';
   cById('settingSystemNotice').value = settings.system_notice?.message || '';
@@ -928,10 +1696,13 @@ async function saveSettings() {
     system_notice: {
       message: cById('settingSystemNotice').value
     },
+    live_defaults: {
+      defaultProvider: getLiveDefaultProvider()
+    },
     feature_toggles: toggles
   });
 
-  window.alert('Platform settings updated.');
+  window.alert('System settings updated.');
 }
 
 async function saveContributionVisibilitySettings() {
@@ -1031,7 +1802,7 @@ async function saveMembershipConfig() {
   };
 
   await window.CollegeOSApi.adminControlUpdateMembershipConfig(payload);
-  window.alert('Membership center configuration saved. Pricing page updates instantly for students.');
+  window.alert('Membership studio saved. Pricing updates instantly for students.');
 }
 
 function renderToggleGrid(hostId, options, selectedValues = {}) {
@@ -1239,7 +2010,84 @@ async function saveExperienceConfig() {
   };
 
   await window.CollegeOSApi.adminControlUpdateExperienceConfig(payload);
-  window.alert('Student experience configuration saved. Home and Dashboard will reflect updates instantly.');
+  window.alert('Experience studio saved. Home, auth, onboarding, and dashboard modules will reflect updates instantly.');
+}
+
+async function loadLiveSessionControl() {
+  const [payload, liveSessions] = await Promise.all([
+    window.CollegeOSApi.adminControlExperienceConfig(),
+    window.CollegeOSApi.liveSessionsUpcoming({ scope: 'admin', includeEnded: true })
+  ]);
+  const config = payload?.config || {};
+  const liveHub = config.liveHub || {};
+  const configSessions = Array.isArray(liveHub.sessions) ? liveHub.sessions : [];
+  const configSessionById = new Map(configSessions.map((session) => [String(session.id || session.sessionId || '').trim(), session]));
+
+  cById('liveHubEnabled').value = String(liveHub.enabled !== false);
+  cById('liveHubTitle').value = liveHub.title || 'Unified Live Hub';
+  cById('liveHubSubtitle').value = liveHub.subtitle || 'Mentorship sessions and hands-on labs in one place.';
+  cById('liveHubSidebarLabel').value = liveHub.sidebarLabel || 'Live Hub';
+  cById('liveHubMentorshipDays').value = liveHub.mentorshipCycleDays ?? 15;
+  cById('liveHubLabDays').value = liveHub.labCycleDays ?? 7;
+  const sessions = (liveSessions.sessions || []).map((session) => {
+    const configSession = configSessionById.get(String(session.sessionId || session.id || '').trim()) || {};
+    return mapLiveSessionApiToCard({
+      ...session,
+      mentorAccessId: configSession.mentorAccessId || session.hostCode || session.hostCodePreview || session.hostCodePlain || '',
+      assignedHostUserRef: configSession.assignedHostUserRef || session.assignedHostUserRef || session.assignedHostEmail || session.mentorProfileKey || '',
+      assignedHostEmail: configSession.assignedHostEmail || session.assignedHostEmail || session.mentorEmail || '',
+      mentorProfileKey: configSession.mentorProfileKey || session.mentorProfileKey || session.assignedHostUserId || session.assignedHostEmail || '',
+      codeGenerated: Boolean(configSession.mentorAccessId || session.hostCode || session.hostCodePreview || session.hostCodePlain),
+      lastGeneratedAt: session.lastGeneratedAt || configSession.lastGeneratedAt || null
+    });
+  });
+  renderLiveSessionMonitor(sessions);
+  renderLiveHubSessions(sessions);
+}
+
+async function saveLiveSessionControl() {
+  const liveHubSessions = readLiveHubSessions();
+  const liveHubErrors = validateLiveHubSessions(liveHubSessions);
+  if (liveHubErrors.length) {
+    window.alert(`Live Session Control issue:\n- ${liveHubErrors.join('\n- ')}`);
+    return;
+  }
+
+  await window.CollegeOSApi.adminControlUpdateExperienceConfig({
+    liveHub: {
+      enabled: cById('liveHubEnabled').value === 'true',
+      title: cById('liveHubTitle').value || 'Unified Live Hub',
+      subtitle: cById('liveHubSubtitle').value || 'Mentorship sessions and hands-on labs in one place.',
+      sidebarLabel: cById('liveHubSidebarLabel').value || 'Live Hub',
+      mentorshipCycleDays: Number(cById('liveHubMentorshipDays').value || 15),
+      labCycleDays: Number(cById('liveHubLabDays').value || 7),
+      defaultProvider: getLiveDefaultProvider(),
+      sessions: liveHubSessions
+    }
+  });
+
+  await window.CollegeOSApi.adminLiveSessionsSync({
+    sessions: liveHubSessions.map((session) => ({
+      sessionId: session.id,
+      title: session.title,
+      description: session.summary,
+      mentorName: session.mentorName,
+      assignedHostUserRef: session.assignedHostUserRef || session.mentorProfileKey,
+      assignedHostEmail: session.assignedHostUserRef || session.assignedHostEmail || session.mentorProfileKey,
+      sessionType: session.type,
+      provider: session.provider,
+      roomName: session.roomId,
+      channelName: session.roomId,
+      scheduledStart: session.startAt,
+      scheduledEnd: session.endAt,
+      status: session.status,
+      maxParticipants: session.maxParticipants || 100,
+      hostCode: session.mentorAccessId || undefined
+    }))
+  });
+
+  window.alert('Live operations saved successfully.');
+  await loadLiveSessionControl();
 }
 
 async function loadAuditLogs() {
@@ -1333,6 +2181,29 @@ function bindEvents() {
   cById('loadMembershipConfigBtn')?.addEventListener('click', () => loadMembershipConfig().catch((e) => window.alert(e.message)));
   cById('saveExperienceConfigBtn')?.addEventListener('click', () => saveExperienceConfig().catch((e) => window.alert(e.message)));
   cById('loadExperienceConfigBtn')?.addEventListener('click', () => loadExperienceConfig().catch((e) => window.alert(e.message)));
+  cById('saveLiveHubControlBtn')?.addEventListener('click', () => saveLiveSessionControl().catch((e) => window.alert(e.message)));
+  cById('loadLiveHubControlBtn')?.addEventListener('click', () => loadLiveSessionControl().catch((e) => window.alert(e.message)));
+  cById('addLiveHubSessionBtn')?.addEventListener('click', () => addLiveHubSession().catch((e) => window.alert(e.message)));
+  cById('seedLiveHubSessionsBtn')?.addEventListener('click', () => window.CollegeOSApi.adminLiveSessionsSync({
+    sessions: liveHubSeedSessions().map((session) => ({
+      sessionId: session.id,
+      title: session.title,
+      description: session.summary,
+      mentorName: session.mentorName,
+      assignedHostUserRef: session.assignedHostUserRef || session.assignedHostEmail || session.mentorProfileKey,
+      assignedHostEmail: session.assignedHostUserRef || session.assignedHostEmail || session.mentorProfileKey,
+      allowUnresolvedHost: true,
+      sessionType: session.type,
+      provider: session.provider,
+      roomName: session.roomId,
+      channelName: session.roomId,
+      scheduledStart: session.startAt,
+      scheduledEnd: session.endAt,
+      status: session.status,
+      maxParticipants: session.maxParticipants || 100,
+      hostCode: session.mentorAccessId || undefined
+    }))
+  }).then(() => loadLiveSessionControl()).catch((e) => window.alert(e.message)));
 
   cById('loadAuditBtn').addEventListener('click', () => loadAuditLogs().catch((e) => window.alert(e.message)));
 }
@@ -1341,6 +2212,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindTabs();
   await ensureAdminSession();
   bindEvents();
+  bindLiveSessionRealtime();
 
   const bootstrapJobs = [
     ['analytics', () => loadAnalytics()],
@@ -1360,7 +2232,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     ['settings', () => loadSettings()],
     ['contribution visibility', () => loadContributionVisibilitySettings()],
     ['membership config', () => loadMembershipConfig()],
-    ['experience config', () => loadExperienceConfig()],
+    ['experience settings', () => loadExperienceConfig()],
+    ['live session control', () => loadLiveSessionControl()],
     ['audit logs', () => loadAuditLogs()]
   ];
 

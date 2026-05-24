@@ -42,6 +42,73 @@ const DEFAULT_STUDENT_EXPERIENCE_CONFIG = {
       announcements: true
     }
   },
+  liveHub: {
+    enabled: true,
+    title: 'Unified Live Hub',
+    subtitle: 'Mentorship sessions and hands-on labs in one place.',
+    mentorshipCycleDays: 15,
+    labCycleDays: 7,
+    defaultProvider: 'jitsi',
+    sidebarLabel: 'Live Hub',
+    sessions: [
+      {
+        id: 'mentor-resume-review',
+        type: 'mentorship',
+        title: 'Resume Review and Interview Prep',
+        mentorName: 'Ananya Sharma',
+        mentorAccessId: 'MENTOR-RESUME-001',
+        startAt: '2026-05-05T10:00:00.000Z',
+        endAt: '2026-05-05T11:00:00.000Z',
+        durationMinutes: 60,
+        provider: 'jitsi',
+        roomId: 'resume-review-room',
+        status: 'scheduled',
+        summary: 'Live feedback on resumes, projects, and interview confidence.'
+      },
+      {
+        id: 'mentor-placement-office',
+        type: 'mentorship',
+        title: 'Placement Strategy Office Hours',
+        mentorName: 'Rohit Verma',
+        mentorAccessId: 'MENTOR-PLACEMENT-002',
+        startAt: '2026-05-08T09:30:00.000Z',
+        endAt: '2026-05-08T10:45:00.000Z',
+        durationMinutes: 75,
+        provider: 'jitsi',
+        roomId: 'placement-office-hours',
+        status: 'scheduled',
+        summary: 'Career planning and placement strategy for the next hiring cycle.'
+      },
+      {
+        id: 'lab-az900-cloud-fundamentals',
+        type: 'lab',
+        title: 'AZ-900 Cloud Fundamentals Lab',
+        mentorName: 'Priya Nair',
+        mentorAccessId: 'LAB-AZ900-003',
+        startAt: '2026-05-06T14:00:00.000Z',
+        endAt: '2026-05-06T15:30:00.000Z',
+        durationMinutes: 90,
+        provider: 'jitsi',
+        roomId: 'az900-lab-room',
+        status: 'scheduled',
+        summary: 'Hands-on walkthrough of cloud concepts, pricing, and lab exercises.'
+      },
+      {
+        id: 'lab-ai900-applied-ai',
+        type: 'lab',
+        title: 'AI-900 Applied AI Lab',
+        mentorName: 'Kunal Mehta',
+        mentorAccessId: 'LAB-AI900-004',
+        startAt: '2026-05-10T13:00:00.000Z',
+        endAt: '2026-05-10T14:30:00.000Z',
+        durationMinutes: 90,
+        provider: 'agora',
+        roomId: 'ai900-lab-room',
+        status: 'scheduled',
+        summary: 'Practical AI-900 walkthrough with prompt, vision, and language demos.'
+      }
+    ]
+  },
   dashboard: {
     sectionVisibility: {
       learningStats: true,
@@ -195,6 +262,85 @@ function toJsonArray(value, fallback = []) {
     }
   }
   return fallback;
+}
+
+function normalizeGoLiveStatus(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (raw === 'live' || raw === 'active') return 'live';
+  if (raw === 'completed' || raw === 'ended') return 'completed';
+  if (raw === 'ready' || raw === 'ready_to_go_live' || raw === 'ready-to-go-live') return 'ready';
+  return 'scheduled';
+}
+
+function isActiveGoLiveStatus(status) {
+  const normalized = normalizeGoLiveStatus(status);
+  return normalized === 'ready' || normalized === 'live';
+}
+
+function parseMaybeDate(value) {
+  const date = value ? new Date(value) : null;
+  return date && !Number.isNaN(date.getTime()) ? date.getTime() : null;
+}
+
+function windowsOverlap(left, right) {
+  const leftStart = parseMaybeDate(left.startAt);
+  const leftEnd = parseMaybeDate(left.endAt);
+  const rightStart = parseMaybeDate(right.startAt);
+  const rightEnd = parseMaybeDate(right.endAt);
+  if (leftStart === null || leftEnd === null || rightStart === null || rightEnd === null) return true;
+  return leftStart < rightEnd && rightStart < leftEnd;
+}
+
+function normalizeGoLiveSession(session, index) {
+  const type = String(session?.type || '').toLowerCase() === 'lab' ? 'lab' : 'mentorship';
+  const mentorAccessId = String(session?.mentorAccessId || session?.liveAccessId || session?.accessId || '').trim();
+  const inputStatus = String(session?.status || '').trim();
+  const status = normalizeGoLiveStatus(inputStatus === 'scheduled' && mentorAccessId ? 'ready' : inputStatus);
+
+  return {
+    ...session,
+    id: String(session?.id || `${type}-${index + 1}`).trim(),
+    type,
+    mentorName: String(session?.mentorName || '').trim(),
+    mentorAccessId,
+    mentorProfileKey: String(session?.mentorProfileKey || session?.mentorUid || session?.mentorEmail || session?.mentorUserId || '').trim(),
+    status
+  };
+}
+
+function validateGoLiveSessions(sessions = []) {
+  const errors = [];
+  const activeByAccessId = new Map();
+
+  sessions.forEach((session, index) => {
+    const row = index + 1;
+    const status = normalizeGoLiveStatus(session.status);
+    const accessId = String(session.mentorAccessId || '').trim();
+    const mentorProfileKey = String(session.mentorProfileKey || '').trim();
+    if ((status === 'ready' || status === 'live') && !accessId) {
+      errors.push(`Session ${row}: Unique Mentor Go Live ID is required for Ready/Live sessions.`);
+    }
+    if ((status === 'ready' || status === 'live') && !mentorProfileKey) {
+      errors.push(`Session ${row}: Mentor Profile Key is required to map the Go Live ID.`);
+    }
+    if (!isActiveGoLiveStatus(status) || !accessId) return;
+    const key = accessId.toUpperCase();
+    if (!activeByAccessId.has(key)) activeByAccessId.set(key, []);
+    activeByAccessId.get(key).push({ row, session });
+  });
+
+  activeByAccessId.forEach((group, key) => {
+    if (group.length < 2) return;
+    for (let i = 0; i < group.length; i += 1) {
+      for (let j = i + 1; j < group.length; j += 1) {
+        if (windowsOverlap(group[i].session, group[j].session)) {
+          errors.push(`Go Live ID ${key} conflicts between sessions ${group[i].row} and ${group[j].row}.`);
+        }
+      }
+    }
+  });
+
+  return errors;
 }
 
 async function ensureAdminControlSchema() {
@@ -2942,17 +3088,31 @@ router.put('/experience-config', requirePermission('settings.manage'), async (re
   const payload = req.body && typeof req.body === 'object' ? req.body : null;
   if (!payload) return res.status(400).json({ error: 'config payload is required' });
 
-  const merged = deepMerge(DEFAULT_STUDENT_EXPERIENCE_CONFIG, payload);
+  const currentResult = await pool.query("SELECT value_json FROM platform_settings WHERE key = 'student_experience_config' LIMIT 1");
+  const currentConfig = deepMerge(DEFAULT_STUDENT_EXPERIENCE_CONFIG, currentResult.rows[0]?.value_json || {});
+  const merged = deepMerge(currentConfig, payload);
+
+  if (Array.isArray(merged.liveHub?.sessions)) {
+    const normalizedSessions = merged.liveHub.sessions.map((session, index) => normalizeGoLiveSession(session, index));
+    const validationErrors = validateGoLiveSessions(normalizedSessions);
+    if (validationErrors.length) {
+      return res.status(400).json({
+        error: 'Live Hub Go Live configuration is invalid',
+        details: validationErrors
+      });
+    }
+    merged.liveHub.sessions = normalizedSessions;
+  }
 
   await pool.query(
     `INSERT INTO platform_settings (key, value_json, updated_by, updated_at)
      VALUES ('student_experience_config', $1::jsonb, $2, CURRENT_TIMESTAMP)
      ON CONFLICT (key)
      DO UPDATE SET value_json = EXCLUDED.value_json, updated_by = EXCLUDED.updated_by, updated_at = CURRENT_TIMESTAMP`,
-    [JSON.stringify(merged), _req.session.userId]
+    [JSON.stringify(merged), req.session.userId]
   );
 
-  await writeAuditLog(_req, 'settings.student_experience.update', 'platform_settings', 'student_experience_config', {
+  await writeAuditLog(req, 'settings.student_experience.update', 'platform_settings', 'student_experience_config', {
     updatedRootKeys: Object.keys(payload)
   });
 
@@ -3003,3 +3163,4 @@ router.get('/audit-logs', requirePermission('reports.view'), async (req, res) =>
 });
 
 module.exports = router;
+module.exports.ensureAdminControlSchema = ensureAdminControlSchema;

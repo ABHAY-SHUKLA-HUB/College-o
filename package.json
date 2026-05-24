@@ -12,8 +12,10 @@
   "dependencies": {
     "@azure/storage-blob": "^12.31.0",
     "@fortawesome/fontawesome-free": "^6.5.2",
+    "agora-access-token": "^2.0.4",
     "bcryptjs": "^2.4.3",
     "chart.js": "^4.5.1",
+    "compression": "^1.8.1",
     "connect-pg-simple": "^10.0.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
@@ -30,6 +32,11 @@
     "uuid": "^11.1.0",
     "validator": "^13.15.26",
     "xlsx": "^0.18.5"
+  ,
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "redis": "^4.6.7",
+    "@socket.io/redis-adapter": "^7.1.1"
   },
   "devDependencies": {
     "ngrok": "^5.0.0-beta.2"

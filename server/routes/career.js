@@ -791,6 +791,209 @@ router.post('/ai-tools/generate', requireAuth, async (req, res) => {
   return res.json(generated.data);
 });
 
+function buildStudioInsight(title, summary, items = [], nextSteps = [], confidence = 0) {
+  return {
+    title,
+    keyTakeaway: summary,
+    confidence: Math.max(0, Math.min(100, Number(confidence) || 0)),
+    sections: [
+      {
+        heading: 'Insights',
+        type: 'bullets',
+        items: Array.isArray(items) && items.length ? items : ['No structured signals were provided.']
+      },
+      {
+        heading: 'Next Steps',
+        type: 'numbered',
+        items: Array.isArray(nextSteps) && nextSteps.length ? nextSteps : ['Add more context for a stronger prediction.']
+      }
+    ],
+    followUps: [],
+    warnings: []
+  };
+}
+
+router.post('/ai-tools/studio/chat', requireAuth, async (req, res) => {
+  const userId = req.session.userId;
+  const toolsPayload = await loadAiToolsForUser(userId);
+  const userInput = String(req.body?.prompt || req.body?.question || '').trim();
+  if (!userInput) {
+    return res.status(400).json({ error: 'prompt is required', code: 'VALIDATION_ERROR' });
+  }
+
+  const toolKey = /what|why|how|explain|concept/i.test(userInput) ? 'concept-explainer' : 'doubt-solver';
+  const tool = (toolsPayload.tools || []).find((item) => item.tool_key === toolKey);
+  const generated = await executeManagedAiToolGeneration({
+    userId,
+    toolKey,
+    tool,
+    inputs: { doubt: userInput, concept: userInput, question: userInput, topic: userInput },
+    profile: toolsPayload.profile,
+    membership: toolsPayload.membership,
+    roadmaps: [],
+    sessionMemory: req.session.aiToolMemory || {},
+    userMeta: { full_name: req.session.full_name || req.session.name || 'Student' }
+  });
+
+  if (!generated.ok) {
+    return res.status(generated.status || 400).json({
+      error: generated.error || 'Unable to generate output.',
+      code: 'GENERATION_FAILED',
+      details: generated.details || []
+    });
+  }
+
+  req.session.aiToolMemory = generated.data.memory || req.session.aiToolMemory || {};
+  return res.json(generated.data);
+});
+
+router.post('/ai-tools/studio/quiz-from-notes', requireAuth, async (req, res) => {
+  const userId = req.session.userId;
+  const toolsPayload = await loadAiToolsForUser(userId);
+  const notes = String(req.body?.notes || req.body?.content || '').trim();
+  if (!notes) {
+    return res.status(400).json({ error: 'notes are required', code: 'VALIDATION_ERROR' });
+  }
+
+  const tool = (toolsPayload.tools || []).find((item) => item.tool_key === 'quiz-generator');
+  const generated = await executeManagedAiToolGeneration({
+    userId,
+    toolKey: 'quiz-generator',
+    tool,
+    inputs: { content: notes, topic: req.body?.topic || '', subject: req.body?.subject || '' },
+    profile: toolsPayload.profile,
+    membership: toolsPayload.membership,
+    roadmaps: [],
+    sessionMemory: req.session.aiToolMemory || {},
+    userMeta: { full_name: req.session.full_name || req.session.name || 'Student' }
+  });
+
+  if (!generated.ok) {
+    return res.status(generated.status || 400).json({ error: generated.error || 'Unable to generate quiz.', code: 'GENERATION_FAILED' });
+  }
+
+  req.session.aiToolMemory = generated.data.memory || req.session.aiToolMemory || {};
+  return res.json(generated.data);
+});
+
+router.post('/ai-tools/studio/session-summary', requireAuth, async (req, res) => {
+  const userId = req.session.userId;
+  const toolsPayload = await loadAiToolsForUser(userId);
+  const transcript = String(req.body?.transcript || req.body?.notes || '').trim();
+  if (!transcript) {
+    return res.status(400).json({ error: 'transcript is required', code: 'VALIDATION_ERROR' });
+  }
+
+  const tool = (toolsPayload.tools || []).find((item) => item.tool_key === 'notes-summary');
+  const generated = await executeManagedAiToolGeneration({
+    userId,
+    toolKey: 'notes-summary',
+    tool,
+    inputs: { content: transcript, topic: req.body?.title || req.body?.topic || 'Live session' },
+    profile: toolsPayload.profile,
+    membership: toolsPayload.membership,
+    roadmaps: [],
+    sessionMemory: req.session.aiToolMemory || {},
+    userMeta: { full_name: req.session.full_name || req.session.name || 'Student' }
+  });
+
+  if (!generated.ok) {
+    return res.status(generated.status || 400).json({ error: generated.error || 'Unable to generate summary.', code: 'GENERATION_FAILED' });
+  }
+
+  req.session.aiToolMemory = generated.data.memory || req.session.aiToolMemory || {};
+  return res.json(generated.data);
+});
+
+router.post('/ai-tools/studio/attendance-insights', requireAuth, async (req, res) => {
+  const present = Math.max(0, Number(req.body?.present || req.body?.attended || 0));
+  const total = Math.max(0, Number(req.body?.total || req.body?.capacity || 0));
+  const late = Math.max(0, Number(req.body?.late || 0));
+  const absent = Math.max(0, Number(req.body?.absent || Math.max(total - present, 0)));
+  const rate = total > 0 ? Math.round((present / total) * 100) : 0;
+  const quality = rate >= 85 ? 'strong' : rate >= 70 ? 'steady' : 'needs attention';
+
+  return res.json({
+    title: 'Attendance Insights',
+    keyTakeaway: `Attendance is ${rate}% and the session health is ${quality}.`,
+    confidence: rate,
+    sections: [
+      {
+        heading: 'Snapshot',
+        type: 'bullets',
+        items: [
+          `Present: ${present}`,
+          `Late: ${late}`,
+          `Absent: ${absent}`,
+          `Coverage: ${total}`
+        ]
+      },
+      {
+        heading: 'Actionable Moves',
+        type: 'numbered',
+        items: [
+          'Reuse the attendance check-in pattern for every live session.',
+          'Trigger reminders before the next session window.',
+          'Review low-attendance cohorts and adjust timing or messaging.'
+        ]
+      }
+    ],
+    followUps: [],
+    warnings: rate < 70 ? ['Attendance rate is below the target threshold.'] : []
+  });
+});
+
+router.post('/ai-tools/studio/performance-prediction', requireAuth, async (req, res) => {
+  const avgScore = Math.max(0, Math.min(100, Number(req.body?.avgScore || req.body?.score || 0)));
+  const streak = Math.max(0, Number(req.body?.streak || req.body?.learningStreak || 0));
+  const attendance = Math.max(0, Math.min(100, Number(req.body?.attendance || req.body?.attendanceRate || 0)));
+  const quizzes = Math.max(0, Number(req.body?.quizzes || req.body?.quizAttempts || 0));
+  const predictionScore = Math.max(0, Math.min(100, Math.round((avgScore * 0.5) + (attendance * 0.3) + (Math.min(streak, 30) * 1.2) + (Math.min(quizzes, 20) * 0.8))));
+  const label = predictionScore >= 85 ? 'high' : predictionScore >= 70 ? 'moderate' : 'at risk';
+
+  return res.json(buildStudioInsight(
+    'Performance Prediction',
+    `Projected performance is ${label} with a confidence score of ${predictionScore}%.`,
+    [
+      `Average score: ${avgScore}%`,
+      `Attendance: ${attendance}%`,
+      `Streak: ${streak} days`,
+      `Quiz attempts: ${quizzes}`
+    ],
+    [
+      'Intervene with targeted revision if the score is below target.',
+      'Increase mock practice cadence before the next checkpoint.',
+      'Use the recommendation engine to surface the next best study action.'
+    ],
+    predictionScore
+  ));
+});
+
+router.post('/ai-tools/studio/recommendations', requireAuth, async (req, res) => {
+  const userId = req.session.userId;
+  const toolsPayload = await loadAiToolsForUser(userId);
+  const goal = String(req.body?.goal || req.body?.targetGoal || '').trim();
+  const tool = (toolsPayload.tools || []).find((item) => item.tool_key === 'roadmap-recommender');
+  const generated = await executeManagedAiToolGeneration({
+    userId,
+    toolKey: 'roadmap-recommender',
+    tool,
+    inputs: { targetGoal: goal || 'Career growth', currentLevel: req.body?.level || req.body?.currentLevel || 'Beginner', goal },
+    profile: toolsPayload.profile,
+    membership: toolsPayload.membership,
+    roadmaps: [],
+    sessionMemory: req.session.aiToolMemory || {},
+    userMeta: { full_name: req.session.full_name || req.session.name || 'Student' }
+  });
+
+  if (!generated.ok) {
+    return res.status(generated.status || 400).json({ error: generated.error || 'Unable to generate recommendations.', code: 'GENERATION_FAILED' });
+  }
+
+  req.session.aiToolMemory = generated.data.memory || req.session.aiToolMemory || {};
+  return res.json(generated.data);
+});
+
 router.get('/admin/roadmaps', requireAdmin, async (_req, res) => {
   const { rows } = await pool.query(
     `SELECT

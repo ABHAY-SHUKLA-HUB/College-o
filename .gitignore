@@ -43,6 +43,12 @@ scripts/
 dist/
 build/
 .cache/
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
 
 # 🔑 Keys / sensitive files
 *.pem

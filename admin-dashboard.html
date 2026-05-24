@@ -24,6 +24,7 @@
         <nav class="co-admin-nav">
           <a class="co-admin-nav-link active" href="admin-dashboard.html"><i class="fa-solid fa-chart-pie"></i><span>Overview</span></a>
           <a class="co-admin-nav-link" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control System</span></a>
+          <a class="co-admin-nav-link" href="admin-control.html#live-session-control"><i class="fa-solid fa-tower-broadcast"></i><span>Live Session Control</span></a>
           <a class="co-admin-nav-link" href="admin-academics.html#contributions"><i class="fa-solid fa-upload"></i><span>Contribution Control</span></a>
           <a class="co-admin-nav-link" href="admin-support-governance.html"><i class="fa-solid fa-shield-halved"></i><span>Support Governance</span></a>
           <a class="co-admin-nav-link" href="admin-notes.html"><i class="fa-solid fa-file-lines"></i><span>Notes</span></a>
@@ -194,6 +195,39 @@
               <span class="co-admin-icon-badge"><i class="fa-solid fa-indian-rupee-sign"></i></span>
             </div>
             <div class="co-admin-trend up"><i class="fa-solid fa-chart-column"></i> Current month approved</div>
+          </article>
+
+          <article class="co-admin-stat">
+            <div class="co-admin-stat-top">
+              <div>
+                <p class="co-admin-stat-label">Daily Active Users</p>
+                <p class="co-admin-stat-value" id="kpiDailyActiveUsers">0</p>
+              </div>
+              <span class="co-admin-icon-badge"><i class="fa-solid fa-bolt"></i></span>
+            </div>
+            <div class="co-admin-trend up" id="adminDAUPulse"><i class="fa-solid fa-chart-line"></i> Live login pulse loading</div>
+          </article>
+
+          <article class="co-admin-stat">
+            <div class="co-admin-stat-top">
+              <div>
+                <p class="co-admin-stat-label">Live Sessions</p>
+                <p class="co-admin-stat-value" id="kpiLiveSessions">0</p>
+              </div>
+              <span class="co-admin-icon-badge"><i class="fa-solid fa-video"></i></span>
+            </div>
+            <div class="co-admin-trend" id="adminLiveSessionsPulse"><i class="fa-solid fa-circle-play"></i> Session flow loading</div>
+          </article>
+
+          <article class="co-admin-stat">
+            <div class="co-admin-stat-top">
+              <div>
+                <p class="co-admin-stat-label">Attendance Rate</p>
+                <p class="co-admin-stat-value" id="kpiAttendanceRate">0%</p>
+              </div>
+              <span class="co-admin-icon-badge"><i class="fa-solid fa-chart-pie"></i></span>
+            </div>
+            <div class="co-admin-trend up" id="adminAttendancePulse"><i class="fa-solid fa-users-line"></i> Participation ratio loading</div>
           </article>
         </div>
       </section>
@@ -447,6 +481,39 @@
             </div>
             <div class="co-admin-table-wrap" style="padding:16px; margin-top:16px; background:#fff;">
               <canvas id="chartCollege" height="180"></canvas>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="co-admin-section">
+        <div class="co-admin-grid two">
+          <article class="co-admin-panel">
+            <div class="co-admin-section-head">
+              <div>
+                <h3>Learning and Live Engagement</h3>
+                <p>Track quiz depth, session momentum, and active participation as one operating signal.</p>
+              </div>
+            </div>
+            <div class="co-admin-grid" style="grid-template-columns:1fr; gap:16px;">
+              <div class="co-admin-table-wrap" style="padding:16px; background:#fff;">
+                <canvas id="chartEngagement" height="120"></canvas>
+              </div>
+              <div class="co-admin-table-wrap" style="padding:16px; background:#fff;">
+                <canvas id="chartLiveSessions" height="120"></canvas>
+              </div>
+            </div>
+          </article>
+
+          <article class="co-admin-panel">
+            <div class="co-admin-section-head">
+              <div>
+                <h3>AI Operations</h3>
+                <p>Usage, provider behavior, and automation demand across the AI layer.</p>
+              </div>
+            </div>
+            <div class="co-admin-table-wrap" style="padding:16px; background:#fff;">
+              <canvas id="chartAiOps" height="260"></canvas>
             </div>
           </article>
         </div>

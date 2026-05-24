@@ -327,3 +327,4 @@ router.post('/payment-request', requireAuth, upload.single('paymentScreenshot'),
 });
 
 module.exports = router;
+module.exports.ensureMembershipConfigSchema = ensureMembershipConfigSchema;

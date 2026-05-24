@@ -14,6 +14,7 @@ const navGroups = [
       { href: 'notes-library.html', label: 'Notes', icon: 'fa-file-lines', key: 'notes' },
       { href: 'academic-contribution-hub.html', label: 'Contribute', icon: 'fa-upload', key: 'contribute' },
       { href: 'study-roadmap.html', label: 'Roadmap', icon: 'fa-map', key: 'roadmap' },
+      { label: 'Live Hub', icon: 'fa-satellite-dish', key: 'liveHub', action: 'liveHub' },
       { href: 'ai-tools.html', label: 'AI Tools', icon: 'fa-sparkles', key: 'aiTools' }
     ]
   },
@@ -81,7 +82,8 @@ const iconColors = {
   aboutUs: '#1e4fd8',
   contactUs: '#0f7b6c',
   helpCenter: '#444',
-  myTickets: '#7c3aed'
+  myTickets: '#7c3aed',
+  liveHub: '#1a73e8'
 };
 
 const tooltipMap = {
@@ -92,6 +94,7 @@ const tooltipMap = {
   Notes: 'Open summary notes library',
   Contribute: 'Submit and track verified academic contributions',
   Roadmap: 'View personalized study path',
+  'Live Hub': 'Open mentorship and lab sessions',
   'AI Tools': 'Use AI study and career tools',
   Leaderboard: 'Check your rank',
   Profile: 'Manage profile and achievements',
@@ -168,9 +171,12 @@ function navHtml() {
     .map((group) => {
       const links = group.items
         .map((item) => {
-          const active = current === item.href ? 'active' : '';
+          const active = item.action ? '' : (current === item.href ? 'active' : '');
           const color = iconColors[item.key] || '#0f7b6c';
           const badge = item.key === 'notifications' ? '<span class="nav-badge" id="notifNavBadge" style="display:none;">0</span>' : '';
+          if (item.action === 'liveHub') {
+            return `<button class="nav-link nav-link-action ${active}" type="button" data-live-hub-toggle title="${tooltipMap[item.label] || item.label}" data-label="${item.label}"><i class="fa-solid ${item.icon}" style="color:${color}"></i><span class="nav-label">${item.label}</span>${badge}</button>`;
+          }
           return `<a class="nav-link ${active}" href="${item.href}" title="${tooltipMap[item.label] || item.label}" data-label="${item.label}"><i class="fa-solid ${item.icon}" style="color:${color}"></i><span class="nav-label">${item.label}</span>${badge}</a>`;
         })
         .join('');
@@ -495,6 +501,29 @@ function bindLogout() {
   });
 }
 
+function ensureLiveHubScript() {
+  if (window.CollegeOSLiveHub) return Promise.resolve(window.CollegeOSLiveHub);
+  if (document.querySelector('script[data-live-hub-script]')) {
+    return new Promise((resolve) => {
+      const poll = () => {
+        if (window.CollegeOSLiveHub) resolve(window.CollegeOSLiveHub);
+        else window.setTimeout(poll, 25);
+      };
+      poll();
+    });
+  }
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'assets/js/live-hub.js';
+    script.defer = true;
+    script.dataset.liveHubScript = 'true';
+    script.onload = () => resolve(window.CollegeOSLiveHub || null);
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
 function bindAdminShortcut() {
   document.addEventListener('keydown', (event) => {
     const isShortcut = event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'a';
@@ -601,6 +630,7 @@ function bindRealtimeNotificationBadge() {
 document.addEventListener('DOMContentLoaded', async () => {
   bindAdminShortcut();
   mountShell();
+  ensureLiveHubScript().catch(() => null);
   bindSidebarCollapse();
   mountContent();
   setTitle();

@@ -24,7 +24,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     runtimeCredits: document.getElementById('aiRuntimeCredits'),
     runtimeUsage: document.getElementById('aiRuntimeUsage'),
     runtimeProvider: document.getElementById('aiRuntimeProvider'),
-    historyList: document.getElementById('aiHistoryList')
+    historyList: document.getElementById('aiHistoryList'),
+    studioMode: document.getElementById('aiStudioMode'),
+    studioInput: document.getElementById('aiStudioInput'),
+    studioContext: document.getElementById('aiStudioContext'),
+    studioRunBtn: document.getElementById('aiStudioRunBtn'),
+    studioExampleBtn: document.getElementById('aiStudioExampleBtn'),
+    studioOutput: document.getElementById('aiStudioOutput'),
+    studioMeta: document.getElementById('aiStudioMeta')
   };
 
   if (!refs.grid) return;
@@ -556,6 +563,149 @@ document.addEventListener('DOMContentLoaded', async () => {
     refs.outputActions.style.display = state.lastRun ? '' : 'none';
   }
 
+  function renderStudioError(message) {
+    if (!refs.studioOutput) return;
+    refs.studioOutput.innerHTML = `<div class="ai-empty"><div><i class="fa-solid fa-triangle-exclamation"></i><p>${escapeHtml(message || 'Unable to run the studio module.')}</p></div></div>`;
+    if (refs.studioMeta) refs.studioMeta.textContent = 'Studio output unavailable';
+  }
+
+  function renderStudioResult(payload, modeLabel) {
+    if (!refs.studioOutput) return;
+    const normalized = payload?.result ? payload : { result: payload || {}, meta: payload?.meta || {}, toolTitle: payload?.toolTitle || modeLabel };
+    const result = normalized.result || {};
+    const sections = Array.isArray(result.sections) ? result.sections : [];
+    const warnings = Array.isArray(result.warnings) ? result.warnings : [];
+    const badges = Array.isArray(result.badges) ? result.badges : [];
+
+    let html = `<h3>${escapeHtml(result.title || normalized.toolTitle || modeLabel || 'AI Studio')}</h3>`;
+    html += `<div class="contrib-pills" style="margin-bottom:10px;"><span class="contrib-pill">Studio</span>${badges.map((badge) => `<span class="contrib-pill">${escapeHtml(badge)}</span>`).join('')}</div>`;
+
+    if (result.keyTakeaway) {
+      html += `<div class="card" style="margin-bottom:12px;"><strong>Key Takeaway</strong><p style="margin-top:8px;">${escapeHtml(result.keyTakeaway)}</p></div>`;
+    }
+
+    if (warnings.length) {
+      html += `<div class="card" style="margin-bottom:12px;"><strong>Signals</strong><ul>${warnings.map((warn) => `<li>${escapeHtml(warn)}</li>`).join('')}</ul></div>`;
+    }
+
+    sections.forEach((section) => {
+      const heading = escapeHtml(section.heading || 'Section');
+      const type = String(section.type || 'bullets');
+      const items = Array.isArray(section.items) ? section.items : [];
+      html += `<section style="margin-bottom:12px;"><h4>${heading}</h4>`;
+
+      if (type === 'paragraphs') {
+        html += items.map((item) => `<p>${escapeHtml(item)}</p>`).join('');
+      } else if (type === 'numbered') {
+        html += `<ol>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ol>`;
+      } else {
+        html += `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
+      }
+
+      html += '</section>';
+    });
+
+    refs.studioOutput.innerHTML = html;
+    if (refs.studioMeta) {
+      const confidence = Number(result.confidence || normalized.meta?.confidence || 0);
+      const suffix = confidence ? ` | Confidence ${confidence}%` : '';
+      refs.studioMeta.textContent = `${modeLabel || normalized.toolTitle || 'AI Studio'}${suffix}`;
+    }
+  }
+
+  function studioExamplePayload(mode) {
+    switch (mode) {
+      case 'quiz':
+        return { input: 'This chapter covers SQL joins, indexes, query plans, and normalization.', context: 'Database systems' };
+      case 'summary':
+        return { input: 'Mentor discussed attendance, mock interview prep, project checkpoints, and a revision plan.', context: 'Live session summary' };
+      case 'attendance':
+        return { input: 'present=42, total=50, late=4, absent=8', context: 'Weekly lab' };
+      case 'prediction':
+        return { input: 'avgScore=78, streak=12, attendance=82, quizzes=14', context: 'Semester 5' };
+      case 'recommendation':
+        return { input: 'Target goal: software engineer internship', context: 'DSA + projects' };
+      case 'chat':
+      default:
+        return { input: 'Explain database indexing in a simple way with one practical example.', context: 'Computer science' };
+    }
+  }
+
+  function getStudioEndpoint(mode) {
+    switch (mode) {
+      case 'quiz':
+        return 'quiz';
+      case 'summary':
+        return 'summary';
+      case 'attendance':
+        return 'attendance';
+      case 'prediction':
+        return 'prediction';
+      case 'recommendation':
+        return 'recommendation';
+      case 'chat':
+      default:
+        return 'chat';
+    }
+  }
+
+  function parseMetricInput(text) {
+    const out = {};
+    String(text || '').split(/[,\n;]/).forEach((chunk) => {
+      const [rawKey, rawValue] = chunk.split('=');
+      if (!rawKey || rawValue == null) return;
+      const key = safeText(rawKey, 40).toLowerCase();
+      const numeric = Number(rawValue);
+      out[key] = Number.isFinite(numeric) && String(rawValue).trim() !== '' ? numeric : safeText(rawValue, 120);
+    });
+    return out;
+  }
+
+  async function runStudioMode() {
+    if (!refs.studioMode || !refs.studioInput || !refs.studioContext) return;
+    const mode = getStudioEndpoint(refs.studioMode.value);
+    const input = refs.studioInput.value.trim();
+    const context = refs.studioContext.value.trim();
+
+    if (!input) {
+      renderStudioError('Add a prompt or metrics block before running the studio.');
+      return;
+    }
+
+    try {
+      if (refs.studioRunBtn) refs.studioRunBtn.disabled = true;
+
+      let payload;
+      if (mode === 'chat') {
+        payload = await window.CollegeOSApi.aiStudioChat(input);
+      } else if (mode === 'quiz') {
+        payload = await window.CollegeOSApi.aiStudioQuizFromNotes(input, { topic: context });
+      } else if (mode === 'summary') {
+        payload = await window.CollegeOSApi.aiStudioSessionSummary(input, { title: context || 'Live session' });
+      } else if (mode === 'attendance') {
+        payload = await window.CollegeOSApi.aiStudioAttendanceInsights({ ...parseMetricInput(input), context });
+      } else if (mode === 'prediction') {
+        payload = await window.CollegeOSApi.aiStudioPerformancePrediction({ ...parseMetricInput(input), context });
+      } else if (mode === 'recommendation') {
+        payload = await window.CollegeOSApi.aiStudioRecommendations({ goal: input, level: context });
+      }
+
+      renderStudioResult(payload, refs.studioMode.options[refs.studioMode.selectedIndex]?.textContent || 'AI Studio');
+    } catch (error) {
+      renderStudioError(error.message || 'Unable to run the studio module.');
+    } finally {
+      if (refs.studioRunBtn) refs.studioRunBtn.disabled = false;
+    }
+  }
+
+  function loadStudioExample() {
+    if (!refs.studioMode || !refs.studioInput || !refs.studioContext) return;
+    const example = studioExamplePayload(refs.studioMode.value);
+    refs.studioInput.value = example.input;
+    refs.studioContext.value = example.context;
+    renderStudioError('Example loaded. Run the studio to generate output.');
+  }
+
   function collectCurrentOutputText() {
     return safeText(refs.output?.innerText || '', 20000);
   }
@@ -607,6 +757,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('aiSaveBtn')?.addEventListener('click', () => {
       saveCurrentResult();
+    });
+
+    refs.studioRunBtn?.addEventListener('click', async () => {
+      await runStudioMode();
+    });
+
+    refs.studioExampleBtn?.addEventListener('click', () => {
+      loadStudioExample();
+    });
+
+    refs.studioMode?.addEventListener('change', () => {
+      const example = studioExamplePayload(refs.studioMode.value);
+      if (refs.studioInput) refs.studioInput.placeholder = example.input;
+      if (refs.studioContext) refs.studioContext.placeholder = example.context;
     });
   }
 

@@ -332,3 +332,4 @@ router.post('/threads/:threadId/best-answer/:replyId', requireAuth, async (req, 
 });
 
 module.exports = router;
+module.exports.ensureForumSchema = ensureForumSchema;

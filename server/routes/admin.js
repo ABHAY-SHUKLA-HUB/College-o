@@ -152,7 +152,7 @@ router.post('/users/admin', requireAdmin, async (req, res) => {
 });
 
 router.get('/dashboard', requireAdmin, async (_req, res) => {
-  const [students, premium, subs, feedback, colleges, pendingApprovals, expiredUsers, monthlyRevenue] = await Promise.all([
+  const [students, premium, subs, feedback, colleges, pendingApprovals, expiredUsers, monthlyRevenue, dailyActiveUsers, liveSessionTotals] = await Promise.all([
     pool.query("SELECT COUNT(*)::int AS total FROM users WHERE role = 'student'"),
     pool.query("SELECT COUNT(*)::int AS total FROM users WHERE role = 'student' AND subscription_tier = 'premium'"),
     pool.query("SELECT COALESCE(SUM(amount_inr), 0)::numeric(10,2) AS revenue FROM subscriptions WHERE status = 'active'"),
@@ -164,6 +164,23 @@ router.get('/dashboard', requireAdmin, async (_req, res) => {
       `SELECT COALESCE(SUM(amount_inr), 0)::numeric(10,2) AS revenue
        FROM membership_payment_requests
        WHERE status = 'approved' AND approved_at >= DATE_TRUNC('month', NOW())`
+    ),
+    pool.query(
+      `SELECT COUNT(*)::int AS total
+       FROM users
+       WHERE role = 'student'
+         AND deleted_at IS NULL
+         AND last_login_at >= CURRENT_DATE`
+    ),
+    pool.query(
+      `SELECT
+        COUNT(*) FILTER (WHERE status = 'live')::int AS live_sessions,
+        COUNT(*) FILTER (WHERE status = 'scheduled')::int AS scheduled_sessions,
+        COUNT(*) FILTER (WHERE status = 'ended')::int AS ended_sessions,
+        COUNT(*) FILTER (WHERE status = 'cancelled')::int AS cancelled_sessions,
+        COALESCE(SUM(COALESCE(participant_count, 0)), 0)::int AS active_participants,
+        COALESCE(ROUND(100.0 * SUM(COALESCE(participant_count, 0)) / NULLIF(SUM(COALESCE(max_participants, 0)), 0), 2), 0) AS attendance_rate
+       FROM live_sessions`
     )
   ]);
 
@@ -175,7 +192,9 @@ router.get('/dashboard', requireAdmin, async (_req, res) => {
     collegesCovered: colleges.rows[0].total,
     pendingApprovals: pendingApprovals.rows[0].total,
     expiredUsers: expiredUsers.rows[0].total,
-    monthlyRevenueInr: Number(monthlyRevenue.rows[0].revenue)
+    monthlyRevenueInr: Number(monthlyRevenue.rows[0].revenue),
+    dailyActiveUsers: dailyActiveUsers.rows[0].total,
+    liveSessions: liveSessionTotals.rows[0]
   });
 });
 
@@ -405,7 +424,7 @@ router.get('/students/report.xlsx', requireAdmin, async (_req, res) => {
 });
 
 router.get('/trends', requireAdmin, async (_req, res) => {
-  const [signups, revenue, collegeStats] = await Promise.all([
+  const [signups, revenue, collegeStats, quizTrend, liveSessionTrend, aiUsageTrend, attendanceHeatmap, hostLeaderboard, liveActiveUsers, sessionAuditSummary] = await Promise.all([
     pool.query(
       `SELECT TO_CHAR(DATE_TRUNC('day', created_at), 'YYYY-MM-DD') AS day, COUNT(*)::int AS count
        FROM users
@@ -427,13 +446,84 @@ router.get('/trends', requireAdmin, async (_req, res) => {
        GROUP BY college_name
        ORDER BY students DESC
        LIMIT 6`
+    ),
+    pool.query(
+      `SELECT TO_CHAR(DATE_TRUNC('day', created_at), 'YYYY-MM-DD') AS day,
+              COUNT(*)::int AS attempts,
+              COALESCE(ROUND(AVG(score_percent), 2), 0) AS avg_score
+       FROM quiz_attempts
+       WHERE created_at >= NOW() - INTERVAL '14 days'
+       GROUP BY 1
+       ORDER BY 1`
+    ),
+    pool.query(
+      `SELECT TO_CHAR(DATE_TRUNC('day', COALESCE(actual_start, scheduled_start)), 'YYYY-MM-DD') AS day,
+              COUNT(*) FILTER (WHERE status = 'live')::int AS live_sessions,
+              COUNT(*) FILTER (WHERE status = 'ended')::int AS ended_sessions,
+              COALESCE(SUM(COALESCE(participant_count, 0)), 0)::int AS participant_total
+       FROM live_sessions
+       WHERE COALESCE(actual_start, scheduled_start) >= NOW() - INTERVAL '14 days'
+       GROUP BY 1
+       ORDER BY 1`
+    ),
+    pool.query(
+      `SELECT TO_CHAR(DATE_TRUNC('day', created_at), 'YYYY-MM-DD') AS day,
+              COUNT(*)::int AS requests,
+              COUNT(*) FILTER (WHERE success = TRUE)::int AS successful_requests,
+              COUNT(*) FILTER (WHERE provider_used = 'azure_openai')::int AS azure_requests
+       FROM ai_request_logs
+       WHERE created_at >= NOW() - INTERVAL '14 days'
+       GROUP BY 1
+       ORDER BY 1`
+    ),
+    pool.query(
+      `SELECT TO_CHAR(DATE_TRUNC('hour', COALESCE(actual_start, scheduled_start)), 'YYYY-MM-DD HH24:00') AS bucket,
+              COUNT(*)::int AS sessions,
+              COALESCE(SUM(COALESCE(participant_count, 0)), 0)::int AS participants
+       FROM live_sessions
+       WHERE COALESCE(actual_start, scheduled_start) >= NOW() - INTERVAL '7 days'
+       GROUP BY 1
+       ORDER BY 1`
+    ),
+    pool.query(
+      `SELECT
+         COALESCE(u.full_name, ls.assigned_host_email, 'Unassigned') AS host_name,
+         COUNT(*)::int AS sessions,
+         COALESCE(SUM(COALESCE(ls.participant_count, 0)), 0)::int AS participants,
+         COUNT(*) FILTER (WHERE ls.status = 'ended')::int AS completed_sessions
+       FROM live_sessions ls
+       LEFT JOIN users u ON u.id = ls.assigned_host_user_id
+       WHERE COALESCE(ls.scheduled_start, NOW()) >= NOW() - INTERVAL '30 days'
+       GROUP BY 1
+       ORDER BY sessions DESC, participants DESC
+       LIMIT 8`
+    ),
+    pool.query(
+      `SELECT COUNT(DISTINCT user_id)::int AS active_users
+       FROM live_session_presence
+       WHERE status = 'online' AND is_present = TRUE`
+    ),
+    pool.query(
+      `SELECT action, COUNT(*)::int AS total
+       FROM live_session_logs
+       WHERE created_at >= NOW() - INTERVAL '7 days'
+       GROUP BY 1
+       ORDER BY total DESC
+       LIMIT 8`
     )
   ]);
 
   res.json({
     signupTrend: signups.rows,
     revenueTrend: revenue.rows,
-    collegeDistribution: collegeStats.rows
+    collegeDistribution: collegeStats.rows,
+    quizTrend: quizTrend.rows,
+    liveSessionTrend: liveSessionTrend.rows,
+    aiUsageTrend: aiUsageTrend.rows,
+    attendanceHeatmap: attendanceHeatmap.rows,
+    hostLeaderboard: hostLeaderboard.rows,
+    liveActiveUsers: Number(liveActiveUsers.rows[0]?.active_users || 0),
+    sessionAuditSummary: sessionAuditSummary.rows
   });
 });
 
@@ -1807,3 +1897,4 @@ router.delete('/cache', requireAdmin, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.ensureCertificateSchema = ensureCertificateSchema;

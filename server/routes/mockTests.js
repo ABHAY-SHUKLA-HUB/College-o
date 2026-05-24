@@ -90,15 +90,6 @@ async function ensureMockTestSchema() {
   mockSchemaEnsured = true;
 }
 
-router.use(async (_req, _res, next) => {
-  try {
-    await ensureMockTestSchema();
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
-
 async function buildDashboardPayload(userId) {
   const [profileResult, membership, totalAttemptsResult] = await Promise.all([
     pool.query(
@@ -952,3 +943,4 @@ router.post('/:id/attempts', requireAuth, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.ensureMockTestSchema = ensureMockTestSchema;

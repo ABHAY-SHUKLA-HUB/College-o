@@ -223,29 +223,41 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   setDashboardLoading(true);
   try {
-    const [
-      personalizedPayload,
-      profilePayload,
-      academicPayload,
-      statsPayload,
-      roadmapPayload,
-      aiPayload,
-      subscriptionPayload,
-      quizAttemptsPayload,
-      mockDashboardPayload,
-      experiencePayload
-    ] = await Promise.all([
+    const [personalizedPayload, experiencePayload] = await Promise.all([
       window.CollegeOSApi.getPersonalizedDashboard().catch(() => null),
-      window.CollegeOSApi.getProfile ? window.CollegeOSApi.getProfile() : Promise.resolve(null),
-      window.CollegeOSApi.getStudentAcademicProfile().catch(() => ({ profile: null })),
-      window.CollegeOSApi.getDashboardStats().catch(() => ({})),
-      window.CollegeOSApi.getCareerRoadmaps().catch(() => ({ roadmaps: [] })),
-      window.CollegeOSApi.getAiToolsCatalog().catch(() => ({ tools: [] })),
-      window.CollegeOSApi.getSubscription().catch(() => ({})),
-      window.CollegeOSApi.getMyQuizAttempts().catch(() => ({ attempts: [] })),
-      window.CollegeOSApi.getMockTestsDashboard().catch(() => null),
       window.CollegeOSApi.getStudentExperienceConfig().catch(() => null)
     ]);
+
+    let profilePayload = null;
+    let academicPayload = null;
+    let statsPayload = {};
+    let roadmapPayload = { roadmaps: [] };
+    let aiPayload = { tools: [] };
+    let subscriptionPayload = {};
+    let quizAttemptsPayload = { attempts: [] };
+    let mockDashboardPayload = null;
+
+    if (!personalizedPayload) {
+      [
+        profilePayload,
+        academicPayload,
+        statsPayload,
+        roadmapPayload,
+        aiPayload,
+        subscriptionPayload,
+        quizAttemptsPayload,
+        mockDashboardPayload
+      ] = await Promise.all([
+        window.CollegeOSApi.getProfile ? window.CollegeOSApi.getProfile() : Promise.resolve(null),
+        window.CollegeOSApi.getStudentAcademicProfile().catch(() => ({ profile: null })),
+        window.CollegeOSApi.getDashboardStats().catch(() => ({})),
+        window.CollegeOSApi.getCareerRoadmaps().catch(() => ({ roadmaps: [] })),
+        window.CollegeOSApi.getAiToolsCatalog().catch(() => ({ tools: [] })),
+        window.CollegeOSApi.getSubscription().catch(() => ({})),
+        window.CollegeOSApi.getMyQuizAttempts().catch(() => ({ attempts: [] })),
+        window.CollegeOSApi.getMockTestsDashboard().catch(() => null)
+      ]);
+    }
 
     const runtimeExperienceConfig = experiencePayload?.config || experiencePayload || null;
 

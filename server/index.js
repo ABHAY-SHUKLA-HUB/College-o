@@ -2,10 +2,11 @@ require('dotenv').config();
 
 const path = require('path');
 const express = require('express');
+const compression = require('compression');
 const session = require('express-session');
 const pgSessionFactory = require('connect-pg-simple');
 const { pool } = require('./db/pool');
-const { ensureAdminAccount } = require('./utils/bootstrap');
+const { ensureDatabaseBootstrap } = require('./db/bootstrap');
 
 const authRoutes = require('./routes/auth');
 const metaRoutes = require('./routes/meta');
@@ -26,6 +27,7 @@ const forumRoutes = require('./routes/forum');
 const contentRoutes = require('./routes/content');
 const feedbackRoutes = require('./routes/feedback');
 const subscriptionRoutes = require('./routes/subscriptions');
+const liveSessionRoutes = require('./routes/live-sessions');
 const adminRoutes = require('./routes/admin');
 const adminControlRoutes = require('./routes/admin-control');
 const adminDashboardRoutes = require('./routes/admin-dashboard');
@@ -45,6 +47,8 @@ const supportModerationRoutes = require('./routes/support-moderation');
 const adminSupportGovernanceRoutes = require('./routes/admin-support-governance');
 const academicsContentMgmtRoutes = require('./routes/academics-content-management');
 const studentLibraryUnifiedRoutes = require('./routes/student-library-unified');
+// Socket / realtime integration
+const { initSocket } = require('./services/socketManager');
 
 // Security middleware imports
 const helmet = require('helmet');
@@ -78,12 +82,20 @@ function parseOrigins(input) {
 }
 
 const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
+const jitsiDomain = String(process.env.JITSI_DOMAIN || 'meet.jit.si').trim() || 'meet.jit.si';
+const productionFrontendOrigins = [
+  'https://college-o.vercel.app',
+  'https://college-o-33sg7jg49-abhayshukla2072006-2030s-projects.vercel.app'
+];
 const configuredOrigins = [
   ...parseOrigins(process.env.ALLOWED_ORIGINS),
   ...parseOrigins(process.env.FRONTEND_PUBLIC_URL),
   ...parseOrigins(process.env.APP_BASE_URL)
 ];
-const allowedOrigins = new Set(configuredOrigins);
+const allowedOrigins = new Set([
+  ...configuredOrigins,
+  ...(isProduction ? productionFrontendOrigins : [])
+]);
 const hasLocalhostOrigin = configuredOrigins.some((origin) => /localhost|127\.0\.0\.1/i.test(origin));
 
 function normalizeSameSite(raw) {
@@ -100,8 +112,8 @@ const sessionOptions = {
   rolling: true,
   cookie: {
     httpOnly: true,
-    sameSite: normalizeSameSite(process.env.SESSION_COOKIE_SAMESITE),
-    secure: isProduction || process.env.SESSION_COOKIE_SECURE === 'true',
+    sameSite: isProduction ? 'none' : normalizeSameSite(process.env.SESSION_COOKIE_SAMESITE),
+    secure: isProduction ? true : process.env.SESSION_COOKIE_SECURE === 'true',
     domain: String(process.env.SESSION_COOKIE_DOMAIN || '').trim() || undefined,
     maxAge: 1000 * 60 * 60 * 24 * 7
   }
@@ -129,10 +141,22 @@ if (isProduction) {
   app.set('trust proxy', 1);
 }
 
+const assetStaticOptions = {
+  etag: true,
+  lastModified: true,
+  maxAge: isProduction ? '30d' : '1h',
+  immutable: isProduction,
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  }
+};
+
 sessionOptions.store = new PgSession({
   pool,
   tableName: 'session',
-  createTableIfMissing: true
+  createTableIfMissing: false
 });
 
 /**
@@ -151,16 +175,22 @@ sessionOptions.store = new PgSession({
 app.use(requestIdMiddleware);
 
 // 2. Helmet - sets critical HTTP security headers
-//    CSP, X-Frame-Options, HSTS, X-XSS-Protection, etc.
+//    CSP, HSTS, X-XSS-Protection, etc.
+// Note: We intentionally allow trusted external script/frame origins required by the
+// Live Hub (Jitsi and Agora). Keep this list minimal and explicit to avoid broad relaxations.
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
-      scriptSrc: ["'self'"],
-      fontSrc: ["'self'", "fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:"],
-      frameSrc: ["'none'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      // Allow the Jitsi external API and Agora SDK to be loaded as scripts.
+      // Inline HTML pages in this app still depend on embedded scripts.
+      scriptSrc: ["'self'", "'unsafe-inline'", `https://${jitsiDomain}`, 'https://meet.jit.si', 'https://download.agora.io'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      // Allow framing Jitsi (embedded meeting) from meet.jit.si
+      frameSrc: ["'self'", `https://${jitsiDomain}`, 'https://meet.jit.si'],
+      connectSrc: ["'self'", `https://${jitsiDomain}`, 'https://meet.jit.si', 'https://download.agora.io'],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       upgradeInsecureRequests: isProduction ? [] : []
@@ -171,13 +201,18 @@ app.use(helmet({
     includeSubDomains: true,
     preload: isProduction
   },
-  frameguard: { action: 'deny' },
+  // Disable frameguard (X-Frame-Options) because it conflicts with modern CSP frame-src
+  frameguard: false,
   noSniff: true,
   xssFilter: true,
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 }));
 
 app.disable('x-powered-by');
+
+app.use(compression({
+  threshold: 1024
+}));
 
 // 3. Body parsers
 app.use(express.json({ limit: '2mb' }));
@@ -213,8 +248,9 @@ app.use((req, res, next) => {
   return next();
 });
 
-// 6. Static file serving
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+// 6. Static file serving - serve assets before session/csrf middleware.
+app.use('/assets', express.static(path.join(__dirname, '..', 'assets'), assetStaticOptions));
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'), assetStaticOptions));
 
 // 7. Session middleware
 app.use(session(sessionOptions));
@@ -282,6 +318,7 @@ app.use('/api/forum', forumRoutes);
 app.use('/api/content', contentRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/live-sessions', liveSessionRoutes);
 app.use('/api/admin/ai-ops', adminAiOpsRoutes);
 app.use('/api/admin-ai-ops', adminAiOpsRoutes);
 app.use('/api/admin', adminRoutes);
@@ -301,7 +338,7 @@ app.use('/api/admin/support-governance', adminSupportGovernanceRoutes);
 app.use('/api', academicsContentMgmtRoutes);
 app.use('/api', studentLibraryUnifiedRoutes);
 
-app.use(express.static(path.join(__dirname, '..')));
+app.use(express.static(path.join(__dirname, '..'), assetStaticOptions));
 
 // SPA fallback - serve index.html for client-side routing
 app.get('*', (req, res) => {
@@ -343,11 +380,32 @@ process.on('uncaughtException', (err) => {
 
 async function startServer() {
   await pool.query('SELECT 1');
-  await ensureAdminAccount();
-  app.listen(port, host, () => {
+  await ensureDatabaseBootstrap();
+  if (typeof liveSessionRoutes.runLiveSessionMaintenance === 'function') {
+    liveSessionRoutes.runLiveSessionMaintenance().catch((error) => {
+      console.warn('[Live Session Maintenance] initial run failed:', error.message);
+    });
+    setInterval(() => {
+      liveSessionRoutes.runLiveSessionMaintenance().catch((error) => {
+        console.warn('[Live Session Maintenance] sweep failed:', error.message);
+      });
+    }, 2 * 60 * 1000);
+  }
+
+  const server = app.listen(port, host, () => {
     const displayHost = host === '0.0.0.0' ? 'localhost' : host;
     console.log(`College OS server listening on http://${displayHost}:${port}`);
   });
+
+  // Initialize real-time socket layer (Socket.IO)
+  try {
+    initSocket(server, { allowedOrigins: Array.from(allowedOrigins) });
+  } catch (e) {
+    console.warn('[Socket Init] failed to initialize socket manager:', e && e.message);
+  }
+
+  server.keepAliveTimeout = 65 * 1000;
+  server.headersTimeout = 70 * 1000;
 }
 
 startServer().catch((error) => {

@@ -355,7 +355,7 @@ async function createNotification(userId, kind, message) {
 
     const row = recipient.rows[0];
     if (row?.email && row?.is_email_verified !== false) {
-      const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+      const baseUrl = process.env.APP_BASE_URL || process.env.FRONTEND_PUBLIC_URL || 'https://college-o.vercel.app';
       const template = buildNotificationEmail({
         kind,
         title: `Hello ${row.full_name || 'Student'}, here is your update`,

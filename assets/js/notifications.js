@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function toCategory(kind, message) {
     const k = String(kind || '').toLowerCase();
     const m = String(message || '').toLowerCase();
+    if (k.includes('live_session') || m.includes('live session') || m.includes('session is now live')) return 'Live Session Updates';
     if (k.includes('roadmap') || m.includes('roadmap')) return 'Roadmap Progress';
     if (k.includes('note') || m.includes('note')) return 'New Notes Uploaded';
     if (k.includes('certificate') || m.includes('certificate')) return 'Certificates Issued';
@@ -17,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function tabGroup(category) {
     if (category === 'Certificates Issued') return 'achievements';
-    if (category === 'Study Updates' || category === 'Roadmap Progress' || category === 'New Notes Uploaded' || category === 'Mock Test Results') return 'study';
+    if (category === 'Study Updates' || category === 'Roadmap Progress' || category === 'New Notes Uploaded' || category === 'Mock Test Results' || category === 'Live Session Updates') return 'study';
     if (category === 'System Alerts') return 'system';
     return 'all';
   }
@@ -28,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (category === 'New Notes Uploaded') return { icon: 'fa-file-circle-plus', bg: '#eef0ff', color: '#4847a5' };
     if (category === 'Certificates Issued') return { icon: 'fa-certificate', bg: '#fff2df', color: '#8d5800' };
     if (category === 'Mock Test Results') return { icon: 'fa-flask', bg: '#ffecef', color: '#9c3151' };
+    if (category === 'Live Session Updates') return { icon: 'fa-video', bg: '#e7f9f8', color: '#0f766e' };
     return { icon: 'fa-triangle-exclamation', bg: '#edf3fb', color: '#375472' };
   }
 
@@ -67,6 +69,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (item.category === 'Roadmap Progress') {
       return '<a class="btn-mini warn" href="study-roadmap.html"><i class="fa-solid fa-map"></i> Continue Roadmap</a>';
+    }
+    if (item.category === 'Live Session Updates') {
+      return '<a class="btn-mini warn" href="live-hub.html"><i class="fa-solid fa-video"></i> Open Live Hub</a>';
     }
     return '';
   }
@@ -203,8 +208,28 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   initRealtime();
+  // Socket fallback: if socket.io-client is available, listen for server-published events
+  try {
+    if (window.io) {
+      const socketUrl = window.CollegeOSApiClient?.getSocketBaseUrl?.()
+        || window.API_URL
+        || window.VITE_API_URL
+        || 'https://college-o.onrender.com';
+      const s = window.io(socketUrl, { path: '/socket.io' });
+      s.on('connect', () => {});
+      s.on('notification_changed', () => load().catch(() => {}));
+      s.on('live_session_started', () => load().catch(() => {}));
+      s.on('live_session_joined', () => load().catch(() => {}));
+    }
+  } catch (e) {
+    // ignore
+  }
 
   load().catch((error) => {
-    byId('notificationFeed').innerHTML = `<div class="empty-state">${error.message}</div>`;
+    const message = window.CollegeOSApiClient?.formatErrorMessage?.(error, 'Unable to load notifications.')
+      || error?.message
+      || JSON.stringify(error)
+      || 'Unable to load notifications.';
+    byId('notificationFeed').innerHTML = `<div class="empty-state">${message}</div>`;
   });
 });

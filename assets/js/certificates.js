@@ -60,7 +60,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function verifyUrl(code) {
-    return `${window.location.origin}/api/certificates/verify/${encodeURIComponent(code)}`;
+    const apiBase = window.CollegeOSApiClient?.getApiBaseUrl?.()
+      || window.API_URL
+      || window.VITE_API_URL
+      || 'https://college-o.onrender.com';
+    return `${String(apiBase).replace(/\/$/, '')}/api/certificates/verify/${encodeURIComponent(code)}`;
+  }
+
+  function formatError(error, fallback = 'Unable to complete certificate action.') {
+    return window.CollegeOSApiClient?.formatErrorMessage?.(error, fallback)
+      || error?.message
+      || JSON.stringify(error)
+      || fallback;
   }
 
   function formatDate(date) {
@@ -357,13 +368,13 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     try {
-      const res = await fetch(`/api/certificates/verify/${encodeURIComponent(code)}`, { credentials: 'include' });
+      const res = await fetch(verifyUrl(code), { credentials: 'include' });
       const payload = await res.json();
       const valid = Boolean(payload?.valid);
       if (verifyStatusBadge) verifyStatusBadge.textContent = valid ? 'Verified' : 'Invalid';
       setStatus(valid ? 'Certificate is valid and verified.' : 'Certificate verification failed.');
     } catch (error) {
-      setStatus(error.message || 'Verification request failed.');
+      setStatus(formatError(error, 'Verification request failed.'));
     }
   }
 
@@ -394,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
         verifyStatusBadge.textContent = 'No Certificate';
       }
     } catch (error) {
-      certGrid.innerHTML = `<div class="empty-state-modern">${error.message}</div>`;
+      certGrid.innerHTML = `<div class="empty-state-modern">${formatError(error, 'Failed to load certificates.')}</div>`;
     }
   }
 

@@ -186,7 +186,7 @@ async function sendOtpEmail({ otp, originalTarget, channel, purpose, targetEmail
 }
 
 async function sendPasswordResetEmail({ email, token }) {
-  const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+  const baseUrl = process.env.APP_BASE_URL || process.env.FRONTEND_PUBLIC_URL || 'https://college-o.vercel.app';
   const resetUrl = `${baseUrl.replace(/\/$/, '')}/login.html?resetToken=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`;
   const template = buildPasswordResetEmail({ resetUrl });
 
@@ -337,29 +337,20 @@ async function ensureAuthSchema() {
       ADD COLUMN IF NOT EXISTS preferred_study_mode VARCHAR(50)
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS platform_settings (
+      key VARCHAR(120) PRIMARY KEY,
+      value_json JSONB NOT NULL,
+      updated_by INTEGER REFERENCES users(id),
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   authSchemaEnsured = true;
 }
 
-router.use(async (_req, _res, next) => {
-  try {
-    await ensureAuthSchema();
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
-
 router.get('/config', async (_req, res) => {
   try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS platform_settings (
-        key VARCHAR(120) PRIMARY KEY,
-        value_json JSONB NOT NULL,
-        updated_by INTEGER REFERENCES users(id),
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
     const [experienceResult, contactConfigResult] = await Promise.all([
       pool.query("SELECT value_json FROM platform_settings WHERE key = 'student_experience_config' LIMIT 1"),
       pool.query("SELECT value_json FROM platform_settings WHERE key = 'contact-us-config' LIMIT 1")
@@ -1069,3 +1060,4 @@ router.get('/me', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.ensureAuthSchema = ensureAuthSchema;

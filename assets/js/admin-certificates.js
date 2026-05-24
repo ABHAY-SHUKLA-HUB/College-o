@@ -77,7 +77,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function verifyUrl(certId) {
-    return `${window.location.origin}/api/certificates/verify/${encodeURIComponent(certId || '')}`;
+    const apiBase = window.CollegeOSApiClient?.getApiBaseUrl?.()
+      || window.API_URL
+      || window.VITE_API_URL
+      || 'https://college-o.onrender.com';
+    return `${String(apiBase).replace(/\/$/, '')}/api/certificates/verify/${encodeURIComponent(certId || '')}`;
+  }
+  function formatError(error, fallback = 'Unable to complete certificate action.') {
+    return window.CollegeOSApiClient?.formatErrorMessage?.(error, fallback)
+      || error?.message
+      || JSON.stringify(error)
+      || fallback;
   }
 
   async function refreshPreview() {

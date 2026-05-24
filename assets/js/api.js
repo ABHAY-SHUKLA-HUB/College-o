@@ -11,14 +11,70 @@ const AUTH_TRANSITION_PATHS = new Set([
   '/api/auth/verification/verify'
 ]);
 
+const DEFAULT_API_URL = 'https://college-o.onrender.com';
 let csrfTokenCache = null;
 let csrfRefreshPromise = null;
 let telemetryDisabled = false;
+const requestCache = new Map();
+const REQUEST_CACHE_TTL_MS = 3000;
 
 const requestInterceptors = [];
 const responseInterceptors = [];
 
 const rawFetch = window.fetch.bind(window);
+
+function normalizeUrl(value, fallback = DEFAULT_API_URL) {
+  const raw = String(value || '').trim();
+  if (!raw) return fallback;
+  try {
+    return new URL(raw, window.location.href).toString().replace(/\/$/, '');
+  } catch {
+    return fallback;
+  }
+}
+
+function formatErrorMessage(error, fallback = 'Something went wrong.') {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (error && typeof error === 'object') {
+    if (typeof error.message === 'string' && error.message.trim()) {
+      return error.message.trim();
+    }
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return fallback;
+    }
+  }
+
+  const text = String(error || '').trim();
+  return text || fallback;
+}
+
+const apiUrl = normalizeUrl(
+  window.API_URL || window.VITE_API_URL || window.CollegeOSApiConfig?.apiUrl,
+  DEFAULT_API_URL
+);
+const apiOrigin = new URL(apiUrl).origin;
+
+window.API_URL = apiUrl;
+window.VITE_API_URL = window.VITE_API_URL || apiUrl;
+window.CollegeOSApiConfig = {
+  ...(window.CollegeOSApiConfig || {}),
+  apiUrl,
+  apiOrigin,
+  socketUrl: window.CollegeOSApiConfig?.socketUrl || apiUrl
+};
+
+function resolveApiUrl(path) {
+  if (typeof path !== 'string') return path;
+  if (path.startsWith('/api/')) {
+    return new URL(path, apiUrl).toString();
+  }
+  return path;
+}
 
 function isFormDataBody(body) {
   return typeof FormData !== 'undefined' && body instanceof FormData;
@@ -75,6 +131,13 @@ function normalizePathname(path) {
   return '';
 }
 
+function normalizeRequestKey(path) {
+  if (typeof path === 'string') return path;
+  if (typeof URL !== 'undefined' && path instanceof URL) return path.toString();
+  if (typeof Request !== 'undefined' && path instanceof Request) return path.url;
+  return String(path || '');
+}
+
 function isAuthTransitionRequest(path, method) {
   if (!AUTH_TRANSITION_METHODS.has(method)) {
     return false;
@@ -93,7 +156,7 @@ function isApiRequestUrl(path) {
     if (path.startsWith('http://') || path.startsWith('https://')) {
       try {
         const url = new URL(path);
-        return url.origin === window.location.origin && url.pathname.startsWith('/api/');
+        return url.origin === apiOrigin && url.pathname.startsWith('/api/');
       } catch {
         return false;
       }
@@ -101,11 +164,11 @@ function isApiRequestUrl(path) {
   }
 
   if (typeof URL !== 'undefined' && path instanceof URL) {
-    return path.origin === window.location.origin && path.pathname.startsWith('/api/');
+    return path.origin === apiOrigin && path.pathname.startsWith('/api/');
   }
 
   if (typeof Request !== 'undefined' && path instanceof Request) {
-    return path.url.startsWith(window.location.origin + '/api/');
+    return path.url.startsWith(apiOrigin + '/api/');
   }
 
   return false;
@@ -137,7 +200,7 @@ async function refreshCsrfToken() {
   csrfRefreshPromise = (async () => {
     try {
       // Any authenticated GET endpoint will trigger csrfInit and refresh cookie token.
-      await rawFetch('/api/auth/me', {
+      await rawFetch(resolveApiUrl('/api/auth/me'), {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -243,10 +306,21 @@ function runResponseInterceptors(ctx) {
 async function request(path, options = {}) {
   const method = methodOf(options);
   const isAuthTransition = isAuthTransitionRequest(path, method);
+  const cacheKey = method === 'GET' ? normalizeRequestKey(path) : '';
 
   if (isAuthTransition) {
     // Prevent reuse of old token across login/logout/signup boundaries.
     csrfTokenCache = null;
+    requestCache.clear();
+  }
+
+  if (cacheKey) {
+    const cached = requestCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      if (cached.promise) return cached.promise;
+      return cached.payload;
+    }
+    if (cached) requestCache.delete(cacheKey);
   }
 
   const headers = normalizeHeaders(options.headers);
@@ -274,93 +348,119 @@ async function request(path, options = {}) {
   }
 
   const interceptedRequest = runRequestInterceptors({ path, options: requestOptions });
-  const response = await rawFetch(interceptedRequest.path, interceptedRequest.options);
-  let payload = await parseResponsePayload(response);
+  const fetchPromise = (async () => {
+    const response = await rawFetch(resolveApiUrl(interceptedRequest.path), interceptedRequest.options);
+    let payload = await parseResponsePayload(response);
 
-  if (shouldAttachCsrf(method) && isCsrfErrorResponse(response, payload)) {
-    const refreshedToken = await ensureCsrfToken(true);
-    if (refreshedToken) {
-      const retryOptions = {
-        ...interceptedRequest.options,
-        headers: {
-          ...normalizeHeaders(interceptedRequest.options.headers),
-          [CSRF_HEADER_NAME]: refreshedToken
-        }
-      };
-
-      const retryResponse = await rawFetch(interceptedRequest.path, retryOptions);
-      const retryPayload = await parseResponsePayload(retryResponse);
-      const interceptedResponse = runResponseInterceptors({
-        response: retryResponse,
-        payload: retryPayload,
-        path: interceptedRequest.path,
-        options: retryOptions
-      });
-
-      if (!interceptedResponse.response.ok) {
-        const message = interceptedResponse.payload?.error || `Request failed (${interceptedResponse.response.status})`;
-        const error = new Error(message);
-        error.status = interceptedResponse.response.status;
-        error.code = interceptedResponse.payload?.code;
-        error.payload = interceptedResponse.payload;
-        throw error;
-      }
-
-      return interceptedResponse.payload;
-    }
-  }
-
-  const interceptedResponse = runResponseInterceptors({
-    response,
-    payload,
-    path: interceptedRequest.path,
-    options: interceptedRequest.options
-  });
-
-  payload = interceptedResponse.payload;
-
-  const isTelemetryRequest = isLearnerTelemetryPath(interceptedRequest.path);
-
-  if (isAuthTransition && interceptedResponse.response.ok) {
-    await ensureCsrfToken(true);
-  }
-
-  if (!interceptedResponse.response.ok) {
-    if (interceptedResponse.response.status === 401 || interceptedResponse.response.status === 403) {
-      csrfTokenCache = null;
-
-      // Avoid noisy telemetry failures when auth/CSRF state is unavailable.
-      if (isTelemetryRequest) {
-        telemetryDisabled = true;
-        return {
-          ok: false,
-          skipped: true,
-          reason: 'telemetry_unavailable'
+    if (shouldAttachCsrf(method) && isCsrfErrorResponse(response, payload)) {
+      const refreshedToken = await ensureCsrfToken(true);
+      if (refreshedToken) {
+        const retryOptions = {
+          ...interceptedRequest.options,
+          headers: {
+            ...normalizeHeaders(interceptedRequest.options.headers),
+            [CSRF_HEADER_NAME]: refreshedToken
+          }
         };
+
+        const retryResponse = await rawFetch(resolveApiUrl(interceptedRequest.path), retryOptions);
+        const retryPayload = await parseResponsePayload(retryResponse);
+        const interceptedRetryResponse = runResponseInterceptors({
+          response: retryResponse,
+          payload: retryPayload,
+          path: interceptedRequest.path,
+          options: retryOptions
+        });
+
+        if (!interceptedRetryResponse.response.ok) {
+          const message = interceptedRetryResponse.payload?.error || `Request failed (${interceptedRetryResponse.response.status})`;
+          const error = new Error(message);
+          error.status = interceptedRetryResponse.response.status;
+          error.code = interceptedRetryResponse.payload?.code;
+          error.payload = interceptedRetryResponse.payload;
+          throw error;
+        }
+
+        return interceptedRetryResponse.payload;
       }
     }
 
-    const message = payload?.error || `Request failed (${interceptedResponse.response.status})`;
-    const error = new Error(message);
-    error.status = interceptedResponse.response.status;
-    error.code = payload?.code;
-    error.payload = payload;
+    const interceptedResponse = runResponseInterceptors({
+      response,
+      payload,
+      path: interceptedRequest.path,
+      options: interceptedRequest.options
+    });
 
-    if (isApiRequestUrl(path) && !isTelemetryRequest) {
-      // Lightweight debug trail for failed API requests.
-      console.warn('API request failed', {
-        method,
-        path,
-        status: interceptedResponse.response.status,
-        code: error.code || null,
-        message: error.message
-      });
+    payload = interceptedResponse.payload;
+
+    const isTelemetryRequest = isLearnerTelemetryPath(interceptedRequest.path);
+
+    if (isAuthTransition && interceptedResponse.response.ok) {
+      await ensureCsrfToken(true);
     }
 
+    if (!interceptedResponse.response.ok) {
+      if (interceptedResponse.response.status === 401 || interceptedResponse.response.status === 403) {
+        csrfTokenCache = null;
+
+        // Avoid noisy telemetry failures when auth/CSRF state is unavailable.
+        if (isTelemetryRequest) {
+          telemetryDisabled = true;
+          return {
+            ok: false,
+            skipped: true,
+            reason: 'telemetry_unavailable'
+          };
+        }
+      }
+      const message = payload?.error || `Request failed (${interceptedResponse.response.status})`;
+      const error = new Error(message);
+      error.status = interceptedResponse.response.status;
+      error.code = payload?.code;
+      error.payload = payload;
+
+      if (isApiRequestUrl(path) && !isTelemetryRequest) {
+        // Lightweight debug trail for failed API requests.
+        console.warn('API request failed', {
+          method,
+          path,
+          status: interceptedResponse.response.status,
+          code: error.code || null,
+          message: error.message
+        });
+      }
+
+      throw error;
+    }
+
+    if (method !== 'GET') {
+      requestCache.clear();
+    }
+
+    return payload;
+  })();
+
+  if (cacheKey) {
+    requestCache.set(cacheKey, {
+      promise: fetchPromise,
+      expiresAt: Date.now() + REQUEST_CACHE_TTL_MS
+    });
+  }
+
+  try {
+    const payload = await fetchPromise;
+    if (cacheKey) {
+      requestCache.set(cacheKey, {
+        payload,
+        expiresAt: Date.now() + REQUEST_CACHE_TTL_MS
+      });
+    }
+    return payload;
+  } catch (error) {
+    if (cacheKey) requestCache.delete(cacheKey);
     throw error;
   }
-
-  return payload;
 }
 
 // Backward-compatible helper used by existing API methods.
@@ -372,6 +472,9 @@ window.CollegeOSApiClient = {
   request,
   ensureCsrfToken,
   getCsrfToken: () => csrfTokenCache || getCsrfTokenFromCookie() || null,
+  getApiBaseUrl: () => apiUrl,
+  getSocketBaseUrl: () => window.CollegeOSApiConfig?.socketUrl || apiUrl,
+  formatErrorMessage,
   setCsrfToken: (token) => {
     csrfTokenCache = token || null;
   },
@@ -405,7 +508,13 @@ window.fetch = async function wrappedFetch(input, init = undefined) {
     }
   }
 
-  return rawFetch(input, {
+  const resolvedInput = typeof input === 'string'
+    ? input
+    : (typeof URL !== 'undefined' && input instanceof URL)
+      ? input.toString()
+      : input.url || input;
+
+  return rawFetch(resolveApiUrl(resolvedInput), {
     ...(init || {}),
     method,
     credentials: 'include',
@@ -458,6 +567,46 @@ window.CollegeOSApi = {
   getDashboardStats: () => apiFetch('/api/dashboard/stats'),
   getPersonalizedDashboard: () => apiFetch('/api/dashboard/personalized'),
   getStudentExperienceConfig: () => apiFetch('/api/dashboard/experience-config'),
+  liveHubStartSession: (payload) => apiFetch('/api/dashboard/live-hub/start', { method: 'POST', body: JSON.stringify(payload) }),
+  liveHubEndSession: (payload) => apiFetch('/api/dashboard/live-hub/end', { method: 'POST', body: JSON.stringify(payload) }),
+  liveHubAgoraToken: (payload) => apiFetch('/api/dashboard/live-hub/agora-token', { method: 'POST', body: JSON.stringify(payload) }),
+  liveSessionsUpcoming: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.scope) qs.set('scope', params.scope);
+    if (params.includeEnded !== undefined) qs.set('includeEnded', params.includeEnded ? 'true' : 'false');
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch(`/api/live-sessions/upcoming${suffix}`);
+  },
+  liveSessionGet: (sessionId) => apiFetch(`/api/live-sessions/${encodeURIComponent(sessionId)}`),
+  liveSessionCreate: (payload) => apiFetch('/api/live-sessions/create', { method: 'POST', body: JSON.stringify(payload) }),
+  liveSessionValidateHostCode: (sessionId, payload) => apiFetch(`/api/live-sessions/${encodeURIComponent(sessionId)}/validate-host-code`, { method: 'POST', body: JSON.stringify(payload) }),
+  liveSessionUnlockHost: (sessionId, payload = {}) => apiFetch(`/api/live-sessions/${encodeURIComponent(sessionId)}/unlock-host`, { method: 'POST', body: JSON.stringify(payload) }),
+  liveSessionStart: (sessionId, payload) => apiFetch(`/api/live-sessions/${encodeURIComponent(sessionId)}/start`, { method: 'POST', body: JSON.stringify(payload) }),
+  liveSessionJoin: (sessionId, payload = {}) => apiFetch(`/api/live-sessions/${encodeURIComponent(sessionId)}/join`, { method: 'POST', body: JSON.stringify(payload) }),
+  liveSessionLeave: (sessionId, payload = {}) => apiFetch(`/api/live-sessions/${encodeURIComponent(sessionId)}/leave`, { method: 'POST', body: JSON.stringify(payload) }),
+  liveSessionEnd: (sessionId, payload) => apiFetch(`/api/live-sessions/${encodeURIComponent(sessionId)}/end`, { method: 'POST', body: JSON.stringify(payload) }),
+  liveSessionReschedule: (sessionId, payload) => apiFetch(`/api/live-sessions/${encodeURIComponent(sessionId)}/reschedule`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  liveSessionCancel: (sessionId, payload = {}) => apiFetch(`/api/live-sessions/${encodeURIComponent(sessionId)}/cancel`, { method: 'DELETE', body: JSON.stringify(payload) }),
+  liveSessionPresence: (sessionId) => apiFetch(`/api/live-sessions/${encodeURIComponent(sessionId)}/presence`),
+  liveSessionPresenceUpdate: (sessionId, payload = {}) => apiFetch(`/api/live-sessions/${encodeURIComponent(sessionId)}/presence`, { method: 'POST', body: JSON.stringify(payload) }),
+  liveSessionActivity: (sessionId, params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.limit !== undefined) qs.set('limit', String(params.limit));
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch(`/api/live-sessions/${encodeURIComponent(sessionId)}/activity${suffix}`);
+  },
+  liveSessionPostActivity: (sessionId, payload = {}) => apiFetch(`/api/live-sessions/${encodeURIComponent(sessionId)}/activity`, { method: 'POST', body: JSON.stringify(payload) }),
+  liveSessionChatMessages: (sessionId, params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.limit !== undefined) qs.set('limit', String(params.limit));
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch(`/api/live-sessions/${encodeURIComponent(sessionId)}/chat${suffix}`);
+  },
+  liveSessionPostChatMessage: (sessionId, payload = {}) => apiFetch(`/api/live-sessions/${encodeURIComponent(sessionId)}/chat`, { method: 'POST', body: JSON.stringify(payload) }),
+  liveSessionPostReaction: (sessionId, payload = {}) => apiFetch(`/api/live-sessions/${encodeURIComponent(sessionId)}/reactions`, { method: 'POST', body: JSON.stringify(payload) }),
+  liveSessionJoinToken: (sessionId, payload = {}) => apiFetch(`/api/live-sessions/${encodeURIComponent(sessionId)}/join-token`, { method: 'POST', body: JSON.stringify(payload) }),
+  adminLiveSessionsSync: (payload) => apiFetch('/api/live-sessions/admin/sync', { method: 'POST', body: JSON.stringify(payload) }),
+  getLiveSessionRealtimeStreamUrl: () => '/api/live-sessions/stream',
   getAiBrain: (horizonDays = 7) => apiFetch(`/api/intelligence/brain?horizonDays=${encodeURIComponent(horizonDays)}`),
   getNextAction: () => apiFetch('/api/intelligence/next-action'),
   getAdaptiveStudyPlan: (horizonDays = 7) => apiFetch(`/api/intelligence/study-plan?horizonDays=${encodeURIComponent(horizonDays)}`),
@@ -529,6 +678,30 @@ window.CollegeOSApi = {
   generateAiToolOutput: (toolKey, inputs = {}) => apiFetch('/api/career/ai-tools/generate', {
     method: 'POST',
     body: JSON.stringify({ toolKey, inputs })
+  }),
+  aiStudioChat: (prompt) => apiFetch('/api/career/ai-tools/studio/chat', {
+    method: 'POST',
+    body: JSON.stringify({ prompt })
+  }),
+  aiStudioQuizFromNotes: (notes, extra = {}) => apiFetch('/api/career/ai-tools/studio/quiz-from-notes', {
+    method: 'POST',
+    body: JSON.stringify({ notes, ...extra })
+  }),
+  aiStudioSessionSummary: (transcript, extra = {}) => apiFetch('/api/career/ai-tools/studio/session-summary', {
+    method: 'POST',
+    body: JSON.stringify({ transcript, ...extra })
+  }),
+  aiStudioAttendanceInsights: (payload = {}) => apiFetch('/api/career/ai-tools/studio/attendance-insights', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  }),
+  aiStudioPerformancePrediction: (payload = {}) => apiFetch('/api/career/ai-tools/studio/performance-prediction', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  }),
+  aiStudioRecommendations: (payload = {}) => apiFetch('/api/career/ai-tools/studio/recommendations', {
+    method: 'POST',
+    body: JSON.stringify(payload)
   }),
   getNotes: (search = '') => apiFetch(`/api/notes${search ? `?search=${encodeURIComponent(search)}` : ''}`),
   getMyNotes: () => apiFetch('/api/notes/mine'),

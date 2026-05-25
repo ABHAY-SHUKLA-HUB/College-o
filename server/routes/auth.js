@@ -32,6 +32,7 @@ const RATE_LIMIT_STATE = new Map();
 
 const CAPTCHA_TTL_MS = 5 * 60 * 1000;
 const CAPTCHA_SECRET = process.env.AUTH_CAPTCHA_SECRET || process.env.SESSION_SECRET || 'dev-captcha-secret';
+const CAPTCHA_DEV_BYPASS = String(process.env.AUTH_CAPTCHA_DEV_BYPASS || '').toLowerCase() === 'true';
 const OTP_QA_ASSIST_ENABLED = process.env.NODE_ENV !== 'production' && process.env.OTP_QA_ASSIST_ENABLED === 'true';
 const OTP_QA_ASSIST_SECRET = String(process.env.OTP_QA_ASSIST_SECRET || '');
 const OTP_MOBILE_ENABLED = String(process.env.OTP_MOBILE_ENABLED || '').toLowerCase() === 'true';
@@ -100,13 +101,16 @@ function enforceRateLimit(req, res, scope, maxAttempts = 20, blockMs = 10 * 60 *
   return null;
 }
 
-function buildCaptchaChallenge(req) {
+function buildCaptchaChallenge(_req) {
+  // Do NOT include requester IP in the signed payload. Signing IP caused
+  // brittle verification failures when proxies/multiple XFF entries changed
+  // the apparent client IP between requests. Using nonce+expires is sufficient
+  // to prevent trivial replay while keeping verification reliable.
   const a = randomInt(1, 10);
   const b = randomInt(1, 10);
   const expiresAt = Date.now() + CAPTCHA_TTL_MS;
   const nonce = crypto.randomBytes(12).toString('hex');
-  const requesterIp = getRequesterIp(req);
-  const payload = `${a}:${b}:${expiresAt}:${nonce}:${requesterIp}`;
+  const payload = `${a}:${b}:${expiresAt}:${nonce}`;
   const signature = crypto.createHmac('sha256', CAPTCHA_SECRET).update(payload).digest('hex');
   return {
     question: `${a} + ${b} = ?`,
@@ -120,8 +124,22 @@ function buildCaptchaChallenge(req) {
 
 function verifyCaptchaPayload(req, captcha) {
   // CRITICAL: Reject missing captcha (fail-closed, not fail-open)
-  if (!captcha || typeof captcha !== 'object') return false;
-  
+  if (!captcha || typeof captcha !== 'object') {
+    if (process.env.NODE_ENV !== 'production' && CAPTCHA_DEV_BYPASS) {
+      console.warn('[auth:captcha] dev bypass enabled - missing captcha accepted');
+      return true;
+    }
+    console.warn('[auth:captcha] verification failed - missing captcha');
+    // Track failures per IP to throttle abusive clients
+    try {
+      const ip = getRequesterIp(req);
+      const rec = getRateRecord(`auth:captcha_fail:${ip}`);
+      rec.count += 1;
+      if (rec.count > 10) rec.blockedUntil = Date.now() + (15 * 60 * 1000);
+    } catch (e) { /* best-effort */ }
+    return false;
+  }
+
   const answer = Number(captcha?.answer);
   const a = Number(captcha?.a);
   const b = Number(captcha?.b);
@@ -130,17 +148,52 @@ function verifyCaptchaPayload(req, captcha) {
   const signature = String(captcha?.signature || '');
 
   if (!Number.isInteger(answer) || !Number.isInteger(a) || !Number.isInteger(b) || !expiresAt || !nonce || !signature) {
+    console.warn('[auth:captcha] verification failed - malformed captcha payload', { ip: getRequesterIp(req) });
+    try {
+      const ip = getRequesterIp(req);
+      const rec = getRateRecord(`auth:captcha_fail:${ip}`);
+      rec.count += 1;
+      if (rec.count > 10) rec.blockedUntil = Date.now() + (15 * 60 * 1000);
+    } catch (e) { /* best-effort */ }
     return false;
   }
 
-  if (Date.now() > expiresAt) return false;
+  if (Date.now() > expiresAt) {
+    console.warn('[auth:captcha] verification failed - captcha expired', { ip: getRequesterIp(req), expiresAt });
+    return false;
+  }
 
-  const requesterIp = getRequesterIp(req);
-  const payload = `${a}:${b}:${expiresAt}:${nonce}:${requesterIp}`;
-  const expected = crypto.createHmac('sha256', CAPTCHA_SECRET).update(payload).digest('hex');
-  if (expected !== signature) return false;
+  try {
+    const payload = `${a}:${b}:${expiresAt}:${nonce}`;
+    const expected = crypto.createHmac('sha256', CAPTCHA_SECRET).update(payload).digest();
+    const provided = Buffer.from(signature, 'hex');
+    const ok = provided.length === expected.length && timingSafeEqual(provided, expected);
+    if (!ok) {
+      console.warn('[auth:captcha] verification failed - signature mismatch', { ip: getRequesterIp(req) });
+      try {
+        const ip = getRequesterIp(req);
+        const rec = getRateRecord(`auth:captcha_fail:${ip}`);
+        rec.count += 1;
+        if (rec.count > 10) rec.blockedUntil = Date.now() + (15 * 60 * 1000);
+      } catch (e) { /* best-effort */ }
+      return false;
+    }
+  } catch (err) {
+    console.warn('[auth:captcha] verification error', { err: err && err.message });
+    return false;
+  }
 
-  return answer === a + b;
+  const correct = answer === a + b;
+  if (!correct) {
+    console.warn('[auth:captcha] verification failed - incorrect answer', { ip: getRequesterIp(req) });
+    try {
+      const ip = getRequesterIp(req);
+      const rec = getRateRecord(`auth:captcha_fail:${ip}`);
+      rec.count += 1;
+      if (rec.count > 10) rec.blockedUntil = Date.now() + (15 * 60 * 1000);
+    } catch (e) { /* best-effort */ }
+  }
+  return correct;
 }
 
 function getOtpStoreKey({ purpose, channel, target }) {

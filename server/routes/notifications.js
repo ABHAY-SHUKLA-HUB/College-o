@@ -5,6 +5,11 @@ const { subscribeRealtime, publishRealtimeEvent } = require('../services/realtim
 
 const router = express.Router();
 
+function setPrivateCacheHeaders(res, maxAgeSeconds = 5) {
+  res.setHeader('Cache-Control', `private, max-age=${maxAgeSeconds}, stale-while-revalidate=${Math.max(maxAgeSeconds * 2, 15)}`);
+  res.setHeader('Vary', 'Cookie');
+}
+
 router.get('/stream', requireAuth, async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
@@ -33,6 +38,7 @@ router.get('/stream', requireAuth, async (req, res) => {
 });
 
 router.get('/mine', requireAuth, async (req, res) => {
+  setPrivateCacheHeaders(res, 5);
   const { rows } = await pool.query(
     'SELECT id, message, kind, is_read, created_at FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100',
     [req.session.userId]
@@ -47,6 +53,7 @@ router.get('/mine', requireAuth, async (req, res) => {
 });
 
 router.get('/unread-count', requireAuth, async (req, res) => {
+  setPrivateCacheHeaders(res, 5);
   const { rows } = await pool.query(
     'SELECT COUNT(*)::int AS unread_count FROM notifications WHERE user_id = $1 AND is_read = FALSE',
     [req.session.userId]

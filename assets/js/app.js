@@ -114,6 +114,104 @@ const tooltipMap = {
   'My Tickets': 'View and track your support tickets'
 };
 
+const routeWarmupMap = {
+  'home.html': [
+    '/api/dashboard/personalized',
+    '/api/dashboard/stats',
+    '/api/dashboard/experience-config',
+    '/api/profile/me',
+    '/api/academics/profile',
+    '/api/quizzes/attempts/me',
+    '/api/mock-tests/dashboard',
+    '/api/roadmaps/me',
+    '/api/notes/mine'
+  ],
+  'dashboard.html': [
+    '/api/dashboard/personalized',
+    '/api/dashboard/stats',
+    '/api/dashboard/experience-config',
+    '/api/profile/me',
+    '/api/academics/profile',
+    '/api/quizzes/attempts/me',
+    '/api/mock-tests/dashboard',
+    '/api/roadmaps/me',
+    '/api/notes/mine'
+  ],
+  'study.html': [
+    '/api/career/roadmaps',
+    '/api/roadmaps/me',
+    '/api/profile/me',
+    '/api/academics/profile'
+  ],
+  'mock-tests.html': [
+    '/api/mock-tests/dashboard',
+    '/api/quizzes/attempts/me',
+    '/api/profile/me',
+    '/api/academics/profile'
+  ],
+  'notes-library.html': [
+    '/api/notes/mine',
+    '/api/profile/me',
+    '/api/academics/profile'
+  ],
+  'study-roadmap.html': [
+    '/api/career/roadmaps',
+    '/api/roadmaps/me',
+    '/api/profile/me',
+    '/api/academics/profile'
+  ],
+  'ai-tools.html': [
+    '/api/career/ai-tools',
+    '/api/profile/me',
+    '/api/academics/profile'
+  ],
+  'college-feed.html': [
+    '/api/campus-feed/me/summary',
+    '/api/campus-feed/posts/trending?limit=8',
+    '/api/campus-feed/collections',
+    '/api/profile/me'
+  ],
+  'notifications.html': [
+    '/api/notifications/mine',
+    '/api/notifications/unread-count',
+    '/api/profile/me'
+  ],
+  'forum.html': [
+    '/api/forum/threads/trending',
+    '/api/profile/me'
+  ],
+  'support-dashboard.html': [
+    '/api/profile/me',
+    '/api/academics/profile'
+  ],
+  'support-hub.html': [
+    '/api/profile/me',
+    '/api/academics/profile'
+  ],
+  'profile.html': [
+    '/api/profile/me',
+    '/api/academics/profile',
+    '/api/subscriptions/me'
+  ],
+  'pricing.html': [
+    '/api/subscriptions/me',
+    '/api/profile/me'
+  ],
+  'settings.html': [
+    '/api/profile/me',
+    '/api/notifications/unread-count',
+    '/api/settings/icons',
+    '/api/settings/sessions'
+  ],
+  'live-hub': [
+    '/api/dashboard/experience-config',
+    '/api/live-sessions/upcoming?includeEnded=true&scope=student'
+  ]
+};
+
+const prefetchedDocuments = new Set();
+let liveHubScriptPromise = null;
+
 function resolveThemeMode(theme) {
   const preferredDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   return theme === 'system' ? (preferredDark ? 'dark' : 'light') : theme;
@@ -202,6 +300,107 @@ function mobileNavHtml() {
       return `<a class="${active}" href="${item.href}" title="${item.label}"><i class="fa-solid ${item.icon}"></i><div>${item.label}</div></a>`;
     })
     .join('');
+}
+
+function normalizeHrefTarget(href) {
+  if (!href) return '';
+  try {
+    const url = new URL(href, window.location.href);
+    return url.pathname.split('/').pop()?.toLowerCase() || '';
+  } catch {
+    return String(href).toLowerCase();
+  }
+}
+
+function getWarmupPathsForTarget(target) {
+  const key = normalizeHrefTarget(target);
+  const base = [
+    '/api/profile/me',
+    '/api/academics/profile',
+    '/api/notifications/unread-count',
+    '/api/subscriptions/me'
+  ];
+  return [...new Set([...(routeWarmupMap[key] || []), ...base])];
+}
+
+function prefetchDocument(href) {
+  if (!href || href.startsWith('#')) return;
+  if (/^(mailto:|tel:|javascript:)/i.test(href)) return;
+
+  const resolved = new URL(href, window.location.href).toString();
+  if (prefetchedDocuments.has(resolved)) return;
+  prefetchedDocuments.add(resolved);
+
+  const existing = document.querySelector(`link[rel="prefetch"][href="${resolved}"]`);
+  if (existing) return;
+
+  const link = document.createElement('link');
+  link.rel = 'prefetch';
+  link.as = 'document';
+  link.href = resolved;
+  document.head.appendChild(link);
+}
+
+function warmupRouteData(target) {
+  if (!window.CollegeOSApi?.warmupRequests) return;
+  const paths = getWarmupPathsForTarget(target);
+  if (!paths.length) return;
+  window.CollegeOSApi.warmupRequests(paths).catch(() => null);
+}
+
+function primeNavigationTarget(target) {
+  if (!target) return;
+  if (target.matches('[data-live-hub-toggle]')) {
+    if (!liveHubScriptPromise) {
+      liveHubScriptPromise = ensureLiveHubScript().catch(() => {
+        liveHubScriptPromise = null;
+        return null;
+      });
+    }
+    warmupRouteData('live-hub');
+    return;
+  }
+
+  const href = target.getAttribute('href');
+  if (!href) return;
+  prefetchDocument(href);
+  warmupRouteData(href);
+}
+
+function bindNavigationPrefetch() {
+  const selector = 'a[href], button[data-live-hub-toggle]';
+
+  const handle = (event) => {
+    const target = event.target.closest(selector);
+    if (!target) return;
+    primeNavigationTarget(target);
+  };
+
+  document.addEventListener('pointerenter', handle, true);
+  document.addEventListener('focusin', handle, true);
+
+  document.addEventListener('click', async (event) => {
+    const liveHubButton = event.target.closest('[data-live-hub-toggle]');
+    if (!liveHubButton || window.CollegeOSLiveHub) return;
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    liveHubButton.disabled = true;
+    try {
+      liveHubScriptPromise = liveHubScriptPromise || ensureLiveHubScript().catch(() => {
+        liveHubScriptPromise = null;
+        return null;
+      });
+      await liveHubScriptPromise;
+      await window.CollegeOSLiveHub?.boot?.();
+      window.CollegeOSLiveHub?.toggle?.();
+    } catch {
+      // Leave the button usable if Live Hub loading fails.
+    } finally {
+      liveHubButton.disabled = false;
+    }
+  }, true);
 }
 
 function mountShell() {
@@ -307,7 +506,12 @@ async function hydrateSidebarProfile() {
       if (window._cachedStats.data && now - window._cachedStats.ts < 60000) {
         stats = window._cachedStats.data;
       } else {
-        stats = await window.CollegeOSApi.getDashboardStats();
+        const [statsPayload, subscriptionPayload] = await Promise.all([
+          window.CollegeOSApi.getDashboardStats(),
+          window.CollegeOSApi.getSubscription()
+        ]);
+        stats = statsPayload;
+        window._cachedSubscription = { data: subscriptionPayload, ts: now };
         window._cachedStats = { data: stats, ts: now };
       }
       const xp = stats?.xp ?? stats?.totalXp ?? stats?.totalXP ?? null;
@@ -425,27 +629,25 @@ function publicPage() {
 async function hydrateCommonStats() {
   if (!window.CollegeOSApi) return;
 
-  let stats = {};
   try {
-    if (document.querySelector('[data-stat="myRoadmaps"]') || document.querySelector('[data-stat="savedNotes"]')) {
-      const profile = await window.CollegeOSApi.getProfile();
-      stats = { ...(profile?.totals || {}) };
-    }
-  } catch {
-    stats = {};
-  }
+    const needsProfileTotals = Boolean(document.querySelector('[data-stat="myRoadmaps"]') || document.querySelector('[data-stat="savedNotes"]'));
+    const [profile, dashboard] = await Promise.all([
+      needsProfileTotals ? window.CollegeOSApi.getProfile() : Promise.resolve(null),
+      window.CollegeOSApi.getDashboardStats().catch(() => ({}))
+    ]);
 
-  try {
-    const dashboard = await window.CollegeOSApi.getDashboardStats();
-    stats = { ...stats, ...dashboard };
+    const stats = {
+      ...(profile?.totals || {}),
+      ...(dashboard || {})
+    };
+
+    document.querySelectorAll('[data-stat]').forEach((node) => {
+      const key = node.dataset.stat;
+      if (stats[key] !== undefined) node.textContent = stats[key];
+    });
   } catch {
     // Ignore on pages where stats are not required.
   }
-
-  document.querySelectorAll('[data-stat]').forEach((node) => {
-    const key = node.dataset.stat;
-    if (stats[key] !== undefined) node.textContent = stats[key];
-  });
 }
 
 async function applyAuthGuard() {
@@ -630,7 +832,7 @@ function bindRealtimeNotificationBadge() {
 document.addEventListener('DOMContentLoaded', async () => {
   bindAdminShortcut();
   mountShell();
-  ensureLiveHubScript().catch(() => null);
+  bindNavigationPrefetch();
   bindSidebarCollapse();
   mountContent();
   setTitle();
@@ -641,16 +843,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     await enforceAcademicOnboarding();
     bindLogout();
 
-    await Promise.all([
+    if (window.CollegeOSApi?.warmupRequests) {
+      const warmupPaths = [
+        '/api/profile/me',
+        '/api/academics/profile',
+        '/api/dashboard/stats',
+        '/api/dashboard/experience-config',
+        '/api/notifications/unread-count',
+        '/api/subscriptions/me',
+        '/api/contributions/config'
+      ];
+      window.CollegeOSApi.warmupRequests(warmupPaths).catch(() => null);
+    }
+
+    const backgroundTasks = [
       hydrateSidebarProfile(),
       hydrateCommonStats(),
       hydrateNotificationBadge(),
       applyContributionVisibility(),
       applyPremiumLocks(),
       trackPageViewEvent()
-    ]);
+    ];
 
-    bindRealtimeNotificationBadge();
+    Promise.allSettled(backgroundTasks).finally(() => {
+      window.requestIdleCallback
+        ? window.requestIdleCallback(() => bindRealtimeNotificationBadge())
+        : window.setTimeout(() => bindRealtimeNotificationBadge(), 0);
+    });
   } finally {
     setContentLoadingState(false);
   }

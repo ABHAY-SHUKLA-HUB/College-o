@@ -17,6 +17,34 @@ let csrfRefreshPromise = null;
 let telemetryDisabled = false;
 const requestCache = new Map();
 const REQUEST_CACHE_TTL_MS = 3000;
+const SESSION_CACHE_PREFIX = 'collegeos_api_cache_v2:';
+const SESSION_CACHE_TTL_MS = 15000;
+const SESSION_CACHEABLE_PATHS = [
+  /^\/api\/auth\/me$/,
+  /^\/api\/dashboard\/stats$/,
+  /^\/api\/dashboard\/personalized$/,
+  /^\/api\/dashboard\/experience-config$/,
+  /^\/api\/notifications\/unread-count$/,
+  /^\/api\/academics\/profile$/,
+  /^\/api\/profile\/me$/,
+  /^\/api\/subscriptions\/me$/,
+  /^\/api\/contributions\/config$/,
+  /^\/api\/live-sessions\/upcoming$/,
+  /^\/api\/roadmaps\/me$/,
+  /^\/api\/quizzes\/attempts\/me$/,
+  /^\/api\/mock-tests\/dashboard$/,
+  /^\/api\/career\/roadmaps$/,
+  /^\/api\/career\/ai-tools$/,
+  /^\/api\/campus-feed\/me\/summary$/,
+  /^\/api\/campus-feed\/posts\/trending$/,
+  /^\/api\/campus-feed\/posts\/mine$/,
+  /^\/api\/campus-feed\/collections$/,
+  /^\/api\/forum\/threads\/trending$/,
+  /^\/api\/notifications\/mine$/,
+  /^\/api\/notes\/mine$/,
+  /^\/api\/settings\/icons$/,
+  /^\/api\/settings\/sessions$/
+];
 
 const requestInterceptors = [];
 const responseInterceptors = [];
@@ -136,6 +164,95 @@ function normalizeRequestKey(path) {
   if (typeof URL !== 'undefined' && path instanceof URL) return path.toString();
   if (typeof Request !== 'undefined' && path instanceof Request) return path.url;
   return String(path || '');
+}
+
+function getPathnameForCache(path) {
+  const pathname = normalizePathname(path);
+  if (pathname) return pathname;
+
+  const raw = normalizeRequestKey(path);
+  if (!raw) return '';
+
+  try {
+    return new URL(raw, window.location.href).pathname;
+  } catch {
+    return '';
+  }
+}
+
+function isSessionCacheableRequest(path, method) {
+  if (method !== 'GET') return false;
+  const pathname = getPathnameForCache(path);
+  if (!pathname) return false;
+  return SESSION_CACHEABLE_PATHS.some((pattern) => pattern.test(pathname));
+}
+
+function sessionCacheKey(path) {
+  return `${SESSION_CACHE_PREFIX}${normalizeRequestKey(path)}`;
+}
+
+function getSessionStorage() {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+function readSessionCache(key) {
+  const storage = getSessionStorage();
+  if (!storage) return null;
+
+  try {
+    const raw = storage.getItem(key);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (!parsed.expiresAt || Number(parsed.expiresAt) <= Date.now()) {
+      storage.removeItem(key);
+      return null;
+    }
+
+    return parsed.payload ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function writeSessionCache(key, payload, ttlMs = SESSION_CACHE_TTL_MS) {
+  const storage = getSessionStorage();
+  if (!storage) return;
+
+  try {
+    const serialized = JSON.stringify({
+      payload,
+      expiresAt: Date.now() + ttlMs
+    });
+
+    if (serialized.length > 200000) return;
+    storage.setItem(key, serialized);
+  } catch {
+    // Ignore storage quota and serialization failures.
+  }
+}
+
+function clearSessionCache() {
+  const storage = getSessionStorage();
+  if (!storage) return;
+
+  try {
+    const keys = [];
+    for (let i = 0; i < storage.length; i += 1) {
+      const key = storage.key(i);
+      if (key && key.startsWith(SESSION_CACHE_PREFIX)) {
+        keys.push(key);
+      }
+    }
+    keys.forEach((key) => storage.removeItem(key));
+  } catch {
+    // Ignore cache clear failures.
+  }
 }
 
 function isAuthTransitionRequest(path, method) {
@@ -307,11 +424,14 @@ async function request(path, options = {}) {
   const method = methodOf(options);
   const isAuthTransition = isAuthTransitionRequest(path, method);
   const cacheKey = method === 'GET' ? normalizeRequestKey(path) : '';
+  const shouldSessionCache = isSessionCacheableRequest(path, method);
+  const sessionKey = shouldSessionCache ? sessionCacheKey(path) : '';
 
   if (isAuthTransition) {
     // Prevent reuse of old token across login/logout/signup boundaries.
     csrfTokenCache = null;
     requestCache.clear();
+    clearSessionCache();
   }
 
   if (cacheKey) {
@@ -321,6 +441,17 @@ async function request(path, options = {}) {
       return cached.payload;
     }
     if (cached) requestCache.delete(cacheKey);
+  }
+
+  if (sessionKey) {
+    const sessionCached = readSessionCache(sessionKey);
+    if (sessionCached !== null && sessionCached !== undefined) {
+      requestCache.set(cacheKey, {
+        payload: sessionCached,
+        expiresAt: Date.now() + REQUEST_CACHE_TTL_MS
+      });
+      return sessionCached;
+    }
   }
 
   const headers = normalizeHeaders(options.headers);
@@ -422,13 +553,9 @@ async function request(path, options = {}) {
 
       if (isApiRequestUrl(path) && !isTelemetryRequest) {
         // Lightweight debug trail for failed API requests.
-        console.warn('API request failed', {
-          method,
-          path,
-          status: interceptedResponse.response.status,
-          code: error.code || null,
-          message: error.message
-        });
+        const status = interceptedResponse.response.status;
+        const code = error.code ? ` ${error.code}` : '';
+        console.warn(`API request failed: ${method} ${path} -> ${status}${code} - ${error.message}`);
       }
 
       throw error;
@@ -436,6 +563,7 @@ async function request(path, options = {}) {
 
     if (method !== 'GET') {
       requestCache.clear();
+      clearSessionCache();
     }
 
     return payload;
@@ -455,12 +583,28 @@ async function request(path, options = {}) {
         payload,
         expiresAt: Date.now() + REQUEST_CACHE_TTL_MS
       });
+      if (sessionKey) {
+        writeSessionCache(sessionKey, payload);
+      }
     }
     return payload;
   } catch (error) {
     if (cacheKey) requestCache.delete(cacheKey);
     throw error;
   }
+}
+
+async function warmupRequests(paths = []) {
+  const list = Array.isArray(paths) ? paths : [paths];
+  const uniquePaths = [...new Set(list.filter(Boolean).map((entry) => {
+    if (typeof entry === 'string') return entry;
+    if (entry && typeof entry === 'object' && typeof entry.path === 'string') return entry.path;
+    return '';
+  }).filter(Boolean))];
+
+  return Promise.allSettled(
+    uniquePaths.map((entry) => request(entry, { method: 'GET' }))
+  );
 }
 
 // Backward-compatible helper used by existing API methods.
@@ -475,6 +619,8 @@ window.CollegeOSApiClient = {
   getApiBaseUrl: () => apiUrl,
   getSocketBaseUrl: () => window.CollegeOSApiConfig?.socketUrl || apiUrl,
   formatErrorMessage,
+  warmupRequests,
+  clearSessionCache,
   setCsrfToken: (token) => {
     csrfTokenCache = token || null;
   },
@@ -550,6 +696,8 @@ async function safeTrackEvent(eventType, eventPayload = {}, source = 'web') {
 }
 
 window.CollegeOSApi = {
+  warmupRequests,
+  clearSessionCache,
   getAuthConfig: () => apiFetch('/api/auth/config'),
   getCaptchaChallenge: () => apiFetch('/api/auth/captcha/challenge'),
   getMe: () => apiFetch('/api/auth/me'),

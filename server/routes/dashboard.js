@@ -8,6 +8,11 @@ const { RtcTokenBuilder, RtcRole } = require('agora-access-token');
 const router = express.Router();
 let experienceSettingsPromise = null;
 
+function setPrivateCacheHeaders(res, maxAgeSeconds = 10) {
+  res.setHeader('Cache-Control', `private, max-age=${maxAgeSeconds}, stale-while-revalidate=${Math.max(maxAgeSeconds * 3, 30)}`);
+  res.setHeader('Vary', 'Cookie');
+}
+
 const DEFAULT_STUDENT_EXPERIENCE_CONFIG = {
   home: {
     hero: {
@@ -321,6 +326,7 @@ async function readStudentExperienceConfig() {
 
 router.get('/stats', requireAuth, async (req, res) => {
   const userId = req.session.userId;
+  setPrivateCacheHeaders(res, 10);
 
   const [xpData, certData, roadmapData, notesData, streakData] = await Promise.all([
     pool.query('SELECT COALESCE(SUM(xp_earned), 0) AS xp FROM quiz_attempts WHERE user_id = $1', [userId]),
@@ -341,6 +347,7 @@ router.get('/stats', requireAuth, async (req, res) => {
 
 router.get('/personalized', requireAuth, async (req, res) => {
   const userId = req.session.userId;
+  setPrivateCacheHeaders(res, 10);
 
   let intelligence = null;
   try {
@@ -522,6 +529,7 @@ router.get('/personalized', requireAuth, async (req, res) => {
 });
 
 router.get('/experience-config', requireAuth, async (req, res) => {
+  setPrivateCacheHeaders(res, 15);
   const [config, announcements] = await Promise.all([
     readStudentExperienceConfig(),
     pool.query(

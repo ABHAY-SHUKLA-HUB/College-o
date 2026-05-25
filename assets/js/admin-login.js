@@ -79,6 +79,10 @@
 
   refreshBtn.addEventListener('click', (event) => {
     event.preventDefault();
+    if (typeof refreshCaptcha === 'function') {
+      refreshCaptcha('admin', { force: true });
+      return;
+    }
     initAdminCaptcha();
   });
 

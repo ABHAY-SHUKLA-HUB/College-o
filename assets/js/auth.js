@@ -42,6 +42,22 @@ function setAuthMessages(scope, error = '', success = '') {
   setText(`${scope}Success`, success);
 }
 
+const DASHBOARD_BOOTSTRAP_PATHS = [
+  '/api/dashboard/personalized',
+  '/api/dashboard/stats',
+  '/api/dashboard/experience-config',
+  '/api/profile/me',
+  '/api/academics/profile',
+  '/api/notifications/unread-count',
+  '/api/subscriptions/me',
+  '/api/contributions/config'
+];
+
+async function warmDashboardBootstrap() {
+  if (!window.CollegeOSApi?.warmupRequests) return;
+  await window.CollegeOSApi.warmupRequests(DASHBOARD_BOOTSTRAP_PATHS);
+}
+
 function getFieldHost(input) {
   return input?.closest('.field') || null;
 }
@@ -236,36 +252,109 @@ const captchaState = {
   admin: { answer: '', serverChallenge: null, lastFetched: 0 }
 };
 
-async function refreshCaptcha(scope) {
+const CAPTCHA_STORAGE_KEY = 'collegeOsCaptchaState';
+
+function hasCaptchaUi(scope) {
+  return Boolean(byId(`${scope}CaptchaQuestion`) || byId(`${scope}CaptchaInput`));
+}
+
+function readPersistedCaptcha(scope) {
+  if (typeof sessionStorage === 'undefined') return null;
+
+  try {
+    const raw = sessionStorage.getItem(CAPTCHA_STORAGE_KEY);
+    if (!raw) return null;
+
+    const stored = JSON.parse(raw);
+    const challenge = stored?.[scope];
+    if (!challenge || typeof challenge !== 'object') return null;
+    if (!challenge.expiresAt || Number(challenge.expiresAt) <= Date.now()) return null;
+
+    return challenge;
+  } catch {
+    return null;
+  }
+}
+
+function persistCaptcha(scope, challenge) {
+  if (typeof sessionStorage === 'undefined' || !challenge || typeof challenge !== 'object') return;
+
+  try {
+    const raw = sessionStorage.getItem(CAPTCHA_STORAGE_KEY);
+    const stored = raw ? JSON.parse(raw) : {};
+    stored[scope] = challenge;
+    sessionStorage.setItem(CAPTCHA_STORAGE_KEY, JSON.stringify(stored));
+  } catch {
+    // Ignore storage failures and fall back to in-memory state.
+  }
+}
+
+async function refreshCaptcha(scope, { force = false } = {}) {
+  if (!hasCaptchaUi(scope)) return null;
+
   const now = Date.now();
-  // Only fetch a new challenge if none exists or last fetched > 60s ago
-  if (captchaState[scope].serverChallenge && (now - captchaState[scope].lastFetched < 60000)) {
+  const currentChallenge = captchaState[scope].serverChallenge;
+  if (!force && currentChallenge) {
+    const expiresAt = Number(currentChallenge.expiresAt || 0);
+    if (!expiresAt || expiresAt - now > 15000) {
+      const questionNode = byId(`${scope}CaptchaQuestion`);
+      if (questionNode && currentChallenge.question) {
+        questionNode.textContent = currentChallenge.question;
+      }
+      return currentChallenge;
+    }
+  }
+
+  if (!force) {
+    const persistedChallenge = readPersistedCaptcha(scope);
+    if (persistedChallenge) {
+      captchaState[scope].serverChallenge = persistedChallenge;
+      captchaState[scope].lastFetched = Number(persistedChallenge.fetchedAt || now);
+      const questionNode = byId(`${scope}CaptchaQuestion`);
+      if (questionNode && persistedChallenge.question) {
+        questionNode.textContent = persistedChallenge.question;
+      }
+      if (Number.isInteger(Number(persistedChallenge.a)) && Number.isInteger(Number(persistedChallenge.b))) {
+        captchaState[scope].answer = String(Number(persistedChallenge.a) + Number(persistedChallenge.b));
+      }
+      return persistedChallenge;
+    }
+  }
+
+  if (currentChallenge && !force) {
     // Use cached challenge
     const questionNode = byId(`${scope}CaptchaQuestion`);
-    if (questionNode && captchaState[scope].serverChallenge.question) {
-      questionNode.textContent = captchaState[scope].serverChallenge.question;
+    if (questionNode && currentChallenge.question) {
+      questionNode.textContent = currentChallenge.question;
     }
-    return;
+    return currentChallenge;
   }
+
   const next = createMathCaptcha(scope);
   captchaState[scope].answer = next.answer;
 
   try {
     if (window.CollegeOSApi?.getCaptchaChallenge) {
       const payload = await window.CollegeOSApi.getCaptchaChallenge();
-      captchaState[scope].serverChallenge = payload?.captcha || null;
+      const challenge = payload?.captcha || null;
+      captchaState[scope].serverChallenge = challenge;
       captchaState[scope].lastFetched = Date.now();
-      if (payload?.captcha?.question) {
-        const questionNode = byId(`${scope}CaptchaQuestion`);
-        if (questionNode) questionNode.textContent = payload.captcha.question;
+      if (challenge) {
+        persistCaptcha(scope, { ...challenge, fetchedAt: captchaState[scope].lastFetched });
       }
-      if (Number.isInteger(Number(payload?.captcha?.a)) && Number.isInteger(Number(payload?.captcha?.b))) {
-        captchaState[scope].answer = String(Number(payload.captcha.a) + Number(payload.captcha.b));
+      if (challenge?.question) {
+        const questionNode = byId(`${scope}CaptchaQuestion`);
+        if (questionNode) questionNode.textContent = challenge.question;
+      }
+      if (Number.isInteger(Number(challenge?.a)) && Number.isInteger(Number(challenge?.b))) {
+        captchaState[scope].answer = String(Number(challenge.a) + Number(challenge.b));
       }
     }
   } catch {
     captchaState[scope].serverChallenge = null;
   }
+
+  return captchaState[scope].serverChallenge;
 }
 
 function verifyCaptcha(scope) {
@@ -286,8 +375,16 @@ function getCaptchaPayload(scope) {
 async function ensureCaptchaPayload(scope) {
   let payload = getCaptchaPayload(scope);
   if (payload) return payload;
-  await refreshCaptcha(scope);
+  try {
+    await refreshCaptcha(scope);
+  } catch (err) {
+    // Propagate so caller can show a friendly message and avoid submitting without a server challenge
+    throw new Error('Captcha service is unavailable. Please refresh the captcha and try again.');
+  }
   payload = getCaptchaPayload(scope);
+  if (!payload) {
+    throw new Error('Captcha service is unavailable. Please refresh the captcha and try again.');
+  }
   return payload;
 }
 
@@ -1374,6 +1471,7 @@ async function completePostLoginFlow(preferredCategoryId = null, preferredBranch
     return;
   }
 
+  await warmDashboardBootstrap();
   window.location.href = 'dashboard.html';
 }
 
@@ -1423,7 +1521,9 @@ function bindEmailLogin() {
       await completePostLoginFlow();
     } catch (error) {
       const message = error?.message || 'Login failed';
-      if (/too many failed attempts/i.test(message)) {
+      if (/captcha/i.test(message)) {
+        setAuthMessages('login', 'Captcha verification failed or unavailable. Please refresh the captcha and try again.');
+      } else if (/too many failed attempts/i.test(message)) {
         const otpInput = byId('mobileNumber');
         if (otpInput) otpInput.value = email;
         if (typeof window.__collegeOsSetLoginMethod === 'function') {
@@ -1433,7 +1533,8 @@ function bindEmailLogin() {
       } else {
         setAuthMessages('login', message);
       }
-      refreshCaptcha('login');
+      // After any failure, fetch a fresh captcha (force) so the user has a new valid token.
+      try { await refreshCaptcha('login', { force: true }); } catch { /* ignore */ }
     } finally {
       setLoading(submitBtn, 'Sign In', false);
     }
@@ -1486,8 +1587,13 @@ function bindMobileOtp() {
       setAuthMessages('login', '', payload?.message || 'OTP sent successfully.');
       startOtpResendTimer(30, 'otpResendTimer', 'resendOtpBtn');
     } catch (error) {
-      setAuthMessages('login', error.message || 'Failed to send OTP');
-      refreshCaptcha('login');
+      const msg = error?.message || 'Failed to send OTP';
+      if (/captcha/i.test(msg)) {
+        setAuthMessages('login', 'Captcha verification failed or unavailable. Please refresh the captcha and try again.');
+      } else {
+        setAuthMessages('login', msg);
+      }
+      try { await refreshCaptcha('login', { force: true }); } catch { /* ignore */ }
     } finally {
       setLoading(sendBtn, 'Send OTP', false);
     }
@@ -1512,7 +1618,13 @@ function bindMobileOtp() {
       setAuthMessages('login', '', 'OTP verified. Welcome back.');
       await completePostLoginFlow();
     } catch (error) {
-      setAuthMessages('login', error.message || 'OTP verification failed');
+      const msg = error?.message || 'OTP verification failed';
+      if (/captcha/i.test(msg)) {
+        setAuthMessages('login', 'Captcha verification failed or unavailable. Please refresh the captcha and try again.');
+      } else {
+        setAuthMessages('login', msg);
+      }
+      try { await refreshCaptcha('login', { force: true }); } catch { /* ignore */ }
     } finally {
       setLoading(verifyBtn, 'Verify OTP and Login', false);
     }
@@ -1533,7 +1645,13 @@ function bindMobileOtp() {
         setAuthMessages('login', '', payload?.message || 'OTP resent successfully.');
         startOtpResendTimer(30, 'otpResendTimer', 'resendOtpBtn');
       } catch (error) {
-        setAuthMessages('login', error.message || 'Unable to resend OTP');
+        const msg = error?.message || 'Unable to resend OTP';
+        if (/captcha/i.test(msg)) {
+          setAuthMessages('login', 'Captcha verification failed or unavailable. Please refresh the captcha and try again.');
+        } else {
+          setAuthMessages('login', msg);
+        }
+        try { await refreshCaptcha('login', { force: true }); } catch { /* ignore */ }
       } finally {
         setLoading(resendBtn, 'Resend OTP', false);
       }
@@ -1961,10 +2079,11 @@ async function submitOnboarding() {
     });
 
     setText('onboardingSuccess', 'Onboarding complete. Redirecting to your dashboard...');
+    await warmDashboardBootstrap();
     window.setTimeout(() => {
       closeOnboardingModal();
       window.location.href = 'dashboard.html';
-    }, 700);
+    }, 250);
   } catch (error) {
     setText('onboardingError', error.message || 'Failed to complete onboarding.');
   } finally {
@@ -2091,14 +2210,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   refreshCaptcha('login');
   refreshCaptcha('signup');
 
-  byId('refreshLoginCaptcha')?.addEventListener('click', () => refreshCaptcha('login'));
-  byId('refreshSignupCaptcha')?.addEventListener('click', () => refreshCaptcha('signup'));
-
-  // Refresh captcha when user navigates away and comes back
-  window.addEventListener('focus', () => {
-    refreshCaptcha('login');
-    refreshCaptcha('signup');
-  });
+  byId('refreshLoginCaptcha')?.addEventListener('click', () => refreshCaptcha('login', { force: true }));
+  byId('refreshSignupCaptcha')?.addEventListener('click', () => refreshCaptcha('signup', { force: true }));
 
   await loadAcademicOptions();
   await loadOnboardingConfig();

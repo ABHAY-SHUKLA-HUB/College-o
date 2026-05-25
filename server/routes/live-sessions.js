@@ -1336,9 +1336,8 @@ router.get('/upcoming', requireAuth, asyncHandler(async (req, res) => {
   const includeEnded = String(req.query?.includeEnded || 'true').toLowerCase() !== 'false';
   const scope = String(req.query?.scope || 'student');
   const sessions = await fetchSessionList(viewer, { includeEnded, scope, serialize: false });
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
+  res.setHeader('Cache-Control', 'private, max-age=5, stale-while-revalidate=20');
+  res.setHeader('Vary', 'Cookie');
   res.json({
     sessions: sessions.map((session) => serializeSessionForRequest(session, viewer, req))
   });

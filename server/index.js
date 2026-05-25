@@ -85,11 +85,15 @@ const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'produ
 const jitsiDomain = String(process.env.JITSI_DOMAIN || 'meet.jit.si').trim() || 'meet.jit.si';
 const productionFrontendOrigins = [
   'https://college-o.vercel.app',
-  'https://college-o-33sg7jg49-abhayshukla2072006-2030s-projects.vercel.app'
+  'https://college-o-33sg7jg49-abhayshukla2072006-2030s-projects.vercel.app',
+  'https://collegeo.in',
+  'https://www.collegeo.in'
 ];
+
+// Support multiple env names used across deployments
 const configuredOrigins = [
-  ...parseOrigins(process.env.ALLOWED_ORIGINS),
-  ...parseOrigins(process.env.FRONTEND_PUBLIC_URL),
+  ...parseOrigins(process.env.CORS_ORIGINS || process.env.ALLOWED_ORIGINS),
+  ...parseOrigins(process.env.FRONTEND_URL || process.env.FRONTEND_PUBLIC_URL),
   ...parseOrigins(process.env.APP_BASE_URL)
 ];
 const allowedOrigins = new Set([
@@ -231,6 +235,7 @@ app.use((req, res, next) => {
   const isAllowedOrigin = hasOrigin && allowedOrigins.has(origin);
 
   if (hasOrigin && !isAllowedOrigin && isProduction && !CORS_ALLOW_ALL) {
+    console.warn('[CORS] Rejected origin', { origin, method: req.method, path: req.path });
     return res.status(403).json({ error: 'Origin not allowed' });
   }
 
@@ -250,10 +255,27 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') {
     // Preflight request - respond early when we have allowed CORS
     if (willAllow) return res.status(204).end();
+    console.warn('[CORS] Preflight rejected', { origin, method: req.method, path: req.path });
     return res.status(403).end();
   }
 
   return next();
+});
+
+// Explicit OPTIONS handler to ensure preflight checks succeed for all routes
+app.options('*', (req, res) => {
+  const origin = String(req.headers.origin || '').trim();
+  const isAllowed = origin && (allowedOrigins.has(origin) || CORS_ALLOW_ALL);
+  if (isAllowed) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-CSRF-Token');
+    return res.status(204).end();
+  }
+  console.warn('[CORS] Global OPTIONS rejected', { origin, path: req.path });
+  return res.status(403).end();
 });
 
 // 6. Static file serving - serve assets before session/csrf middleware.

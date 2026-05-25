@@ -96,6 +96,7 @@ const allowedOrigins = new Set([
   ...configuredOrigins,
   ...(isProduction ? productionFrontendOrigins : [])
 ]);
+const CORS_ALLOW_ALL = String(process.env.CORS_ALLOW_ALL || '').toLowerCase() === 'true';
 const hasLocalhostOrigin = configuredOrigins.some((origin) => /localhost|127\.0\.0\.1/i.test(origin));
 
 function normalizeSameSite(raw) {
@@ -229,20 +230,27 @@ app.use((req, res, next) => {
   const hasOrigin = Boolean(origin);
   const isAllowedOrigin = hasOrigin && allowedOrigins.has(origin);
 
-  if (hasOrigin && !isAllowedOrigin && isProduction) {
+  if (hasOrigin && !isAllowedOrigin && isProduction && !CORS_ALLOW_ALL) {
     return res.status(403).json({ error: 'Origin not allowed' });
   }
 
-  if (isAllowedOrigin) {
+  const willAllow = isAllowedOrigin || (hasOrigin && CORS_ALLOW_ALL);
+  if (willAllow) {
+    // Echo origin back to allow credentialed requests from arbitrary origins
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-CSRF-Token');
+    if (CORS_ALLOW_ALL && !isAllowedOrigin) {
+      console.warn(`[CORS] WARNING: CORS_ALLOW_ALL=true - allowing origin ${origin}. Disable in production when possible.`);
+    }
   }
 
   if (req.method === 'OPTIONS') {
-    return res.status(204).end();
+    // Preflight request - respond early when we have allowed CORS
+    if (willAllow) return res.status(204).end();
+    return res.status(403).end();
   }
 
   return next();

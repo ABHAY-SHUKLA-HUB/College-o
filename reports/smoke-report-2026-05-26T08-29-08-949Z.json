@@ -1,0 +1,1261 @@
+{
+  "timestamp": "2026-05-26T08-29-08-949Z",
+  "base": "http://localhost:3000",
+  "failures": [
+    {
+      "step": "captcha-load",
+      "message": "Captcha question missing or loading: \"Loading captcha...\""
+    },
+    {
+      "step": "captcha-challenge",
+      "message": "Captcha challenge area is empty"
+    }
+  ],
+  "consoleErrors": [
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/config' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/config' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/captcha/challenge' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/captcha/challenge' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/categories' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/categories' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/semesters' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/semesters' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/onboarding/config' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/onboarding/config' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/me' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/me' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'shell:dashboard-bootstrap' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'shell:dashboard-bootstrap' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/stats' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/stats' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/bootstrap' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/bootstrap' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/personalized' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/personalized' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/quizzes/attempts/me' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/quizzes/attempts/me' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/mock-tests/dashboard' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/mock-tests/dashboard' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/roadmaps/me' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/roadmaps/me' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/notes/mine' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/notes/mine' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/config' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/config' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/captcha/challenge' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/captcha/challenge' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/categories' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/categories' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/semesters' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/semesters' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/onboarding/config' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/onboarding/config' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/me' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/me' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'shell:dashboard-bootstrap' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'shell:dashboard-bootstrap' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/stats' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/stats' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/profile/me' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/profile/me' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/personalized' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/personalized' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/experience-config' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/experience-config' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/profile/me' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/profile/me' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/profile' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/profile' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/stats' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/stats' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/career/roadmaps' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/career/roadmaps' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/career/ai-tools' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/career/ai-tools' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/subscriptions/me' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/subscriptions/me' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/quizzes/attempts/me' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/quizzes/attempts/me' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/mock-tests/dashboard' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/mock-tests/dashboard' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/config' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/config' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/captcha/challenge' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/captcha/challenge' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/categories' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/categories' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/semesters' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/semesters' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/onboarding/config' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/onboarding/config' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/me' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/me' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'shell:dashboard-bootstrap' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'shell:dashboard-bootstrap' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/stats' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/stats' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/student/library/materials?limit=100' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 755
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/student/library/materials?limit=100' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 755
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/student/library/materials/categories' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 755
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/student/library/materials/categories' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 755
+      }
+    },
+    {
+      "text": "Error loading study hub: JSHandle@error",
+      "location": {
+        "url": "http://localhost:3000/study",
+        "lineNumber": 376,
+        "columnNumber": 16
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/config' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/config' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/captcha/challenge' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/captcha/challenge' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/categories' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/categories' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/semesters' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/semesters' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/onboarding/config' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/onboarding/config' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/me' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/me' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'shell:dashboard-bootstrap' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'shell:dashboard-bootstrap' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/stats' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/stats' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/mock-tests/dashboard' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/mock-tests/dashboard' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/config' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/config' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/captcha/challenge' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/captcha/challenge' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/categories' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/categories' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/semesters' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/semesters' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/onboarding/config' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/onboarding/config' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/me' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/me' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'shell:dashboard-bootstrap' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'shell:dashboard-bootstrap' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/stats' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/stats' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/me' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/me' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/categories' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/categories' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/semesters' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/semesters' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/profile' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/profile' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/notes/mine' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/notes/mine' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/notes' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 755
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/notes' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 755
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/config' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/config' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/captcha/challenge' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/captcha/challenge' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/categories' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/categories' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/semesters' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/semesters' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/onboarding/config' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/onboarding/config' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/me' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/me' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'shell:dashboard-bootstrap' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'shell:dashboard-bootstrap' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/profile/me' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/profile/me' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/stats' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/dashboard/stats' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/profile/me' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/profile/me' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/profile' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/profile' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/config' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/config' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/captcha/challenge' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/captcha/challenge' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/categories' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/categories' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/semesters' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/semesters' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/onboarding/config' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/onboarding/config' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to load the script 'https://cdn.socket.io/4.9.0/socket.io.min.js' because it violates the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://www.gstatic.com\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback.\n",
+      "location": {
+        "url": "http://localhost:3000/live-hub"
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/config' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/config' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/captcha/challenge' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/auth/captcha/challenge' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/categories' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/categories' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/semesters' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/semesters' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/onboarding/config' because it violates the following Content Security Policy directive: \"connect-src 'self' https://meet.jit.si https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com\".\n",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Refused to connect to 'https://college-o.onrender.com/api/academics/onboarding/config' because it violates the document's Content Security Policy.",
+      "location": {
+        "url": "http://localhost:3000/assets/js/api.js",
+        "lineNumber": 522
+      }
+    },
+    {
+      "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "location": {
+        "url": "http://localhost:3000/api/auth/logout"
+      }
+    }
+  ],
+  "failedRequests": [
+    {
+      "url": "http://localhost:3000/api/auth/logout",
+      "status": 401,
+      "statusText": "Unauthorized"
+    }
+  ]
+}

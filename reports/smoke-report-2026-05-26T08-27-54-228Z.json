@@ -1,0 +1,79 @@
+{
+  "timestamp": "2026-05-26T08-27-54-228Z",
+  "base": "http://localhost:3000",
+  "failures": [
+    {
+      "step": "goto http://localhost:3000/login",
+      "error": "Error: net::ERR_CONNECTION_REFUSED at http://localhost:3000/login"
+    },
+    {
+      "step": "captcha-wait",
+      "message": "Captcha failed to render in time"
+    },
+    {
+      "step": "api-health-ex",
+      "message": "Error: Evaluation failed: TypeError: Failed to fetch\n    at pptr://__puppeteer_evaluation_script__:2:27"
+    },
+    {
+      "step": "goto http://localhost:3000/home",
+      "error": "Error: net::ERR_CONNECTION_REFUSED at http://localhost:3000/home"
+    },
+    {
+      "step": "goto http://localhost:3000/dashboard",
+      "error": "Error: net::ERR_CONNECTION_REFUSED at http://localhost:3000/dashboard"
+    },
+    {
+      "step": "goto http://localhost:3000/study",
+      "error": "Error: net::ERR_CONNECTION_REFUSED at http://localhost:3000/study"
+    },
+    {
+      "step": "goto http://localhost:3000/mock-tests",
+      "error": "Error: net::ERR_CONNECTION_REFUSED at http://localhost:3000/mock-tests"
+    },
+    {
+      "step": "goto http://localhost:3000/notes",
+      "error": "Error: net::ERR_CONNECTION_REFUSED at http://localhost:3000/notes"
+    },
+    {
+      "step": "goto http://localhost:3000/profile",
+      "error": "Error: net::ERR_CONNECTION_REFUSED at http://localhost:3000/profile"
+    },
+    {
+      "step": "goto http://localhost:3000/reset-password",
+      "error": "Error: net::ERR_CONNECTION_REFUSED at http://localhost:3000/reset-password"
+    },
+    {
+      "step": "goto http://localhost:3000/live-hub",
+      "error": "Error: net::ERR_CONNECTION_REFUSED at http://localhost:3000/live-hub"
+    },
+    {
+      "step": "socket-probe",
+      "message": "TypeError: Failed to fetch"
+    },
+    {
+      "step": "goto http://localhost:3000/login",
+      "error": "Error: net::ERR_CONNECTION_REFUSED at http://localhost:3000/login"
+    }
+  ],
+  "consoleErrors": [
+    {
+      "text": "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+      "location": {
+        "url": "http://localhost:3000/api/health"
+      }
+    },
+    {
+      "text": "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+      "location": {
+        "url": "http://localhost:3000/socket.io/?EIO=4&transport=polling"
+      }
+    },
+    {
+      "text": "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+      "location": {
+        "url": "http://localhost:3000/api/auth/logout"
+      }
+    }
+  ],
+  "failedRequests": []
+}

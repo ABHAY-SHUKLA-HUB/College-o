@@ -7,11 +7,13 @@
     "dev": "node --watch server/index.js",
     "dev:all": "powershell -ExecutionPolicy Bypass -File ./start-all.ps1",
     "start": "node server/index.js",
+    "qa:smoke": "node tools/qa-smoke.js",
     "db:init": "node server/db/init.js"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.31.0",
     "@fortawesome/fontawesome-free": "^6.5.2",
+    "@socket.io/redis-adapter": "^7.1.1",
     "agora-access-token": "^2.0.4",
     "bcryptjs": "^2.4.3",
     "chart.js": "^4.5.1",
@@ -29,16 +31,15 @@
     "qrcode": "^1.5.4",
     "qrcode-generator": "^1.4.4",
     "quill": "^1.3.7",
+    "redis": "^4.6.7",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "uuid": "^11.1.0",
     "validator": "^13.15.26",
     "xlsx": "^0.18.5"
-  ,
-    "socket.io": "^4.8.1",
-    "socket.io-client": "^4.8.1",
-    "redis": "^4.6.7",
-    "@socket.io/redis-adapter": "^7.1.1"
   },
   "devDependencies": {
-    "ngrok": "^5.0.0-beta.2"
+    "ngrok": "^5.0.0-beta.2",
+    "puppeteer": "^19.11.1"
   }
 }

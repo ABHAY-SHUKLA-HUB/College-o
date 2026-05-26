@@ -693,7 +693,8 @@ router.get('/captcha/challenge', (req, res) => {
   res.setHeader('Expires', '0');
   const challenge = buildCaptchaChallenge(req);
   res.json({
-    id: challenge.id,
+    ok: true,
+    captchaId: challenge.id,
     captcha: challenge,
     question: challenge.question,
     challenge: challenge.challengeText,

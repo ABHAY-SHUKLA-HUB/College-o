@@ -57,12 +57,12 @@ const authBootstrapState = {
   experiencePromise: null,
   academicPromise: null,
   universityQuery: '',
+  universityQueryPromise: null
+};
 
 const googleAuthState = {
   scriptPromise: null,
   initialized: false
-};
-  universityQueryPromise: null
 };
 
 async function warmDashboardBootstrap() {
@@ -260,9 +260,9 @@ function createMathCaptcha(targetPrefix) {
 
 
 const captchaState = {
-  login: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false, retryAttempted: false },
-  signup: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false, retryAttempted: false },
-  admin: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false, retryAttempted: false }
+  login: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false, retryAttempted: false, retryCount: 0 },
+  signup: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false, retryAttempted: false, retryCount: 0 },
+  admin: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false, retryAttempted: false, retryCount: 0 }
 };
 
 const CAPTCHA_STORAGE_KEY = 'collegeOsCaptchaState';
@@ -460,39 +460,59 @@ async function refreshCaptcha(scope, { force = false } = {}) {
   setCaptchaReady(scope, false, force ? 'Refreshing CAPTCHA...' : 'Preparing secure CAPTCHA...');
 
   const fetchPromise = (async () => {
-  try {
-    if (window.CollegeOSApi?.getCaptchaChallenge) {
-      const payload = await window.CollegeOSApi.getCaptchaChallenge(force ? { forceRefresh: true } : {});
-      const challenge = payload?.captcha || payload || null;
-      if (captchaState[scope].requestId !== requestId) return captchaState[scope].serverChallenge;
-      captchaState[scope].serverChallenge = challenge;
-      captchaState[scope].lastFetched = Date.now();
-      if (challenge) {
-        persistCaptcha(scope, { ...challenge, fetchedAt: captchaState[scope].lastFetched });
+    try {
+      if (window.CollegeOSApi?.getCaptchaChallenge) {
+        // Use a timeout to avoid infinite loading
+        const apiCall = window.CollegeOSApi.getCaptchaChallenge(force ? { forceRefresh: true } : {});
+        const timeoutMs = 5000;
+        const timeoutPromise = new Promise((resolve, reject) => setTimeout(() => reject(new Error('CAPTCHA_TIMEOUT')), timeoutMs));
+        let payload;
+        try {
+          const result = await Promise.race([apiCall, timeoutPromise]);
+          payload = result;
+        } catch (err) {
+          // Timeout or fetch error
+          captchaState[scope].serverChallenge = null;
+          if (captchaState[scope].requestId === requestId) {
+            captchaState[scope].retryCount = (captchaState[scope].retryCount || 0) + 1;
+            const msg = captchaState[scope].retryCount > 1 ? 'Captcha failed to load. Refresh' : 'Captcha could not load. Retrying...';
+            setCaptchaReady(scope, false, msg, null);
+          }
+          // Clear promise reference below
+          return captchaState[scope].serverChallenge;
+        }
+
+        const challenge = payload?.captcha || payload || null;
+        if (captchaState[scope].requestId !== requestId) return captchaState[scope].serverChallenge;
+        captchaState[scope].serverChallenge = challenge;
+        captchaState[scope].lastFetched = Date.now();
+        if (challenge) {
+          persistCaptcha(scope, { ...challenge, fetchedAt: captchaState[scope].lastFetched });
+        }
+        if (Number.isInteger(Number(challenge?.a)) && Number.isInteger(Number(challenge?.b))) {
+          captchaState[scope].answer = String(Number(challenge.a) + Number(challenge.b));
+        }
+        const resolvedContent = resolveCaptchaContent(challenge);
+        if (!resolvedContent && !force && (captchaState[scope].retryCount || 0) < 1) {
+          captchaState[scope].retryCount = (captchaState[scope].retryCount || 0) + 1;
+          // Try one forced refresh, but do not recurse indefinitely
+          return refreshCaptcha(scope, { force: true });
+        }
+        // Reset retry count on success or final failure
+        captchaState[scope].retryCount = 0;
+        setCaptchaReady(scope, Boolean(resolvedContent), resolvedContent ? 'Captcha ready.' : 'Captcha could not load. Refresh captcha.', challenge);
       }
-      if (Number.isInteger(Number(challenge?.a)) && Number.isInteger(Number(challenge?.b))) {
-        captchaState[scope].answer = String(Number(challenge.a) + Number(challenge.b));
+    } catch (e) {
+      captchaState[scope].serverChallenge = null;
+      if (captchaState[scope].requestId === requestId) {
+        setCaptchaReady(scope, false, 'Captcha could not load. Refresh captcha.', null);
       }
-      const resolvedContent = resolveCaptchaContent(challenge);
-      captchaState[scope].retryAttempted = false;
-      if (!resolvedContent && !force && !captchaState[scope].retryAttempted) {
-        captchaState[scope].retryAttempted = true;
-        return refreshCaptcha(scope, { force: true });
+    } finally {
+      if (captchaState[scope].requestId === requestId) {
+        captchaState[scope].challengePromise = null;
       }
-      setCaptchaReady(scope, Boolean(resolvedContent), resolvedContent ? 'Captcha ready.' : 'Captcha could not load. Refresh captcha.', challenge);
     }
-  } catch {
-    captchaState[scope].serverChallenge = null;
-    if (captchaState[scope].requestId === requestId) {
-      captchaState[scope].retryAttempted = false;
-      setCaptchaReady(scope, false, 'Captcha could not load. Refresh captcha.', null);
-    }
-  } finally {
-    if (captchaState[scope].requestId === requestId) {
-      captchaState[scope].challengePromise = null;
-    }
-  }
-  return captchaState[scope].serverChallenge;
+    return captchaState[scope].serverChallenge;
   })();
 
   captchaState[scope].challengePromise = fetchPromise;
@@ -2137,6 +2157,8 @@ function bindSignup() {
       email,
       mobile,
       password
+
+    };
 
     signupVerificationState.method = 'email';
 

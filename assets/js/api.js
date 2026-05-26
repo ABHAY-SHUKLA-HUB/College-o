@@ -12,7 +12,7 @@ const AUTH_TRANSITION_PATHS = new Set([
   '/api/auth/verification/verify'
 ]);
 
-const DEFAULT_API_URL = 'https://college-o.onrender.com';
+const DEFAULT_API_URL = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'http://localhost:3000';
 let csrfTokenCache = null;
 let csrfRefreshPromise = null;
 let telemetryDisabled = false;

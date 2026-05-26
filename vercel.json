@@ -10,63 +10,71 @@
     },
     {
       "source": "/home",
-      "destination": "/index.html"
+      "destination": "/home.html"
     },
     {
       "source": "/dashboard",
-      "destination": "/index.html"
+      "destination": "/dashboard.html"
     },
     {
       "source": "/study",
-      "destination": "/index.html"
+      "destination": "/study.html"
     },
     {
       "source": "/mock-test",
-      "destination": "/index.html"
+      "destination": "/mock-tests.html"
     },
     {
       "source": "/mock-tests",
-      "destination": "/index.html"
+      "destination": "/mock-tests.html"
     },
     {
       "source": "/notes",
-      "destination": "/index.html"
+      "destination": "/notes-library.html"
     },
     {
       "source": "/roadmap",
-      "destination": "/index.html"
+      "destination": "/study-roadmap.html"
     },
     {
       "source": "/ai-tools",
-      "destination": "/index.html"
+      "destination": "/ai-tools.html"
     },
     {
       "source": "/live-hub",
-      "destination": "/index.html"
+      "destination": "/live-hub.html"
     },
     {
       "source": "/notifications",
-      "destination": "/index.html"
+      "destination": "/notifications.html"
     },
     {
       "source": "/profile",
-      "destination": "/index.html"
+      "destination": "/profile.html"
     },
     {
       "source": "/settings",
-      "destination": "/index.html"
+      "destination": "/settings.html"
     },
     {
       "source": "/support-dashboard",
-      "destination": "/index.html"
+      "destination": "/support-dashboard.html"
     },
     {
       "source": "/support-hub",
-      "destination": "/index.html"
+      "destination": "/support-hub.html"
     },
     {
       "source": "/contribute",
-      "destination": "/index.html"
+      "destination": "/academic-contribution-hub.html"
+    },
+    {
+      "source": "/reset-password",
+      "destination": "/reset-password.html"
+    },
+    {
+      "source": "/reset-password/:path*",
+      "destination": "/reset-password.html"
     }
   ],
   "redirects": [
@@ -148,6 +156,11 @@
     {
       "source": "/signup.html",
       "destination": "/signup",
+      "permanent": true
+    },
+    {
+      "source": "/reset-password.html",
+      "destination": "/reset-password",
       "permanent": true
     }
   ]

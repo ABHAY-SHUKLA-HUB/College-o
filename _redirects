@@ -14,4 +14,23 @@
 /support-hub.html /support-hub 301
 /login.html /login 301
 /signup.html /signup 301
+/reset-password.html /reset-password 301
+
+/home /home.html 200
+/dashboard /dashboard.html 200
+/study /study.html 200
+/mock-test /mock-tests.html 200
+/mock-tests /mock-tests.html 200
+/notes /notes-library.html 200
+/roadmap /study-roadmap.html 200
+/ai-tools /ai-tools.html 200
+/live-hub /live-hub.html 200
+/notifications /notifications.html 200
+/profile /profile.html 200
+/settings /settings.html 200
+/support-dashboard /support-dashboard.html 200
+/support-hub /support-hub.html 200
+/contribute /academic-contribution-hub.html 200
+/reset-password /reset-password.html 200
+
 /* /index.html 200

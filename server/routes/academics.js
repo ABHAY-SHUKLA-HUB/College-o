@@ -16,7 +16,11 @@ async function ensureAcademicsSchema() {
   await pool.query(`
     ALTER TABLE user_profiles
       ADD COLUMN IF NOT EXISTS learning_goals JSONB,
-      ADD COLUMN IF NOT EXISTS onboarding_payload JSONB
+      ADD COLUMN IF NOT EXISTS onboarding_payload JSONB,
+      ADD COLUMN IF NOT EXISTS onboarding_step VARCHAR(40) DEFAULT 'academic_profile',
+      ADD COLUMN IF NOT EXISTS batch_year INTEGER,
+      ADD COLUMN IF NOT EXISTS course_name VARCHAR(120),
+      ADD COLUMN IF NOT EXISTS academic_scope JSONB DEFAULT '{}'::jsonb
   `);
 
   await pool.query(`
@@ -223,6 +227,8 @@ router.post('/onboarding/complete', requireAuth, async (req, res) => {
       learningGoals,
       careerInterest,
       preferredStudyMode,
+      batchYear,
+      courseName,
       onboardingPayload
     } = req.body;
 
@@ -247,33 +253,41 @@ router.post('/onboarding/complete', requireAuth, async (req, res) => {
     const profileResult = await pool.query(
       `INSERT INTO user_profiles (
         user_id, category_id, branch_id, semester_id,
+        batch_year, course_name,
         target_exam, weak_subjects, career_interest, preferred_study_mode,
-        learning_goals, onboarding_payload, onboarding_completed, current_streak
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, 0)
+        learning_goals, onboarding_payload, onboarding_completed, onboarding_step, academic_scope, current_streak
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, TRUE, 'complete', $13::jsonb, 0)
       ON CONFLICT (user_id) DO UPDATE SET
         category_id = $2,
         branch_id = $3,
         semester_id = $4,
-        target_exam = $5,
-        weak_subjects = $6,
-        career_interest = $7,
-        preferred_study_mode = $8,
-        learning_goals = $9,
-        onboarding_payload = $10,
+        batch_year = $5,
+        course_name = $6,
+        target_exam = $7,
+        weak_subjects = $8,
+        career_interest = $9,
+        preferred_study_mode = $10,
+        learning_goals = $11,
+        onboarding_payload = $12,
         onboarding_completed = TRUE,
+        onboarding_step = 'complete',
+        academic_scope = jsonb_build_object('categoryId', $2, 'branchId', $3, 'semesterId', $4, 'batchYear', $5, 'courseName', $6),
         updated_at = CURRENT_TIMESTAMP
-      RETURNING id, user_id, category_id, branch_id, semester_id, onboarding_completed`,
+      RETURNING id, user_id, category_id, branch_id, semester_id, batch_year, course_name, onboarding_completed, onboarding_step`,
       [
         userId,
         categoryId,
         branchId,
         semesterId,
+        Number(batchYear) || null,
+        courseName || null,
         targetExam || null,
         JSON.stringify(weakSubjects || []),
         careerInterest || null,
         preferredStudyMode || null,
         JSON.stringify(Array.isArray(learningGoals) ? learningGoals : []),
-        onboardingPayload && typeof onboardingPayload === 'object' ? JSON.stringify(onboardingPayload) : JSON.stringify({})
+        onboardingPayload && typeof onboardingPayload === 'object' ? JSON.stringify(onboardingPayload) : JSON.stringify({}),
+        JSON.stringify({ categoryId, branchId, semesterId, batchYear: Number(batchYear) || null, courseName: courseName || null })
       ]
     );
 
@@ -345,6 +359,8 @@ router.get('/profile', requireAuth, async (req, res) => {
         categoryId: profile.category_id,
         branchId: profile.branch_id,
         semesterId: profile.semester_id,
+        batchYear: profile.batch_year,
+        courseName: profile.course_name,
         targetExam: profile.target_exam,
           weakSubjects: (() => {
             try {
@@ -357,6 +373,8 @@ router.get('/profile', requireAuth, async (req, res) => {
         preferredStudyMode: profile.preferred_study_mode,
         learningGoals: Array.isArray(profile.learning_goals) ? profile.learning_goals : [],
         onboardingPayload: profile.onboarding_payload || {},
+        onboardingStep: profile.onboarding_step || 'academic_profile',
+        academicScope: profile.academic_scope || {},
         category: {
           name: profile.category_name,
           label: profile.category_label
@@ -388,18 +406,22 @@ router.put('/profile', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
     const {
+      categoryId,
       branchId,
       semesterId,
+      batchYear,
+      courseName,
       targetExam,
       weakSubjects,
       learningGoals,
       careerInterest,
-      preferredStudyMode
+      preferredStudyMode,
+      onboardingStep,
+      academicScope
     } = req.body;
 
-    // Get current category to maintain it
     const currentProfile = await pool.query(
-      `SELECT category_id FROM user_profiles WHERE user_id = $1`,
+      `SELECT category_id, onboarding_step FROM user_profiles WHERE user_id = $1`,
       [userId]
     );
 
@@ -407,14 +429,15 @@ router.put('/profile', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Academic profile not found' });
     }
 
-    const categoryId = currentProfile.rows[0].category_id;
+    const currentCategoryId = currentProfile.rows[0].category_id;
+    const resolvedCategoryId = categoryId || currentCategoryId;
 
     // If branch is being changed, validate it belongs to the category
     if (branchId) {
       const branchCheck = await pool.query(
         `SELECT id FROM academic_branches
          WHERE id = $1 AND category_id = $2`,
-        [branchId, categoryId]
+        [branchId, resolvedCategoryId]
       );
 
       if (branchCheck.rowCount === 0) {
@@ -424,25 +447,35 @@ router.put('/profile', requireAuth, async (req, res) => {
 
     const updateResult = await pool.query(
       `UPDATE user_profiles SET
-        branch_id = COALESCE($2, branch_id),
-        semester_id = COALESCE($3, semester_id),
-        target_exam = COALESCE($4, target_exam),
-        weak_subjects = COALESCE($5, weak_subjects),
-        career_interest = COALESCE($6, career_interest),
-        preferred_study_mode = COALESCE($7, preferred_study_mode),
-        learning_goals = COALESCE($8, learning_goals),
+        category_id = COALESCE($2, category_id),
+        branch_id = COALESCE($3, branch_id),
+        semester_id = COALESCE($4, semester_id),
+        batch_year = COALESCE($5, batch_year),
+        course_name = COALESCE($6, course_name),
+        target_exam = COALESCE($7, target_exam),
+        weak_subjects = COALESCE($8, weak_subjects),
+        career_interest = COALESCE($9, career_interest),
+        preferred_study_mode = COALESCE($10, preferred_study_mode),
+        learning_goals = COALESCE($11, learning_goals),
+        onboarding_step = COALESCE($12, onboarding_step),
+        academic_scope = COALESCE($13::jsonb, academic_scope),
         updated_at = CURRENT_TIMESTAMP
        WHERE user_id = $1
-       RETURNING id, user_id, category_id, branch_id, semester_id`,
+       RETURNING id, user_id, category_id, branch_id, semester_id, batch_year, course_name, onboarding_step`,
       [
         userId,
+        categoryId || null,
         branchId || null,
         semesterId || null,
+        batchYear || null,
+        courseName || null,
         targetExam || null,
         weakSubjects ? JSON.stringify(weakSubjects) : null,
         careerInterest || null,
         preferredStudyMode || null,
-        Array.isArray(learningGoals) ? JSON.stringify(learningGoals) : null
+        Array.isArray(learningGoals) ? JSON.stringify(learningGoals) : null,
+        onboardingStep || currentProfile.rows[0].onboarding_step || null,
+        academicScope ? JSON.stringify(academicScope) : null
       ]
     );
 

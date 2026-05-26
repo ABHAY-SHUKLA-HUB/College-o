@@ -132,6 +132,7 @@ const CLEAN_PAGE_ROUTES = new Map([
   ['/support-dashboard', 'support-dashboard.html'],
   ['/support-hub', 'support-hub.html'],
   ['/contribute', 'academic-contribution-hub.html']
+  ,['/reset-password', 'reset-password.html']
 ]);
 
 function getRateLimitKey(req) {
@@ -228,11 +229,13 @@ app.use(helmet({
       // Allow the Jitsi external API and Agora SDK to be loaded as scripts.
       // Inline HTML pages in this app still depend on embedded scripts.
       scriptSrc: ["'self'", "'unsafe-inline'", `https://${jitsiDomain}`, 'https://meet.jit.si', 'https://download.agora.io'],
+      scriptSrc: ["'self'", "'unsafe-inline'", `https://${jitsiDomain}`, 'https://meet.jit.si', 'https://download.agora.io', 'https://accounts.google.com', 'https://www.gstatic.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'https:'],
       // Allow framing Jitsi (embedded meeting) from meet.jit.si
       frameSrc: ["'self'", `https://${jitsiDomain}`, 'https://meet.jit.si'],
       connectSrc: ["'self'", `https://${jitsiDomain}`, 'https://meet.jit.si', 'https://download.agora.io'],
+        connectSrc: ["'self'", `https://${jitsiDomain}`, 'https://meet.jit.si', 'https://download.agora.io', 'https://accounts.google.com', 'https://oauth2.googleapis.com'],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       upgradeInsecureRequests: isProduction ? [] : []
@@ -412,7 +415,7 @@ app.use((req, res, next) => {
   const pathKey = req.path.toLowerCase();
   if (/\.html$/i.test(pathKey)) {
     const cleanPath = pathKey.replace(/\.html$/i, '');
-    return res.redirect(302, CLEAN_PAGE_ROUTES.has(cleanPath) ? cleanPath : cleanPath || '/');
+    return res.redirect(301, CLEAN_PAGE_ROUTES.has(cleanPath) ? cleanPath : cleanPath || '/');
   }
 
   if (CLEAN_PAGE_ROUTES.has(pathKey)) {

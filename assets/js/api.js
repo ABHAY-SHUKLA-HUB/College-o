@@ -6,6 +6,7 @@ const AUTH_TRANSITION_PATHS = new Set([
   '/api/auth/login',
   '/api/auth/login/email-otp',
   '/api/auth/signup',
+  '/api/auth/google',
   '/api/auth/logout',
   '/api/auth/logout-all',
   '/api/auth/verification/verify'
@@ -808,6 +809,7 @@ window.CollegeOSApi = {
   login: (data) => apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify(data) }),
   loginWithEmailOtp: (data) => apiFetch('/api/auth/login/email-otp', { method: 'POST', body: JSON.stringify(data) }),
   signup: (data) => apiFetch('/api/auth/signup', { method: 'POST', body: JSON.stringify(data) }),
+  googleSignup: (data) => apiFetch('/api/auth/google', { method: 'POST', body: JSON.stringify(data) }),
   requestVerificationCode: (data) => apiFetch('/api/auth/verification/request', { method: 'POST', body: JSON.stringify(data) }),
   verifyCode: (data) => apiFetch('/api/auth/verification/verify', { method: 'POST', body: JSON.stringify(data) }),
   forgotPassword: (data) => apiFetch('/api/auth/password/forgot', { method: 'POST', body: JSON.stringify(data) }),

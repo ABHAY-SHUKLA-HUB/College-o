@@ -58,3 +58,4 @@ build/
 # 🧾 Database (optional - only ignore if local)
 *.sqlite
 *.db
+*._redirects

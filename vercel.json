@@ -1,0 +1,154 @@
+{
+  "rewrites": [
+    {
+      "source": "/login",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/signup",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/home",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/study",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/mock-test",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/mock-tests",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/notes",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/roadmap",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/ai-tools",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/live-hub",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/notifications",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/profile",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/settings",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/support-dashboard",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/support-hub",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/contribute",
+      "destination": "/index.html"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/dashboard.html",
+      "destination": "/dashboard",
+      "permanent": true
+    },
+    {
+      "source": "/home.html",
+      "destination": "/home",
+      "permanent": true
+    },
+    {
+      "source": "/study.html",
+      "destination": "/study",
+      "permanent": true
+    },
+    {
+      "source": "/mock-tests.html",
+      "destination": "/mock-tests",
+      "permanent": true
+    },
+    {
+      "source": "/notes-library.html",
+      "destination": "/notes",
+      "permanent": true
+    },
+    {
+      "source": "/study-roadmap.html",
+      "destination": "/roadmap",
+      "permanent": true
+    },
+    {
+      "source": "/ai-tools.html",
+      "destination": "/ai-tools",
+      "permanent": true
+    },
+    {
+      "source": "/live-hub.html",
+      "destination": "/live-hub",
+      "permanent": true
+    },
+    {
+      "source": "/notifications.html",
+      "destination": "/notifications",
+      "permanent": true
+    },
+    {
+      "source": "/profile.html",
+      "destination": "/profile",
+      "permanent": true
+    },
+    {
+      "source": "/settings.html",
+      "destination": "/settings",
+      "permanent": true
+    },
+    {
+      "source": "/academic-contribution-hub.html",
+      "destination": "/contribute",
+      "permanent": true
+    },
+    {
+      "source": "/support-dashboard.html",
+      "destination": "/support-dashboard",
+      "permanent": true
+    },
+    {
+      "source": "/support-hub.html",
+      "destination": "/support-hub",
+      "permanent": true
+    },
+    {
+      "source": "/login.html",
+      "destination": "/login",
+      "permanent": true
+    },
+    {
+      "source": "/signup.html",
+      "destination": "/signup",
+      "permanent": true
+    }
+  ]
+}

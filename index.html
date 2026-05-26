@@ -597,6 +597,25 @@
       color: #4a5568;
     }
 
+    .google-auth-panel {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .google-auth-panel .provider-note {
+      margin: 0;
+      font-size: 0.78rem;
+      color: #64748b;
+      text-align: center;
+    }
+
+    .google-auth-slot {
+      display: flex;
+      justify-content: center;
+      min-height: 44px;
+    }
+
     .auth-view h2 {
       margin: 0 0 8px 0;
       font-size: clamp(1.4rem, 2.4vw, 1.66rem);
@@ -2668,6 +2687,11 @@
           <h2 id="loginTitle">Welcome back, build momentum</h2>
           <p id="loginDescription">Enter your secure workspace to continue your streak, plans, and career-focused study flow.</p>
 
+          <div class="google-auth-panel">
+            <div class="google-auth-slot" data-google-auth-slot="login"></div>
+            <p class="provider-note">Use Google to sign in or create a new workspace account.</p>
+          </div>
+
           <form id="loginForm" class="stack-form email-login-form">
             <div class="field">
               <label for="loginEmail">Email Address</label>
@@ -2739,6 +2763,11 @@
         <div class="auth-view hidden" data-auth-view="signup">
           <h2 id="signupTitle">Create your account</h2>
           <p id="signupDescription">Set up your profile in a few steps to unlock a branch-aware dashboard.</p>
+
+          <div class="google-auth-panel">
+            <div class="google-auth-slot" data-google-auth-slot="signup"></div>
+            <p class="provider-note">Google sign-up also works for returning users.</p>
+          </div>
 
           <div class="signup-steps" id="signupStepChips">
             <div class="signup-step-chip active" data-step-chip="1">1. Basic</div>

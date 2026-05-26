@@ -85,17 +85,18 @@ function buildOtpEmail({ otp, purpose = 'signup', channel = 'email', target = ''
   };
 }
 
-function buildPasswordResetEmail({ resetUrl }) {
+function buildPasswordResetEmail({ resetUrl, expiresMinutes = 15, supportEmail = 'support@collegeos.in' }) {
   return {
     subject: 'College OS Password Reset Request',
-    text: `A password reset was requested for your College OS account. Use this link within 15 minutes: ${resetUrl}`,
+    text: `A password reset was requested for your College OS account. Use this secure link within ${expiresMinutes} minutes: ${resetUrl} If you did not request this, contact ${supportEmail}.`,
     html: renderLayout({
       eyebrow: 'Account Security',
       title: 'Reset your College OS password',
       subtitle: 'A password reset request was received for your account.',
       bodyHtml: `
         <p style="margin:0 0 12px;">If this request was made by you, continue using the secure reset link below.</p>
-        <p style="margin:0; color:#5f748a;">The link expires in 15 minutes.</p>
+        <p style="margin:0; color:#5f748a;">The link expires in ${escapeHtml(expiresMinutes)} minutes and can be used only once.</p>
+        <p style="margin:10px 0 0; color:#5f748a;">Need help? Contact <a href="mailto:${escapeHtml(supportEmail)}" style="color:#1f6feb;">${escapeHtml(supportEmail)}</a>.</p>
       `,
       ctaLabel: 'Reset Password',
       ctaUrl: resetUrl,

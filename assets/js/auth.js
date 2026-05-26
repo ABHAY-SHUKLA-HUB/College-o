@@ -57,6 +57,11 @@ const authBootstrapState = {
   experiencePromise: null,
   academicPromise: null,
   universityQuery: '',
+
+const googleAuthState = {
+  scriptPromise: null,
+  initialized: false
+};
   universityQueryPromise: null
 };
 
@@ -864,6 +869,9 @@ const authExperienceState = {
       targetCareerInterest: true
     }
   },
+  oauth: {
+    googleClientId: ''
+  },
   support: {
     email: 'support@collegeos.in',
     whatsapp: '+919000000000',
@@ -880,8 +888,19 @@ const authExperienceState = {
 
 const signupStepState = {
   current: 1,
-  total: 4
+  total: 2
 };
+
+function configureSignupFlowLayout() {
+  document.querySelectorAll('[data-signup-step="2"], [data-signup-step="3"]').forEach((section) => section.classList.add('hidden'));
+  document.querySelectorAll('[data-step-chip="2"], [data-step-chip="3"]').forEach((chip) => chip.classList.add('hidden'));
+  const step4Chip = document.querySelector('[data-step-chip="4"]');
+  if (step4Chip) step4Chip.textContent = '2. Security';
+  const step1Chip = document.querySelector('[data-step-chip="1"]');
+  if (step1Chip) step1Chip.textContent = '1. Basic';
+  const securitySection = document.querySelector('[data-signup-step="4"]');
+  if (securitySection) securitySection.classList.remove('hidden');
+}
 
 function fallbackAcademicData() {
   return {
@@ -1202,6 +1221,8 @@ function applyAuthExperienceConfig() {
   setFieldVisibility('semester', isFieldVisible('semester'));
   setFieldVisibility('targetCareerInterest', isFieldVisible('targetCareerInterest'));
 
+  void renderGoogleAuthButtons();
+
   if (signupEnabled) {
     const activeTab = document.querySelector('[data-auth-tab].active')?.dataset.authTab || 'login';
     switchAuthView(activeTab === 'signup' ? 'signup' : 'login');
@@ -1210,6 +1231,106 @@ function applyAuthExperienceConfig() {
   }
 
   bindLoginMethodToggle();
+}
+
+function getGoogleClientId() {
+  return String(authExperienceState.oauth?.googleClientId || '').trim();
+}
+
+function getActiveAuthMessagesTarget() {
+  return document.querySelector('[data-auth-view]:not(.hidden)')?.dataset.authView === 'signup' ? 'signup' : 'login';
+}
+
+function loadGoogleIdentityScript() {
+  if (window.google?.accounts?.id) return Promise.resolve(true);
+  if (googleAuthState.scriptPromise) return googleAuthState.scriptPromise;
+
+  googleAuthState.scriptPromise = new Promise((resolve, reject) => {
+    const existing = document.querySelector('script[data-google-identity="true"]');
+    if (existing) {
+      existing.addEventListener('load', () => resolve(true), { once: true });
+      existing.addEventListener('error', () => reject(new Error('Google sign-in could not load.')), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.dataset.googleIdentity = 'true';
+    script.onload = () => resolve(true);
+    script.onerror = () => reject(new Error('Google sign-in could not load.'));
+    document.head.appendChild(script);
+  }).finally(() => {
+    googleAuthState.scriptPromise = null;
+  });
+
+  return googleAuthState.scriptPromise;
+}
+
+async function handleGoogleCredentialResponse(credentialResponse) {
+  const credential = String(credentialResponse?.credential || '').trim();
+  const messageTarget = getActiveAuthMessagesTarget();
+  if (!credential) {
+    setAuthMessages(messageTarget, 'Google sign-in did not return a valid credential.');
+    return;
+  }
+
+  setAuthMessages(messageTarget, '', 'Completing Google sign-in...');
+
+  try {
+    await window.CollegeOSApi.googleSignup({ credential });
+    setAuthMessages(messageTarget, '', 'Google sign-in successful. Finalizing your workspace...');
+    await completePostLoginFlow();
+  } catch (error) {
+    setAuthMessages(messageTarget, error.message || 'Google sign-in failed.');
+  }
+}
+
+async function renderGoogleAuthButtons() {
+  const clientId = getGoogleClientId();
+  const slots = document.querySelectorAll('[data-google-auth-slot]');
+
+  slots.forEach((slot) => {
+    slot.classList.toggle('hidden', !clientId);
+    slot.replaceChildren();
+    if (!clientId) {
+      slot.dataset.rendered = 'false';
+    }
+  });
+
+  if (!clientId || !slots.length) return;
+
+  try {
+    await loadGoogleIdentityScript();
+    if (!window.google?.accounts?.id) return;
+
+    if (!googleAuthState.initialized) {
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleGoogleCredentialResponse
+      });
+      googleAuthState.initialized = true;
+    }
+
+    slots.forEach((slot) => {
+      if (!slot.isConnected || slot.dataset.rendered === 'true') return;
+      window.google.accounts.id.renderButton(slot, {
+        theme: 'outline',
+        size: 'large',
+        type: 'standard',
+        text: 'continue_with',
+        shape: 'pill',
+        width: Math.max(280, Math.min(slot.clientWidth || 340, 420))
+      });
+      slot.dataset.rendered = 'true';
+    });
+  } catch (_error) {
+    slots.forEach((slot) => {
+      slot.classList.add('hidden');
+      slot.dataset.rendered = 'false';
+    });
+  }
 }
 
 async function loadAuthExperienceConfig() {
@@ -1222,6 +1343,7 @@ async function loadAuthExperienceConfig() {
     authExperienceState.modules = { ...authExperienceState.modules, ...(incoming.modules || {}) };
     authExperienceState.branding = { ...authExperienceState.branding, ...(incoming.branding || {}) };
     authExperienceState.text = { ...authExperienceState.text, ...(incoming.text || {}) };
+    authExperienceState.oauth = { ...authExperienceState.oauth, ...(incoming.oauth || {}) };
     authExperienceState.signup = {
       ...authExperienceState.signup,
       ...(incoming.signup || {}),
@@ -1250,11 +1372,6 @@ function validateSignupStep(step) {
   const fullName = byId('signupName')?.value.trim() || '';
   const email = byId('signupEmail')?.value.trim() || '';
   const mobile = byId('signupMobile')?.value.trim() || '';
-  const categoryId = Number(byId('signupCategory')?.value || 0);
-  const branchId = Number(byId('signupBranch')?.value || 0);
-  const resolvedUniversityName = String(byId('signupUniversityName')?.value || '').trim()
-    || String(byId('signupCustomUniversity')?.value || '').trim()
-    || String(byId('signupUniversitySearch')?.value || '').trim();
 
   if (step === 1) {
     if (!fullName || !email) {
@@ -1268,20 +1385,21 @@ function validateSignupStep(step) {
   }
 
   if (step === 2) {
-    if (isFieldVisible('category') && !categoryId) {
-      setAuthMessages('signup', 'Please select a learning path/category.');
+    const password = String(byId('signupPassword')?.value || '');
+    const confirm = String(byId('signupConfirmPassword')?.value || '');
+    if (!password) {
+      setAuthMessages('signup', 'Password is required.');
       return false;
     }
-    if (isFieldVisible('branch') && !branchId) {
-      setAuthMessages('signup', 'Please select branch/course.');
+    if (!isStrongSignupPassword(password)) {
+      setFieldState(byId('signupPassword'), { valid: false, message: PASSWORD_POLICY_MESSAGE });
+      setAuthMessages('signup', PASSWORD_POLICY_MESSAGE);
       return false;
     }
-  }
-
-  if (step === 3 && isFieldVisible('university') && !resolvedUniversityName) {
-    setUniversityInvalidState(true);
-    setAuthMessages('signup', 'Please select your university.');
-    return false;
+    if (password !== confirm) {
+      setAuthMessages('signup', 'Password and confirm password do not match.');
+      return false;
+    }
   }
 
   setAuthMessages('signup');
@@ -1289,11 +1407,22 @@ function validateSignupStep(step) {
 }
 
 function updateSignupStepUI() {
+  configureSignupFlowLayout();
   document.querySelectorAll('[data-signup-step]').forEach((section) => {
-    section.classList.toggle('hidden', Number(section.dataset.signupStep || 1) !== signupStepState.current);
+    const stepNumber = Number(section.dataset.signupStep || 1);
+    if (stepNumber === 2 || stepNumber === 3) {
+      section.classList.add('hidden');
+      return;
+    }
+    if (stepNumber === 4) {
+      section.classList.toggle('hidden', signupStepState.current !== 2);
+      return;
+    }
+    section.classList.toggle('hidden', signupStepState.current !== 1);
   });
   document.querySelectorAll('[data-step-chip]').forEach((chip) => {
-    chip.classList.toggle('active', Number(chip.dataset.stepChip || 1) === signupStepState.current);
+    const chipStep = Number(chip.dataset.stepChip || 1);
+    chip.classList.toggle('active', (chipStep === 1 && signupStepState.current === 1) || (chipStep === 4 && signupStepState.current === 2));
   });
 
   const prevBtn = byId('signupPrevStepBtn');
@@ -1619,7 +1748,8 @@ async function completePostLoginFlow(preferredCategoryId = null, preferredBranch
       openOnboardingModal({
         categoryId: preferredCategoryId || profile?.categoryId || null,
         branchId: preferredBranchId || profile?.branchId || null,
-        semesterId: preferredSemesterId || profile?.semesterId || null
+        semesterId: preferredSemesterId || profile?.semesterId || null,
+        onboardingStep: profile?.onboardingStep || 1
       });
       return;
     }
@@ -1627,7 +1757,8 @@ async function completePostLoginFlow(preferredCategoryId = null, preferredBranch
     openOnboardingModal({
       categoryId: preferredCategoryId || null,
       branchId: preferredBranchId || null,
-      semesterId: preferredSemesterId || null
+      semesterId: preferredSemesterId || null,
+      onboardingStep: 1
     });
     return;
   }
@@ -1830,13 +1961,6 @@ async function registerAccount(signupData) {
     email: signupData.email,
     mobile: signupData.mobile,
     password: signupData.password,
-    universityId: signupData.universityId,
-    universityName: signupData.universityName,
-    customUniversity: signupData.customUniversity,
-    categoryId: signupData.categoryId,
-    branchId: signupData.branchId,
-    semesterId: signupData.semesterId,
-    targetCareerInterest: signupData.targetCareerInterest,
     verificationMethod: signupVerificationState.method,
     verificationToken: signupVerificationState.verificationToken,
     captcha: await ensureCaptchaPayload('signup')
@@ -1977,20 +2101,9 @@ function bindSignup() {
     const fullName = byId('signupName').value.trim();
     const email = byId('signupEmail').value.trim().toLowerCase();
     const mobile = byId('signupMobile').value.trim();
-    const categoryId = Number(byId('signupCategory').value || 0);
-    const branchId = Number(byId('signupBranch').value || 0);
-    const semesterId = Number(byId('signupSemester').value || 0) || null;
-    const selectedUniversityId = Number(byId('signupUniversityId')?.value || 0) || null;
-    const selectedUniversityName = String(byId('signupUniversityName')?.value || '').trim();
-    const typedUniversity = String(byId('signupUniversitySearch')?.value || '').trim();
-    const customUniversity = String(byId('signupCustomUniversity')?.value || '').trim();
-    const targetCareerInterest = byId('signupTargetCareerInterest')?.value.trim() || '';
     const password = byId('signupPassword').value;
     const confirmPassword = byId('signupConfirmPassword').value;
     const acceptedTerms = Boolean(byId('signupTerms')?.checked);
-
-    const resolvedUniversityName = selectedUniversityName || customUniversity || typedUniversity;
-    const resolvedCustomUniversity = selectedUniversityId ? '' : resolvedUniversityName;
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setFieldState(byId('signupEmail'), { valid: false, message: 'Enter a valid email address.' });
@@ -1998,21 +2111,8 @@ function bindSignup() {
       return;
     }
 
-    if (!fullName || !email || (isFieldVisible('mobile') && !mobile) || (isFieldVisible('category') && !categoryId) || (isFieldVisible('branch') && !branchId) || !password) {
-      setAuthMessages('signup', 'Please complete all required fields including branch/course.');
-      return;
-    }
-
-    if (isFieldVisible('university') && !resolvedUniversityName) {
-      setUniversityInvalidState(true);
-      setAuthMessages('signup', 'Please select your university');
-      return;
-    }
-
-    setUniversityInvalidState(false);
-
-    if (isFieldVisible('mobile') && !/^\d{10}$/.test(mobile)) {
-      setAuthMessages('signup', 'Enter a valid 10-digit mobile number.');
+    if (!fullName || !email || (isFieldVisible('mobile') && !mobile)) {
+      setAuthMessages('signup', 'Please complete your basic details.');
       return;
     }
 
@@ -2036,15 +2136,7 @@ function bindSignup() {
       fullName,
       email,
       mobile,
-      categoryId,
-      branchId,
-      semesterId,
-      universityId: selectedUniversityId,
-      universityName: resolvedUniversityName,
-      customUniversity: resolvedCustomUniversity,
-      targetCareerInterest,
       password
-    };
 
     signupVerificationState.method = 'email';
 
@@ -2052,7 +2144,6 @@ function bindSignup() {
     if (!sent) return;
 
     setSignupOtpStatus('', 'OTP sent successfully. Enter it below to continue.');
-    const otpInput = byId('signupOtpInput');
     if (otpInput) otpInput.value = '';
     openSignupOtpModal({ focusInput: true });
     setAuthMessages('signup', '', 'Verification required. Complete OTP in the popup to finish signup.');
@@ -2164,7 +2255,7 @@ function openOnboardingModal(prefill = {}) {
   }
 
   onboardingState.visible = true;
-  onboardingState.step = 1;
+  onboardingState.step = Math.max(1, Number(prefill.onboardingStep || 1));
   onboardingState.prefill = prefill;
   onboardingState.selectedInterest = '';
   onboardingState.selectedGoals = [];
@@ -2180,6 +2271,10 @@ function openOnboardingModal(prefill = {}) {
 
   if (prefill.semesterId && byId('onboardSemester')) {
     byId('onboardSemester').value = String(prefill.semesterId);
+  }
+
+  if (prefill.onboardingStep) {
+    onboardingState.step = Math.max(1, Number(prefill.onboardingStep || 1));
   }
 
   document.querySelectorAll('.interest-card').forEach((card) => card.classList.remove('active'));
@@ -2232,6 +2327,8 @@ async function submitOnboarding() {
       weakSubjects: [],
       careerInterest: onboardingState.selectedInterest,
       preferredStudyMode,
+      batchYear: null,
+      courseName: null,
       learningGoals: onboardingState.selectedGoals,
       onboardingPayload: {
         wizardVersion: onboardingConfigState.wizard.version || 1,
@@ -2308,6 +2405,16 @@ function bindOnboarding() {
           setText('onboardingError', 'Please confirm category and branch/course.');
           return;
         }
+        try {
+          await window.CollegeOSApi.updateAcademicProfile({
+            categoryId,
+            branchId,
+            semesterId: Number(byId('onboardSemester')?.value || 0) || null,
+            onboardingStep: 'career_interest'
+          });
+        } catch {
+          // Keep going so users are not blocked by a profile save issue.
+        }
         onboardingState.step = 2;
         updateOnboardingStepUi();
         return;
@@ -2315,8 +2422,34 @@ function bindOnboarding() {
 
       if (onboardingState.step === 2) {
         if (!onboardingState.selectedInterest) {
+          try {
+            await window.CollegeOSApi.updateAcademicProfile({
+              categoryId,
+              branchId,
+              semesterId: Number(byId('onboardSemester')?.value || 0) || null,
+              onboardingStep: 'career_interest'
+            });
+          } catch {
+            // Keep going if step persistence fails.
+          }
           setText('onboardingError', 'Choose one career interest to continue.');
           return;
+        }
+        try {
+          await window.CollegeOSApi.updateAcademicProfile({
+            careerInterest: onboardingState.selectedInterest,
+            onboardingStep: 'learning_goals'
+          });
+        } catch {
+          // continue
+          try {
+            await window.CollegeOSApi.updateAcademicProfile({
+              careerInterest: onboardingState.selectedInterest,
+              onboardingStep: 'learning_goals'
+            });
+          } catch {
+            // Keep going if step persistence fails.
+          }
         }
         onboardingState.step = 3;
         updateOnboardingStepUi();
@@ -2327,6 +2460,24 @@ function bindOnboarding() {
         if (!onboardingState.selectedGoals.length) {
           setText('onboardingError', 'Select at least one learning goal to continue.');
           return;
+          try {
+            await window.CollegeOSApi.updateAcademicProfile({
+              learningGoals: onboardingState.selectedGoals,
+              preferredStudyMode: String(byId('onboardStudyMode')?.value || 'Self paced'),
+              onboardingStep: 'dashboard_setup'
+            });
+          } catch {
+            // Keep going if step persistence fails.
+          }
+        }
+        try {
+          await window.CollegeOSApi.updateAcademicProfile({
+            learningGoals: onboardingState.selectedGoals,
+            preferredStudyMode: String(byId('onboardStudyMode')?.value || 'Self paced'),
+            onboardingStep: 'dashboard_setup'
+          });
+        } catch {
+          // continue
         }
         onboardingState.step = 4;
         updateOnboardingStepUi();

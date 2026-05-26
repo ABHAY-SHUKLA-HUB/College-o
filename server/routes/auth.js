@@ -22,7 +22,7 @@ const LOGIN_LOCK_THRESHOLD = 5;
 const LOGIN_LOCK_MINUTES = 15;
 const LOGIN_FAILURE_DELAY_MS = 400;
 
-const FORGOT_TOKEN_TTL_MS = 15 * 60 * 1000;
+const RESET_TOKEN_TTL_MS = 20 * 60 * 1000;
 
 const REMEMBER_ME_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
 const STANDARD_SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 12;
@@ -36,6 +36,7 @@ const CAPTCHA_DEV_BYPASS = String(process.env.AUTH_CAPTCHA_DEV_BYPASS || '').toL
 const OTP_QA_ASSIST_ENABLED = process.env.NODE_ENV !== 'production' && process.env.OTP_QA_ASSIST_ENABLED === 'true';
 const OTP_QA_ASSIST_SECRET = String(process.env.OTP_QA_ASSIST_SECRET || '');
 const OTP_MOBILE_ENABLED = String(process.env.OTP_MOBILE_ENABLED || '').toLowerCase() === 'true';
+const GOOGLE_OAUTH_CLIENT_ID = String(process.env.GOOGLE_OAUTH_CLIENT_ID || '').trim();
 
 const otpStore = new Map();
 const verifiedStore = new Map();
@@ -285,9 +286,19 @@ async function sendOtpEmail({ otp, originalTarget, channel, purpose, targetEmail
 }
 
 async function sendPasswordResetEmail({ email, token }) {
-  const baseUrl = process.env.APP_BASE_URL || process.env.FRONTEND_PUBLIC_URL || 'https://college-o.vercel.app';
-  const resetUrl = `${baseUrl.replace(/\/$/, '')}/login.html?resetToken=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`;
-  const template = buildPasswordResetEmail({ resetUrl });
+  const configuredFrontend = String(
+    process.env.FRONTEND_URL
+    || process.env.APP_BASE_URL
+    || process.env.FRONTEND_PUBLIC_URL
+    || 'https://collegeo.in'
+  ).trim();
+  const frontendUrl = configuredFrontend.replace(/\/$/, '');
+  const resetUrl = `${frontendUrl}/reset-password?token=${encodeURIComponent(token)}`;
+  const template = buildPasswordResetEmail({
+    resetUrl,
+    expiresMinutes: Math.floor(RESET_TOKEN_TTL_MS / (60 * 1000)),
+    supportEmail: process.env.SUPPORT_EMAIL || 'support@collegeos.in'
+  });
 
   await sendSystemEmail({
     to: email,
@@ -295,6 +306,151 @@ async function sendPasswordResetEmail({ email, token }) {
     text: template.text,
     html: template.html
   });
+}
+
+function maskEmailForLog(email) {
+  const value = String(email || '').trim().toLowerCase();
+  const [local, domain] = value.split('@');
+  if (!local || !domain) return 'unknown';
+  return `${local.slice(0, 2)}***@${domain}`;
+}
+
+async function logAuthSecurityEvent({ eventType, userId = null, email = '', req, meta = {} }) {
+  const safeEventType = String(eventType || '').trim().slice(0, 80) || 'auth_event';
+  const normalizedEmail = normalizeEmail(email || '');
+  const emailHash = normalizedEmail ? hashSha256(normalizedEmail) : null;
+  const ip = getRequesterIp(req);
+  const userAgent = String(req.headers['user-agent'] || '').slice(0, 1024);
+
+  try {
+    await pool.query(
+      `INSERT INTO auth_security_events (event_type, user_id, email_hash, ip, user_agent, meta)
+       VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+      [safeEventType, userId, emailHash, ip, userAgent, JSON.stringify(meta || {})]
+    );
+  } catch (_error) {
+    // Best-effort logging, do not break auth flow if audit insert fails.
+  }
+}
+
+async function createPasswordResetToken({ userId, req }) {
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = hashSha256(rawToken);
+  const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+  const requestedIp = getRequesterIp(req);
+  const requestedUserAgent = String(req.headers['user-agent'] || '').slice(0, 1024);
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `UPDATE password_reset_tokens
+       SET invalidated_at = CURRENT_TIMESTAMP
+       WHERE user_id = $1
+         AND used_at IS NULL
+         AND invalidated_at IS NULL`,
+      [userId]
+    );
+
+    await client.query(
+      `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at, requested_ip, requested_user_agent)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, tokenHash, expiresAt, requestedIp, requestedUserAgent]
+    );
+
+    // Legacy compatibility while old paths still exist.
+    await client.query(
+      `UPDATE users
+       SET password_reset_token_hash = $2,
+           password_reset_expires_at = $3
+       WHERE id = $1`,
+      [userId, tokenHash, expiresAt]
+    );
+
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  return { rawToken, expiresAt };
+}
+
+async function findPasswordResetTokenRecord(token) {
+  const tokenHash = hashSha256(token || '');
+  const tokenResult = await pool.query(
+    `SELECT prt.id,
+            prt.user_id,
+            prt.expires_at,
+            prt.used_at,
+            prt.invalidated_at,
+            u.email,
+            u.password_reset_expires_at,
+            u.password_reset_token_hash
+     FROM password_reset_tokens prt
+     INNER JOIN users u ON u.id = prt.user_id
+     WHERE prt.token_hash = $1
+     LIMIT 1`,
+    [tokenHash]
+  );
+
+  if (tokenResult.rowCount > 0) {
+    return {
+      type: 'table',
+      tokenHash,
+      row: tokenResult.rows[0]
+    };
+  }
+
+  const legacyResult = await pool.query(
+    `SELECT id AS user_id,
+            email,
+            password_reset_expires_at
+     FROM users
+     WHERE password_reset_token_hash = $1
+     LIMIT 1`,
+    [tokenHash]
+  );
+
+  if (legacyResult.rowCount === 0) {
+    return null;
+  }
+
+  return {
+    type: 'legacy',
+    tokenHash,
+    row: legacyResult.rows[0]
+  };
+}
+
+function evaluatePasswordResetTokenState(tokenRecord) {
+  if (!tokenRecord || !tokenRecord.row) {
+    return { valid: false, code: 'TOKEN_INVALID', message: 'Invalid reset link.' };
+  }
+
+  const row = tokenRecord.row;
+  const expiresAt = row.expires_at ? new Date(row.expires_at) : row.password_reset_expires_at ? new Date(row.password_reset_expires_at) : null;
+
+  if (tokenRecord.type === 'table' && row.used_at) {
+    return { valid: false, code: 'TOKEN_USED', message: 'This reset link has already been used.' };
+  }
+
+  if (tokenRecord.type === 'table' && row.invalidated_at) {
+    return { valid: false, code: 'TOKEN_INVALIDATED', message: 'This reset link is no longer valid.' };
+  }
+
+  if (!expiresAt || expiresAt.getTime() <= Date.now()) {
+    return { valid: false, code: 'TOKEN_EXPIRED', message: 'This reset link has expired.' };
+  }
+
+  return {
+    valid: true,
+    code: 'TOKEN_VALID',
+    expiresAt,
+    userId: Number(row.user_id)
+  };
 }
 
 const DEFAULT_AUTH_EXPERIENCE_CONFIG = {
@@ -340,6 +496,9 @@ const DEFAULT_AUTH_EXPERIENCE_CONFIG = {
       semester: true,
       targetCareerInterest: true
     }
+  },
+  oauth: {
+    googleClientId: GOOGLE_OAUTH_CLIENT_ID || ''
   },
   support: {
     email: 'support@collegeos.in',
@@ -412,8 +571,13 @@ async function ensureAuthSchema() {
   await pool.query(`
     ALTER TABLE users
       ADD COLUMN IF NOT EXISTS mobile VARCHAR(24),
+      ADD COLUMN IF NOT EXISTS phone VARCHAR(24),
       ADD COLUMN IF NOT EXISTS is_email_verified BOOLEAN DEFAULT FALSE,
       ADD COLUMN IF NOT EXISTS is_mobile_verified BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS phone_verified BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS signup_provider VARCHAR(40) DEFAULT 'email',
+      ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS phone_verified_at TIMESTAMP,
       ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP,
       ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0,
       ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP,
@@ -427,13 +591,18 @@ async function ensureAuthSchema() {
   `);
 
   await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS users_mobile_unique_idx ON users(mobile) WHERE mobile IS NOT NULL');
+  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique_lower_idx ON users (LOWER(email))');
 
   await pool.query(`
     ALTER TABLE user_profiles
       ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS onboarding_step VARCHAR(40) DEFAULT 'academic_profile',
+      ADD COLUMN IF NOT EXISTS batch_year INTEGER,
+      ADD COLUMN IF NOT EXISTS course_name VARCHAR(120),
       ADD COLUMN IF NOT EXISTS career_interest VARCHAR(200),
       ADD COLUMN IF NOT EXISTS weak_subjects JSONB,
-      ADD COLUMN IF NOT EXISTS preferred_study_mode VARCHAR(50)
+      ADD COLUMN IF NOT EXISTS preferred_study_mode VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS academic_scope JSONB DEFAULT '{}'::jsonb
   `);
 
   await pool.query(`
@@ -444,6 +613,39 @@ async function ensureAuthSchema() {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id BIGSERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token_hash VARCHAR(64) NOT NULL UNIQUE,
+      expires_at TIMESTAMP NOT NULL,
+      used_at TIMESTAMP,
+      invalidated_at TIMESTAMP,
+      requested_ip VARCHAR(64),
+      requested_user_agent TEXT,
+      used_ip VARCHAR(64),
+      used_user_agent TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_active ON password_reset_tokens(user_id, expires_at)');
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS auth_security_events (
+      id BIGSERIAL PRIMARY KEY,
+      event_type VARCHAR(80) NOT NULL,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      email_hash VARCHAR(64),
+      ip VARCHAR(64),
+      user_agent TEXT,
+      meta JSONB DEFAULT '{}'::jsonb,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_auth_security_events_type_created ON auth_security_events(event_type, created_at DESC)');
 
   authSchemaEnsured = true;
 }
@@ -457,6 +659,10 @@ router.get('/config', async (_req, res) => {
 
     const experienceConfig = experienceResult.rows[0]?.value_json || {};
     const authConfig = deepMerge(DEFAULT_AUTH_EXPERIENCE_CONFIG, experienceConfig.auth || {});
+    authConfig.oauth = {
+      ...(authConfig.oauth || {}),
+      googleClientId: GOOGLE_OAUTH_CLIENT_ID || String(experienceConfig?.auth?.oauth?.googleClientId || '')
+    };
 
     const contactConfig = contactConfigResult.rows[0]?.value_json || {};
     const contactChannels = Array.isArray(contactConfig.channels) ? contactConfig.channels : [];
@@ -508,13 +714,6 @@ router.post('/signup', async (req, res) => {
     email,
     password,
     mobile,
-    universityId,
-    universityName,
-    customUniversity,
-    categoryId,
-    branchId,
-    semesterId,
-    targetCareerInterest,
     verificationMethod,
     verificationToken,
     captcha
@@ -535,14 +734,11 @@ router.post('/signup', async (req, res) => {
   const normalizedEmail = normalizeEmail(email);
   const normalizedMobile = String(mobile || '').trim() || null;
   const selectedVerificationMethod = String(verificationMethod || 'email').toLowerCase();
-  if (!['email', 'mobile'].includes(selectedVerificationMethod)) {
-    return res.status(400).json({ error: 'Invalid verification method' });
+  if (selectedVerificationMethod !== 'email') {
+    return res.status(400).json({ error: 'Email verification is required for signup' });
   }
-  const selectedUniversityId = toInt(universityId, null);
-  const typedUniversityName = String(universityName || '').trim();
-  const typedCustomUniversity = String(customUniversity || '').trim();
 
-  const verificationTarget = selectedVerificationMethod === 'mobile' ? normalizedMobile : normalizedEmail;
+  const verificationTarget = normalizedEmail;
   if (!verificationTarget || !consumeVerificationToken({
     purpose: 'signup',
     channel: selectedVerificationMethod,
@@ -554,77 +750,38 @@ router.post('/signup', async (req, res) => {
 
   const client = await pool.connect();
   try {
-    const exists = await client.query('SELECT id FROM users WHERE email = $1', [normalizedEmail]);
+    const exists = await client.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1', [normalizedEmail]);
     if (exists.rowCount > 0) return res.status(409).json({ error: 'Email already registered' });
 
     if (normalizedMobile) {
-      const mobileExists = await client.query('SELECT id FROM users WHERE mobile = $1', [normalizedMobile]);
+      const mobileExists = await client.query('SELECT id FROM users WHERE mobile = $1 OR phone = $1', [normalizedMobile]);
       if (mobileExists.rowCount > 0) return res.status(409).json({ error: 'Mobile number already registered' });
-    }
-
-    let resolvedUniversityId = null;
-    let resolvedUniversityName = '';
-    let resolvedCustomUniversity = null;
-
-    if (selectedUniversityId) {
-      const university = await client.query(
-        `SELECT id, name FROM universities WHERE id = $1 AND is_enabled = TRUE LIMIT 1`,
-        [selectedUniversityId]
-      );
-      if (!university.rows[0]) {
-        return res.status(400).json({ error: 'Please select your university' });
-      }
-      resolvedUniversityId = university.rows[0].id;
-      resolvedUniversityName = university.rows[0].name;
-    } else {
-      const fallbackName = typedCustomUniversity || typedUniversityName;
-      if (!fallbackName) {
-        return res.status(400).json({ error: 'Please select your university' });
-      }
-      resolvedUniversityName = fallbackName;
-      resolvedCustomUniversity = fallbackName;
     }
 
     const hash = await bcrypt.hash(password, 12);
     const referralCode = `COL${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
     const user = await client.query(
-      `INSERT INTO users (full_name, email, mobile, college_name, university_id, university_name, custom_university, password_hash, referral_code, is_email_verified, is_mobile_verified)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-       RETURNING id, full_name, email, mobile, college_name, university_id, university_name, custom_university, referral_code, role, subscription_tier`,
+      `INSERT INTO users (full_name, email, mobile, phone, college_name, password_hash, referral_code, signup_provider, is_email_verified, is_mobile_verified, phone_verified, email_verified_at)
+       VALUES ($1, $2, $3, $4, NULL, $5, $6, 'email', TRUE, $7, $7, CURRENT_TIMESTAMP)
+       RETURNING id, full_name, email, mobile, phone, college_name, referral_code, role, subscription_tier, signup_provider, is_email_verified, is_mobile_verified, phone_verified`,
       [
         fullName,
         normalizedEmail,
         normalizedMobile,
-        resolvedUniversityName,
-        resolvedUniversityId,
-        resolvedUniversityName,
-        resolvedCustomUniversity,
         hash,
         referralCode,
-        selectedVerificationMethod === 'email',
-        selectedVerificationMethod === 'mobile'
+        Boolean(normalizedMobile)
       ]
     );
 
     await client.query(
-      `INSERT INTO user_profiles (user_id, current_streak, category_id, branch_id, semester_id, career_interest, course_branch, semester)
-       VALUES ($1, 0, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO user_profiles (user_id, current_streak, onboarding_completed, onboarding_step, academic_scope)
+       VALUES ($1, 0, FALSE, 'academic_profile', '{}'::jsonb)
        ON CONFLICT (user_id) DO UPDATE SET
-         category_id = COALESCE(EXCLUDED.category_id, user_profiles.category_id),
-         branch_id = COALESCE(EXCLUDED.branch_id, user_profiles.branch_id),
-         semester_id = COALESCE(EXCLUDED.semester_id, user_profiles.semester_id),
-         career_interest = COALESCE(EXCLUDED.career_interest, user_profiles.career_interest),
-         course_branch = COALESCE(EXCLUDED.course_branch, user_profiles.course_branch),
-         semester = COALESCE(EXCLUDED.semester, user_profiles.semester)` ,
-      [
-        user.rows[0].id,
-        toInt(categoryId),
-        toInt(branchId),
-        toInt(semesterId),
-        targetCareerInterest || null,
-        toInt(branchId) ? null : null,
-        toInt(semesterId) ? null : null
-      ]
+         onboarding_completed = FALSE,
+         onboarding_step = 'academic_profile',
+         updated_at = CURRENT_TIMESTAMP`
+      , [user.rows[0].id]
     );
 
     await client.query(
@@ -647,6 +804,106 @@ router.post('/signup', async (req, res) => {
     return;
   } finally {
     client.release();
+  }
+});
+
+router.post('/google', async (req, res) => {
+  const rateBlocked = enforceRateLimit(req, res, 'auth:google', 20, 15 * 60 * 1000);
+  if (rateBlocked) return;
+
+  const credential = String(req.body?.credential || req.body?.idToken || '').trim();
+  if (!credential) {
+    return res.status(400).json({ error: 'Google credential is required' });
+  }
+  if (!GOOGLE_OAUTH_CLIENT_ID) {
+    return res.status(503).json({ error: 'Google sign-in is not configured on this server' });
+  }
+
+  try {
+    const tokenInfoResponse = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+    const tokenInfo = await tokenInfoResponse.json().catch(() => ({}));
+    if (!tokenInfoResponse.ok) {
+      return res.status(400).json({ error: 'Invalid Google sign-in credential' });
+    }
+
+    const googleEmail = normalizeEmail(tokenInfo.email || '');
+    if (!isEmail(googleEmail)) {
+      return res.status(400).json({ error: 'Google account email is invalid' });
+    }
+    if (String(tokenInfo.aud || '') !== GOOGLE_OAUTH_CLIENT_ID) {
+      return res.status(400).json({ error: 'Google sign-in audience mismatch' });
+    }
+    if (String(tokenInfo.email_verified || '').toLowerCase() !== 'true') {
+      return res.status(400).json({ error: 'Google email must be verified' });
+    }
+
+    const fullName = String(tokenInfo.name || tokenInfo.given_name || googleEmail.split('@')[0] || 'Student').trim();
+    const client = await pool.connect();
+    try {
+      const existing = await client.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1', [googleEmail]);
+      let userRow = existing.rows[0] || null;
+
+      if (!userRow) {
+        const referralCode = `COL${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+        const temporaryPassword = await bcrypt.hash(crypto.randomBytes(24).toString('hex'), 12);
+        const created = await client.query(
+          `INSERT INTO users (full_name, email, college_name, password_hash, referral_code, signup_provider, is_email_verified, email_verified_at, is_mobile_verified, phone_verified)
+           VALUES ($1, $2, NULL, $3, $4, 'google', TRUE, CURRENT_TIMESTAMP, FALSE, FALSE)
+           RETURNING *`,
+          [fullName, googleEmail, temporaryPassword, referralCode]
+        );
+        userRow = created.rows[0];
+
+        await client.query(
+          `INSERT INTO user_profiles (user_id, current_streak, onboarding_completed, onboarding_step, academic_scope)
+           VALUES ($1, 0, FALSE, 'academic_profile', '{}'::jsonb)
+           ON CONFLICT (user_id) DO UPDATE SET
+             onboarding_completed = FALSE,
+             onboarding_step = 'academic_profile',
+             updated_at = CURRENT_TIMESTAMP`,
+          [userRow.id]
+        );
+      } else {
+        await client.query(
+          `UPDATE users
+           SET full_name = COALESCE(NULLIF(full_name, ''), $2),
+               signup_provider = 'google',
+               is_email_verified = TRUE,
+               email_verified_at = COALESCE(email_verified_at, CURRENT_TIMESTAMP),
+               last_login_at = CURRENT_TIMESTAMP
+           WHERE id = $1`,
+          [userRow.id, fullName]
+        );
+        userRow = (await client.query('SELECT * FROM users WHERE id = $1', [userRow.id])).rows[0];
+      }
+
+      req.session.regenerate((sessionError) => {
+        if (sessionError) {
+          return res.status(500).json({ error: 'Could not start secure session' });
+        }
+
+        req.session.userId = userRow.id;
+        req.session.user = {
+          id: userRow.id,
+          full_name: userRow.full_name,
+          email: userRow.email,
+          role: userRow.role,
+          signup_provider: userRow.signup_provider
+        };
+        req.session.role = userRow.role;
+        req.session.cookie.maxAge = STANDARD_SESSION_MAX_AGE_MS;
+        return res.json({
+          user: req.session.user,
+          onboardingCompleted: false,
+          provider: 'google'
+        });
+      });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('[auth:google] sign-in failed', error.message);
+    return res.status(400).json({ error: 'Google sign-in failed' });
   }
 });
 
@@ -1017,7 +1274,7 @@ router.post('/password/forgot', async (req, res) => {
 
   const email = normalizeEmail(req.body?.email || '');
   const captcha = req.body?.captcha;
-  if (!verifyCaptchaPayload(req, captcha)) {
+  if (captcha && !verifyCaptchaPayload(req, captcha)) {
     return res.status(400).json({ error: 'Captcha validation failed' });
   }
 
@@ -1036,95 +1293,210 @@ router.post('/password/forgot', async (req, res) => {
   }
 
   if (!isEmail(email)) {
+    await logAuthSecurityEvent({
+      eventType: 'password_reset_requested',
+      email,
+      req,
+      meta: { accepted: true, accountFound: false }
+    });
     return res.json({ message: 'If an account exists, a reset link has been sent.' });
   }
 
   const userResult = await pool.query('SELECT id FROM users WHERE email = $1 LIMIT 1', [email]);
   if (userResult.rowCount === 0) {
+    await logAuthSecurityEvent({
+      eventType: 'password_reset_requested',
+      email,
+      req,
+      meta: { accepted: true, accountFound: false }
+    });
     return res.json({ message: 'If an account exists, a reset link has been sent.' });
   }
 
-  const token = crypto.randomBytes(32).toString('hex');
-  const tokenHash = hashSha256(token);
-  const expiresAt = new Date(Date.now() + FORGOT_TOKEN_TTL_MS);
-
-  await pool.query(
-    `UPDATE users
-     SET password_reset_token_hash = $2,
-         password_reset_expires_at = $3
-     WHERE id = $1`,
-    [userResult.rows[0].id, tokenHash, expiresAt]
-  );
+  const userId = Number(userResult.rows[0].id);
+  const { rawToken } = await createPasswordResetToken({ userId, req });
 
   try {
-    await sendPasswordResetEmail({ email, token });
+    await sendPasswordResetEmail({ email, token: rawToken });
   } catch {
     // Keep generic response to prevent account and infrastructure enumeration.
   }
 
+  await logAuthSecurityEvent({
+    eventType: 'password_reset_requested',
+    userId,
+    email,
+    req,
+    meta: { accepted: true, accountFound: true, emailMasked: maskEmailForLog(email) }
+  });
+
   return res.json({ message: 'If an account exists, a reset link has been sent.' });
+});
+
+router.get('/password/reset/validate', async (req, res) => {
+  const rateBlocked = enforceRateLimit(req, res, 'auth:reset_password_validate', 100, 15 * 60 * 1000);
+  if (rateBlocked) return;
+
+  const token = String(req.query?.token || '').trim();
+  if (!token || token.length < 32) {
+    return res.status(400).json({ valid: false, code: 'TOKEN_INVALID', message: 'Invalid reset link.' });
+  }
+
+  const tokenRecord = await findPasswordResetTokenRecord(token);
+  const state = evaluatePasswordResetTokenState(tokenRecord);
+
+  if (!state.valid) {
+    const eventType = state.code === 'TOKEN_EXPIRED'
+      ? 'password_reset_token_expired'
+      : state.code === 'TOKEN_USED'
+        ? 'password_reset_token_reused'
+        : 'password_reset_failed';
+    await logAuthSecurityEvent({
+      eventType,
+      userId: tokenRecord?.row?.user_id || null,
+      email: tokenRecord?.row?.email || '',
+      req,
+      meta: { code: state.code }
+    });
+    return res.status(400).json({ valid: false, code: state.code, message: state.message });
+  }
+
+  const remainingSeconds = Math.max(1, Math.floor((state.expiresAt.getTime() - Date.now()) / 1000));
+  await logAuthSecurityEvent({
+    eventType: 'password_reset_token_validated',
+    userId: state.userId,
+    email: tokenRecord?.row?.email || '',
+    req,
+    meta: { remainingSeconds }
+  });
+
+  return res.json({ valid: true, expiresInSeconds: remainingSeconds });
 });
 
 router.post('/password/reset', async (req, res) => {
   const rateBlocked = enforceRateLimit(req, res, 'auth:reset_password', 20, 15 * 60 * 1000);
   if (rateBlocked) return;
 
-  const email = normalizeEmail(req.body?.email || '');
   const token = String(req.body?.token || '').trim();
   const newPassword = String(req.body?.newPassword || '');
-  const captcha = req.body?.captcha;
+  const confirmPassword = String(req.body?.confirmPassword || '');
 
-  if (!verifyCaptchaPayload(req, captcha)) {
-    return res.status(400).json({ error: 'Captcha validation failed' });
+  if (!token || token.length < 32) {
+    return res.status(400).json({ error: 'Invalid reset request' });
   }
 
-  if (!isEmail(email) || !token) {
-    return res.status(400).json({ error: 'Invalid reset request' });
+  if (newPassword !== confirmPassword) {
+    return res.status(400).json({ error: 'Passwords do not match.' });
   }
 
   if (!isStrongPassword(newPassword)) {
     return res.status(400).json({ error: PASSWORD_POLICY_MESSAGE });
   }
 
-  const tokenHash = hashSha256(token);
-  const userResult = await pool.query(
-    `SELECT id, password_reset_expires_at
-     FROM users
-     WHERE email = $1 AND password_reset_token_hash = $2
-     LIMIT 1`,
-    [email, tokenHash]
-  );
-
-  if (userResult.rowCount === 0) {
-    return res.status(400).json({ error: 'Invalid or expired reset token' });
-  }
-
-  const expiresAt = userResult.rows[0].password_reset_expires_at ? new Date(userResult.rows[0].password_reset_expires_at) : null;
-  if (!expiresAt || expiresAt.getTime() < Date.now()) {
-    return res.status(400).json({ error: 'Invalid or expired reset token' });
+  const tokenRecord = await findPasswordResetTokenRecord(token);
+  const state = evaluatePasswordResetTokenState(tokenRecord);
+  if (!state.valid) {
+    const eventType = state.code === 'TOKEN_EXPIRED'
+      ? 'password_reset_token_expired'
+      : state.code === 'TOKEN_USED'
+        ? 'password_reset_token_reused'
+        : 'password_reset_failed';
+    await logAuthSecurityEvent({
+      eventType,
+      userId: tokenRecord?.row?.user_id || null,
+      email: tokenRecord?.row?.email || '',
+      req,
+      meta: { code: state.code }
+    });
+    return res.status(400).json({ error: state.message });
   }
 
   const newHash = await bcrypt.hash(newPassword, 12);
-  await pool.query(
-    `UPDATE users
-     SET password_hash = $2,
-         password_changed_at = NOW(),
-         password_reset_token_hash = NULL,
-         password_reset_expires_at = NULL,
-         failed_login_attempts = 0,
-         locked_until = NULL
-     WHERE id = $1`,
-    [userResult.rows[0].id, newHash]
-  );
+  const userId = state.userId;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (tokenRecord.type === 'table') {
+      const lockTokenResult = await client.query(
+        `SELECT id, used_at, invalidated_at, expires_at
+         FROM password_reset_tokens
+         WHERE id = $1
+         FOR UPDATE`,
+        [tokenRecord.row.id]
+      );
+
+      const locked = lockTokenResult.rows[0];
+      if (!locked || locked.used_at || locked.invalidated_at || new Date(locked.expires_at).getTime() <= Date.now()) {
+        await client.query('ROLLBACK');
+        await logAuthSecurityEvent({
+          eventType: 'password_reset_failed',
+          userId,
+          email: tokenRecord?.row?.email || '',
+          req,
+          meta: { code: 'TOKEN_NO_LONGER_VALID' }
+        });
+        return res.status(400).json({ error: 'Invalid or expired reset token' });
+      }
+    }
+
+    await client.query(
+      `UPDATE users
+       SET password_hash = $2,
+           password_changed_at = NOW(),
+           password_reset_token_hash = NULL,
+           password_reset_expires_at = NULL,
+           failed_login_attempts = 0,
+           locked_until = NULL
+       WHERE id = $1`,
+      [userId, newHash]
+    );
+
+    if (tokenRecord.type === 'table') {
+      await client.query(
+        `UPDATE password_reset_tokens
+         SET used_at = CURRENT_TIMESTAMP,
+             used_ip = $2,
+             used_user_agent = $3
+         WHERE id = $1`,
+        [tokenRecord.row.id, getRequesterIp(req), String(req.headers['user-agent'] || '').slice(0, 1024)]
+      );
+
+      await client.query(
+        `UPDATE password_reset_tokens
+         SET invalidated_at = CURRENT_TIMESTAMP
+         WHERE user_id = $1
+           AND id <> $2
+           AND used_at IS NULL
+           AND invalidated_at IS NULL`,
+        [userId, tokenRecord.row.id]
+      );
+    }
+
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 
   try {
-    await revokeUserSessionsByUserId(userResult.rows[0].id, 'password/reset');
+    await revokeUserSessionsByUserId(userId, 'password/reset');
   } catch (error) {
     // Non-fatal in local/in-memory modes, but log if debugging
     if (process.env.DEBUG_AUTH === 'true') {
       console.error('[password/reset] Session deletion error:', error.message);
     }
   }
+
+  await logAuthSecurityEvent({
+    eventType: 'password_reset_success',
+    userId,
+    email: tokenRecord?.row?.email || '',
+    req,
+    meta: { sessionRevoked: true }
+  });
 
   return res.json({ ok: true, message: 'Password reset successful. Please login again.' });
 });

@@ -42,6 +42,7 @@
     liveEventRetryTimer: null,
     reconnectState: 'connected',
     heartbeatTimer: null,
+    beforeUnloadBound: false,
     reminderTimers: new Map(),
     notifiedSessionKeys: new Set(),
     hostModeUnlockedSessionIds: new Set()
@@ -115,6 +116,43 @@
       window.clearTimeout(timer);
     }
     state.reminderTimers.clear();
+  }
+
+  function clearLiveStream() {
+    if (state.liveEventRetryTimer) {
+      window.clearTimeout(state.liveEventRetryTimer);
+      state.liveEventRetryTimer = null;
+    }
+    if (state.liveEventSource) {
+      try {
+        state.liveEventSource.close();
+      } catch {
+        // Ignore close failures.
+      }
+      state.liveEventSource = null;
+    }
+  }
+
+  function disposeSessionRuntime({ keepRefreshTimer = true } = {}) {
+    clearLiveStream();
+    if (state.heartbeatTimer) {
+      window.clearInterval(state.heartbeatTimer);
+      state.heartbeatTimer = null;
+    }
+    if (state.chatChannel) {
+      try {
+        state.chatChannel.close();
+      } catch {
+        // Ignore close failures.
+      }
+      state.chatChannel = null;
+    }
+    clearReminderTimers();
+    destroyVideo();
+    if (!keepRefreshTimer && state.refreshTimer) {
+      window.clearInterval(state.refreshTimer);
+      state.refreshTimer = null;
+    }
   }
 
   function scheduleSessionReminder(session) {
@@ -1268,15 +1306,7 @@
       window.CollegeOSApi?.liveSessionLeave?.(state.activeSessionId).catch(() => null);
     }
     state.waitingRoomActive = false;
-    destroyVideo();
-    if (state.chatChannel) {
-      state.chatChannel.close();
-      state.chatChannel = null;
-    }
-    if (state.heartbeatTimer) {
-      window.clearInterval(state.heartbeatTimer);
-      state.heartbeatTimer = null;
-    }
+    disposeSessionRuntime({ keepRefreshTimer: true });
     state.joinContext = null;
     state.activeSessionId = null;
     state.activeSession = null;
@@ -1701,17 +1731,15 @@
     };
 
     openStream();
-    window.addEventListener('beforeunload', () => {
-      try {
-        state.liveEventSource?.close();
-      } catch {
-        // Ignore close failures.
-      }
-      if (state.liveEventRetryTimer) {
-        window.clearTimeout(state.liveEventRetryTimer);
-      }
-      clearReminderTimers();
-    });
+    if (!state.beforeUnloadBound) {
+      state.beforeUnloadBound = true;
+      window.addEventListener('beforeunload', () => {
+        disposeSessionRuntime({ keepRefreshTimer: false });
+      });
+      window.addEventListener('pagehide', () => {
+        disposeSessionRuntime({ keepRefreshTimer: false });
+      });
+    }
   }
 
   function bindEvents() {

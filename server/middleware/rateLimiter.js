@@ -120,7 +120,18 @@ function rateLimit(options = {}) {
 
       if (limits.current > limiter.maxRequests) {
         const retryAfter = Math.ceil((limits.resetTime - Date.now()) / 1000);
-        throw new RateLimitError(retryAfter);
+        const error = new RateLimitError(retryAfter);
+        error.rateLimitContext = {
+          route: req.path,
+          method: req.method,
+          ip: req.ip,
+          userId: req.user?.id || null,
+          origin: req.headers.origin || '',
+          userAgent: req.headers['user-agent'] || '',
+          key,
+          retryAfter
+        };
+        throw error;
       }
 
       next();

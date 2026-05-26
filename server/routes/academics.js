@@ -5,6 +5,11 @@ const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 let academicsSchemaReady = false;
 
+function setPublicCacheHeaders(res, maxAgeSeconds = 300) {
+  res.setHeader('Cache-Control', `public, max-age=${maxAgeSeconds}, stale-while-revalidate=${Math.max(maxAgeSeconds * 3, 60)}`);
+  res.setHeader('Vary', 'Origin');
+}
+
 async function ensureAcademicsSchema() {
   if (academicsSchemaReady) return;
 
@@ -83,6 +88,7 @@ router.get('/categories', async (req, res) => {
        WHERE is_active = TRUE
        ORDER BY display_order ASC`
     );
+    setPublicCacheHeaders(res, 600);
     res.json({ categories: rows });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch categories' });
@@ -107,6 +113,7 @@ router.get('/branches', async (req, res) => {
        ORDER BY display_order ASC`,
       [categoryId]
     );
+    setPublicCacheHeaders(res, 300);
     res.json({ branches: rows });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch branches' });
@@ -125,6 +132,7 @@ router.get('/semesters', async (req, res) => {
        WHERE is_active = TRUE
        ORDER BY display_order ASC`
     );
+    setPublicCacheHeaders(res, 600);
     res.json({ semesters: rows });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch semesters' });
@@ -188,6 +196,7 @@ router.get('/onboarding/config', async (_req, res) => {
       return acc;
     }, {});
 
+    setPublicCacheHeaders(res, 300);
     res.json({
       steps: stepsResult.rows,
       options: grouped

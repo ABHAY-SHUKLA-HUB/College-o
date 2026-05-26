@@ -68,8 +68,28 @@ async function revokeUserSessionsByUserId(userId, debugContext) {
 }
 
 function getRequesterIp(req) {
-  const xff = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  return xff || req.ip || 'unknown';
+  return req.ip || String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
+}
+
+function setCacheHeaders(res, value) {
+  const maxAge = Number(value || 0);
+  if (Number.isFinite(maxAge) && maxAge > 0) {
+    res.setHeader('Cache-Control', `private, max-age=${maxAge}, stale-while-revalidate=${Math.max(maxAge * 3, 30)}`);
+  } else {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  }
+  res.setHeader('Vary', 'Origin, Cookie');
+}
+
+function sendRateLimitedResponse(res, retryAfterSeconds, message) {
+  const retryAfter = Math.max(1, Math.ceil(Number(retryAfterSeconds || 0)));
+  res.setHeader('Retry-After', String(retryAfter));
+  return res.status(429).json({
+    ok: false,
+    code: 'RATE_LIMITED',
+    message: message || `Too many requests. Please wait ${retryAfter} seconds.`,
+    retryAfter
+  });
 }
 
 function getRateRecord(key) {
@@ -89,13 +109,35 @@ function enforceRateLimit(req, res, scope, maxAttempts = 20, blockMs = 10 * 60 *
   const record = getRateRecord(key);
 
   if (record.blockedUntil && record.blockedUntil > now) {
-    return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+    const retryAfter = Math.ceil((record.blockedUntil - now) / 1000);
+    console.warn('[RATE_LIMIT] blocked', {
+      route: req.path,
+      method: req.method,
+      ip: getRequesterIp(req),
+      userId: req.session?.userId || null,
+      origin: req.headers.origin || '',
+      userAgent: req.headers['user-agent'] || '',
+      key,
+      retryAfter
+    });
+    return sendRateLimitedResponse(res, retryAfter);
   }
 
   record.count += 1;
   if (record.count > maxAttempts) {
     record.blockedUntil = now + blockMs;
-    return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+    const retryAfter = Math.ceil(blockMs / 1000);
+    console.warn('[RATE_LIMIT] blocked', {
+      route: req.path,
+      method: req.method,
+      ip: getRequesterIp(req),
+      userId: req.session?.userId || null,
+      origin: req.headers.origin || '',
+      userAgent: req.headers['user-agent'] || '',
+      key,
+      retryAfter
+    });
+    return sendRateLimitedResponse(res, retryAfter);
   }
 
   return null;
@@ -424,6 +466,7 @@ router.get('/config', async (_req, res) => {
       authConfig.support.whatsapp = String(whatsappChannel.value);
     }
 
+    setCacheHeaders(res, 300);
     return res.json({ config: authConfig });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to load authentication config' });
@@ -431,10 +474,13 @@ router.get('/config', async (_req, res) => {
 });
 
 router.get('/captcha/challenge', (req, res) => {
-  // Light rate limiting on captcha requests (prevent script spam)
-  const rateBlocked = enforceRateLimit(req, res, 'auth:captcha_challenge', 100, 1 * 60 * 1000);
+  // CAPTCHA gets its own limiter so normal refreshes do not trip the login limiter.
+  const rateBlocked = enforceRateLimit(req, res, 'auth:captcha_challenge', 180, 60 * 1000);
   if (rateBlocked) return;
   
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   const challenge = buildCaptchaChallenge(req);
   res.json({ captcha: challenge, expiresInSeconds: Math.floor(CAPTCHA_TTL_MS / 1000) });
 });
@@ -612,7 +658,8 @@ router.post('/login', async (req, res) => {
 
   const userRow = rows[0];
   if (userRow.locked_until && new Date(userRow.locked_until).getTime() > Date.now()) {
-    return res.status(429).json({ error: 'Too many failed attempts. Please try again later.' });
+    const retryAfter = Math.ceil((new Date(userRow.locked_until).getTime() - Date.now()) / 1000);
+    return sendRateLimitedResponse(res, retryAfter, 'Too many failed attempts. Please wait before trying again.');
   }
 
   const valid = await bcrypt.compare(password, userRow.password_hash);
@@ -718,13 +765,13 @@ router.post('/verification/request', async (req, res) => {
   // Per-target rate limit (5 requests per 10min to SAME email/phone)
   if (existing?.requestWindowStartedAt && now - existing.requestWindowStartedAt <= OTP_REQUEST_WINDOW_MS) {
     if (Number(existing.requestCount || 0) >= OTP_MAX_REQUESTS_PER_WINDOW) {
-      return res.status(429).json({ error: 'Too many OTP requests. Please try again later.' });
+      return sendRateLimitedResponse(res, OTP_RESEND_MS / 1000, 'Too many OTP requests. Please try again later.');
     }
   }
 
   // Per-target rate limit (30-second cooldown between OTP sends)
   if (existing?.nextAllowedAt && now < existing.nextAllowedAt) {
-    return res.status(429).json({ error: 'Please wait before requesting a new OTP/code', retryAfterMs: existing.nextAllowedAt - now });
+    return sendRateLimitedResponse(res, Math.ceil((existing.nextAllowedAt - now) / 1000), 'Please wait before requesting a new OTP/code');
   }
 
   const code = String(randomInt(100000, 999999));
@@ -810,7 +857,7 @@ router.post('/verification/verify', async (req, res) => {
     record.attempts = Number(record.attempts || 0) + 1;
     if (record.attempts >= OTP_MAX_VERIFY_ATTEMPTS) {
       otpStore.delete(key);
-      return res.status(429).json({ error: 'Too many incorrect attempts. Request a new OTP.' });
+      return sendRateLimitedResponse(res, OTP_RESEND_MS / 1000, 'Too many incorrect attempts. Request a new OTP.');
     }
     otpStore.set(key, record);
     return res.status(400).json({ error: 'Invalid verification code' });
@@ -901,7 +948,7 @@ router.post('/login/email-otp', async (req, res) => {
     record.attempts = Number(record.attempts || 0) + 1;
     if (record.attempts >= OTP_MAX_VERIFY_ATTEMPTS) {
       otpStore.delete(key);
-      return res.status(429).json({ error: 'Too many incorrect attempts. Request a new OTP.' });
+      return sendRateLimitedResponse(res, OTP_RESEND_MS / 1000, 'Too many incorrect attempts. Request a new OTP.');
     }
     otpStore.set(key, record);
     return res.status(400).json({ error: 'Invalid email or OTP' });
@@ -1101,6 +1148,7 @@ router.post('/logout', (req, res) => {
 });
 
 router.get('/me', async (req, res) => {
+  setCacheHeaders(res, 15);
   if (!req.session.userId) return res.json({ user: null });
   const { rows } = await pool.query(
     `SELECT id, full_name, email, mobile, college_name, university_id, university_name, custom_university, role, subscription_tier, payment_status, subscription_started_at, subscription_expiry,

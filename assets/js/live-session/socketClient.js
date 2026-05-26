@@ -75,6 +75,16 @@
       },
       close() {
         try { socket.close(); } catch (e) {}
+        if (sessionId && global.__LiveSocketInstancesBySession) {
+          delete global.__LiveSocketInstancesBySession[sessionId];
+        }
+      },
+      dispose() {
+        try { socket.removeAllListeners?.(); } catch (e) {}
+        try { socket.close(); } catch (e) {}
+        if (sessionId && global.__LiveSocketInstancesBySession) {
+          delete global.__LiveSocketInstancesBySession[sessionId];
+        }
       },
       _raw: socket
     };

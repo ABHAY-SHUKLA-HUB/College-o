@@ -148,6 +148,8 @@ function errorLogger(err, req, res, next) {
     userId: req.session?.userId || 'unknown',
     ip: req.ip,
     userAgent: req.get('user-agent'),
+    origin: req.get('origin'),
+    rateLimit: err.rateLimitContext || null,
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
     timestamp: new Date().toISOString()
   });
@@ -296,6 +298,13 @@ function globalErrorHandler(err, req, res, next) {
   // Add Retry-After header for rate limits
   if (statusCode === 429 && err.retryAfter) {
     res.set('Retry-After', err.retryAfter.toString());
+  }
+
+  if (statusCode === 429) {
+    response.ok = false;
+    response.message = message;
+    response.retryAfter = err.retryAfter || null;
+    response.code = 'RATE_LIMITED';
   }
 
   // Never send headers if already sent (streaming response)

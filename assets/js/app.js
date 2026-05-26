@@ -210,6 +210,7 @@ const routeWarmupMap = {
 };
 
 const prefetchedDocuments = new Set();
+const warmedRouteKeys = new Set();
 let liveHubScriptPromise = null;
 
 function resolveThemeMode(theme) {
@@ -345,7 +346,13 @@ function warmupRouteData(target) {
   if (!window.CollegeOSApi?.warmupRequests) return;
   const paths = getWarmupPathsForTarget(target);
   if (!paths.length) return;
-  window.CollegeOSApi.warmupRequests(paths).catch(() => null);
+  const routeKey = String(target || '').trim();
+  if (routeKey) {
+    if (warmedRouteKeys.has(routeKey)) return;
+    warmedRouteKeys.add(routeKey);
+  }
+  const warmupFn = window.CollegeOSApi.warmupRequestsOnce || window.CollegeOSApi.warmupRequests;
+  warmupFn(`route:${routeKey || paths.join('|')}`, paths).catch(() => null);
 }
 
 function primeNavigationTarget(target) {
@@ -853,7 +860,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         '/api/subscriptions/me',
         '/api/contributions/config'
       ];
-      window.CollegeOSApi.warmupRequests(warmupPaths).catch(() => null);
+      const warmupFn = window.CollegeOSApi.warmupRequestsOnce || window.CollegeOSApi.warmupRequests;
+      warmupFn('shell:dashboard-bootstrap', warmupPaths).catch(() => null);
     }
 
     const backgroundTasks = [

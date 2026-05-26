@@ -886,6 +886,27 @@
       gap: 10px;
     }
 
+    .captcha-box.is-loading {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .captcha-box.is-loading::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0.02) 100%);
+      transform: translateX(-100%);
+      animation: captchaShimmer 1.2s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes captchaShimmer {
+      100% {
+        transform: translateX(100%);
+      }
+    }
+
     .captcha-question {
       margin: 0;
       font-size: 0.84rem;
@@ -925,6 +946,18 @@
       display: flex;
       align-items: center;
       gap: 8px;
+    }
+
+    .captcha-status {
+      margin: 0;
+      color: #5f6c7b;
+      font-size: 0.78rem;
+      font-weight: 600;
+      min-height: 1.1em;
+    }
+
+    .captcha-box.is-loading .captcha-status {
+      color: #0f7b6c;
     }
 
     .strength-bar {
@@ -2592,6 +2625,7 @@
 
             <div class="captcha-box" id="loginCaptchaBox">
               <p class="captcha-question"><i class="fa-solid fa-shield"></i> <span id="loginCaptchaQuestion">Loading captcha...</span></p>
+              <p class="captcha-status" id="loginCaptchaStatus" aria-live="polite"></p>
               <div class="captcha-actions">
                 <div class="field">
                   <label for="loginCaptchaInput">Enter Answer</label>
@@ -2743,6 +2777,7 @@
 
               <div class="captcha-box" id="signupCaptchaBox">
                 <p class="captcha-question"><i class="fa-solid fa-shield"></i> <span id="signupCaptchaQuestion">Loading captcha...</span></p>
+                <p class="captcha-status" id="signupCaptchaStatus" aria-live="polite"></p>
                 <div class="captcha-actions">
                   <div class="field">
                     <label for="signupCaptchaInput">Enter Answer</label>

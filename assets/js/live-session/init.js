@@ -13,6 +13,7 @@
 
     const socket = LiveSocket({ url: backendUrl, sessionId, token: joinToken });
     if (!socket) return;
+    let presenceTimer = null;
 
     // Presence count
     const presenceCountEl = document.querySelector('.live-hub-presence-count');
@@ -98,9 +99,17 @@
     }
 
     // wire presence ping periodically (throttled)
-    setInterval(() => {
+    presenceTimer = window.setInterval(() => {
       try { socket.sendPresence({ status: 'online', ts: Date.now() }); } catch (e) {}
     }, 20 * 1000);
+
+    window.addEventListener('beforeunload', () => {
+      if (presenceTimer) {
+        clearInterval(presenceTimer);
+        presenceTimer = null;
+      }
+      try { socket.dispose?.(); } catch (e) { try { socket.close?.(); } catch {} }
+    }, { once: true });
 
     // Expose for debugging
     window.__LiveSocketInstance = socket;

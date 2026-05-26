@@ -16,11 +16,19 @@ let csrfTokenCache = null;
 let csrfRefreshPromise = null;
 let telemetryDisabled = false;
 const requestCache = new Map();
+const rateLimitCache = new Map();
+const warmupOnceCache = new Set();
 const REQUEST_CACHE_TTL_MS = 3000;
 const SESSION_CACHE_PREFIX = 'collegeos_api_cache_v2:';
 const SESSION_CACHE_TTL_MS = 15000;
 const SESSION_CACHEABLE_PATHS = [
+  /^\/api\/auth\/config$/,
   /^\/api\/auth\/me$/,
+  /^\/api\/auth\/captcha\/challenge$/,
+  /^\/api\/academics\/categories$/,
+  /^\/api\/academics\/branches$/,
+  /^\/api\/academics\/semesters$/,
+  /^\/api\/academics\/onboarding\/config$/,
   /^\/api\/dashboard\/stats$/,
   /^\/api\/dashboard\/personalized$/,
   /^\/api\/dashboard\/experience-config$/,
@@ -394,6 +402,20 @@ function isCsrfErrorResponse(response, payload) {
   return typeof payload.code === 'string' && payload.code.startsWith('CSRF_');
 }
 
+function getRetryAfterSeconds(response, payload) {
+  const bodyRetryAfter = Number(payload?.retryAfter || 0);
+  if (Number.isFinite(bodyRetryAfter) && bodyRetryAfter > 0) return bodyRetryAfter;
+
+  const headerRetryAfter = Number(response.headers.get('retry-after') || 0);
+  if (Number.isFinite(headerRetryAfter) && headerRetryAfter > 0) return headerRetryAfter;
+
+  return null;
+}
+
+function getRateLimitCacheKey(path, method) {
+  return `${method}:${normalizeRequestKey(path)}`;
+}
+
 function runRequestInterceptors(ctx) {
   let current = ctx;
   for (const interceptor of requestInterceptors) {
@@ -424,8 +446,25 @@ async function request(path, options = {}) {
   const method = methodOf(options);
   const isAuthTransition = isAuthTransitionRequest(path, method);
   const cacheKey = method === 'GET' ? normalizeRequestKey(path) : '';
+  const rateLimitKey = getRateLimitCacheKey(path, method);
   const shouldSessionCache = isSessionCacheableRequest(path, method);
   const sessionKey = shouldSessionCache ? sessionCacheKey(path) : '';
+
+  const blockedRateLimit = rateLimitCache.get(rateLimitKey);
+  if (blockedRateLimit && blockedRateLimit.blockedUntil > Date.now()) {
+    const retryAfter = Math.max(1, Math.ceil((blockedRateLimit.blockedUntil - Date.now()) / 1000));
+    const error = new Error(blockedRateLimit.message || `Too many requests. Please wait ${retryAfter} seconds.`);
+    error.status = 429;
+    error.code = 'RATE_LIMITED';
+    error.retryAfter = retryAfter;
+    error.payload = {
+      ok: false,
+      code: 'RATE_LIMITED',
+      message: error.message,
+      retryAfter
+    };
+    throw error;
+  }
 
   if (isAuthTransition) {
     // Prevent reuse of old token across login/logout/signup boundaries.
@@ -509,6 +548,15 @@ async function request(path, options = {}) {
           error.status = interceptedRetryResponse.response.status;
           error.code = interceptedRetryResponse.payload?.code;
           error.payload = interceptedRetryResponse.payload;
+            if (interceptedRetryResponse.response.status === 429) {
+            error.retryAfter = getRetryAfterSeconds(interceptedRetryResponse.response, interceptedRetryResponse.payload);
+            if (error.retryAfter) {
+              rateLimitCache.set(rateLimitKey, {
+                blockedUntil: Date.now() + (error.retryAfter * 1000),
+                message
+              });
+            }
+            }
           throw error;
         }
 
@@ -550,6 +598,15 @@ async function request(path, options = {}) {
       error.status = interceptedResponse.response.status;
       error.code = payload?.code;
       error.payload = payload;
+      if (interceptedResponse.response.status === 429) {
+        error.retryAfter = getRetryAfterSeconds(interceptedResponse.response, payload);
+        if (error.retryAfter) {
+          rateLimitCache.set(rateLimitKey, {
+            blockedUntil: Date.now() + (error.retryAfter * 1000),
+            message
+          });
+        }
+      }
 
       if (isApiRequestUrl(path) && !isTelemetryRequest) {
         // Lightweight debug trail for failed API requests.
@@ -590,6 +647,9 @@ async function request(path, options = {}) {
     return payload;
   } catch (error) {
     if (cacheKey) requestCache.delete(cacheKey);
+    if (error?.status !== 429) {
+      rateLimitCache.delete(rateLimitKey);
+    }
     throw error;
   }
 }
@@ -607,6 +667,37 @@ async function warmupRequests(paths = []) {
   );
 }
 
+async function warmupRequestsOnce(cacheKey, paths = []) {
+  const key = String(cacheKey || '').trim();
+  if (!key) return warmupRequests(paths);
+  if (warmupOnceCache.has(key)) return [];
+
+  try {
+    const storage = getSessionStorage();
+    if (storage && storage.getItem(`collegeos_warmup_once:${key}`) === '1') {
+      warmupOnceCache.add(key);
+      return [];
+    }
+  } catch {
+    // Ignore storage access failures.
+  }
+
+  warmupOnceCache.add(key);
+  try {
+    const result = await warmupRequests(paths);
+    try {
+      const storage = getSessionStorage();
+      storage?.setItem(`collegeos_warmup_once:${key}`, '1');
+    } catch {
+      // Ignore storage write failures.
+    }
+    return result;
+  } catch (error) {
+    warmupOnceCache.delete(key);
+    throw error;
+  }
+}
+
 // Backward-compatible helper used by existing API methods.
 async function apiFetch(path, options = {}) {
   return request(path, options);
@@ -620,6 +711,7 @@ window.CollegeOSApiClient = {
   getSocketBaseUrl: () => window.CollegeOSApiConfig?.socketUrl || apiUrl,
   formatErrorMessage,
   warmupRequests,
+  warmupRequestsOnce,
   clearSessionCache,
   setCsrfToken: (token) => {
     csrfTokenCache = token || null;
@@ -699,7 +791,18 @@ window.CollegeOSApi = {
   warmupRequests,
   clearSessionCache,
   getAuthConfig: () => apiFetch('/api/auth/config'),
-  getCaptchaChallenge: () => apiFetch('/api/auth/captcha/challenge'),
+  getCaptchaChallenge: (options = {}) => {
+    const requestOptions = { ...options };
+    let path = '/api/auth/captcha/challenge';
+
+    if (requestOptions.forceRefresh) {
+      const separator = path.includes('?') ? '&' : '?';
+      path = `${path}${separator}_=${Date.now()}`;
+      delete requestOptions.forceRefresh;
+    }
+
+    return apiFetch(path, requestOptions);
+  },
   getMe: () => apiFetch('/api/auth/me'),
   login: (data) => apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify(data) }),
   loginWithEmailOtp: (data) => apiFetch('/api/auth/login/email-otp', { method: 'POST', body: JSON.stringify(data) }),

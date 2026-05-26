@@ -74,6 +74,9 @@ const PgSession = pgSessionFactory(session);
 const port = Number(process.env.PORT || 3000);
 const host = process.env.HOST || '0.0.0.0';
 
+// Render sits behind a proxy; trust the first hop so req.ip and secure cookies are correct.
+app.set('trust proxy', 1);
+
 function parseOrigins(input) {
   return String(input || '')
     .split(',')
@@ -101,6 +104,24 @@ const allowedOrigins = new Set([
   ...(isProduction ? productionFrontendOrigins : [])
 ]);
 const CORS_ALLOW_ALL = String(process.env.CORS_ALLOW_ALL || '').toLowerCase() === 'true';
+const PUBLIC_READ_PATHS = new Set([
+  '/api/auth/config',
+  '/api/auth/me',
+  '/api/auth/captcha/challenge',
+  '/api/academics/categories',
+  '/api/academics/semesters',
+  '/api/academics/onboarding/config',
+  '/api/academics/branches'
+]);
+
+function getRateLimitKey(req) {
+  if (req.user?.id) return `user:${req.user.id}`;
+  return `ip:${req.ip || 'unknown'}`;
+}
+
+function isPublicReadRoute(req) {
+  return req.method === 'GET' && PUBLIC_READ_PATHS.has(req.path);
+}
 const hasLocalhostOrigin = configuredOrigins.some((origin) => /localhost|127\.0\.0\.1/i.test(origin));
 
 function normalizeSameSite(raw) {
@@ -140,10 +161,6 @@ if (isProduction) {
     throw new Error('SESSION cookie sameSite=none requires secure cookies in production.');
   }
   console.log('[Production Mode] All security validations passed ✅');
-}
-
-if (isProduction) {
-  app.set('trust proxy', 1);
 }
 
 const assetStaticOptions = {
@@ -290,29 +307,28 @@ app.use(csrfInit());
 
 // 9. Rate limiting - general API limit
 // Relax rate limiting in development mode
-if (process.env.NODE_ENV === 'development') {
-  app.use(rateLimit({
-    windowMs: 60 * 1000, // 1 minute
-    maxRequests: 10000, // Very high limit for dev
-    keyGenerator: (req) => {
-      const xff = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-      return xff || req.ip || 'unknown';
-    },
-    skipSuccessfulRequests: false,
-    skipFailedRequests: false
-  }));
-} else {
-  app.use(rateLimit({
-    windowMs: 15 * 60 * 1000,  // 15 minutes
-    maxRequests: 100,
-    keyGenerator: (req) => {
-      const xff = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-      return xff || req.ip || 'unknown';
-    },
-    skipSuccessfulRequests: false,
-    skipFailedRequests: false
-  }));
-}
+const generalRateLimiter = process.env.NODE_ENV === 'development'
+  ? rateLimit({
+      windowMs: 60 * 1000, // 1 minute
+      maxRequests: 10000, // Very high limit for dev
+      keyGenerator: getRateLimitKey,
+      skipSuccessfulRequests: false,
+      skipFailedRequests: false
+    })
+  : rateLimit({
+      windowMs: 15 * 60 * 1000,  // 15 minutes
+      maxRequests: 300,
+      keyGenerator: getRateLimitKey,
+      skipSuccessfulRequests: false,
+      skipFailedRequests: false
+    });
+
+app.use((req, res, next) => {
+  if (isPublicReadRoute(req)) {
+    return next();
+  }
+  return generalRateLimiter(req, res, next);
+});
 
 // 10. CSRF protection for state-changing endpoints
 app.use(csrfProtect());

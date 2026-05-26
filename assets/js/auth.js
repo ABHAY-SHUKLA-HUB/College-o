@@ -53,9 +53,17 @@ const DASHBOARD_BOOTSTRAP_PATHS = [
   '/api/contributions/config'
 ];
 
+const authBootstrapState = {
+  experiencePromise: null,
+  academicPromise: null,
+  universityQuery: '',
+  universityQueryPromise: null
+};
+
 async function warmDashboardBootstrap() {
   if (!window.CollegeOSApi?.warmupRequests) return;
-  await window.CollegeOSApi.warmupRequests(DASHBOARD_BOOTSTRAP_PATHS);
+  const warmupFn = window.CollegeOSApi.warmupRequestsOnce || window.CollegeOSApi.warmupRequests;
+  await warmupFn('auth:dashboard-bootstrap', DASHBOARD_BOOTSTRAP_PATHS);
 }
 
 function getFieldHost(input) {
@@ -247,9 +255,9 @@ function createMathCaptcha(targetPrefix) {
 
 
 const captchaState = {
-  login: { answer: '', serverChallenge: null, lastFetched: 0 },
-  signup: { answer: '', serverChallenge: null, lastFetched: 0 },
-  admin: { answer: '', serverChallenge: null, lastFetched: 0 }
+  login: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false },
+  signup: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false },
+  admin: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false }
 };
 
 const CAPTCHA_STORAGE_KEY = 'collegeOsCaptchaState';
@@ -289,11 +297,57 @@ function persistCaptcha(scope, challenge) {
   }
 }
 
+function getCaptchaElements(scope) {
+  const box = byId(`${scope}CaptchaBox`);
+  const question = byId(`${scope}CaptchaQuestion`);
+  const input = byId(`${scope}CaptchaInput`);
+  const refreshButton = byId(`refresh${scope.charAt(0).toUpperCase()}${scope.slice(1)}Captcha`);
+  const status = byId(`${scope}CaptchaStatus`);
+  const submitButton = scope === 'login'
+    ? byId('loginSubmitBtn')
+    : scope === 'signup'
+      ? byId('signupSubmitBtn')
+      : byId('adminLoginForm')?.querySelector('button[type="submit"]');
+
+  return { box, question, input, refreshButton, status, submitButton };
+}
+
+function setCaptchaUiState(scope, { loading = false, message = '', error = false } = {}) {
+  const { box, question, input, refreshButton, status, submitButton } = getCaptchaElements(scope);
+  if (box) box.classList.toggle('is-loading', loading);
+  if (question && message) question.textContent = message;
+  if (status) status.textContent = message && (loading || error) ? message : '';
+  if (input) input.disabled = loading;
+  if (refreshButton) refreshButton.disabled = loading;
+  if (submitButton) submitButton.disabled = loading || !captchaState[scope].ready;
+}
+
+function setCaptchaReady(scope, ready, message = '') {
+  captchaState[scope].ready = Boolean(ready);
+  setCaptchaUiState(scope, {
+    loading: false,
+    message: message || (ready ? 'Captcha ready.' : 'Preparing secure CAPTCHA...'),
+    error: !ready
+  });
+}
+
+function isChallengeFresh(challenge, graceMs = 5000) {
+  if (!challenge) return false;
+  const expiresAt = Number(challenge.expiresAt || 0);
+  return Boolean(expiresAt && expiresAt > Date.now() + graceMs);
+}
+
 async function refreshCaptcha(scope, { force = false } = {}) {
   if (!hasCaptchaUi(scope)) return null;
 
   const now = Date.now();
   const currentChallenge = captchaState[scope].serverChallenge;
+  const existingPromise = captchaState[scope].challengePromise;
+
+  if (existingPromise && !force) {
+    return existingPromise;
+  }
+
   if (!force && currentChallenge) {
     const expiresAt = Number(currentChallenge.expiresAt || 0);
     if (!expiresAt || expiresAt - now > 15000) {
@@ -301,6 +355,7 @@ async function refreshCaptcha(scope, { force = false } = {}) {
       if (questionNode && currentChallenge.question) {
         questionNode.textContent = currentChallenge.question;
       }
+      setCaptchaReady(scope, true);
       return currentChallenge;
     }
   }
@@ -317,6 +372,7 @@ async function refreshCaptcha(scope, { force = false } = {}) {
       if (Number.isInteger(Number(persistedChallenge.a)) && Number.isInteger(Number(persistedChallenge.b))) {
         captchaState[scope].answer = String(Number(persistedChallenge.a) + Number(persistedChallenge.b));
       }
+      setCaptchaReady(scope, true);
       return persistedChallenge;
     }
   }
@@ -327,16 +383,20 @@ async function refreshCaptcha(scope, { force = false } = {}) {
     if (questionNode && currentChallenge.question) {
       questionNode.textContent = currentChallenge.question;
     }
+    setCaptchaReady(scope, true);
     return currentChallenge;
   }
 
-  const next = createMathCaptcha(scope);
-  captchaState[scope].answer = next.answer;
+  const requestId = (captchaState[scope].requestId || 0) + 1;
+  captchaState[scope].requestId = requestId;
+  setCaptchaReady(scope, false, force ? 'Refreshing CAPTCHA...' : 'Preparing secure CAPTCHA...');
 
+  const fetchPromise = (async () => {
   try {
     if (window.CollegeOSApi?.getCaptchaChallenge) {
-      const payload = await window.CollegeOSApi.getCaptchaChallenge();
+      const payload = await window.CollegeOSApi.getCaptchaChallenge(force ? { forceRefresh: true } : {});
       const challenge = payload?.captcha || null;
+      if (captchaState[scope].requestId !== requestId) return captchaState[scope].serverChallenge;
       captchaState[scope].serverChallenge = challenge;
       captchaState[scope].lastFetched = Date.now();
       if (challenge) {
@@ -349,12 +409,23 @@ async function refreshCaptcha(scope, { force = false } = {}) {
       if (Number.isInteger(Number(challenge?.a)) && Number.isInteger(Number(challenge?.b))) {
         captchaState[scope].answer = String(Number(challenge.a) + Number(challenge.b));
       }
+      setCaptchaReady(scope, Boolean(challenge), challenge ? 'Captcha ready.' : 'Captcha unavailable. Tap refresh to retry.');
     }
   } catch {
     captchaState[scope].serverChallenge = null;
+    if (captchaState[scope].requestId === requestId) {
+      setCaptchaReady(scope, false, 'Captcha unavailable. Tap refresh to retry.');
+    }
+  } finally {
+    if (captchaState[scope].requestId === requestId) {
+      captchaState[scope].challengePromise = null;
+    }
   }
-
   return captchaState[scope].serverChallenge;
+  })();
+
+  captchaState[scope].challengePromise = fetchPromise;
+  return fetchPromise;
 }
 
 function verifyCaptcha(scope) {
@@ -565,9 +636,24 @@ function renderUniversityResults(queryText = '') {
 
 async function fetchUniversities(queryText = '') {
   if (!window.CollegeOSApi?.getUniversities) return;
-  const payload = await window.CollegeOSApi.getUniversities(queryText, 40);
-  universityState.options = Array.isArray(payload?.universities) ? payload.universities : [];
-  renderUniversityResults(queryText);
+  const normalizedQuery = String(queryText || '').trim();
+  if (authBootstrapState.universityQueryPromise && authBootstrapState.universityQuery === normalizedQuery) {
+    return authBootstrapState.universityQueryPromise;
+  }
+
+  authBootstrapState.universityQuery = normalizedQuery;
+  authBootstrapState.universityQueryPromise = (async () => {
+    const payload = await window.CollegeOSApi.getUniversities(normalizedQuery, 40);
+    universityState.options = Array.isArray(payload?.universities) ? payload.universities : [];
+    renderUniversityResults(normalizedQuery);
+    return payload;
+  })();
+
+  try {
+    return await authBootstrapState.universityQueryPromise;
+  } finally {
+    authBootstrapState.universityQueryPromise = null;
+  }
 }
 
 function bindUniversitySelector() {
@@ -584,17 +670,8 @@ function bindUniversitySelector() {
     }
   };
 
-  input.addEventListener('focus', async () => {
-    await openResults();
-  });
-
-  input.addEventListener('click', async () => {
-    await openResults();
-  });
-
-  input.addEventListener('pointerdown', async () => {
-    await openResults();
-  });
+  input.addEventListener('focus', async () => { await openResults(); });
+  input.addEventListener('click', async () => { await openResults(); });
 
   input.addEventListener('input', () => {
     const idNode = byId('signupUniversityId');
@@ -776,6 +853,8 @@ function fallbackAcademicData() {
 }
 
 async function loadAcademicOptions() {
+  if (authBootstrapState.academicPromise) return authBootstrapState.academicPromise;
+  authBootstrapState.academicPromise = (async () => {
   const categorySelects = [byId('signupCategory'), byId('onboardCategory')].filter(Boolean);
   const branchSelects = [byId('signupBranch'), byId('onboardBranch')].filter(Boolean);
   const semesterSelects = [byId('signupSemester'), byId('onboardSemester')].filter(Boolean);
@@ -821,6 +900,13 @@ async function loadAcademicOptions() {
   branchSelects.forEach((select) => {
     select.innerHTML = '<option value="">Select branch/course</option>';
   });
+  })();
+
+  try {
+    return await authBootstrapState.academicPromise;
+  } finally {
+    authBootstrapState.academicPromise = null;
+  }
 }
 
 function updateBranchSelect(categoryId, branchSelectId) {
@@ -1062,6 +1148,8 @@ function applyAuthExperienceConfig() {
 
 async function loadAuthExperienceConfig() {
   if (!window.CollegeOSApi?.getAuthConfig) return;
+  if (authBootstrapState.experiencePromise) return authBootstrapState.experiencePromise;
+  authBootstrapState.experiencePromise = (async () => {
   try {
     const payload = await window.CollegeOSApi.getAuthConfig();
     const incoming = payload?.config || {};
@@ -1083,6 +1171,13 @@ async function loadAuthExperienceConfig() {
   }
 
   applyAuthExperienceConfig();
+  })();
+
+  try {
+    return await authBootstrapState.experiencePromise;
+  } finally {
+    authBootstrapState.experiencePromise = null;
+  }
 }
 
 function validateSignupStep(step) {
@@ -1486,7 +1581,6 @@ function bindEmailLogin() {
 
     if (!verifyCaptcha('login')) {
       setAuthMessages('login', 'Captcha answer is incorrect. Please try again.');
-      refreshCaptcha('login');
       return;
     }
 
@@ -1533,8 +1627,9 @@ function bindEmailLogin() {
       } else {
         setAuthMessages('login', message);
       }
-      // After any failure, fetch a fresh captcha (force) so the user has a new valid token.
-      try { await refreshCaptcha('login', { force: true }); } catch { /* ignore */ }
+      if (/captcha/i.test(message) || error?.status === 429) {
+        try { await refreshCaptcha('login', { force: true }); } catch { /* ignore */ }
+      }
     } finally {
       setLoading(submitBtn, 'Sign In', false);
     }
@@ -1558,7 +1653,6 @@ function bindMobileOtp() {
 
     if (!verifyCaptcha('login')) {
       setAuthMessages('login', 'Captcha answer is incorrect. Please try again.');
-      refreshCaptcha('login');
       return;
     }
 
@@ -1593,7 +1687,9 @@ function bindMobileOtp() {
       } else {
         setAuthMessages('login', msg);
       }
-      try { await refreshCaptcha('login', { force: true }); } catch { /* ignore */ }
+      if (/captcha/i.test(msg) || error?.status === 429) {
+        try { await refreshCaptcha('login', { force: true }); } catch { /* ignore */ }
+      }
     } finally {
       setLoading(sendBtn, 'Send OTP', false);
     }
@@ -1624,7 +1720,9 @@ function bindMobileOtp() {
       } else {
         setAuthMessages('login', msg);
       }
-      try { await refreshCaptcha('login', { force: true }); } catch { /* ignore */ }
+      if (/captcha/i.test(msg) || error?.status === 429) {
+        try { await refreshCaptcha('login', { force: true }); } catch { /* ignore */ }
+      }
     } finally {
       setLoading(verifyBtn, 'Verify OTP and Login', false);
     }
@@ -1651,7 +1749,9 @@ function bindMobileOtp() {
         } else {
           setAuthMessages('login', msg);
         }
-        try { await refreshCaptcha('login', { force: true }); } catch { /* ignore */ }
+        if (/captcha/i.test(msg) || error?.status === 429) {
+          try { await refreshCaptcha('login', { force: true }); } catch { /* ignore */ }
+        }
       } finally {
         setLoading(resendBtn, 'Resend OTP', false);
       }
@@ -1806,7 +1906,6 @@ function bindSignup() {
 
     if (!verifyCaptcha('signup')) {
       setAuthMessages('signup', 'Captcha answer is incorrect. Please try again.');
-      refreshCaptcha('signup');
       return;
     }
 
@@ -2184,8 +2283,8 @@ function hydrateRememberedFields() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-  await loadAuthExperienceConfig();
+document.addEventListener('DOMContentLoaded', () => {
+  void loadAuthExperienceConfig();
   initAuthEntranceMotion();
   window.addEventListener('resize', () => {
     window.requestAnimationFrame(updateAuthTabIndicator);
@@ -2206,15 +2305,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindSignupVerificationUi();
   bindOnboarding();
 
-  // Captcha refreshes only on initial page load and manual refresh button clicks
-  refreshCaptcha('login');
-  refreshCaptcha('signup');
+  // Start CAPTCHA generation immediately so the login form does not wait on slower bootstrap work.
+  setCaptchaReady('login', false, 'Preparing secure CAPTCHA...');
+  setCaptchaReady('signup', false, 'Preparing secure CAPTCHA...');
+  void refreshCaptcha('login');
+  void refreshCaptcha('signup');
 
   byId('refreshLoginCaptcha')?.addEventListener('click', () => refreshCaptcha('login', { force: true }));
   byId('refreshSignupCaptcha')?.addEventListener('click', () => refreshCaptcha('signup', { force: true }));
 
-  await loadAcademicOptions();
-  await loadOnboardingConfig();
+  void loadAcademicOptions();
+  void loadOnboardingConfig();
   bindCategoryBranchCascades();
   hydrateRememberedFields();
 });

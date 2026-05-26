@@ -99,7 +99,10 @@ const errorHandler = (err, req, res, next) => {
       method: req.method,
       path: req.path,
       userId: req.user?.id,
-      ip: req.ip
+      ip: req.ip,
+      origin: req.headers.origin,
+      userAgent: req.headers['user-agent'],
+      rateLimit: err.rateLimitContext || null
     }
   });
 
@@ -154,6 +157,13 @@ const errorHandler = (err, req, res, next) => {
   // Add retry-after header for rate limit errors
   if (statusCode === 429 && err.retryAfter) {
     res.set('Retry-After', err.retryAfter.toString());
+  }
+
+  if (statusCode === 429) {
+    response.ok = false;
+    response.message = message;
+    response.retryAfter = err.retryAfter || null;
+    response.code = 'RATE_LIMITED';
   }
 
   res.status(statusCode).json(response);

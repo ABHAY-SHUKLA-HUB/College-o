@@ -260,9 +260,9 @@ function createMathCaptcha(targetPrefix) {
 
 
 const captchaState = {
-  login: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false, retryAttempted: false, retryCount: 0 },
-  signup: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false, retryAttempted: false, retryCount: 0 },
-  admin: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false, retryAttempted: false, retryCount: 0 }
+  login: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false, retryAttempted: false, retryCount: 0, loadFailed: false },
+  signup: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false, retryAttempted: false, retryCount: 0, loadFailed: false },
+  admin: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false, retryAttempted: false, retryCount: 0, loadFailed: false }
 };
 
 const CAPTCHA_STORAGE_KEY = 'collegeOsCaptchaState';
@@ -342,9 +342,13 @@ function renderCaptchaContent(scope, challenge) {
   const questionNode = byId(`${scope}CaptchaQuestion`);
   const resolved = resolveCaptchaContent(challenge);
 
-  if (questionNode && challenge) {
-    const label = resolved?.type === 'text' ? resolved.value : 'Captcha challenge';
-    questionNode.textContent = label;
+  if (questionNode) {
+    if (challenge && resolved) {
+      const label = resolved.type === 'text' ? resolved.value : 'Captcha challenge';
+      questionNode.textContent = label;
+    } else {
+      questionNode.textContent = 'Captcha unavailable. Click refresh.';
+    }
   }
 
   if (!contentNode) return resolved;
@@ -393,7 +397,13 @@ function setCaptchaUiState(scope, { loading = false, message = '', error = false
   const { box, input, refreshButton, status, submitButton } = getCaptchaElements(scope);
   if (box) box.classList.toggle('is-loading', loading);
   if (status) status.textContent = message && (loading || error) ? message : '';
-  if (input) input.disabled = loading;
+  if (input) input.disabled = loading || !captchaState[scope].ready;
+  if (input) {
+    const inputFieldHost = input.closest('.field');
+    if (inputFieldHost) {
+      inputFieldHost.classList.toggle('hidden', !captchaState[scope].ready);
+    }
+  }
   if (refreshButton) refreshButton.disabled = loading;
   if (submitButton) submitButton.disabled = loading || !captchaState[scope].ready;
 }
@@ -402,6 +412,14 @@ function setCaptchaReady(scope, ready, message = '', challenge = null) {
   const content = challenge || captchaState[scope].serverChallenge;
   const hasContent = Boolean(resolveCaptchaContent(content));
   captchaState[scope].ready = Boolean(ready && hasContent);
+  if (!captchaState[scope].ready) {
+    captchaState[scope].answer = '';
+    captchaState[scope].serverChallenge = challenge || null;
+  }
+  if (captchaState[scope].ready) {
+    captchaState[scope].retryCount = 0;
+    captchaState[scope].retryAttempted = false;
+  }
   renderCaptchaContent(scope, content);
   setCaptchaUiState(scope, {
     loading: false,
@@ -420,6 +438,11 @@ function isChallengeFresh(challenge, graceMs = 5000) {
 
 async function refreshCaptcha(scope, { force = false } = {}) {
   if (!hasCaptchaUi(scope)) return null;
+
+  if (captchaState[scope].loadFailed && !force) {
+    setCaptchaReady(scope, false, 'Captcha failed to load. Click Refresh to try again.', null);
+    return null;
+  }
 
   const now = Date.now();
   const currentChallenge = captchaState[scope].serverChallenge;
@@ -473,10 +496,9 @@ async function refreshCaptcha(scope, { force = false } = {}) {
         } catch (err) {
           // Timeout or fetch error
           captchaState[scope].serverChallenge = null;
+          captchaState[scope].loadFailed = true;
           if (captchaState[scope].requestId === requestId) {
-            captchaState[scope].retryCount = (captchaState[scope].retryCount || 0) + 1;
-            const msg = captchaState[scope].retryCount > 1 ? 'Captcha failed to load. Refresh' : 'Captcha could not load. Retrying...';
-            setCaptchaReady(scope, false, msg, null);
+            setCaptchaReady(scope, false, 'Captcha failed to load. Click Refresh to try again.', null);
           }
           // Clear promise reference below
           return captchaState[scope].serverChallenge;
@@ -484,6 +506,7 @@ async function refreshCaptcha(scope, { force = false } = {}) {
 
         const challenge = payload?.captcha || payload || null;
         if (captchaState[scope].requestId !== requestId) return captchaState[scope].serverChallenge;
+
         captchaState[scope].serverChallenge = challenge;
         captchaState[scope].lastFetched = Date.now();
         if (challenge) {
@@ -492,20 +515,24 @@ async function refreshCaptcha(scope, { force = false } = {}) {
         if (Number.isInteger(Number(challenge?.a)) && Number.isInteger(Number(challenge?.b))) {
           captchaState[scope].answer = String(Number(challenge.a) + Number(challenge.b));
         }
+
         const resolvedContent = resolveCaptchaContent(challenge);
-        if (!resolvedContent && !force && (captchaState[scope].retryCount || 0) < 1) {
-          captchaState[scope].retryCount = (captchaState[scope].retryCount || 0) + 1;
-          // Try one forced refresh, but do not recurse indefinitely
-          return refreshCaptcha(scope, { force: true });
+        if (!resolvedContent) {
+          captchaState[scope].loadFailed = true;
+          setCaptchaReady(scope, false, 'Captcha failed to load. Click Refresh to try again.', challenge);
+          return null;
         }
-        // Reset retry count on success or final failure
+
+        captchaState[scope].loadFailed = false;
         captchaState[scope].retryCount = 0;
-        setCaptchaReady(scope, Boolean(resolvedContent), resolvedContent ? 'Captcha ready.' : 'Captcha could not load. Refresh captcha.', challenge);
+        captchaState[scope].retryAttempted = false;
+        setCaptchaReady(scope, true, 'Captcha ready.', challenge);
       }
     } catch (e) {
       captchaState[scope].serverChallenge = null;
+      captchaState[scope].loadFailed = true;
       if (captchaState[scope].requestId === requestId) {
-        setCaptchaReady(scope, false, 'Captcha could not load. Refresh captcha.', null);
+        setCaptchaReady(scope, false, 'Captcha failed to load. Click Refresh to try again.', null);
       }
     } finally {
       if (captchaState[scope].requestId === requestId) {
@@ -537,6 +564,9 @@ function getCaptchaPayload(scope) {
 async function ensureCaptchaPayload(scope) {
   let payload = getCaptchaPayload(scope);
   if (payload) return payload;
+  if (captchaState[scope].loadFailed) {
+    throw new Error('Captcha failed to load. Click Refresh to try again.');
+  }
   try {
     await refreshCaptcha(scope);
   } catch (err) {

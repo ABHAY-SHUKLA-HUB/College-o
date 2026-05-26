@@ -442,6 +442,16 @@ app.get('*', (req, res) => {
       path: req.path
     });
   }
+
+  if (req.path.startsWith('/socket.io')) {
+    return res.status(404).json({
+      success: false,
+      error: 'Socket endpoint not found',
+      code: 'SOCKET_NOT_FOUND',
+      path: req.path
+    });
+  }
+
   // Serve index.html for all non-API paths (SPA client-side routing)
   return res.sendFile(path.join(__dirname, '..', 'index.html'));
 });

@@ -12,7 +12,38 @@ const AUTH_TRANSITION_PATHS = new Set([
   '/api/auth/verification/verify'
 ]);
 
-const DEFAULT_API_URL = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'http://localhost:3000';
+const PROD_BACKEND_ORIGIN = 'https://college-o.onrender.com';
+
+function isProductionFrontendHost(hostname = '') {
+  const value = String(hostname || '').toLowerCase();
+  return Boolean(
+    value === 'collegeo.in'
+    || value === 'www.collegeo.in'
+    || value.endsWith('.vercel.app')
+  );
+}
+
+function inferDefaultApiUrl() {
+  if (typeof window === 'undefined' || !window.location) {
+    return PROD_BACKEND_ORIGIN;
+  }
+
+  const { protocol, hostname, origin } = window.location;
+  const explicitBase = window.API_BASE_URL || window.API_URL || window.VITE_API_URL || window.CollegeOSApiConfig?.apiUrl;
+  if (explicitBase) return normalizeUrl(explicitBase, PROD_BACKEND_ORIGIN);
+
+  if (isProductionFrontendHost(hostname)) {
+    return PROD_BACKEND_ORIGIN;
+  }
+
+  if (protocol === 'file:') {
+    return PROD_BACKEND_ORIGIN;
+  }
+
+  return origin || PROD_BACKEND_ORIGIN;
+}
+
+const DEFAULT_API_URL = inferDefaultApiUrl();
 let csrfTokenCache = null;
 let csrfRefreshPromise = null;
 let telemetryDisabled = false;
@@ -91,12 +122,13 @@ function formatErrorMessage(error, fallback = 'Something went wrong.') {
 }
 
 const apiUrl = normalizeUrl(
-  window.API_URL || window.VITE_API_URL || window.CollegeOSApiConfig?.apiUrl,
+  window.API_URL || window.API_BASE_URL || window.VITE_API_URL || window.CollegeOSApiConfig?.apiUrl,
   DEFAULT_API_URL
 );
 const apiOrigin = new URL(apiUrl).origin;
 
 window.API_URL = apiUrl;
+window.API_BASE_URL = window.API_BASE_URL || apiUrl;
 window.VITE_API_URL = window.VITE_API_URL || apiUrl;
 window.CollegeOSApiConfig = {
   ...(window.CollegeOSApiConfig || {}),

@@ -1632,8 +1632,7 @@ async function completePostLoginFlow(preferredCategoryId = null, preferredBranch
     return;
   }
 
-  await warmDashboardBootstrap();
-  window.location.href = 'dashboard.html';
+  window.location.href = '/dashboard';
 }
 
 function bindEmailLogin() {
@@ -2160,7 +2159,7 @@ function updateOnboardingStepUi() {
 function openOnboardingModal(prefill = {}) {
   const modal = byId('onboardingModal');
   if (!modal) {
-    window.location.href = 'dashboard.html';
+    window.location.href = '/dashboard';
     return;
   }
 
@@ -2247,7 +2246,7 @@ async function submitOnboarding() {
     await warmDashboardBootstrap();
     window.setTimeout(() => {
       closeOnboardingModal();
-      window.location.href = 'dashboard.html';
+      window.location.href = '/dashboard';
     }, 250);
   } catch (error) {
     setText('onboardingError', error.message || 'Failed to complete onboarding.');

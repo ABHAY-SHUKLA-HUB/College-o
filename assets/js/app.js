@@ -116,22 +116,14 @@ const tooltipMap = {
 
 const routeWarmupMap = {
   'home.html': [
-    '/api/dashboard/personalized',
-    '/api/dashboard/stats',
-    '/api/dashboard/experience-config',
-    '/api/profile/me',
-    '/api/academics/profile',
+    '/api/dashboard/bootstrap',
     '/api/quizzes/attempts/me',
     '/api/mock-tests/dashboard',
     '/api/roadmaps/me',
     '/api/notes/mine'
   ],
   'dashboard.html': [
-    '/api/dashboard/personalized',
-    '/api/dashboard/stats',
-    '/api/dashboard/experience-config',
-    '/api/profile/me',
-    '/api/academics/profile',
+    '/api/dashboard/bootstrap',
     '/api/quizzes/attempts/me',
     '/api/mock-tests/dashboard',
     '/api/roadmaps/me',
@@ -212,6 +204,64 @@ const routeWarmupMap = {
 const prefetchedDocuments = new Set();
 const warmedRouteKeys = new Set();
 let liveHubScriptPromise = null;
+let toastHost = null;
+
+const CLEAN_ROUTE_MAP = {
+  'index.html': '/',
+  'login.html': '/login',
+  'signup.html': '/signup',
+  'home.html': '/home',
+  'dashboard.html': '/dashboard',
+  'study.html': '/study',
+  'mock-tests.html': '/mock-tests',
+  'notes-library.html': '/notes',
+  'study-roadmap.html': '/roadmap',
+  'ai-tools.html': '/ai-tools',
+  'live-hub.html': '/live-hub',
+  'notifications.html': '/notifications',
+  'profile.html': '/profile',
+  'settings.html': '/settings',
+  'support-dashboard.html': '/support-dashboard',
+  'support-hub.html': '/support-hub',
+  'academic-contribution-hub.html': '/contribute'
+};
+
+function cleanRouteForPage(file) {
+  return CLEAN_ROUTE_MAP[file] || `/${String(file || '').replace(/\.html$/i, '')}`;
+}
+
+function pageName() {
+  const file = window.location.pathname.split('/').pop() || 'index.html';
+  return file.toLowerCase();
+}
+
+function normalizeRoutePath(href) {
+  if (!href) return href;
+  try {
+    const url = new URL(href, window.location.href);
+    const file = url.pathname.split('/').pop()?.toLowerCase() || '';
+    if (CLEAN_ROUTE_MAP[file]) {
+      url.pathname = url.pathname.replace(/[^/]*$/, CLEAN_ROUTE_MAP[file].replace(/^\//, ''));
+      return `${url.pathname}${url.search}${url.hash}`;
+    }
+    if (/\.html$/i.test(file)) {
+      url.pathname = url.pathname.replace(/\.html$/i, '');
+      return `${url.pathname}${url.search}${url.hash}`;
+    }
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return String(href);
+  }
+}
+
+function goToRoute(href, { replace = false } = {}) {
+  const nextHref = normalizeRoutePath(href);
+  if (replace) {
+    window.location.replace(nextHref);
+    return;
+  }
+  window.location.href = nextHref;
+}
 
 function resolveThemeMode(theme) {
   const preferredDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -259,24 +309,19 @@ window.addEventListener('storage', (event) => {
   applyThemePreference(getStoredThemePreference());
 });
 
-function pageName() {
-  const file = window.location.pathname.split('/').pop() || 'index.html';
-  return file.toLowerCase();
-}
-
 function navHtml() {
   const current = pageName();
   return navGroups
     .map((group) => {
       const links = group.items
         .map((item) => {
-          const active = item.action ? '' : (current === item.href ? 'active' : '');
+          const active = item.action ? '' : (current === normalizeRoutePath(item.href).split('/').pop().toLowerCase() ? 'active' : '');
           const color = iconColors[item.key] || '#0f7b6c';
           const badge = item.key === 'notifications' ? '<span class="nav-badge" id="notifNavBadge" style="display:none;">0</span>' : '';
           if (item.action === 'liveHub') {
             return `<button class="nav-link nav-link-action ${active}" type="button" data-live-hub-toggle title="${tooltipMap[item.label] || item.label}" data-label="${item.label}"><i class="fa-solid ${item.icon}" style="color:${color}"></i><span class="nav-label">${item.label}</span>${badge}</button>`;
           }
-          return `<a class="nav-link ${active}" href="${item.href}" title="${tooltipMap[item.label] || item.label}" data-label="${item.label}"><i class="fa-solid ${item.icon}" style="color:${color}"></i><span class="nav-label">${item.label}</span>${badge}</a>`;
+          return `<a class="nav-link ${active}" href="${normalizeRoutePath(item.href)}" title="${tooltipMap[item.label] || item.label}" data-label="${item.label}"><i class="fa-solid ${item.icon}" style="color:${color}"></i><span class="nav-label">${item.label}</span>${badge}</a>`;
         })
         .join('');
 
@@ -288,16 +333,16 @@ function navHtml() {
 function mobileNavHtml() {
   const current = pageName();
   const quick = [
-    { href: 'dashboard.html', icon: 'fa-house', label: 'Home' },
-    { href: 'study.html', icon: 'fa-book-open', label: 'Study' },
-    { href: 'ai-tools.html', icon: 'fa-sparkles', label: 'AI' },
-    { href: 'study-roadmap.html', icon: 'fa-map', label: 'Roadmap' },
-    { href: 'profile.html', icon: 'fa-user', label: 'Profile' }
+    { href: '/dashboard', icon: 'fa-house', label: 'Home' },
+    { href: '/study', icon: 'fa-book-open', label: 'Study' },
+    { href: '/ai-tools', icon: 'fa-sparkles', label: 'AI' },
+    { href: '/roadmap', icon: 'fa-map', label: 'Roadmap' },
+    { href: '/profile', icon: 'fa-user', label: 'Profile' }
   ];
 
   return quick
     .map((item) => {
-      const active = current === item.href ? 'active' : '';
+      const active = current === normalizeRoutePath(item.href).split('/').pop().toLowerCase() ? 'active' : '';
       return `<a class="${active}" href="${item.href}" title="${item.label}"><i class="fa-solid ${item.icon}"></i><div>${item.label}</div></a>`;
     })
     .join('');
@@ -416,7 +461,7 @@ function mountShell() {
   shell.innerHTML = `
     <aside class="sidebar">
       <div class="sidebar-head">
-        <div class="logo"><i class="fa-solid fa-graduation-cap"></i><span>College OS</span></div>
+        <a class="logo" href="/dashboard" aria-label="College OS home"><i class="fa-solid fa-graduation-cap"></i><span>College OS</span></a>
         <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Collapse sidebar" title="Collapse sidebar">
           <i class="fa-solid fa-angle-left" id="sidebarToggleIcon"></i>
         </button>
@@ -434,13 +479,13 @@ function mountShell() {
     </aside>
     <section class="main-area">
       <header class="topbar">
-        <strong id="pageTitle">College OS</strong>
+        <a class="topbar-brand" href="/dashboard" aria-label="College OS home"><i class="fa-solid fa-graduation-cap"></i><strong id="pageTitle">College OS</strong></a>
         <div class="quick-icons">
-          <a class="icon-chip" href="study-roadmap.html"><i class="fa-solid fa-map"></i> Roadmap</a>
-          <a class="icon-chip" href="ai-tools.html"><i class="fa-solid fa-sparkles"></i> AI Tools</a>
-          <a class="icon-chip" href="notes-library.html"><i class="fa-solid fa-file-lines"></i> Notes</a>
-          <a class="icon-chip" href="academic-contribution-hub.html"><i class="fa-solid fa-upload"></i> Contribute</a>
-          <a class="icon-chip" href="certificates.html"><i class="fa-solid fa-graduation-cap"></i> Certificates</a>
+          <a class="icon-chip" href="/roadmap"><i class="fa-solid fa-map"></i> Roadmap</a>
+          <a class="icon-chip" href="/ai-tools"><i class="fa-solid fa-sparkles"></i> AI Tools</a>
+          <a class="icon-chip" href="/notes"><i class="fa-solid fa-file-lines"></i> Notes</a>
+          <a class="icon-chip" href="/contribute"><i class="fa-solid fa-upload"></i> Contribute</a>
+          <a class="icon-chip" href="/certificates"><i class="fa-solid fa-graduation-cap"></i> Certificates</a>
           <button class="icon-chip" id="logoutBtn" style="border: 1px solid rgba(0,0,0,0.1); cursor:pointer;"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
         </div>
       </header>
@@ -630,7 +675,7 @@ function mountContent() {
 
 function publicPage() {
   const file = pageName();
-  return ['index.html', 'login.html', 'signup.html', 'pricing.html', 'support.html', 'about-us.html', 'contact-us.html', 'help-center.html'].includes(file);
+  return ['index.html', 'login', 'signup', 'pricing.html', 'support.html', 'about-us.html', 'contact-us.html', 'help-center.html', 'login.html', 'signup.html'].includes(file);
 }
 
 async function hydrateCommonStats() {
@@ -665,17 +710,17 @@ async function applyAuthGuard() {
     user = result.user;
   } catch {
     if (!publicPage()) {
-      window.location.href = 'login.html';
+      goToRoute('/login', { replace: true });
       return;
     }
   }
   window.collegeOsCurrentUser = user;
   if (!user && !publicPage()) {
-    window.location.href = 'login.html';
+    goToRoute('/login', { replace: true });
     return;
   }
-  if (user && ['login.html', 'signup.html'].includes(pageName())) {
-    window.location.href = 'dashboard.html';
+  if (user && ['login.html', 'signup.html', 'login', 'signup', 'index.html'].includes(pageName())) {
+    goToRoute('/dashboard', { replace: true });
   }
 }
 
@@ -705,8 +750,62 @@ function bindLogout() {
     return;
   }
   button.addEventListener('click', async () => {
-    await window.CollegeOSApi.logout();
-    window.location.href = 'login.html';
+    if (button.dataset.busy === '1') return;
+    button.dataset.busy = '1';
+    const original = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Logging out...';
+
+    try {
+      try {
+        await window.CollegeOSApi.logout();
+      } catch {
+        // Continue cleanup even if the API call fails or the session is already gone.
+      }
+
+      try { window.CollegeOSApiClient?.clearSessionCache?.(); } catch { /* ignore */ }
+      try { window.CollegeOSApiClient?.setCsrfToken?.(null); } catch { /* ignore */ }
+      try { window.CollegeOSLiveHub?.dispose?.(); } catch { /* ignore */ }
+      try { window.CollegeOSLiveHub?.close?.(); } catch { /* ignore */ }
+      try { window.CollegeOSLiveHub?.reset?.(); } catch { /* ignore */ }
+      try { window.CollegeOSLiveHub?.disconnect?.(); } catch { /* ignore */ }
+
+      try {
+        const keys = [
+          'collegeOsCurrentUser',
+          'collegeos_theme',
+          'collegeos_warmup_once:shell:dashboard-bootstrap',
+          'collegeos_live_hub_ui_state',
+          'collegeos_live_hub_active_session',
+          'collegeos_live_hub_selected_session',
+          'collegeos_live_hub_chat',
+          'collegeos_live_hub_channel'
+        ];
+        keys.forEach((key) => {
+          window.localStorage.removeItem(key);
+          window.sessionStorage.removeItem(key);
+        });
+      } catch {
+        // Ignore storage failures.
+      }
+
+      try {
+        Object.keys(window.sessionStorage || {}).forEach((key) => {
+          if (/^(collegeos_|collegeOs|cs?rf|auth)/i.test(key)) {
+            window.sessionStorage.removeItem(key);
+          }
+        });
+      } catch {
+        // Ignore storage iteration failures.
+      }
+
+      showToast('Logged out successfully.', 'success');
+      goToRoute('/login', { replace: true });
+    } finally {
+      button.dataset.busy = '0';
+      button.disabled = false;
+      button.innerHTML = original;
+    }
   });
 }
 
@@ -742,6 +841,27 @@ function bindAdminShortcut() {
   });
 }
 
+function showToast(message, tone = 'info') {
+  if (!message) return;
+  if (!toastHost) {
+    toastHost = document.createElement('div');
+    toastHost.className = 'app-toast-host';
+    document.body.appendChild(toastHost);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = `app-toast ${tone}`;
+  toast.textContent = message;
+  toastHost.appendChild(toast);
+
+  window.setTimeout(() => {
+    toast.classList.add('is-hiding');
+    window.setTimeout(() => toast.remove(), 220);
+  }, 2200);
+}
+
+window.__collegeOsToast = showToast;
+
 async function hydrateNotificationBadge() {
   const badge = document.getElementById('notifNavBadge');
   if (!badge || !window.CollegeOSApi || !window.collegeOsCurrentUser) return;
@@ -771,14 +891,14 @@ async function applyContributionVisibility() {
     const showEntry = cfg?.visibility?.showHubEntryPoint !== false;
     const visible = enabled && showEntry;
 
-    const desktopLink = document.querySelector('.nav-link[href="academic-contribution-hub.html"]');
+    const desktopLink = document.querySelector('.nav-link[href="/contribute"]');
     if (desktopLink) desktopLink.style.display = visible ? '' : 'none';
 
-    const topbarLink = document.querySelector('.quick-icons .icon-chip[href="academic-contribution-hub.html"]');
+    const topbarLink = document.querySelector('.quick-icons .icon-chip[href="/contribute"]');
     if (topbarLink) topbarLink.style.display = visible ? '' : 'none';
 
     if (!visible && pageName() === 'academic-contribution-hub.html') {
-      window.location.href = 'dashboard.html';
+      goToRoute('/dashboard', { replace: true });
     }
   } catch {
     // Keep links visible if config fetch fails.
@@ -850,14 +970,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     await enforceAcademicOnboarding();
     bindLogout();
 
+    setContentLoadingState(false);
+
     if (window.CollegeOSApi?.warmupRequests) {
       const warmupPaths = [
-        '/api/profile/me',
-        '/api/academics/profile',
-        '/api/dashboard/stats',
-        '/api/dashboard/experience-config',
+        '/api/dashboard/bootstrap',
         '/api/notifications/unread-count',
-        '/api/subscriptions/me',
         '/api/contributions/config'
       ];
       const warmupFn = window.CollegeOSApi.warmupRequestsOnce || window.CollegeOSApi.warmupRequests;

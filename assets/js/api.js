@@ -791,6 +791,7 @@ window.CollegeOSApi = {
   warmupRequests,
   clearSessionCache,
   getAuthConfig: () => apiFetch('/api/auth/config'),
+  getDashboardBootstrap: () => apiFetch('/api/dashboard/bootstrap'),
   getCaptchaChallenge: (options = {}) => {
     const requestOptions = { ...options };
     let path = '/api/auth/captcha/challenge';

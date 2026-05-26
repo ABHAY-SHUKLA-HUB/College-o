@@ -13,7 +13,7 @@
   }
 
   function goToDashboard() {
-    window.location.href = 'support-dashboard.html';
+    window.location.href = '/support-dashboard';
   }
 
   function goToRequest(id) {

@@ -1064,11 +1064,11 @@
     try {
       const me = await window.CollegeOSApi.getMe();
       if (!me?.user) {
-        window.location.href = 'login.html';
+        window.location.href = '/login';
         return;
       }
     } catch {
-      window.location.href = 'login.html';
+      window.location.href = '/login';
       return;
     }
 

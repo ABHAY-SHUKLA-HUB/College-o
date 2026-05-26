@@ -7,6 +7,12 @@ const { RtcTokenBuilder, RtcRole } = require('agora-access-token');
 
 const router = express.Router();
 let experienceSettingsPromise = null;
+const EXPERIENCE_CONFIG_CACHE_TTL_MS = 30 * 1000;
+const experienceConfigCache = {
+  payload: null,
+  loadedAt: 0,
+  promise: null
+};
 
 function setPrivateCacheHeaders(res, maxAgeSeconds = 10) {
   res.setHeader('Cache-Control', `private, max-age=${maxAgeSeconds}, stale-while-revalidate=${Math.max(maxAgeSeconds * 3, 30)}`);
@@ -200,6 +206,8 @@ function normalizeLiveHubConfig(config) {
 }
 
 async function saveStudentExperienceConfig(config, updatedBy = null) {
+  experienceConfigCache.payload = null;
+  experienceConfigCache.loadedAt = 0;
   await pool.query(
     `INSERT INTO platform_settings (key, value_json, updated_by, updated_at)
      VALUES ('student_experience_config', $1::jsonb, $2, CURRENT_TIMESTAMP)
@@ -290,39 +298,135 @@ async function updateLiveHubSession(sessionId, updater, updatedBy) {
 }
 
 async function readStudentExperienceConfig() {
-  if (!experienceSettingsPromise) {
-    experienceSettingsPromise = pool.query(`
-      CREATE TABLE IF NOT EXISTS platform_settings (
-        key VARCHAR(120) PRIMARY KEY,
-        value_json JSONB NOT NULL,
-        updated_by INTEGER REFERENCES users(id),
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+  if (experienceConfigCache.payload && Date.now() - experienceConfigCache.loadedAt < EXPERIENCE_CONFIG_CACHE_TTL_MS) {
+    return experienceConfigCache.payload;
   }
 
-  await experienceSettingsPromise;
+  if (experienceConfigCache.promise) {
+    return experienceConfigCache.promise;
+  }
 
-  const [experienceRow, featureRow] = await Promise.all([
-    pool.query("SELECT value_json FROM platform_settings WHERE key = 'student_experience_config' LIMIT 1"),
-    pool.query("SELECT value_json FROM platform_settings WHERE key = 'feature_toggles' LIMIT 1")
+  experienceConfigCache.promise = (async () => {
+    if (!experienceSettingsPromise) {
+      experienceSettingsPromise = pool.query(`
+        CREATE TABLE IF NOT EXISTS platform_settings (
+          key VARCHAR(120) PRIMARY KEY,
+          value_json JSONB NOT NULL,
+          updated_by INTEGER REFERENCES users(id),
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+    }
+
+    await experienceSettingsPromise;
+
+    const [experienceRow, featureRow] = await Promise.all([
+      pool.query("SELECT value_json FROM platform_settings WHERE key = 'student_experience_config' LIMIT 1"),
+      pool.query("SELECT value_json FROM platform_settings WHERE key = 'feature_toggles' LIMIT 1")
+    ]);
+
+    const baseConfig = deepMerge(DEFAULT_STUDENT_EXPERIENCE_CONFIG, experienceRow.rows[0]?.value_json || {});
+    const featureToggles = featureRow.rows[0]?.value_json || {};
+
+    const mergedFeatureFlags = {
+      ...baseConfig.featureFlags,
+      aiTools: typeof featureToggles.aiTools === 'boolean' ? featureToggles.aiTools : baseConfig.featureFlags.aiTools,
+      mockTests: typeof featureToggles.mockTests === 'boolean' ? featureToggles.mockTests : baseConfig.featureFlags.mockTests,
+      roadmapSystem: typeof featureToggles.roadmaps === 'boolean' ? featureToggles.roadmaps : baseConfig.featureFlags.roadmapSystem
+    };
+
+    const payload = {
+      ...baseConfig,
+      featureFlags: mergedFeatureFlags
+    };
+
+    experienceConfigCache.payload = payload;
+    experienceConfigCache.loadedAt = Date.now();
+    return payload;
+  })();
+
+  try {
+    return await experienceConfigCache.promise;
+  } finally {
+    experienceConfigCache.promise = null;
+  }
+}
+
+router.get('/bootstrap', requireAuth, async (req, res) => {
+  const userId = req.session.userId;
+  setPrivateCacheHeaders(res, 8);
+
+  const [profileResult, statsResult, membership, config] = await Promise.all([
+    pool.query(
+      `SELECT u.full_name, u.email, u.subscription_tier,
+              up.category_id, up.branch_id, up.semester_id, up.career_interest,
+              ac.name AS category_name,
+              ab.name AS branch_name,
+              sem.label AS semester_label
+       FROM users u
+       LEFT JOIN user_profiles up ON up.user_id = u.id
+       LEFT JOIN academic_categories ac ON ac.id = up.category_id
+       LEFT JOIN academic_branches ab ON ab.id = up.branch_id
+       LEFT JOIN academic_semesters sem ON sem.id = up.semester_id
+       WHERE u.id = $1`,
+      [userId]
+    ),
+    pool.query(
+      `SELECT
+        COALESCE((SELECT SUM(xp_earned) FROM quiz_attempts WHERE user_id = $1), 0)::int AS xp,
+        COALESCE((SELECT current_streak FROM user_profiles WHERE user_id = $1), 0)::int AS streak,
+        COALESCE((SELECT MAX(progress) FROM roadmaps WHERE user_id = $1), 0)::int AS roadmap_progress,
+        (SELECT COUNT(*)::int FROM certificates WHERE user_id = $1) AS certificates,
+        (SELECT COUNT(*)::int FROM notes WHERE created_by = $1 AND bookmarks IS NOT NULL) AS saved_notes`,
+      [userId]
+    ),
+    resolveMembershipState(userId),
+    readStudentExperienceConfig()
   ]);
 
-  const baseConfig = deepMerge(DEFAULT_STUDENT_EXPERIENCE_CONFIG, experienceRow.rows[0]?.value_json || {});
-  const featureToggles = featureRow.rows[0]?.value_json || {};
+  const profile = profileResult.rows[0] || {};
+  const stats = statsResult.rows[0] || {};
+  const isPremium = Boolean(membership?.premiumActive || membership?.isAdmin);
 
-  const mergedFeatureFlags = {
-    ...baseConfig.featureFlags,
-    aiTools: typeof featureToggles.aiTools === 'boolean' ? featureToggles.aiTools : baseConfig.featureFlags.aiTools,
-    mockTests: typeof featureToggles.mockTests === 'boolean' ? featureToggles.mockTests : baseConfig.featureFlags.mockTests,
-    roadmapSystem: typeof featureToggles.roadmaps === 'boolean' ? featureToggles.roadmaps : baseConfig.featureFlags.roadmapSystem
-  };
-
-  return {
-    ...baseConfig,
-    featureFlags: mergedFeatureFlags
-  };
-}
+  res.json({
+    profile: {
+      fullName: profile.full_name || 'Student',
+      email: profile.email || null,
+      categoryId: profile.category_id || null,
+      branchId: profile.branch_id || null,
+      semesterId: profile.semester_id || null,
+      categoryName: profile.category_name || null,
+      branchName: profile.branch_name || null,
+      semesterLabel: profile.semester_label || null,
+      careerInterest: profile.career_interest || null
+    },
+    membership: {
+      tier: membership?.tier || profile.subscription_tier || 'free',
+      premiumActive: isPremium,
+      status: membership?.status || 'free',
+      statusLabel: membership?.statusLabel || 'Free'
+    },
+    stats: {
+      xp: Number(stats.xp || 0),
+      streak: Number(stats.streak || 0),
+      roadmapProgress: Number(stats.roadmap_progress || 0),
+      certificates: Number(stats.certificates || 0),
+      savedNotes: Number(stats.saved_notes || 0)
+    },
+    hero: {
+      title: `Welcome back, ${String(profile.full_name || 'Student').split(' ')[0]}`,
+      subtitle: profile.branch_name
+        ? `Your ${profile.branch_name} dashboard is ready.`
+        : 'Complete your academic profile to unlock branch-based personalization.'
+    },
+    config: {
+      home: config.home,
+      dashboard: config.dashboard,
+      featureFlags: config.featureFlags,
+      contributions: config.contributions
+    }
+  });
+});
 
 router.get('/stats', requireAuth, async (req, res) => {
   const userId = req.session.userId;

@@ -618,39 +618,11 @@
     if (!byId('homeDashboard')) return;
 
     const user = window.collegeOsCurrentUser || null;
-
-    const [personalized, stats, academic, quizzes, mockDash, roadmap, notesMine, experienceCfg] = await Promise.all([
-      safeCall(() => window.CollegeOSApi.getPersonalizedDashboard(), null),
-      safeCall(() => window.CollegeOSApi.getDashboardStats(), null),
-      safeCall(() => window.CollegeOSApi.getStudentAcademicProfile(), null),
-      safeCall(() => window.CollegeOSApi.getMyQuizAttempts(), { attempts: [] }),
-      safeCall(() => window.CollegeOSApi.getMockTestsDashboard(), null),
-      safeCall(() => window.CollegeOSApi.getRoadmap(), null),
-      safeCall(() => window.CollegeOSApi.getMyNotes(), { notes: [] }),
-      safeCall(() => window.CollegeOSApi.getStudentExperienceConfig(), null)
-    ]);
-
-    const runtimeExperienceConfig = experienceCfg?.config || experienceCfg || null;
-
-    const pStats = personalized?.stats || {};
-    const dStats = stats || {};
-
-    const consolidated = {
-      streak: toNum(pStats.streak, toNum(dStats.streak, 0)),
-      xp: toNum(pStats.xp, toNum(dStats.xp, 0)),
-      roadmapProgress: clampPercent(toNum(pStats.roadmapProgress, toNum(dStats.roadmapProgress, 0))),
-      achievements: toNum(pStats.certificates, toNum(dStats.certificates, 0))
-    };
-
-    const branchLabel =
-      academic?.profile?.branch?.label ||
-      academic?.profile?.branch?.name ||
-      personalized?.profile?.branchName ||
-      'your branch';
-    const semesterLabel =
-      academic?.profile?.semester?.label ||
-      personalized?.profile?.semesterLabel ||
-      'current semester';
+    const bootstrap = await safeCall(() => window.CollegeOSApi.getDashboardBootstrap(), null);
+    const bootstrapProfile = bootstrap?.profile || {};
+    const bootstrapStats = bootstrap?.stats || {};
+    const bootstrapConfig = bootstrap?.config || null;
+    const bootstrapMembership = bootstrap?.membership || {};
 
     const heroTitle = byId('heroTitle');
     const heroSubtitle = byId('heroSubtitle');
@@ -661,22 +633,62 @@
     const heroStreakValue = byId('heroStreakValue');
     const heroMilestoneValue = byId('heroMilestoneValue');
 
-    if (heroTitle) heroTitle.textContent = `Welcome back, ${firstNameOf(user)}`;
+    const branchLabel = bootstrapProfile.branchName || 'your branch';
+    const semesterLabel = bootstrapProfile.semesterLabel || 'current semester';
+    const criticalStats = {
+      streak: toNum(bootstrapStats.streak, 0),
+      xp: toNum(bootstrapStats.xp, 0),
+      roadmapProgress: clampPercent(bootstrapStats.roadmapProgress),
+      achievements: toNum(bootstrapStats.certificates, 0)
+    };
+
+    if (heroTitle) heroTitle.textContent = bootstrap?.hero?.title || `Welcome back, ${firstNameOf(user)}`;
     if (heroSubtitle) {
-      heroSubtitle.textContent =
-        personalized?.hero?.subtitle ||
-        `Your dashboard is personalized for ${branchLabel}. Keep daily momentum across quizzes, roadmap, and revision.`;
+      heroSubtitle.textContent = bootstrap?.hero?.subtitle || `Your dashboard is personalized for ${branchLabel}.`;
     }
     if (heroContext) heroContext.textContent = `${safeText(branchLabel, 'Branch')} • ${safeText(semesterLabel, 'Semester')}`;
-    if (heroRoadmapPct) heroRoadmapPct.textContent = `${consolidated.roadmapProgress}%`;
-    if (heroRoadmapFill) heroRoadmapFill.style.width = `${consolidated.roadmapProgress}%`;
+    if (heroRoadmapPct) heroRoadmapPct.textContent = `${criticalStats.roadmapProgress}%`;
+    if (heroRoadmapFill) heroRoadmapFill.style.width = `${criticalStats.roadmapProgress}%`;
     if (branchHeadline) branchHeadline.textContent = `Optimized for ${safeText(branchLabel, 'your track')} and ${safeText(semesterLabel, 'your term')}.`;
-    if (heroStreakValue) heroStreakValue.textContent = `${Math.round(consolidated.streak)} day(s)`;
+    if (heroStreakValue) heroStreakValue.textContent = `${Math.round(criticalStats.streak)} day(s)`;
 
-    if (byId('statStreak')) byId('statStreak').textContent = String(consolidated.streak);
-    if (byId('statXp')) byId('statXp').textContent = String(consolidated.xp);
-    if (byId('statRoadmap')) byId('statRoadmap').textContent = `${consolidated.roadmapProgress}%`;
-    if (byId('statAchievements')) byId('statAchievements').textContent = String(consolidated.achievements);
+    if (byId('statStreak')) byId('statStreak').textContent = String(criticalStats.streak);
+    if (byId('statXp')) byId('statXp').textContent = String(criticalStats.xp);
+    if (byId('statRoadmap')) byId('statRoadmap').textContent = `${criticalStats.roadmapProgress}%`;
+    if (byId('statAchievements')) byId('statAchievements').textContent = String(criticalStats.achievements);
+
+    if (heroMilestoneValue) {
+      heroMilestoneValue.textContent = bootstrapMembership.premiumActive
+        ? 'Premium active'
+        : 'Start roadmap milestone';
+    }
+
+    applyHomeExperienceConfig(bootstrapConfig);
+
+    const [personalized, quizzes, mockDash, roadmap, notesMine] = await Promise.all([
+      safeCall(() => window.CollegeOSApi.getPersonalizedDashboard(), null),
+      safeCall(() => window.CollegeOSApi.getMyQuizAttempts(), { attempts: [] }),
+      safeCall(() => window.CollegeOSApi.getMockTestsDashboard(), null),
+      safeCall(() => window.CollegeOSApi.getRoadmap(), null),
+      safeCall(() => window.CollegeOSApi.getMyNotes(), { notes: [] })
+    ]);
+
+    const consolidated = {
+      streak: toNum(personalized?.stats?.streak, criticalStats.streak),
+      xp: toNum(personalized?.stats?.xp, criticalStats.xp),
+      roadmapProgress: clampPercent(toNum(personalized?.stats?.roadmapProgress, criticalStats.roadmapProgress)),
+      achievements: toNum(personalized?.stats?.certificates, criticalStats.achievements)
+    };
+
+    const academic = {
+      profile: {
+        branch: { label: bootstrapProfile.branchName || bootstrapProfile.branch_name || branchLabel },
+        semester: { label: bootstrapProfile.semesterLabel || bootstrapProfile.semester_label || semesterLabel },
+        weakSubjects: []
+      }
+    };
+
+    const runtimeExperienceConfig = bootstrapConfig;
 
     const tasks = (personalized?.sections?.todaysTasks || []).map((task, idx) => ({
       title: safeText(task.label, `Task ${idx + 1}`),

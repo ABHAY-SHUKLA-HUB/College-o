@@ -114,6 +114,26 @@ const PUBLIC_READ_PATHS = new Set([
   '/api/academics/branches'
 ]);
 
+const CLEAN_PAGE_ROUTES = new Map([
+  ['/login', 'index.html'],
+  ['/signup', 'index.html'],
+  ['/home', 'home.html'],
+  ['/dashboard', 'dashboard.html'],
+  ['/study', 'study.html'],
+  ['/mock-test', 'mock-tests.html'],
+  ['/mock-tests', 'mock-tests.html'],
+  ['/notes', 'notes-library.html'],
+  ['/roadmap', 'study-roadmap.html'],
+  ['/ai-tools', 'ai-tools.html'],
+  ['/live-hub', 'live-hub.html'],
+  ['/notifications', 'notifications.html'],
+  ['/profile', 'profile.html'],
+  ['/settings', 'settings.html'],
+  ['/support-dashboard', 'support-dashboard.html'],
+  ['/support-hub', 'support-hub.html'],
+  ['/contribute', 'academic-contribution-hub.html']
+]);
+
 function getRateLimitKey(req) {
   if (req.user?.id) return `user:${req.user.id}`;
   return `ip:${req.ip || 'unknown'}`;
@@ -383,6 +403,24 @@ app.use('/api/support', supportModerationRoutes);
 app.use('/api/admin/support-governance', adminSupportGovernanceRoutes);
 app.use('/api', academicsContentMgmtRoutes);
 app.use('/api', studentLibraryUnifiedRoutes);
+
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api') || req.path.startsWith('/assets/') || req.path.startsWith('/uploads/')) {
+    return next();
+  }
+
+  const pathKey = req.path.toLowerCase();
+  if (/\.html$/i.test(pathKey)) {
+    const cleanPath = pathKey.replace(/\.html$/i, '');
+    return res.redirect(302, CLEAN_PAGE_ROUTES.has(cleanPath) ? cleanPath : cleanPath || '/');
+  }
+
+  if (CLEAN_PAGE_ROUTES.has(pathKey)) {
+    return res.sendFile(path.join(__dirname, '..', CLEAN_PAGE_ROUTES.get(pathKey)));
+  }
+
+  return next();
+});
 
 app.use(express.static(path.join(__dirname, '..'), assetStaticOptions));
 

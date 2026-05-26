@@ -255,9 +255,9 @@ function createMathCaptcha(targetPrefix) {
 
 
 const captchaState = {
-  login: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false },
-  signup: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false },
-  admin: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false }
+  login: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false, retryAttempted: false },
+  signup: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false, retryAttempted: false },
+  admin: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false, retryAttempted: false }
 };
 
 const CAPTCHA_STORAGE_KEY = 'collegeOsCaptchaState';
@@ -297,6 +297,78 @@ function persistCaptcha(scope, challenge) {
   }
 }
 
+function resolveCaptchaContent(challenge) {
+  if (!challenge || typeof challenge !== 'object') return null;
+
+  const text = String(
+    challenge.question ||
+    challenge.challenge ||
+    challenge.challengeText ||
+    challenge.prompt ||
+    challenge.captchaText ||
+    ''
+  ).trim();
+
+  if (challenge.svg && String(challenge.svg).trim()) {
+    return { type: 'svg', value: String(challenge.svg) };
+  }
+
+  if (challenge.image && String(challenge.image).trim()) {
+    return { type: 'image', value: String(challenge.image) };
+  }
+
+  if (challenge.imageUrl && String(challenge.imageUrl).trim()) {
+    return { type: 'image', value: String(challenge.imageUrl) };
+  }
+
+  if (challenge.dataUrl && String(challenge.dataUrl).trim()) {
+    return { type: 'image', value: String(challenge.dataUrl) };
+  }
+
+  if (text) {
+    return { type: 'text', value: text };
+  }
+
+  return null;
+}
+
+function renderCaptchaContent(scope, challenge) {
+  const contentNode = byId(`${scope}CaptchaChallenge`);
+  const questionNode = byId(`${scope}CaptchaQuestion`);
+  const resolved = resolveCaptchaContent(challenge);
+
+  if (questionNode && challenge) {
+    const label = resolved?.type === 'text' ? resolved.value : 'Captcha challenge';
+    questionNode.textContent = label;
+  }
+
+  if (!contentNode) return resolved;
+
+  contentNode.innerHTML = '';
+
+  if (!resolved) {
+    contentNode.textContent = '';
+    return null;
+  }
+
+  if (resolved.type === 'svg') {
+    contentNode.innerHTML = resolved.value;
+    return resolved;
+  }
+
+  if (resolved.type === 'image') {
+    const img = document.createElement('img');
+    img.alt = 'CAPTCHA challenge';
+    img.src = resolved.value;
+    img.loading = 'eager';
+    contentNode.appendChild(img);
+    return resolved;
+  }
+
+  contentNode.textContent = resolved.value;
+  return resolved;
+}
+
 function getCaptchaElements(scope) {
   const box = byId(`${scope}CaptchaBox`);
   const question = byId(`${scope}CaptchaQuestion`);
@@ -313,21 +385,25 @@ function getCaptchaElements(scope) {
 }
 
 function setCaptchaUiState(scope, { loading = false, message = '', error = false } = {}) {
-  const { box, question, input, refreshButton, status, submitButton } = getCaptchaElements(scope);
+  const { box, input, refreshButton, status, submitButton } = getCaptchaElements(scope);
   if (box) box.classList.toggle('is-loading', loading);
-  if (question && message) question.textContent = message;
   if (status) status.textContent = message && (loading || error) ? message : '';
   if (input) input.disabled = loading;
   if (refreshButton) refreshButton.disabled = loading;
   if (submitButton) submitButton.disabled = loading || !captchaState[scope].ready;
 }
 
-function setCaptchaReady(scope, ready, message = '') {
-  captchaState[scope].ready = Boolean(ready);
+function setCaptchaReady(scope, ready, message = '', challenge = null) {
+  const content = challenge || captchaState[scope].serverChallenge;
+  const hasContent = Boolean(resolveCaptchaContent(content));
+  captchaState[scope].ready = Boolean(ready && hasContent);
+  renderCaptchaContent(scope, content);
   setCaptchaUiState(scope, {
     loading: false,
-    message: message || (ready ? 'Captcha ready.' : 'Preparing secure CAPTCHA...'),
-    error: !ready
+    message: captchaState[scope].ready
+      ? (message || 'Captcha ready.')
+      : (message || 'Captcha could not load. Refresh captcha.'),
+    error: !captchaState[scope].ready
   });
 }
 
@@ -349,13 +425,8 @@ async function refreshCaptcha(scope, { force = false } = {}) {
   }
 
   if (!force && currentChallenge) {
-    const expiresAt = Number(currentChallenge.expiresAt || 0);
-    if (!expiresAt || expiresAt - now > 15000) {
-      const questionNode = byId(`${scope}CaptchaQuestion`);
-      if (questionNode && currentChallenge.question) {
-        questionNode.textContent = currentChallenge.question;
-      }
-      setCaptchaReady(scope, true);
+    if (isChallengeFresh(currentChallenge, 15000)) {
+      setCaptchaReady(scope, true, 'Captcha ready.', currentChallenge);
       return currentChallenge;
     }
   }
@@ -365,25 +436,17 @@ async function refreshCaptcha(scope, { force = false } = {}) {
     if (persistedChallenge) {
       captchaState[scope].serverChallenge = persistedChallenge;
       captchaState[scope].lastFetched = Number(persistedChallenge.fetchedAt || now);
-      const questionNode = byId(`${scope}CaptchaQuestion`);
-      if (questionNode && persistedChallenge.question) {
-        questionNode.textContent = persistedChallenge.question;
-      }
       if (Number.isInteger(Number(persistedChallenge.a)) && Number.isInteger(Number(persistedChallenge.b))) {
         captchaState[scope].answer = String(Number(persistedChallenge.a) + Number(persistedChallenge.b));
       }
-      setCaptchaReady(scope, true);
+      setCaptchaReady(scope, true, 'Captcha ready.', persistedChallenge);
       return persistedChallenge;
     }
   }
 
   if (currentChallenge && !force) {
     // Use cached challenge
-    const questionNode = byId(`${scope}CaptchaQuestion`);
-    if (questionNode && currentChallenge.question) {
-      questionNode.textContent = currentChallenge.question;
-    }
-    setCaptchaReady(scope, true);
+    setCaptchaReady(scope, true, 'Captcha ready.', currentChallenge);
     return currentChallenge;
   }
 
@@ -395,26 +458,29 @@ async function refreshCaptcha(scope, { force = false } = {}) {
   try {
     if (window.CollegeOSApi?.getCaptchaChallenge) {
       const payload = await window.CollegeOSApi.getCaptchaChallenge(force ? { forceRefresh: true } : {});
-      const challenge = payload?.captcha || null;
+      const challenge = payload?.captcha || payload || null;
       if (captchaState[scope].requestId !== requestId) return captchaState[scope].serverChallenge;
       captchaState[scope].serverChallenge = challenge;
       captchaState[scope].lastFetched = Date.now();
       if (challenge) {
         persistCaptcha(scope, { ...challenge, fetchedAt: captchaState[scope].lastFetched });
       }
-      if (challenge?.question) {
-        const questionNode = byId(`${scope}CaptchaQuestion`);
-        if (questionNode) questionNode.textContent = challenge.question;
-      }
       if (Number.isInteger(Number(challenge?.a)) && Number.isInteger(Number(challenge?.b))) {
         captchaState[scope].answer = String(Number(challenge.a) + Number(challenge.b));
       }
-      setCaptchaReady(scope, Boolean(challenge), challenge ? 'Captcha ready.' : 'Captcha unavailable. Tap refresh to retry.');
+      const resolvedContent = resolveCaptchaContent(challenge);
+      captchaState[scope].retryAttempted = false;
+      if (!resolvedContent && !force && !captchaState[scope].retryAttempted) {
+        captchaState[scope].retryAttempted = true;
+        return refreshCaptcha(scope, { force: true });
+      }
+      setCaptchaReady(scope, Boolean(resolvedContent), resolvedContent ? 'Captcha ready.' : 'Captcha could not load. Refresh captcha.', challenge);
     }
   } catch {
     captchaState[scope].serverChallenge = null;
     if (captchaState[scope].requestId === requestId) {
-      setCaptchaReady(scope, false, 'Captcha unavailable. Tap refresh to retry.');
+      captchaState[scope].retryAttempted = false;
+      setCaptchaReady(scope, false, 'Captcha could not load. Refresh captcha.', null);
     }
   } finally {
     if (captchaState[scope].requestId === requestId) {
@@ -454,7 +520,7 @@ async function ensureCaptchaPayload(scope) {
   }
   payload = getCaptchaPayload(scope);
   if (!payload) {
-    throw new Error('Captcha service is unavailable. Please refresh the captcha and try again.');
+    throw new Error('Captcha could not load. Refresh captcha.');
   }
   return payload;
 }
@@ -1580,7 +1646,7 @@ function bindEmailLogin() {
     setAuthMessages('login');
 
     if (!verifyCaptcha('login')) {
-      setAuthMessages('login', 'Captcha answer is incorrect. Please try again.');
+      setAuthMessages('login', captchaState.login.ready ? 'Captcha answer is incorrect. Please try again.' : 'Captcha could not load. Refresh captcha.');
       return;
     }
 
@@ -1616,7 +1682,7 @@ function bindEmailLogin() {
     } catch (error) {
       const message = error?.message || 'Login failed';
       if (/captcha/i.test(message)) {
-        setAuthMessages('login', 'Captcha verification failed or unavailable. Please refresh the captcha and try again.');
+        setAuthMessages('login', 'Captcha could not load. Refresh captcha.');
       } else if (/too many failed attempts/i.test(message)) {
         const otpInput = byId('mobileNumber');
         if (otpInput) otpInput.value = email;
@@ -1652,7 +1718,7 @@ function bindMobileOtp() {
     setAuthMessages('login');
 
     if (!verifyCaptcha('login')) {
-      setAuthMessages('login', 'Captcha answer is incorrect. Please try again.');
+      setAuthMessages('login', captchaState.login.ready ? 'Captcha answer is incorrect. Please try again.' : 'Captcha could not load. Refresh captcha.');
       return;
     }
 
@@ -1683,7 +1749,7 @@ function bindMobileOtp() {
     } catch (error) {
       const msg = error?.message || 'Failed to send OTP';
       if (/captcha/i.test(msg)) {
-        setAuthMessages('login', 'Captcha verification failed or unavailable. Please refresh the captcha and try again.');
+        setAuthMessages('login', 'Captcha could not load. Refresh captcha.');
       } else {
         setAuthMessages('login', msg);
       }
@@ -1716,7 +1782,7 @@ function bindMobileOtp() {
     } catch (error) {
       const msg = error?.message || 'OTP verification failed';
       if (/captcha/i.test(msg)) {
-        setAuthMessages('login', 'Captcha verification failed or unavailable. Please refresh the captcha and try again.');
+        setAuthMessages('login', 'Captcha could not load. Refresh captcha.');
       } else {
         setAuthMessages('login', msg);
       }
@@ -1745,7 +1811,7 @@ function bindMobileOtp() {
       } catch (error) {
         const msg = error?.message || 'Unable to resend OTP';
         if (/captcha/i.test(msg)) {
-          setAuthMessages('login', 'Captcha verification failed or unavailable. Please refresh the captcha and try again.');
+          setAuthMessages('login', 'Captcha could not load. Refresh captcha.');
         } else {
           setAuthMessages('login', msg);
         }
@@ -1905,7 +1971,7 @@ function bindSignup() {
     }
 
     if (!verifyCaptcha('signup')) {
-      setAuthMessages('signup', 'Captcha answer is incorrect. Please try again.');
+      setAuthMessages('signup', captchaState.signup.ready ? 'Captcha answer is incorrect. Please try again.' : 'Captcha could not load. Refresh captcha.');
       return;
     }
 
@@ -2306,8 +2372,8 @@ document.addEventListener('DOMContentLoaded', () => {
   bindOnboarding();
 
   // Start CAPTCHA generation immediately so the login form does not wait on slower bootstrap work.
-  setCaptchaReady('login', false, 'Preparing secure CAPTCHA...');
-  setCaptchaReady('signup', false, 'Preparing secure CAPTCHA...');
+  setCaptchaReady('login', false, 'Preparing secure CAPTCHA...', null);
+  setCaptchaReady('signup', false, 'Preparing secure CAPTCHA...', null);
   void refreshCaptcha('login');
   void refreshCaptcha('signup');
 

@@ -948,12 +948,39 @@
       gap: 8px;
     }
 
+    .captcha-challenge {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 10px;
+      padding: 12px 12px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(15, 123, 108, 0.12);
+      color: #123; 
+      overflow: hidden;
+      word-break: break-word;
+      min-height: 0;
+    }
+
+    .captcha-challenge svg,
+    .captcha-challenge img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .captcha-challenge code {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.92rem;
+    }
+
     .captcha-status {
       margin: 0;
       color: #5f6c7b;
       font-size: 0.78rem;
       font-weight: 600;
-      min-height: 1.1em;
+      min-height: 1em;
     }
 
     .captcha-box.is-loading .captcha-status {
@@ -1018,8 +1045,44 @@
       line-height: 1.4;
     }
 
-    .form-error { color: #b91c1c; }
-    .form-success { color: #166534; }
+    .form-error {
+      color: #9f1239;
+      background: rgba(190, 24, 93, 0.08);
+      border: 1px solid rgba(190, 24, 93, 0.14);
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+
+    .form-success {
+      color: #166534;
+      background: rgba(22, 101, 52, 0.08);
+      border: 1px solid rgba(22, 101, 52, 0.12);
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+
+    .captcha-box .field {
+      margin: 0;
+    }
+
+    .captcha-actions {
+      align-items: center;
+    }
+
+    .captcha-actions .btn-tertiary {
+      align-self: flex-end;
+      min-width: 44px;
+      height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 12px;
+      border-radius: 10px;
+    }
+
+    .captcha-box .field input {
+      min-height: 44px;
+    }
 
     .auth-footer {
       margin-top: 22px;
@@ -2625,6 +2688,7 @@
 
             <div class="captcha-box" id="loginCaptchaBox">
               <p class="captcha-question"><i class="fa-solid fa-shield"></i> <span id="loginCaptchaQuestion">Loading captcha...</span></p>
+              <div class="captcha-challenge" id="loginCaptchaChallenge" aria-live="polite"></div>
               <p class="captcha-status" id="loginCaptchaStatus" aria-live="polite"></p>
               <div class="captcha-actions">
                 <div class="field">
@@ -2662,7 +2726,7 @@
             </form>
           </div>
 
-          <p id="loginError" class="form-error"></p>
+          <p id="loginError" class="form-error" role="alert" aria-live="assertive"></p>
           <p id="loginSuccess" class="form-success"></p>
 
           <div class="auth-footer">
@@ -2777,6 +2841,7 @@
 
               <div class="captcha-box" id="signupCaptchaBox">
                 <p class="captcha-question"><i class="fa-solid fa-shield"></i> <span id="signupCaptchaQuestion">Loading captcha...</span></p>
+                <div class="captcha-challenge" id="signupCaptchaChallenge" aria-live="polite"></div>
                 <p class="captcha-status" id="signupCaptchaStatus" aria-live="polite"></p>
                 <div class="captcha-actions">
                   <div class="field">
@@ -2801,7 +2866,7 @@
             <button id="signupSubmitBtn" class="btn-full btn-primary hidden" type="submit"><i class="fa-solid fa-user-check"></i> Create Account</button>
           </form>
 
-          <p id="signupError" class="form-error"></p>
+          <p id="signupError" class="form-error" role="alert" aria-live="assertive"></p>
           <p id="signupSuccess" class="form-success"></p>
 
           <div class="auth-footer">

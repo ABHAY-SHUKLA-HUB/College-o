@@ -155,7 +155,11 @@ function buildCaptchaChallenge(_req) {
   const payload = `${a}:${b}:${expiresAt}:${nonce}`;
   const signature = crypto.createHmac('sha256', CAPTCHA_SECRET).update(payload).digest('hex');
   return {
+    id: nonce,
     question: `${a} + ${b} = ?`,
+    challengeText: `${a} + ${b} = ?`,
+    prompt: `${a} + ${b} = ?`,
+    captchaText: `${a} + ${b} = ?`,
     a,
     b,
     expiresAt,
@@ -482,7 +486,17 @@ router.get('/captcha/challenge', (req, res) => {
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
   const challenge = buildCaptchaChallenge(req);
-  res.json({ captcha: challenge, expiresInSeconds: Math.floor(CAPTCHA_TTL_MS / 1000) });
+  res.json({
+    id: challenge.id,
+    captcha: challenge,
+    question: challenge.question,
+    challenge: challenge.challengeText,
+    challengeText: challenge.challengeText,
+    prompt: challenge.prompt,
+    captchaText: challenge.captchaText,
+    expiresAt: challenge.expiresAt,
+    expiresInSeconds: Math.floor(CAPTCHA_TTL_MS / 1000)
+  });
 });
 
 router.post('/signup', async (req, res) => {

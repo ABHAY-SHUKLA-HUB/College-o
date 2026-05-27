@@ -85,6 +85,7 @@ function parseOrigins(input) {
 }
 
 const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
+const PROD_BACKEND_ORIGIN = 'https://college-o.onrender.com';
 const jitsiDomain = String(process.env.JITSI_DOMAIN || 'meet.jit.si').trim() || 'meet.jit.si';
 const productionFrontendOrigins = [
   'https://college-o.vercel.app',
@@ -228,14 +229,12 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       // Allow the Jitsi external API and Agora SDK to be loaded as scripts.
       // Inline HTML pages in this app still depend on embedded scripts.
-      scriptSrc: ["'self'", "'unsafe-inline'", `https://${jitsiDomain}`, 'https://meet.jit.si', 'https://download.agora.io'],
       scriptSrc: ["'self'", "'unsafe-inline'", `https://${jitsiDomain}`, 'https://meet.jit.si', 'https://download.agora.io', 'https://accounts.google.com', 'https://www.gstatic.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'https:'],
       // Allow framing Jitsi (embedded meeting) from meet.jit.si
       frameSrc: ["'self'", `https://${jitsiDomain}`, 'https://meet.jit.si'],
-      connectSrc: ["'self'", `https://${jitsiDomain}`, 'https://meet.jit.si', 'https://download.agora.io'],
-        connectSrc: ["'self'", `https://${jitsiDomain}`, 'https://meet.jit.si', 'https://download.agora.io', 'https://accounts.google.com', 'https://oauth2.googleapis.com'],
+      connectSrc: ["'self'", PROD_BACKEND_ORIGIN, `https://${jitsiDomain}`, 'https://meet.jit.si', 'https://download.agora.io', 'https://accounts.google.com', 'https://oauth2.googleapis.com'],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       upgradeInsecureRequests: isProduction ? [] : []
@@ -423,6 +422,24 @@ app.use((req, res, next) => {
   }
 
   return next();
+});
+
+app.get('/favicon.ico', (_req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+  res.type('image/svg+xml');
+  return res.send(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="College OS">
+      <defs>
+        <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#0f172a" />
+          <stop offset="100%" stop-color="#2563eb" />
+        </linearGradient>
+      </defs>
+      <rect width="64" height="64" rx="16" fill="url(#g)" />
+      <path d="M18 22h28v6H18zM18 32h20v6H18zM18 42h28v4H18z" fill="#fff" opacity="0.95" />
+      <circle cx="46" cy="18" r="6" fill="#f59e0b" />
+    </svg>
+  `);
 });
 
 app.use(express.static(path.join(__dirname, '..'), assetStaticOptions));

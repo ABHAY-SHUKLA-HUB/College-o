@@ -51,7 +51,7 @@ function verifyCaptchaPayload(req, captcha) {
     return false;
   }
   if (Date.now() > expiresAt) return false;
-  const payload = `${a}:${b}:${expiresAt}:${nonce}:${getRequesterIp(req)}`;
+  const payload = `${a}:${b}:${expiresAt}:${nonce}`;
   const expected = crypto.createHmac('sha256', CAPTCHA_SECRET).update(payload).digest('hex');
   return expected === signature && answer === a + b;
 }

@@ -354,12 +354,30 @@
               </div>
               <div class="co-admin-field">
                 <label>Provider Mode</label>
-                <select name="providerMode"><option value="azure_openai">azure_openai</option><option value="fallback_only">fallback_only</option></select>
+                <select name="providerMode"><option value="aws_bedrock">aws_bedrock</option><option value="azure_openai">azure_openai</option><option value="openai">openai</option><option value="anthropic">anthropic</option><option value="custom_rest">custom_rest</option><option value="fallback_only">fallback_only</option></select>
               </div>
-              <div class="co-admin-field full"><label>Azure Endpoint</label><input name="azureEndpoint" placeholder="https://<resource>.openai.azure.com" /></div>
-              <div class="co-admin-field full"><label>Azure API Key (masked on load)</label><input name="azureApiKey" type="password" autocomplete="new-password" spellcheck="false" placeholder="Paste new key only when rotating" /></div>
-              <div class="co-admin-field"><label>Deployment / Model Name</label><input name="azureDeployment" placeholder="gpt-4o-mini" /></div>
-              <div class="co-admin-field"><label>API Version</label><input name="azureApiVersion" placeholder="2024-02-15-preview" /></div>
+              <div class="co-admin-field"><label>AWS Region</label><input name="awsRegion" placeholder="us-east-1" /></div>
+              <div class="co-admin-field"><label>AWS Access Key ID</label><input name="awsAccessKey" placeholder="AKIA..." /></div>
+              <div class="co-admin-field"><label>AWS Secret Access Key</label><input name="awsSecretKey" type="password" autocomplete="new-password" spellcheck="false" placeholder="Paste new key when rotating" /></div>
+              <div class="co-admin-field"><label>AWS Session Token (optional)</label><input name="awsSessionToken" type="password" autocomplete="new-password" spellcheck="false" placeholder="Optional STS session token" /></div>
+              <div class="co-admin-field"><label>Bedrock Model ID</label><input name="awsModel" placeholder="anthropic.claude-3-haiku-20240307-v1:0" /></div>
+              <div class="co-admin-field"><label>AWS Endpoint URL (optional)</label><input name="awsEndpoint" placeholder="https://bedrock-runtime.us-east-1.amazonaws.com" /></div>
+              <div class="co-admin-field"><label>Azure Endpoint</label><input name="azureEndpoint" placeholder="https://resource.openai.azure.com" /></div>
+              <div class="co-admin-field"><label>Azure API Key (masked on load)</label><input name="azureApiKey" type="password" autocomplete="new-password" spellcheck="false" placeholder="Paste new key only when rotating" /></div>
+              <div class="co-admin-field"><label>Azure Deployment Name</label><input name="azureDeployment" placeholder="gpt-4o-mini" /></div>
+              <div class="co-admin-field"><label>Azure API Version</label><input name="azureApiVersion" placeholder="2024-02-15-preview" /></div>
+              <div class="co-admin-field"><label>OpenAI API Key</label><input name="openAiApiKey" type="password" autocomplete="new-password" spellcheck="false" placeholder="sk-..." /></div>
+              <div class="co-admin-field"><label>OpenAI Model</label><input name="openAiModel" placeholder="gpt-4o-mini" /></div>
+              <div class="co-admin-field"><label>Anthropic API Key</label><input name="anthropicApiKey" type="password" autocomplete="new-password" spellcheck="false" placeholder="sk-ant-..." /></div>
+              <div class="co-admin-field"><label>Anthropic Model</label><input name="anthropicModel" placeholder="claude-3-5-sonnet-latest" /></div>
+              <div class="co-admin-field"><label>Custom API Endpoint</label><input name="customEndpoint" placeholder="https://api.example.com/ai" /></div>
+              <div class="co-admin-field"><label>Custom API Key</label><input name="customApiKey" type="password" autocomplete="new-password" spellcheck="false" placeholder="Bearer token or key" /></div>
+              <div class="co-admin-field full"><label>Custom Headers JSON</label><textarea name="customHeadersJson" rows="2" placeholder='{"x-tenant":"college-os"}'></textarea></div>
+              <div class="co-admin-field full"><label>Custom Request Template (JSON)</label><textarea name="customRequestTemplate" rows="3" placeholder='{"extraContext":"..."}'></textarea></div>
+              <div class="co-admin-field"><label>Max Tokens</label><input name="providerMaxTokens" type="number" min="100" value="900" /></div>
+              <div class="co-admin-field"><label>Temperature</label><input name="providerTemperature" type="number" min="0" max="1.2" step="0.05" value="0.3" /></div>
+              <div class="co-admin-field"><label>Timeout (ms)</label><input name="providerTimeoutMs" type="number" min="1000" value="15000" /></div>
+              <div class="co-admin-field"><label>Retry Count</label><input name="providerRetryCount" type="number" min="0" max="6" value="1" /></div>
             </div>
             <div class="control-actions" style="margin-top: 10px;">
               <button class="btn primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Save Global Settings</button>
@@ -396,6 +414,12 @@
               <div class="co-admin-field"><label>Timeout (ms)</label><input type="number" name="timeoutMs" min="1500" /></div>
               <div class="co-admin-field"><label>Retry Count</label><input type="number" name="retryCount" min="0" max="5" /></div>
               <div class="co-admin-field"><label>Provider Preference</label><select name="providerPreference"><option value="azure_openai">azure_openai</option><option value="fallback_only">fallback_only</option></select></div>
+              <div class="co-admin-field"><label>Fallback Provider</label><select name="fallbackProviderOverride"><option value="">none</option><option value="aws_bedrock">aws_bedrock</option><option value="azure_openai">azure_openai</option><option value="openai">openai</option><option value="anthropic">anthropic</option><option value="custom_rest">custom_rest</option></select></div>
+              <div class="co-admin-field"><label>Tool Model Override</label><input name="modelOverride" placeholder="provider-specific model id" /></div>
+              <div class="co-admin-field"><label>Tool Endpoint Override</label><input name="endpointOverride" placeholder="override endpoint (optional)" /></div>
+              <div class="co-admin-field"><label>Fallback Model Override</label><input name="fallbackModelOverride" placeholder="fallback model id" /></div>
+              <div class="co-admin-field"><label>Cache TTL (sec)</label><input type="number" name="cacheTtlSec" min="0" value="1800" /></div>
+              <div class="co-admin-field"><label>Dedupe Window (ms)</label><input type="number" name="dedupeWindowMs" min="0" value="8000" /></div>
               <div class="co-admin-field"><label>Allow Azure</label><select name="allowAzure"><option value="true">Yes</option><option value="false">No</option></select></div>
               <div class="co-admin-field full"><label>Admin Notes</label><textarea name="adminNotes" rows="3"></textarea></div>
             </div>

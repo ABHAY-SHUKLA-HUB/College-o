@@ -1,4 +1,8 @@
 /dashboard.html /dashboard 301
+/admin-dashboard.html /admin-dashboard 301
+/admin-login.html /admin-login 301
+/admin-ai-tools.html /admin-ai-tools 301
+/admin-control.html /admin-control 301
 /home.html /home 301
 /study.html /study 301
 /mock-tests.html /mock-tests 301
@@ -18,6 +22,10 @@
 
 /home /home.html 200
 /dashboard /dashboard.html 200
+/admin-dashboard /admin-dashboard.html 200
+/admin-login /admin-login.html 200
+/admin-ai-tools /admin-ai-tools.html 200
+/admin-control /admin-control.html 200
 /study /study.html 200
 /mock-test /mock-tests.html 200
 /mock-tests /mock-tests.html 200

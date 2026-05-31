@@ -17,6 +17,22 @@
       "destination": "/dashboard.html"
     },
     {
+      "source": "/admin-dashboard",
+      "destination": "/admin-dashboard.html"
+    },
+    {
+      "source": "/admin-login",
+      "destination": "/admin-login.html"
+    },
+    {
+      "source": "/admin-ai-tools",
+      "destination": "/admin-ai-tools.html"
+    },
+    {
+      "source": "/admin-control",
+      "destination": "/admin-control.html"
+    },
+    {
       "source": "/study",
       "destination": "/study.html"
     },
@@ -81,6 +97,26 @@
     {
       "source": "/dashboard.html",
       "destination": "/dashboard",
+      "permanent": true
+    },
+    {
+      "source": "/admin-dashboard.html",
+      "destination": "/admin-dashboard",
+      "permanent": true
+    },
+    {
+      "source": "/admin-login.html",
+      "destination": "/admin-login",
+      "permanent": true
+    },
+    {
+      "source": "/admin-ai-tools.html",
+      "destination": "/admin-ai-tools",
+      "permanent": true
+    },
+    {
+      "source": "/admin-control.html",
+      "destination": "/admin-control",
       "permanent": true
     },
     {

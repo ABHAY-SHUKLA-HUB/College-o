@@ -65,8 +65,15 @@ const authBootstrapState = {
 
 async function warmDashboardBootstrap() {
   if (!window.CollegeOSApi?.warmupRequests) return;
-  const warmupFn = window.CollegeOSApi.warmupRequestsOnce || window.CollegeOSApi.warmupRequests;
-  await warmupFn('auth:dashboard-bootstrap', DASHBOARD_BOOTSTRAP_PATHS);
+  const warmupOnce = window.CollegeOSApi.warmupRequestsOnce;
+  const warmupMany = window.CollegeOSApi.warmupRequests;
+  if (typeof warmupOnce === 'function') {
+    await warmupOnce('warmup:auth-dashboard-bootstrap', DASHBOARD_BOOTSTRAP_PATHS);
+    return;
+  }
+  if (typeof warmupMany === 'function') {
+    await warmupMany(DASHBOARD_BOOTSTRAP_PATHS);
+  }
 }
 
 function getFieldHost(input) {
@@ -585,6 +592,21 @@ async function ensureCaptchaPayload(scope) {
     throw new Error('Captcha could not load. Refresh captcha.');
   }
   return payload;
+}
+
+async function waitForSessionReady(timeoutMs = 5000, intervalMs = 300) {
+  if (!window.CollegeOSApi) return null;
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const payload = await window.CollegeOSApi.getMe();
+      if (payload && payload.user) return payload.user;
+    } catch (e) {
+      // ignore and retry
+    }
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  return null;
 }
 
 function evaluatePasswordStrength(password) {
@@ -1887,6 +1909,14 @@ function bindEmailLogin() {
       const captcha = await ensureCaptchaPayload('login');
       await window.CollegeOSApi.login({ email, password, rememberMe, captcha });
 
+      // Wait for session cookie to be available and /api/auth/me to return the user
+      const sessionUser = await waitForSessionReady(6000);
+      if (!sessionUser) {
+        setAuthMessages('login', '', 'Login successful. Finalizing session...');
+        // Try one more time before proceeding
+        await new Promise((r) => setTimeout(r, 400));
+      }
+
       localStorage.setItem('collegeOsRememberEmail', rememberMe ? email : '');
       setAuthMessages('login', '', 'Login successful. Preparing your dashboard...');
       await completePostLoginFlow();
@@ -2010,6 +2040,8 @@ function bindMobileOtp() {
     try {
       const captcha = await ensureCaptchaPayload('login');
       await window.CollegeOSApi.loginWithEmailOtp({ email, code: otp, captcha });
+      // Wait for session to be established server-side
+      await waitForSessionReady(6000);
       setAuthMessages('login', '', 'OTP verified. Welcome back.');
       await completePostLoginFlow();
     } catch (error) {

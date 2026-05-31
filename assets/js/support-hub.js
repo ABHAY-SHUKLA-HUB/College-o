@@ -32,8 +32,24 @@
 
       if (!response.ok) {
         if (response.status === 403) {
-          alert('Please complete your academic profile first');
-          window.location.href = 'academic-onboarding.html';
+          const payload = await response.json().catch(() => ({}));
+          const message = String(payload.error || 'Access denied').trim();
+          if (/profile incomplete/i.test(message) || /academic profile/i.test(message)) {
+            alert('Please complete your academic profile first');
+            window.location.href = 'academic-onboarding.html';
+            return;
+          }
+          const container = document.getElementById('requests-container');
+          if (container) {
+            container.innerHTML = `
+              <div class="empty-state">
+                <div class="empty-icon"><i class="fas fa-lock"></i></div>
+                <h3 class="empty-title">Support Access Restricted</h3>
+                <p class="empty-desc">${escapeHtml(message)}</p>
+              </div>
+            `;
+          }
+          return;
         }
         throw new Error('Failed to load requests');
       }
@@ -120,6 +136,10 @@
   async function updateStats() {
     try {
       const response = await fetch('/api/support/requests?limit=1000', { credentials: 'include' });
+      if (!response.ok) {
+        if (response.status === 403) return;
+        throw new Error('Failed to load support stats');
+      }
       const data = await response.json();
       const requests = Array.isArray(data.requests) ? data.requests : [];
 

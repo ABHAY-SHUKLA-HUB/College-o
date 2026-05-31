@@ -1,3 +1,17 @@
+// Polyfill: allow calling `.closest()` on non-Element nodes (like Text) by delegating to parentElement
+try {
+  if (typeof Node !== 'undefined' && !Node.prototype.closest) {
+    Node.prototype.closest = function closestPolyfill(selector) {
+      if (this.nodeType === 1) {
+        return Element.prototype.closest.call(this, selector);
+      }
+      return this.parentElement ? this.parentElement.closest(selector) : null;
+    };
+  }
+} catch (e) {
+  // best-effort; do not break if prototype is not writable
+}
+
 const navGroups = [
   {
     title: 'Main',
@@ -372,6 +386,8 @@ function getWarmupPathsForTarget(target) {
 function prefetchDocument(href) {
   if (!href || href.startsWith('#')) return;
   if (/^(mailto:|tel:|javascript:)/i.test(href)) return;
+  // Ignore non-http(s) or scheme-prefixed routes like "route:/..." which are internal markers
+  if (/^[a-zA-Z0-9+.-]+:/i.test(href) && !/^https?:/i.test(href) && !/^file:/i.test(href)) return;
 
   const resolved = new URL(href, window.location.href).toString();
   if (prefetchedDocuments.has(resolved)) return;
@@ -391,13 +407,21 @@ function warmupRouteData(target) {
   if (!window.CollegeOSApi?.warmupRequests) return;
   const paths = getWarmupPathsForTarget(target);
   if (!paths.length) return;
-  const routeKey = String(target || '').trim();
+  const rawTarget = String(target || '').trim();
+  const routeKey = normalizeHrefTarget(rawTarget) || rawTarget.replace(/^route:/i, '').replace(/^\/+/, '');
   if (routeKey) {
     if (warmedRouteKeys.has(routeKey)) return;
     warmedRouteKeys.add(routeKey);
   }
-  const warmupFn = window.CollegeOSApi.warmupRequestsOnce || window.CollegeOSApi.warmupRequests;
-  warmupFn(`route:${routeKey || paths.join('|')}`, paths).catch(() => null);
+  const warmupOnce = window.CollegeOSApi.warmupRequestsOnce;
+  const warmupMany = window.CollegeOSApi.warmupRequests;
+  if (typeof warmupOnce === 'function') {
+    warmupOnce(`warmup:${routeKey || paths.join('|')}`, paths).catch(() => null);
+    return;
+  }
+  if (typeof warmupMany === 'function') {
+    warmupMany(paths).catch(() => null);
+  }
 }
 
 function primeNavigationTarget(target) {
@@ -422,8 +446,22 @@ function primeNavigationTarget(target) {
 function bindNavigationPrefetch() {
   const selector = 'a[href], button[data-live-hub-toggle]';
 
+  function closestAncestor(node, sel) {
+    try {
+      // If node is not an Element (text node), use parentElement
+      let el = node && node.nodeType === 1 ? node : node && node.parentElement ? node.parentElement : null;
+      while (el) {
+        if (typeof el.matches === 'function' && el.matches(sel)) return el;
+        el = el.parentElement;
+      }
+    } catch (e) {
+      // best-effort
+    }
+    return null;
+  }
+
   const handle = (event) => {
-    const target = event.target.closest(selector);
+    const target = closestAncestor(event.target, selector);
     if (!target) return;
     primeNavigationTarget(target);
   };
@@ -432,7 +470,7 @@ function bindNavigationPrefetch() {
   document.addEventListener('focusin', handle, true);
 
   document.addEventListener('click', async (event) => {
-    const liveHubButton = event.target.closest('[data-live-hub-toggle]');
+    const liveHubButton = closestAncestor(event.target, '[data-live-hub-toggle]');
     if (!liveHubButton || window.CollegeOSLiveHub) return;
 
     event.preventDefault();
@@ -704,24 +742,67 @@ async function hydrateCommonStats() {
 
 async function applyAuthGuard() {
   if (!window.CollegeOSApi) return;
+  setContentLoadingState(true);
   let user = null;
-  try {
-    const result = await window.CollegeOSApi.getMe();
-    user = result.user;
-  } catch {
+  let lastError = null;
+
+  const checkOnce = async () => {
+    try {
+      const result = await window.CollegeOSApi.getMe();
+      return { ok: true, user: result.user };
+    } catch (err) {
+      return { ok: false, error: err };
+    }
+  };
+
+  // Try initial check
+  let res = await checkOnce();
+  if (!res.ok) {
+    lastError = res.error;
+    // Retry once for transient network issues
+    await new Promise((r) => setTimeout(r, 400));
+    res = await checkOnce();
+    if (!res.ok) {
+      lastError = res.error;
+    }
+  }
+
+  if (res.ok) {
+    user = res.user;
+  }
+
+  window.collegeOsCurrentUser = user;
+
+  // If explicit unauthorized, redirect to login for protected pages
+  if (!user && lastError && (lastError.status === 401 || lastError.status === 403)) {
     if (!publicPage()) {
+      setContentLoadingState(false);
       goToRoute('/login', { replace: true });
       return;
     }
   }
-  window.collegeOsCurrentUser = user;
-  if (!user && !publicPage()) {
+
+  // If no user and no explicit auth error, avoid aggressive redirect — allow public pages and proceed on transient failures
+  if (!user && !publicPage() && !lastError) {
+    // No session but no error (unexpected) — redirect conservatively
+    setContentLoadingState(false);
     goToRoute('/login', { replace: true });
     return;
   }
-  if (user && ['login.html', 'signup.html', 'login', 'signup', 'index.html'].includes(pageName())) {
-    goToRoute('/dashboard', { replace: true });
+
+  if (!user && !publicPage() && lastError) {
+    // Non-auth error (network) — do not redirect immediately; show a gentle message and keep loading off.
+    setContentLoadingState(false);
+    return;
   }
+
+  if (user && ['login.html', 'signup.html', 'login', 'signup', 'index.html'].includes(pageName())) {
+    setContentLoadingState(false);
+    goToRoute('/dashboard', { replace: true });
+    return;
+  }
+
+  setContentLoadingState(false);
 }
 
 async function enforceAcademicOnboarding() {
@@ -985,8 +1066,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         '/api/notifications/unread-count',
         '/api/contributions/config'
       ];
-      const warmupFn = window.CollegeOSApi.warmupRequestsOnce || window.CollegeOSApi.warmupRequests;
-      warmupFn('shell:dashboard-bootstrap', warmupPaths).catch(() => null);
+      const warmupOnce = window.CollegeOSApi.warmupRequestsOnce;
+      const warmupMany = window.CollegeOSApi.warmupRequests;
+      if (typeof warmupOnce === 'function') {
+        warmupOnce('warmup:dashboard-bootstrap', warmupPaths).catch(() => null);
+      } else if (typeof warmupMany === 'function') {
+        warmupMany(warmupPaths).catch(() => null);
+      }
     }
 
     const backgroundTasks = [

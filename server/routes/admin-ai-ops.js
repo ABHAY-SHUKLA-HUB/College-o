@@ -26,6 +26,19 @@ const {
   getAiAnalytics,
   simulatePromptAndOutput
 } = require('../services/aiOpsService');
+const {
+  ensureAiGatewaySchema,
+  listProviderConfigsForAdmin,
+  upsertProviderConfig,
+  activateProvider,
+  getProviderConfig,
+  listToolConfigs,
+  upsertToolConfig,
+  getActivePromptTemplate,
+  upsertPromptTemplate
+} = require('../ai/services/configRepository');
+const { getAiGatewayAnalytics } = require('../ai/analytics/analyticsService');
+const { runProvider } = require('../ai/providers');
 
 const router = express.Router();
 
@@ -35,10 +48,100 @@ router.use(presets.loose);
 router.use(async (_req, _res, next) => {
   try {
     await ensureAiOpsSchema();
+    await ensureAiGatewaySchema();
     next();
   } catch (error) {
     next(error);
   }
+});
+
+router.get('/enterprise/providers', async (_req, res) => {
+  const providers = await listProviderConfigsForAdmin();
+  return res.json({ providers });
+});
+
+router.put('/enterprise/providers/:providerKey', async (req, res) => {
+  const providerKey = String(req.params.providerKey || '').trim();
+  const providers = await upsertProviderConfig({
+    ...(req.body || {}),
+    providerKey
+  }, req.session.userId);
+  return res.json({ providers });
+});
+
+router.post('/enterprise/providers/:providerKey/activate', async (req, res) => {
+  const providerKey = String(req.params.providerKey || '').trim();
+  const providers = await activateProvider(providerKey, req.session.userId);
+  return res.json({ providers });
+});
+
+router.post('/enterprise/providers/:providerKey/test', async (req, res) => {
+  const providerKey = String(req.params.providerKey || '').trim();
+  const provider = await getProviderConfig(providerKey);
+  if (!provider) return res.status(404).json({ ok: false, error: 'Provider config not found.' });
+
+  try {
+    const started = Date.now();
+    const result = await runProvider(provider, {
+      prompt: {
+        systemPrompt: 'Return exactly one line: HEALTHY',
+        userPrompt: 'Connection test from College OS admin panel.'
+      },
+      toolConfig: {
+        temperature: 0,
+        max_tokens: 48,
+        timeout_ms: Number(provider.timeout_ms || 12000),
+        retry_count: 0
+      },
+      context: { toolKey: 'health-check' }
+    });
+
+    return res.json({
+      ok: true,
+      provider: providerKey,
+      latencyMs: Date.now() - started,
+      sample: String(result?.text || '').slice(0, 180)
+    });
+  } catch (error) {
+    return res.status(200).json({
+      ok: false,
+      provider: providerKey,
+      error: error.message || 'Provider test failed.',
+      code: error.code || 'PROVIDER_TEST_FAILED'
+    });
+  }
+});
+
+router.get('/enterprise/tools', async (_req, res) => {
+  const tools = await listToolConfigs();
+  return res.json({ tools });
+});
+
+router.put('/enterprise/tools/:toolKey', async (req, res) => {
+  const toolKey = String(req.params.toolKey || '').trim();
+  if (!TOOL_KEYS.includes(toolKey)) return res.status(404).json({ error: 'Unknown feature tool key.' });
+  const tool = await upsertToolConfig(toolKey, req.body || {}, req.session.userId);
+  return res.json({ tool });
+});
+
+router.get('/enterprise/prompts/:toolKey', async (req, res) => {
+  const toolKey = String(req.params.toolKey || '').trim();
+  if (!TOOL_KEYS.includes(toolKey)) return res.status(404).json({ error: 'Unknown feature tool key.' });
+  const prompt = await getActivePromptTemplate(toolKey);
+  return res.json({ prompt });
+});
+
+router.put('/enterprise/prompts/:toolKey', async (req, res) => {
+  const toolKey = String(req.params.toolKey || '').trim();
+  if (!TOOL_KEYS.includes(toolKey)) return res.status(404).json({ error: 'Unknown feature tool key.' });
+  const prompt = await upsertPromptTemplate(toolKey, req.body || {}, req.session.userId);
+  return res.json({ prompt });
+});
+
+router.get('/enterprise/analytics', async (req, res) => {
+  const days = Number(req.query.days || 30);
+  const analytics = await getAiGatewayAnalytics(days);
+  return res.json(analytics);
 });
 
 router.get('/settings/global', async (_req, res) => {

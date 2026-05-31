@@ -30,7 +30,20 @@ function inferDefaultApiUrl() {
 
   const { protocol, hostname, origin } = window.location;
   const explicitBase = window.API_BASE_URL || window.API_URL || window.VITE_API_URL || window.CollegeOSApiConfig?.apiUrl;
-  if (explicitBase) return normalizeUrl(explicitBase, PROD_BACKEND_ORIGIN);
+  if (explicitBase) {
+    const normalized = normalizeUrl(explicitBase, PROD_BACKEND_ORIGIN);
+    if (isProductionFrontendHost(hostname)) {
+      try {
+        const explicitHost = new URL(normalized).hostname.toLowerCase();
+        if (explicitHost === 'localhost' || explicitHost === '127.0.0.1') {
+          return PROD_BACKEND_ORIGIN;
+        }
+      } catch {
+        return PROD_BACKEND_ORIGIN;
+      }
+    }
+    return normalized;
+  }
 
   if (isProductionFrontendHost(hostname)) {
     return PROD_BACKEND_ORIGIN;
@@ -128,8 +141,8 @@ const apiUrl = normalizeUrl(
 const apiOrigin = new URL(apiUrl).origin;
 
 window.API_URL = apiUrl;
-window.API_BASE_URL = window.API_BASE_URL || apiUrl;
-window.VITE_API_URL = window.VITE_API_URL || apiUrl;
+window.API_BASE_URL = apiUrl;
+window.VITE_API_URL = apiUrl;
 window.CollegeOSApiConfig = {
   ...(window.CollegeOSApiConfig || {}),
   apiUrl,
@@ -139,6 +152,9 @@ window.CollegeOSApiConfig = {
 
 function resolveApiUrl(path) {
   if (typeof path !== 'string') return path;
+  if (/^route:/i.test(path)) {
+    throw new Error(`Invalid API path marker: ${path}`);
+  }
   if (path.startsWith('/api/')) {
     return new URL(path, apiUrl).toString();
   }
@@ -693,7 +709,9 @@ async function warmupRequests(paths = []) {
     if (typeof entry === 'string') return entry;
     if (entry && typeof entry === 'object' && typeof entry.path === 'string') return entry.path;
     return '';
-  }).filter(Boolean))];
+  }).filter(Boolean).filter((entry) => isApiRequestUrl(entry)))];
+
+  if (!uniquePaths.length) return [];
 
   return Promise.allSettled(
     uniquePaths.map((entry) => request(entry, { method: 'GET' }))
@@ -759,6 +777,10 @@ window.CollegeOSApiClient = {
 
 // Global compatibility layer: direct fetch('/api/...') calls still get CSRF header.
 window.fetch = async function wrappedFetch(input, init = undefined) {
+  if (typeof input === 'string' && /^(route|shell|auth):/i.test(input.trim())) {
+    return Promise.reject(new Error(`Blocked internal fetch marker: ${input}`));
+  }
+
   if (!isApiRequestUrl(input)) {
     return rawFetch(input, init);
   }
@@ -935,6 +957,15 @@ window.CollegeOSApi = {
     method: 'PUT',
     body: JSON.stringify({ entitlements, campaignLabel })
   }),
+  adminAiOpsEnterpriseProviders: () => apiFetch('/api/admin/ai-ops/enterprise/providers'),
+  adminAiOpsEnterpriseUpsertProvider: (providerKey, payload = {}) => apiFetch(`/api/admin/ai-ops/enterprise/providers/${encodeURIComponent(providerKey)}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  adminAiOpsEnterpriseActivateProvider: (providerKey) => apiFetch(`/api/admin/ai-ops/enterprise/providers/${encodeURIComponent(providerKey)}/activate`, { method: 'POST' }),
+  adminAiOpsEnterpriseTestProvider: (providerKey) => apiFetch(`/api/admin/ai-ops/enterprise/providers/${encodeURIComponent(providerKey)}/test`, { method: 'POST' }),
+  adminAiOpsEnterpriseTools: () => apiFetch('/api/admin/ai-ops/enterprise/tools'),
+  adminAiOpsEnterpriseUpdateTool: (toolKey, payload = {}) => apiFetch(`/api/admin/ai-ops/enterprise/tools/${encodeURIComponent(toolKey)}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  adminAiOpsEnterprisePrompt: (toolKey) => apiFetch(`/api/admin/ai-ops/enterprise/prompts/${encodeURIComponent(toolKey)}`),
+  adminAiOpsEnterpriseUpdatePrompt: (toolKey, payload = {}) => apiFetch(`/api/admin/ai-ops/enterprise/prompts/${encodeURIComponent(toolKey)}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  adminAiOpsEnterpriseAnalytics: (days = 30) => apiFetch(`/api/admin/ai-ops/enterprise/analytics?days=${encodeURIComponent(days)}`),
   getProfile: () => apiFetch('/api/profile/me'),
   updateProfile: (data) => apiFetch('/api/profile/me', { method: 'PUT', body: JSON.stringify(data) }),
   changePassword: (data) => apiFetch('/api/profile/me/password', { method: 'PUT', body: JSON.stringify(data) }),
@@ -965,6 +996,11 @@ window.CollegeOSApi = {
     method: 'POST',
     body: JSON.stringify({ toolKey, inputs })
   }),
+  generateAiToolByRoute: (toolRoute, payload = {}) => apiFetch(`/api/ai/${encodeURIComponent(toolRoute)}`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  }),
+  getAiToolStreamUrlByRoute: (toolRoute) => `/api/ai/${encodeURIComponent(toolRoute)}/stream`,
   aiStudioChat: (prompt) => apiFetch('/api/career/ai-tools/studio/chat', {
     method: 'POST',
     body: JSON.stringify({ prompt })

@@ -16,6 +16,7 @@ const quizRoutes = require('./routes/quizzes');
 const mockRoutes = require('./routes/mockTests');
 const roadmapRoutes = require('./routes/roadmaps');
 const careerRoutes = require('./routes/career');
+const aiRoutes = require('./routes/ai');
 const notesRoutes = require('./routes/notes');
 const certificateRoutes = require('./routes/certificates');
 const leaderboardRoutes = require('./routes/leaderboard');
@@ -297,7 +298,9 @@ app.use((req, res, next) => {
   }
 
   const willAllow = isAllowedOrigin || (hasOrigin && CORS_ALLOW_ALL);
-  if (willAllow) {
+  // In development, be more permissive for localhost origins so credentialed requests work during local testing.
+  const willAllowDev = !isProduction && hasOrigin;
+  if (willAllow || willAllowDev) {
     // Echo origin back to allow credentialed requests from arbitrary origins
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
@@ -421,6 +424,7 @@ app.use('/api/quizzes', quizRoutes);
 app.use('/api/mock-tests', mockRoutes);
 app.use('/api/roadmaps', roadmapRoutes);
 app.use('/api/career', careerRoutes);
+app.use('/api/ai', aiRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);

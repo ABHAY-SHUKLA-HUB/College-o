@@ -3,9 +3,9 @@ const { pool } = require('../db/pool');
 const { requireAuth, requireAdmin, resolveMembershipState } = require('../middleware/auth');
 const {
   ensureAiOpsSchema,
-  executeManagedAiToolGeneration,
   getStudentAiRuntimeConfig
 } = require('../services/aiOpsService');
+const { generateAiToolResponse } = require('../ai/services/gatewayService');
 
 const router = express.Router();
 
@@ -764,7 +764,7 @@ router.post('/ai-tools/generate', requireAuth, async (req, res) => {
     ? (await loadRoadmapsForUser(userId)).roadmaps
     : [];
 
-  const generated = await executeManagedAiToolGeneration({
+  let generated = await generateAiToolResponse({
     userId,
     toolKey,
     tool,
@@ -823,7 +823,7 @@ router.post('/ai-tools/studio/chat', requireAuth, async (req, res) => {
 
   const toolKey = /what|why|how|explain|concept/i.test(userInput) ? 'concept-explainer' : 'doubt-solver';
   const tool = (toolsPayload.tools || []).find((item) => item.tool_key === toolKey);
-  const generated = await executeManagedAiToolGeneration({
+  const generated = await generateAiToolResponse({
     userId,
     toolKey,
     tool,
@@ -856,7 +856,7 @@ router.post('/ai-tools/studio/quiz-from-notes', requireAuth, async (req, res) =>
   }
 
   const tool = (toolsPayload.tools || []).find((item) => item.tool_key === 'quiz-generator');
-  const generated = await executeManagedAiToolGeneration({
+  const generated = await generateAiToolResponse({
     userId,
     toolKey: 'quiz-generator',
     tool,
@@ -885,7 +885,7 @@ router.post('/ai-tools/studio/session-summary', requireAuth, async (req, res) =>
   }
 
   const tool = (toolsPayload.tools || []).find((item) => item.tool_key === 'notes-summary');
-  const generated = await executeManagedAiToolGeneration({
+  const generated = await generateAiToolResponse({
     userId,
     toolKey: 'notes-summary',
     tool,
@@ -974,7 +974,7 @@ router.post('/ai-tools/studio/recommendations', requireAuth, async (req, res) =>
   const toolsPayload = await loadAiToolsForUser(userId);
   const goal = String(req.body?.goal || req.body?.targetGoal || '').trim();
   const tool = (toolsPayload.tools || []).find((item) => item.tool_key === 'roadmap-recommender');
-  const generated = await executeManagedAiToolGeneration({
+  const generated = await generateAiToolResponse({
     userId,
     toolKey: 'roadmap-recommender',
     tool,

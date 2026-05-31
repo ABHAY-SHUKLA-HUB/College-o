@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     analytics: null,
     editingToolId: null,
     globalSettings: null,
+    enterpriseProviders: [],
+    enterpriseToolConfigs: [],
     catalogFilter: {
       query: '',
       access: 'all',
@@ -300,6 +302,111 @@ document.addEventListener('DOMContentLoaded', async () => {
     refs.globalForm.azureApiKey.placeholder = settings.azureApiKeyConfigured ? 'Key is configured. Paste new key only when rotating.' : 'Paste new key only when rotating';
     refs.globalForm.azureDeployment.value = settings.azureDeployment || '';
     refs.globalForm.azureApiVersion.value = settings.azureApiVersion || '2024-02-15-preview';
+
+    // Keep provider fields blank by default for secure key rotation UX.
+    refs.globalForm.awsSecretKey.value = '';
+    refs.globalForm.awsSessionToken.value = '';
+    refs.globalForm.openAiApiKey.value = '';
+    refs.globalForm.anthropicApiKey.value = '';
+    refs.globalForm.customApiKey.value = '';
+  }
+
+  function activeProviderKey() {
+    return safeText(refs.globalForm?.providerMode?.value || state.globalSettings?.providerMode || 'fallback_only');
+  }
+
+  function fillProviderSpecificFields() {
+    if (!refs.globalForm) return;
+    const selected = activeProviderKey();
+    const provider = state.enterpriseProviders.find((item) => safeText(item.provider_key) === selected) || null;
+
+    refs.globalForm.awsRegion.value = provider?.region || '';
+    refs.globalForm.awsAccessKey.value = provider?.access_key_masked || '';
+    refs.globalForm.awsModel.value = provider?.model_name || '';
+    refs.globalForm.awsEndpoint.value = provider?.endpoint_url || '';
+    refs.globalForm.azureEndpoint.value = provider?.endpoint_url || refs.globalForm.azureEndpoint.value || '';
+    refs.globalForm.azureDeployment.value = provider?.deployment_name || provider?.model_name || refs.globalForm.azureDeployment.value || '';
+    refs.globalForm.azureApiVersion.value = provider?.api_version || refs.globalForm.azureApiVersion.value || '2024-02-15-preview';
+    refs.globalForm.openAiModel.value = provider?.model_name || refs.globalForm.openAiModel.value || '';
+    refs.globalForm.anthropicModel.value = provider?.model_name || refs.globalForm.anthropicModel.value || '';
+    refs.globalForm.customEndpoint.value = provider?.endpoint_url || refs.globalForm.customEndpoint.value || '';
+    refs.globalForm.customHeadersJson.value = provider?.headers_json ? JSON.stringify(provider.headers_json, null, 2) : '';
+    refs.globalForm.customRequestTemplate.value = provider?.request_template || '';
+    refs.globalForm.providerMaxTokens.value = provider?.max_tokens || refs.globalForm.providerMaxTokens.value || 900;
+    refs.globalForm.providerTemperature.value = provider?.temperature || refs.globalForm.providerTemperature.value || 0.3;
+    refs.globalForm.providerTimeoutMs.value = provider?.timeout_ms || refs.globalForm.providerTimeoutMs.value || 15000;
+    refs.globalForm.providerRetryCount.value = provider?.retry_count || refs.globalForm.providerRetryCount.value || 1;
+
+    refs.globalForm.awsAccessKey.placeholder = provider?.access_key_masked ? 'Configured (masked). Paste new key only to rotate.' : 'AKIA...';
+    refs.globalForm.awsSecretKey.placeholder = provider?.secret_key_masked ? 'Configured (masked). Paste new key only to rotate.' : 'Paste new key';
+    refs.globalForm.awsSessionToken.placeholder = provider?.session_token_masked ? 'Configured (masked). Paste new token only to rotate.' : 'Optional token';
+    refs.globalForm.azureApiKey.placeholder = provider?.api_key_masked ? 'Configured (masked). Paste new key only to rotate.' : 'Paste key';
+    refs.globalForm.openAiApiKey.placeholder = provider?.api_key_masked ? 'Configured (masked). Paste new key only to rotate.' : 'sk-...';
+    refs.globalForm.anthropicApiKey.placeholder = provider?.api_key_masked ? 'Configured (masked). Paste new key only to rotate.' : 'sk-ant-...';
+    refs.globalForm.customApiKey.placeholder = provider?.api_key_masked ? 'Configured (masked). Paste new key only to rotate.' : 'API key';
+  }
+
+  function parseJsonInput(rawText, fallback = {}) {
+    const text = safeText(rawText, 30000);
+    if (!text) return fallback;
+    try {
+      const parsed = JSON.parse(text);
+      return parsed && typeof parsed === 'object' ? parsed : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function renderEnterpriseProviderOptions() {
+    if (!refs.globalForm) return;
+
+    const providerSelect = refs.globalForm.providerMode;
+    if (!providerSelect) return;
+
+    const options = ['fallback_only']
+      .concat(state.enterpriseProviders.map((provider) => safeText(provider.provider_key)).filter(Boolean));
+    const unique = Array.from(new Set(options));
+
+    providerSelect.innerHTML = unique.map((providerKey) => (
+      `<option value="${esc(providerKey)}">${esc(providerKey)}</option>`
+    )).join('');
+
+    const current = safeText(state.globalSettings?.providerMode || 'fallback_only');
+    providerSelect.value = unique.includes(current) ? current : 'fallback_only';
+
+    if (refs.featureForm?.providerPreference) {
+      refs.featureForm.providerPreference.innerHTML = unique.map((providerKey) => (
+        `<option value="${esc(providerKey)}">${esc(providerKey)}</option>`
+      )).join('');
+      if (state.selectedToolKey) {
+        const feature = currentFeature();
+        if (feature?.provider_preference) {
+          refs.featureForm.providerPreference.value = feature.provider_preference;
+        }
+      }
+    }
+  }
+
+  async function loadEnterpriseProviderState() {
+    if (!api.adminAiOpsEnterpriseProviders) return;
+    try {
+      const payload = await api.adminAiOpsEnterpriseProviders();
+      state.enterpriseProviders = payload.providers || [];
+      renderEnterpriseProviderOptions();
+      fillProviderSpecificFields();
+    } catch (_error) {
+      // Keep legacy form flow if enterprise provider APIs are not available.
+    }
+  }
+
+  async function loadEnterpriseToolConfigs() {
+    if (!api.adminAiOpsEnterpriseTools) return;
+    try {
+      const payload = await api.adminAiOpsEnterpriseTools();
+      state.enterpriseToolConfigs = payload.tools || payload.toolConfigs || [];
+    } catch {
+      state.enterpriseToolConfigs = [];
+    }
   }
 
   function currentFeature() {
@@ -323,6 +430,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     refs.featureForm.timeoutMs.value = feature.timeout_ms ?? 12000;
     refs.featureForm.retryCount.value = feature.retry_count ?? 1;
     refs.featureForm.providerPreference.value = feature.provider_preference || 'azure_openai';
+    const enterprise = state.enterpriseToolConfigs.find((item) => item.tool_key === state.selectedToolKey) || {};
+    refs.featureForm.fallbackProviderOverride.value = enterprise.fallback_provider_override || '';
+    refs.featureForm.modelOverride.value = enterprise.model_override || '';
+    refs.featureForm.endpointOverride.value = enterprise.endpoint_override || '';
+    refs.featureForm.fallbackModelOverride.value = enterprise.fallback_model_override || '';
+    refs.featureForm.cacheTtlSec.value = enterprise.cache_ttl_sec ?? 1800;
+    refs.featureForm.dedupeWindowMs.value = enterprise.dedupe_window_ms ?? 8000;
     refs.featureForm.allowAzure.value = boolToString(Boolean(feature.allow_azure));
     refs.featureForm.adminNotes.value = feature.admin_notes || '';
   }
@@ -331,6 +445,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const payload = await api.adminAiOpsGlobalSettings();
     state.globalSettings = payload.settings || {};
     fillGlobalSettings(state.globalSettings);
+    await loadEnterpriseProviderState();
     renderHealthPills();
   }
 
@@ -350,6 +465,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       refs.featureToolSelect.value = state.selectedToolKey;
     }
 
+    fillFeatureForm();
+    await loadEnterpriseToolConfigs();
     fillFeatureForm();
     await loadPromptForSelectedTool();
   }
@@ -577,9 +694,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   refs.globalForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
+    const providerMode = refs.globalForm.providerMode.value;
     const payload = {
       aiEnabled: refs.globalForm.aiEnabled.value === 'true',
-      providerMode: refs.globalForm.providerMode.value,
+      providerMode,
       azureEndpoint: refs.globalForm.azureEndpoint.value.trim(),
       azureDeployment: refs.globalForm.azureDeployment.value.trim(),
       azureApiVersion: refs.globalForm.azureApiVersion.value.trim()
@@ -591,6 +709,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     await api.adminAiOpsUpdateGlobalSettings(payload);
+
+    if (api.adminAiOpsEnterpriseUpsertProvider && providerMode !== 'fallback_only') {
+      const providerPayload = {
+        displayName: providerMode,
+        isActive: true,
+        region: refs.globalForm.awsRegion.value.trim() || null,
+        modelName: (providerMode === 'azure_openai' ? refs.globalForm.azureDeployment.value : providerMode === 'openai' ? refs.globalForm.openAiModel.value : providerMode === 'anthropic' ? refs.globalForm.anthropicModel.value : refs.globalForm.awsModel.value).trim() || null,
+        endpointUrl: (providerMode === 'azure_openai' ? refs.globalForm.azureEndpoint.value : providerMode === 'custom_rest' ? refs.globalForm.customEndpoint.value : refs.globalForm.awsEndpoint.value).trim() || null,
+        apiVersion: refs.globalForm.azureApiVersion.value.trim() || null,
+        deploymentName: refs.globalForm.azureDeployment.value.trim() || null,
+        maxTokens: Number(refs.globalForm.providerMaxTokens.value || 900),
+        temperature: Number(refs.globalForm.providerTemperature.value || 0.3),
+        timeoutMs: Number(refs.globalForm.providerTimeoutMs.value || 15000),
+        retryCount: Number(refs.globalForm.providerRetryCount.value || 1),
+        headersJson: parseJsonInput(refs.globalForm.customHeadersJson.value, {}),
+        requestTemplate: refs.globalForm.customRequestTemplate.value.trim() || null
+      };
+
+      if (providerMode === 'aws_bedrock') {
+        if (refs.globalForm.awsAccessKey.value.trim() && !refs.globalForm.awsAccessKey.value.includes('*')) providerPayload.accessKey = refs.globalForm.awsAccessKey.value.trim();
+        if (refs.globalForm.awsSecretKey.value.trim()) providerPayload.secretKey = refs.globalForm.awsSecretKey.value.trim();
+        if (refs.globalForm.awsSessionToken.value.trim()) providerPayload.sessionToken = refs.globalForm.awsSessionToken.value.trim();
+      }
+      if (providerMode === 'azure_openai' && refs.globalForm.azureApiKey.value.trim()) providerPayload.apiKey = refs.globalForm.azureApiKey.value.trim();
+      if (providerMode === 'openai' && refs.globalForm.openAiApiKey.value.trim()) providerPayload.apiKey = refs.globalForm.openAiApiKey.value.trim();
+      if (providerMode === 'anthropic' && refs.globalForm.anthropicApiKey.value.trim()) providerPayload.apiKey = refs.globalForm.anthropicApiKey.value.trim();
+      if (providerMode === 'custom_rest' && refs.globalForm.customApiKey.value.trim()) providerPayload.apiKey = refs.globalForm.customApiKey.value.trim();
+
+      await api.adminAiOpsEnterpriseUpsertProvider(providerMode, providerPayload);
+      await api.adminAiOpsEnterpriseActivateProvider(providerMode);
+    }
+
     setStatus('Global AI settings saved.', 'success');
     await loadGlobalSettings();
   });
@@ -599,18 +749,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     refs.connectionTestBtn.disabled = true;
     refs.connectionTestStatus.textContent = 'Running connection test...';
     try {
-      const payload = {
-        aiEnabled: refs.globalForm.aiEnabled.value === 'true',
-        providerMode: refs.globalForm.providerMode.value,
-        azureEndpoint: refs.globalForm.azureEndpoint.value.trim(),
-        azureDeployment: refs.globalForm.azureDeployment.value.trim(),
-        azureApiVersion: refs.globalForm.azureApiVersion.value.trim()
-      };
-      const rotatedKey = refs.globalForm.azureApiKey.value.trim();
-      if (rotatedKey) {
-        payload.azureApiKey = rotatedKey;
-      }
-      const result = await api.adminAiOpsTestConnection(payload);
+      const selectedProvider = activeProviderKey();
+      const result = api.adminAiOpsEnterpriseTestProvider
+        ? await api.adminAiOpsEnterpriseTestProvider(selectedProvider)
+        : await api.adminAiOpsTestConnection({
+            aiEnabled: refs.globalForm.aiEnabled.value === 'true',
+            providerMode: selectedProvider,
+            azureEndpoint: refs.globalForm.azureEndpoint.value.trim(),
+            azureDeployment: refs.globalForm.azureDeployment.value.trim(),
+            azureApiVersion: refs.globalForm.azureApiVersion.value.trim()
+          });
       refs.connectionTestStatus.textContent = result.message || (result.ok ? 'Connection healthy.' : 'Connection failed; fallback mode active.');
     } catch (error) {
       refs.connectionTestStatus.textContent = error.message || 'Connection test failed.';
@@ -647,6 +795,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     await api.adminAiOpsUpdateFeature(state.selectedToolKey, payload);
+
+    if (api.adminAiOpsEnterpriseUpdateTool) {
+      await api.adminAiOpsEnterpriseUpdateTool(state.selectedToolKey, {
+        enabled: payload.featureEnabled,
+        maintenanceMode: payload.maintenanceMode,
+        premiumOnly: payload.planAccess === 'premium' || !payload.isFree,
+        dailyLimit: payload.dailyUsageLimit,
+        monthlyLimit: payload.monthlyUsageLimit,
+        maxTokens: payload.maxOutputTokens,
+        temperature: payload.temperature,
+        timeoutMs: payload.timeoutMs,
+        retryCount: payload.retryCount,
+        providerOverride: refs.featureForm.providerPreference.value,
+        fallbackProviderOverride: refs.featureForm.fallbackProviderOverride.value || null,
+        modelOverride: refs.featureForm.modelOverride.value.trim() || null,
+        endpointOverride: refs.featureForm.endpointOverride.value.trim() || null,
+        fallbackModelOverride: refs.featureForm.fallbackModelOverride.value.trim() || null,
+        cacheTtlSec: Number(refs.featureForm.cacheTtlSec.value || 1800),
+        dedupeWindowMs: Number(refs.featureForm.dedupeWindowMs.value || 8000),
+        freeDailyLimit: payload.isFree ? payload.dailyUsageLimit : 0,
+        freeMonthlyLimit: payload.isFree ? payload.monthlyUsageLimit : 0
+      });
+    }
+
     setStatus(`Feature settings saved for ${state.selectedToolKey}.`, 'success');
     await loadFeatureSettings();
   });
@@ -799,6 +971,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       await Promise.all([
         loadGlobalSettings(),
         loadFeatureSettings(),
+        loadEnterpriseToolConfigs(),
         loadCatalogCards(),
         loadAnalyticsAndLogs(),
         loadPlanEntitlements()
@@ -829,6 +1002,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   setupSectionNav();
+  refs.globalForm?.providerMode?.addEventListener('change', () => {
+    fillProviderSpecificFields();
+  });
 
   try {
     setStatus('Loading AI operations panel...');
@@ -836,6 +1012,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       loadAcademicOptions(),
       loadGlobalSettings(),
       loadFeatureSettings(),
+      loadEnterpriseToolConfigs(),
       loadCatalogCards(),
       loadAnalyticsAndLogs(),
       loadPlanEntitlements()

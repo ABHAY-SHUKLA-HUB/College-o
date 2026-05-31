@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@azure/storage-blob": "^12.31.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.823.0",
     "@fortawesome/fontawesome-free": "^6.5.2",
     "@socket.io/redis-adapter": "^7.1.1",
     "agora-access-token": "^2.0.4",

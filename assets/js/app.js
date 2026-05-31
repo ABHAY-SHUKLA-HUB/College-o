@@ -833,12 +833,19 @@ function ensureLiveHubScript() {
 }
 
 function bindAdminShortcut() {
-  document.addEventListener('keydown', (event) => {
-    const isShortcut = event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'a';
-    if (!isShortcut) return;
-    event.preventDefault();
-    window.location.href = 'admin-login.html';
-  });
+  if (window.__collegeOsAdminShortcutBound) return;
+  window.__collegeOsAdminShortcutBound = true;
+  window.addEventListener('keydown', (event) => {
+    try {
+      const isCtrl = Boolean(event.ctrlKey || event.metaKey);
+      const isShift = Boolean(event.shiftKey);
+      const isA = event.code === 'KeyA' || String(event.key || '').toLowerCase() === 'a';
+      if (!isCtrl || !isShift || !isA) return;
+      event.preventDefault();
+      const target = `${window.location.origin}/admin-login.html`;
+      try { window.location.assign(target); } catch { window.location.href = target; }
+    } catch (e) { }
+  }, { passive: false });
 }
 
 function showToast(message, tone = 'info') {

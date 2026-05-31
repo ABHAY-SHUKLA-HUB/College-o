@@ -2,6 +2,9 @@ function byId(id) {
   return document.getElementById(id);
 }
 
+// Global OTP request state to prevent duplicate requests and spamming
+window.__collegeOsOtpGlobals = window.__collegeOsOtpGlobals || { inFlight: false, cooldownUntil: 0 };
+
 const PASSWORD_POLICY_MESSAGE = 'Password must be at least 6 characters and include uppercase, lowercase, number, and special character.';
 
 function isStrongSignupPassword(value) {
@@ -233,12 +236,21 @@ function initAuthEntranceMotion() {
 }
 
 function bindAdminShortcut() {
-  document.addEventListener('keydown', (event) => {
-    const isShortcut = event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'a';
-    if (!isShortcut) return;
-    event.preventDefault();
-    window.location.href = 'admin-login.html';
-  });
+  if (window.__collegeOsAdminShortcutBound) return;
+  window.__collegeOsAdminShortcutBound = true;
+  window.addEventListener('keydown', (event) => {
+    try {
+      const isCtrl = Boolean(event.ctrlKey || event.metaKey);
+      const isShift = Boolean(event.shiftKey);
+      const isA = event.code === 'KeyA' || String(event.key || '').toLowerCase() === 'a';
+      if (!isCtrl || !isShift || !isA) return;
+      event.preventDefault();
+      const target = `${window.location.origin}/admin-login.html`;
+      try { window.location.assign(target); } catch { window.location.href = target; }
+    } catch (e) {
+      // ignore
+    }
+  }, { passive: false });
 }
 
 function createMathCaptcha(targetPrefix) {
@@ -1282,19 +1294,28 @@ function getGoogleClientId() {
   return String(authExperienceState.oauth?.googleClientId || '').trim();
 }
 
+function isGoogleOAuthEnabled() {
+  if (typeof authExperienceState.oauth?.googleEnabled === 'boolean') {
+    return authExperienceState.oauth.googleEnabled;
+  }
+  return Boolean(
+    String(authExperienceState.oauth?.googleClientId || '').trim()
+    && (window.CollegeOSApiConfig?.apiUrl || window.location.origin)
+  );
+}
+
 function getActiveAuthMessagesTarget() {
   return document.querySelector('[data-auth-view]:not(.hidden)')?.dataset.authView === 'signup' ? 'signup' : 'login';
 }
 
 function renderGoogleAuthButtons() {
   const clientId = getGoogleClientId();
+  const googleEnabled = isGoogleOAuthEnabled();
   const slots = document.querySelectorAll('[data-google-auth-slot]');
 
   slots.forEach((slot) => {
     slot.replaceChildren();
-    slot.classList.toggle('hidden', !clientId);
-
-    if (!clientId) return;
+    slot.classList.remove('hidden');
 
     const button = document.createElement('button');
     button.type = 'button';
@@ -1306,12 +1327,36 @@ function renderGoogleAuthButtons() {
       <span class="google-auth-spinner" aria-hidden="true"><i class="fa-solid fa-spinner fa-spin"></i></span>
     `;
 
+    // If clientId not configured, show disabled button with clear message
+    if (!googleEnabled || !clientId) {
+      button.disabled = true;
+      button.title = 'Google login is not configured for this environment.';
+      button.querySelector('.google-auth-label').textContent = 'Continue with Google (not configured)';
+      const note = document.createElement('p');
+      note.className = 'provider-note';
+      note.textContent = 'Google login not configured. Contact administrator to enable Google sign-in.';
+      slot.appendChild(button);
+      slot.appendChild(note);
+      return;
+    }
+
+    // Build redirect URL - use backend base when available
+    const backendBase = (window.CollegeOSApiConfig && window.CollegeOSApiConfig.apiUrl) ? window.CollegeOSApiConfig.apiUrl : '';
+    const redirectUrl = (() => {
+      try {
+        if (backendBase) return new URL('/api/auth/google', backendBase).toString();
+      } catch {
+        return '/api/auth/google';
+      }
+      return '/api/auth/google';
+    })();
+
     button.addEventListener('click', () => {
       const messageTarget = getActiveAuthMessagesTarget();
       setAuthMessages(messageTarget, '', 'Redirecting to Google...');
       setLoading(button, 'Redirecting to Google', true);
       window.setTimeout(() => {
-        window.location.assign('/api/auth/google');
+        try { window.location.assign(redirectUrl); } catch (e) { window.location.href = redirectUrl; }
       }, 120);
     });
 
@@ -1396,15 +1441,30 @@ function updateSignupStepUI() {
   configureSignupFlowLayout();
   document.querySelectorAll('[data-signup-step]').forEach((section) => {
     const stepNumber = Number(section.dataset.signupStep || 1);
+    let shouldBeHidden = false;
     if (stepNumber === 2 || stepNumber === 3) {
-      section.classList.add('hidden');
-      return;
+      shouldBeHidden = true;
+    } else if (stepNumber === 4) {
+      shouldBeHidden = signupStepState.current !== 2;
+    } else {
+      shouldBeHidden = signupStepState.current !== 1;
     }
-    if (stepNumber === 4) {
-      section.classList.toggle('hidden', signupStepState.current !== 2);
-      return;
-    }
-    section.classList.toggle('hidden', signupStepState.current !== 1);
+
+    section.classList.toggle('hidden', shouldBeHidden);
+
+    // Prevent browser validation on hidden fields by disabling them
+    section.querySelectorAll('input, select, textarea').forEach((input) => {
+      if (!input) return;
+      if (shouldBeHidden) {
+        // store original required state so we can restore it
+        if (typeof input.dataset.wasRequired === 'undefined') input.dataset.wasRequired = input.required ? '1' : '0';
+        input.required = false;
+        input.disabled = true;
+      } else {
+        input.disabled = false;
+        if (input.dataset.wasRequired === '1') input.required = true;
+      }
+    });
   });
   document.querySelectorAll('[data-step-chip]').forEach((chip) => {
     const chipStep = Number(chip.dataset.stepChip || 1);
@@ -1560,6 +1620,12 @@ function bindForgotPassword() {
       return;
     }
 
+    // Quick client-side validation to avoid unnecessary server calls
+    if (!verifyCaptcha('login')) {
+      setAuthMessages('login', captchaState.login.ready ? 'Captcha answer is incorrect. Please try again.' : 'Captcha could not load. Refresh captcha.');
+      return;
+    }
+
     try {
       const captcha = await ensureCaptchaPayload('login');
       await window.CollegeOSApi.forgotPassword({
@@ -1598,7 +1664,7 @@ function canCloseSignupOtpModal() {
 
 function openSignupOtpModal({ focusInput = true } = {}) {
   const modal = byId('signupOtpModal');
-  const input = byId('signupOtpInput');
+  const otpInput = byId('signupOtpInput');
   const closeBtn = byId('signupOtpCloseBtn');
   if (!modal) return;
 
@@ -1612,8 +1678,8 @@ function openSignupOtpModal({ focusInput = true } = {}) {
     closeBtn.disabled = !canCloseSignupOtpModal();
   }
 
-  if (focusInput && input) {
-    window.setTimeout(() => input.focus(), 60);
+  if (focusInput && otpInput) {
+    window.setTimeout(() => otpInput.focus(), 60);
   }
 }
 
@@ -1694,6 +1760,19 @@ async function requestSignupVerificationCode({ isResend = false } = {}) {
   const data = signupVerificationState.pendingData;
   if (!data || signupVerificationState.requestInProgress) return false;
 
+  // Global in-flight lock and cooldown
+  window.__collegeOsOtpGlobals = window.__collegeOsOtpGlobals || { inFlight: false, cooldownUntil: 0 };
+  if (window.__collegeOsOtpGlobals.inFlight) {
+    setSignupOtpStatus('Request already in progress. Please wait.', '');
+    return false;
+  }
+  if (window.__collegeOsOtpGlobals.cooldownUntil && Date.now() < window.__collegeOsOtpGlobals.cooldownUntil) {
+    const wait = Math.ceil((window.__collegeOsOtpGlobals.cooldownUntil - Date.now()) / 1000);
+    setSignupOtpStatus(`Please wait ${wait} seconds before requesting another OTP.`, '');
+    return false;
+  }
+  window.__collegeOsOtpGlobals.inFlight = true;
+
   const triggerBtn = isResend ? byId('signupOtpResendBtn') : byId('signupSubmitBtn');
   signupVerificationState.requestInProgress = true;
   setLoading(triggerBtn, isResend ? 'Resending OTP' : 'Sending OTP', true);
@@ -1714,13 +1793,29 @@ async function requestSignupVerificationCode({ isResend = false } = {}) {
     startVerificationResendTimer(Number(payload.resendAfterSeconds || 30));
     return true;
   } catch (error) {
-    const message = normalizeAuthErrorMessage(error.message, 'Failed to send verification code.');
+    let message = normalizeAuthErrorMessage(error.message, 'Failed to send verification code.');
+    if (error?.status === 429) {
+      const retry = Number(error?.retryAfter || 0) || 30;
+      message = `Too many requests. Please wait ${retry} seconds before retrying.`;
+      // Start resend countdown so user sees when they can retry
+      try { startVerificationResendTimer(retry); } catch (e) { /* ignore */ }
+    }
     setSignupOtpStatus(message, '');
     setAuthMessages('signup', message);
     return false;
   } finally {
     signupVerificationState.requestInProgress = false;
     setLoading(triggerBtn, isResend ? 'Resend OTP' : 'Create Account', false);
+    // release in-flight lock after short delay so UI cannot spam
+    window.setTimeout(() => {
+      if (!window.__collegeOsOtpGlobals) return;
+      // if server suggested a cooldown via retryAfter, keep until then
+      const retry = Number((signupVerificationState.lastRetryAfterSeconds || 0));
+      if (retry && retry > 0) {
+        window.__collegeOsOtpGlobals.cooldownUntil = Date.now() + (retry * 1000);
+      }
+      window.__collegeOsOtpGlobals.inFlight = false;
+    }, 600);
   }
 }
 
@@ -1822,12 +1917,12 @@ function bindMobileOtp() {
   const requestForm = byId('mobileOtpRequestForm');
   const verifyForm = byId('mobileOtpVerifyForm');
   const mobileInput = byId('mobileNumber');
-  const otpInput = byId('mobileOtp');
   const sendBtn = byId('sendOtpBtn');
   const verifyBtn = byId('verifyOtpBtn');
   const resendBtn = byId('resendOtpBtn');
-
   if (!requestForm || !verifyForm) return;
+  if (requestForm.dataset.collegeosBound === '1') return;
+  requestForm.dataset.collegeosBound = '1';
 
   requestForm.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -1843,6 +1938,20 @@ function bindMobileOtp() {
       setAuthMessages('login', 'Enter a valid Gmail ID (example: yourname@gmail.com).');
       return;
     }
+
+
+    // Global in-flight lock and cooldown
+    if (window.__collegeOsOtpGlobals?.inFlight) {
+      setAuthMessages('login', 'Request already in progress. Please wait.');
+      return;
+    }
+    if (window.__collegeOsOtpGlobals?.cooldownUntil && Date.now() < window.__collegeOsOtpGlobals.cooldownUntil) {
+      const wait = Math.ceil((window.__collegeOsOtpGlobals.cooldownUntil - Date.now()) / 1000);
+      setAuthMessages('login', `Please wait ${wait} seconds before requesting another OTP.`);
+      return;
+    }
+    window.__collegeOsOtpGlobals = window.__collegeOsOtpGlobals || {};
+    window.__collegeOsOtpGlobals.inFlight = true;
 
     setLoading(sendBtn, 'Sending OTP', true);
     try {
@@ -1866,14 +1975,22 @@ function bindMobileOtp() {
       const msg = error?.message || 'Failed to send OTP';
       if (/captcha/i.test(msg)) {
         setAuthMessages('login', 'Captcha could not load. Refresh captcha.');
+      } else if (error?.status === 429) {
+        const retry = Number(error?.retryAfter || 0) || 30;
+        setAuthMessages('login', `Too many requests. Please wait ${retry} seconds before retrying.`);
+        try { startOtpResendTimer(retry, 'otpResendTimer', 'resendOtpBtn'); } catch (e) { /* ignore */ }
       } else {
         setAuthMessages('login', msg);
       }
-      if (/captcha/i.test(msg) || error?.status === 429) {
+      if (/captcha/i.test(msg)) {
         try { await refreshCaptcha('login', { force: true }); } catch { /* ignore */ }
       }
     } finally {
       setLoading(sendBtn, 'Send OTP', false);
+      // release in-flight lock after small delay to avoid immediate duplicate calls
+      window.setTimeout(() => {
+        if (window.__collegeOsOtpGlobals) window.__collegeOsOtpGlobals.inFlight = false;
+      }, 600);
     }
   });
 
@@ -1882,7 +1999,7 @@ function bindMobileOtp() {
     setAuthMessages('login');
 
     const email = String(mobileInput.value || '').trim().toLowerCase();
-    const otp = String(otpInput.value || '').trim();
+    const otp = String(byId('mobileOtp')?.value || '').trim();
 
     if (!/^[^\s@]+@gmail\.com$/i.test(email) || !/^\d{6}$/.test(otp)) {
       setAuthMessages('login', 'Enter valid Gmail ID and 6-digit OTP.');
@@ -1913,6 +2030,8 @@ function bindMobileOtp() {
   if (resendBtn) {
     resendBtn.addEventListener('click', async () => {
       if (!otpState.email || otpState.remaining > 0) return;
+      if (window.__collegeOsOtpGlobals?.inFlight) return;
+      if (window.__collegeOsOtpGlobals?.cooldownUntil && Date.now() < window.__collegeOsOtpGlobals.cooldownUntil) return;
       setLoading(resendBtn, 'Resending', true);
       try {
         const captcha = await ensureCaptchaPayload('login');
@@ -1958,11 +2077,18 @@ function bindSignupVerificationUi() {
   const resendBtn = byId('signupOtpResendBtn');
   const verifyBtn = byId('signupOtpVerifyBtn');
   const closeBtn = byId('signupOtpCloseBtn');
-  const otpInput = byId('signupOtpInput');
 
-  if (otpInput) {
-    otpInput.addEventListener('input', () => {
-      otpInput.value = String(otpInput.value || '').replace(/\D/g, '').slice(0, 6);
+  if (!modal) return;
+  if (modal.dataset.collegeosBound === '1') return;
+  modal.dataset.collegeosBound = '1';
+
+  // Use live lookup inside handler to avoid closed-over undefined variable
+  const signupOtpInputEl = byId('signupOtpInput');
+  if (signupOtpInputEl) {
+    signupOtpInputEl.addEventListener('input', () => {
+      const el = byId('signupOtpInput');
+      if (!el) return;
+      el.value = String(el.value || '').replace(/\D/g, '').slice(0, 6);
       if (byId('signupOtpError')?.textContent) {
         setSignupOtpStatus('', byId('signupOtpSuccess')?.textContent || '');
       }
@@ -1985,10 +2111,10 @@ function bindSignupVerificationUi() {
         return;
       }
 
-      const code = String(otpInput?.value || '').trim();
+      const code = String(byId('signupOtpInput')?.value || '').trim();
       if (!/^\d{6}$/.test(code)) {
         setSignupOtpStatus('OTP must be 6 digits.', '');
-        otpInput?.focus();
+        const el = byId('signupOtpInput'); if (el) el.focus();
         return;
       }
 
@@ -2067,6 +2193,8 @@ function bindSignupVerificationUi() {
 function bindSignup() {
   const form = byId('signupForm');
   if (!form) return;
+  if (form.dataset.collegeosBound === '1') return;
+  form.dataset.collegeosBound = '1';
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -2132,7 +2260,8 @@ function bindSignup() {
     if (!sent) return;
 
     setSignupOtpStatus('', 'OTP sent successfully. Enter it below to continue.');
-    if (otpInput) otpInput.value = '';
+    const otpInputEl = byId('signupOtpInput');
+    if (otpInputEl) otpInputEl.value = '';
     openSignupOtpModal({ focusInput: true });
     setAuthMessages('signup', '', 'Verification required. Complete OTP in the popup to finish signup.');
   });
@@ -2510,7 +2639,19 @@ function hydrateAuthErrorFromQuery() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  const pathname = String(window.location.pathname || '').toLowerCase();
+  const isAdminPath = pathname.startsWith('/admin') || pathname.includes('admin-login.html');
+
+  // Always load config but skip full student auth initialization on admin pages
   void loadAuthExperienceConfig();
+  if (isAdminPath) {
+    // Minimal admin-only initialization: prepare captcha utilities and admin shortcut.
+    bindAdminShortcut();
+    // Prepare admin captcha widget but do not initialize student auth UI
+    setCaptchaReady('admin', false, 'Preparing secure CAPTCHA...', null);
+    void refreshCaptcha('admin');
+    return;
+  }
   initAuthEntranceMotion();
   window.addEventListener('resize', () => {
     window.requestAnimationFrame(updateAuthTabIndicator);
@@ -2546,3 +2687,44 @@ document.addEventListener('DOMContentLoaded', () => {
   bindCategoryBranchCascades();
   hydrateRememberedFields();
 });
+
+// Fallback: ensure Google button exists even if earlier rendering failed.
+function ensureGoogleAuthButtonFallback() {
+  try {
+    const slots = document.querySelectorAll('[data-google-auth-slot]');
+    if (!slots || slots.length === 0) return;
+    slots.forEach((slot) => {
+      if (slot.querySelector('.google-auth-button')) return; // already present
+      slot.classList.remove('hidden');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.id = 'googleLoginBtn';
+      btn.className = 'google-auth-button';
+      btn.innerHTML = `<span class="google-auth-icon" aria-hidden="true"><i class="fa-brands fa-google"></i></span><span class="google-auth-label">Continue with Google</span>`;
+      const clientId = getGoogleClientId();
+      if (!clientId) {
+        btn.disabled = true;
+        btn.title = 'Google login is not configured for this environment.';
+        const note = document.createElement('p');
+        note.className = 'provider-note';
+        note.textContent = 'Google login not configured. Contact administrator to enable Google sign-in.';
+        slot.appendChild(btn);
+        slot.appendChild(note);
+        return;
+      }
+      const backendBase = (window.CollegeOSApiConfig && window.CollegeOSApiConfig.apiUrl) ? window.CollegeOSApiConfig.apiUrl : '';
+      const redirectUrl = (() => {
+        try { if (backendBase) return new URL('/api/auth/google', backendBase).toString(); } catch { return '/api/auth/google'; }
+        return '/api/auth/google';
+      })();
+      btn.addEventListener('click', () => { try { window.location.assign(redirectUrl); } catch { window.location.href = redirectUrl; } });
+      slot.appendChild(btn);
+    });
+  } catch (e) {
+    // non-fatal
+    console.warn('ensureGoogleAuthButtonFallback failed', e && e.message);
+  }
+}
+
+// Run fallback a short time after DOM ready to cover race conditions.
+window.setTimeout(() => ensureGoogleAuthButtonFallback(), 300);

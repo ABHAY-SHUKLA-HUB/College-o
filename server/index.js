@@ -68,6 +68,7 @@ const {
   notFoundHandler,
   globalErrorHandler
 } = require('./middleware/logging');
+const { requireAdmin } = require('./middleware/auth');
 
 const app = express();
 const PgSession = pgSessionFactory(session);
@@ -135,6 +136,22 @@ const CLEAN_PAGE_ROUTES = new Map([
   ['/support-hub', 'support-hub.html'],
   ['/contribute', 'academic-contribution-hub.html']
   ,['/reset-password', 'reset-password.html']
+  ,['/admin-login', 'admin-login.html']
+  ,['/admin-dashboard', 'admin-dashboard.html']
+  ,['/admin-dashboard-mgmt', 'admin-dashboard-mgmt.html']
+  ,['/admin-control', 'admin-control.html']
+  ,['/admin-academics', 'admin-academics.html']
+  ,['/admin-academics-refactored', 'admin-academics-refactored.html']
+  ,['/admin-materials', 'admin-materials.html']
+  ,['/admin-notes', 'admin-notes.html']
+  ,['/admin-certificates', 'admin-certificates.html']
+  ,['/admin-mock-tests', 'admin-mock-tests.html']
+  ,['/admin-quizzes', 'admin-quizzes.html']
+  ,['/admin-papers', 'admin-papers.html']
+  ,['/admin-roadmaps', 'admin-roadmaps.html']
+  ,['/admin-campus-feed', 'admin-campus-feed.html']
+  ,['/admin-ai-tools', 'admin-ai-tools.html']
+  ,['/admin-support-governance', 'admin-support-governance.html']
 ]);
 
 function getRateLimitKey(req) {
@@ -364,6 +381,34 @@ app.use(securityEventLogger);
 
 // 13. Performance monitoring - alerts on slow endpoints
 app.use(performanceMonitor);
+
+// Admin page protection: serve admin HTML only when admin session exists.
+// Register AFTER session and csrf initialization so requireAdmin can access req.session.
+const adminPages = [
+  '/admin-login.html', '/admin-login',
+  '/admin-dashboard.html', '/admin-dashboard', '/admin-dashboard-mgmt',
+  '/admin-control.html', '/admin-control',
+  '/admin-academics.html', '/admin-academics-refactored.html',
+  '/admin-materials.html', '/admin-notes.html', '/admin-certificates.html',
+  '/admin-mock-tests.html', '/admin-quizzes.html', '/admin-papers.html',
+  '/admin-roadmaps.html', '/admin-campus-feed.html', '/admin-ai-tools.html',
+  '/admin-support-governance.html'
+];
+
+adminPages.forEach((p) => {
+  app.get(p, (req, res, next) => {
+    // Allow admin login page to be public
+    if (p === '/admin-login.html' || p === '/admin-login') return res.sendFile(path.join(__dirname, '..', 'admin-login.html'));
+    // All other admin pages need an admin session; redirect to admin login if not authenticated
+    return requireAdmin(req, res, (err) => {
+      if (err) return res.redirect('/admin-login');
+      // Serve mapped file if present in CLEAN_PAGE_ROUTES
+      const key = req.path.toLowerCase();
+      const file = CLEAN_PAGE_ROUTES.get(key) || key.replace(/^\//, '');
+      return res.sendFile(path.join(__dirname, '..', file));
+    });
+  });
+});
 
 
 app.use('/api/health', healthRoutes);

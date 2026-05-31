@@ -134,9 +134,45 @@
         return;
       }
 
+      // Prevent full page form submission; use API endpoint for admin auth
+      event.preventDefault();
       loginBtn.classList.add('loading');
       loginBtn.disabled = true;
       errorBanner.classList.remove('visible');
+
+      (async () => {
+        try {
+          const captcha = (typeof ensureCaptchaPayload === 'function') ? await ensureCaptchaPayload('admin') : null;
+          const payload = { email: emailInput.value.trim(), password: pwdInput.value, captcha };
+          const resp = await fetch('/api/admin/login', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok) {
+            const message = data?.error || 'Login failed. Please try again.';
+            legacyError.textContent = message;
+            errorBannerText.textContent = message;
+            errorBanner.classList.add('visible');
+            loginBtn.classList.remove('loading');
+            loginBtn.disabled = false;
+            return;
+          }
+
+          // Successful admin login -> redirect to dashboard
+          window.location.assign('/admin-dashboard');
+        } catch (err) {
+          console.error('Admin login error', err);
+          legacyError.textContent = 'Login failed. Please try again.';
+          errorBannerText.textContent = 'Login failed. Please try again.';
+          errorBanner.classList.add('visible');
+          loginBtn.classList.remove('loading');
+          loginBtn.disabled = false;
+        }
+      })();
     },
     true
   );

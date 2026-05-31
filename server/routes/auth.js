@@ -30,6 +30,9 @@ const STANDARD_SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 12;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_STATE = new Map();
 
+const IS_DEV = String(process.env.NODE_ENV || '').toLowerCase() !== 'production';
+const DEV_RATE_LIMIT_MULTIPLIER = IS_DEV ? Number(process.env.AUTH_RATE_LIMIT_DEV_MULTIPLIER || 4) : 1;
+
 const CAPTCHA_TTL_MS = 5 * 60 * 1000;
 const CAPTCHA_SECRET = process.env.AUTH_CAPTCHA_SECRET || process.env.SESSION_SECRET || 'dev-captcha-secret';
 const CAPTCHA_DEV_BYPASS = String(process.env.AUTH_CAPTCHA_DEV_BYPASS || '').toLowerCase() === 'true';
@@ -90,7 +93,9 @@ function setCacheHeaders(res, value) {
 function sendRateLimitedResponse(res, retryAfterSeconds, message) {
   const retryAfter = Math.max(1, Math.ceil(Number(retryAfterSeconds || 0)));
   res.setHeader('Retry-After', String(retryAfter));
+  console.warn('[RATE_LIMIT_RESPONSE]', { retryAfter, message });
   return res.status(429).json({
+    success: false,
     ok: false,
     code: 'RATE_LIMITED',
     message: message || `Too many requests. Please wait ${retryAfter} seconds.`,
@@ -324,6 +329,10 @@ function buildAuthErrorRedirect(code, message) {
 }
 
 function buildGoogleAuthorizationUrl(state) {
+  // Google Cloud Console setup reminder:
+  // Authorized JavaScript origin: http://localhost:3000
+  // Authorized redirect URI: http://localhost:3000/api/auth/google/callback
+  // Production redirect URI: https://YOUR_BACKEND_DOMAIN/api/auth/google/callback
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   url.searchParams.set('client_id', GOOGLE_CLIENT_ID);
   url.searchParams.set('redirect_uri', GOOGLE_CALLBACK_URL);
@@ -697,7 +706,10 @@ const DEFAULT_AUTH_EXPERIENCE_CONFIG = {
     }
   },
   oauth: {
-    googleClientId: GOOGLE_OAUTH_CLIENT_ID || ''
+    googleClientId: GOOGLE_OAUTH_CLIENT_ID || '',
+    googleEnabled: Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_CALLBACK_URL),
+    googleCallbackUrl: GOOGLE_CALLBACK_URL || '',
+    googleClientSecretConfigured: Boolean(GOOGLE_CLIENT_SECRET)
   },
   support: {
     email: 'support@collegeos.in',
@@ -866,8 +878,20 @@ router.get('/config', async (_req, res) => {
     const authConfig = deepMerge(DEFAULT_AUTH_EXPERIENCE_CONFIG, experienceConfig.auth || {});
     authConfig.oauth = {
       ...(authConfig.oauth || {}),
-      googleClientId: GOOGLE_CLIENT_ID || String(experienceConfig?.auth?.oauth?.googleClientId || '')
+      googleClientId: GOOGLE_CLIENT_ID || String(experienceConfig?.auth?.oauth?.googleClientId || ''),
+      googleEnabled: Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_CALLBACK_URL),
+      googleCallbackUrl: GOOGLE_CALLBACK_URL || String(experienceConfig?.auth?.oauth?.googleCallbackUrl || ''),
+      googleClientSecretConfigured: Boolean(GOOGLE_CLIENT_SECRET)
     };
+
+    if (process.env.DEBUG_AUTH === 'true') {
+      console.log('[auth:config] google oauth', {
+        enabled: authConfig.oauth.googleEnabled,
+        clientIdConfigured: Boolean(authConfig.oauth.googleClientId),
+        callbackUrl: authConfig.oauth.googleCallbackUrl || '',
+        origin: _req.headers.origin || ''
+      });
+    }
 
     const contactConfig = contactConfigResult.rows[0]?.value_json || {};
     const contactChannels = Array.isArray(contactConfig.channels) ? contactConfig.channels : [];
@@ -1292,12 +1316,25 @@ router.post('/login', async (req, res) => {
 });
 
 router.post('/verification/request', async (req, res) => {
-  const rateBlocked = enforceRateLimit(req, res, 'auth:otp_request', 30, 15 * 60 * 1000);
-  if (rateBlocked) return;
-
+  // Apply a slightly relaxed rate limit in development to ease debugging.
+  const maxAttempts = Math.max(5, Math.floor(30 * DEV_RATE_LIMIT_MULTIPLIER));
+  // lightweight dedupe: if the same IP+target+purpose repeats within 1.5s, don't consume rate-limit counters
   const channel = String(req.body.channel || 'email').toLowerCase();
   const target = String(req.body.target || '').trim().toLowerCase();
   const purpose = String(req.body.purpose || 'signup').toLowerCase();
+  const now = Date.now();
+  const fingerprint = `recentreq:${getRequesterIp(req)}:${channel}:${purpose}:${target}`;
+  const recent = RATE_LIMIT_STATE.get(fingerprint);
+  if (recent && (now - (recent.lastAt || 0)) < 1500) {
+    // Return a short retry response but do NOT increment global counters to avoid accidental DOS from duplicate client calls
+    const retryAfter = Math.ceil((1500 - (now - recent.lastAt || 0)) / 1000) || 1;
+    console.warn('[RATE_LIMIT_DEDUPE] duplicate rapid request', { ip: getRequesterIp(req), channel, target, purpose });
+    return res.status(429).json({ success: false, code: 'RATE_LIMITED', message: 'Too many requests. Please wait a moment.', retryAfter });
+  }
+  RATE_LIMIT_STATE.set(fingerprint, { lastAt: now, resetAt: now + 5000 });
+  const rateBlocked = enforceRateLimit(req, res, 'auth:otp_request', maxAttempts, 15 * 60 * 1000);
+  if (rateBlocked) return;
+
   const captcha = req.body.captcha;
 
   if (!verifyCaptchaPayload(req, captcha)) {
@@ -1325,12 +1362,13 @@ router.post('/verification/request', async (req, res) => {
   }
 
   clearExpiredOtps();
-  const now = Date.now();
+  // reuse earlier `now` from dedupe region
   const key = getOtpStoreKey({ purpose, channel, target });
   const existing = otpStore.get(key);
 
   // CRITICAL FIX: Enforce global per-IP rate limit (prevents spam of ANY target)
-  const ipRateLimited = enforceRateLimit(req, res, 'auth:otp_request_global', 30, 15 * 60 * 1000);
+  const ipMax = Math.max(10, Math.floor(30 * DEV_RATE_LIMIT_MULTIPLIER));
+  const ipRateLimited = enforceRateLimit(req, res, 'auth:otp_request_global', ipMax, 15 * 60 * 1000);
   if (ipRateLimited) return;
   
   // Per-target rate limit (5 requests per 10min to SAME email/phone)
@@ -1342,7 +1380,9 @@ router.post('/verification/request', async (req, res) => {
 
   // Per-target rate limit (30-second cooldown between OTP sends)
   if (existing?.nextAllowedAt && now < existing.nextAllowedAt) {
-    return sendRateLimitedResponse(res, Math.ceil((existing.nextAllowedAt - now) / 1000), 'Please wait before requesting a new OTP/code');
+    const retryAfter = Math.ceil((existing.nextAllowedAt - now) / 1000);
+    console.warn('[OTP_RATE_LIMIT] resend cooldown', { ip: getRequesterIp(req), target, purpose, retryAfter, requestCount: existing.requestCount });
+    return sendRateLimitedResponse(res, retryAfter, 'Please wait before requesting a new OTP/code');
   }
 
   const code = String(randomInt(100000, 999999));

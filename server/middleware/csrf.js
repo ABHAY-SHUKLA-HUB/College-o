@@ -71,6 +71,7 @@ function csrfProtect() {
       '/api/auth/signup',
       '/api/auth/login',
       '/api/auth/login/email-otp',
+      '/api/auth/google',
       '/api/admin/login',
       '/api/auth/password/forgot',
       '/api/auth/password/reset',

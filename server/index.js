@@ -118,6 +118,7 @@ const PUBLIC_READ_PATHS = new Set([
 const CLEAN_PAGE_ROUTES = new Map([
   ['/login', 'index.html'],
   ['/signup', 'index.html'],
+  ['/academic-onboarding', 'academic-onboarding.html'],
   ['/home', 'home.html'],
   ['/dashboard', 'dashboard.html'],
   ['/study', 'study.html'],

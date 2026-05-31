@@ -36,7 +36,12 @@ const CAPTCHA_DEV_BYPASS = String(process.env.AUTH_CAPTCHA_DEV_BYPASS || '').toL
 const OTP_QA_ASSIST_ENABLED = process.env.NODE_ENV !== 'production' && process.env.OTP_QA_ASSIST_ENABLED === 'true';
 const OTP_QA_ASSIST_SECRET = String(process.env.OTP_QA_ASSIST_SECRET || '');
 const OTP_MOBILE_ENABLED = String(process.env.OTP_MOBILE_ENABLED || '').toLowerCase() === 'true';
-const GOOGLE_OAUTH_CLIENT_ID = String(process.env.GOOGLE_OAUTH_CLIENT_ID || '').trim();
+const GOOGLE_CLIENT_ID = String(process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_OAUTH_CLIENT_ID || '').trim();
+const GOOGLE_CLIENT_SECRET = String(process.env.GOOGLE_CLIENT_SECRET || process.env.GOOGLE_OAUTH_CLIENT_SECRET || '').trim();
+const GOOGLE_CALLBACK_URL = String(process.env.GOOGLE_CALLBACK_URL || process.env.GOOGLE_OAUTH_CALLBACK_URL || '').trim();
+const FRONTEND_URL = String(process.env.FRONTEND_URL || process.env.FRONTEND_PUBLIC_URL || process.env.APP_BASE_URL || 'http://localhost:3000').trim() || 'http://localhost:3000';
+const GOOGLE_OAUTH_CLIENT_ID = GOOGLE_CLIENT_ID;
+const GOOGLE_OAUTH_SCOPES = 'openid email profile';
 
 const otpStore = new Map();
 const verifiedStore = new Map();
@@ -286,16 +291,10 @@ async function sendOtpEmail({ otp, originalTarget, channel, purpose, targetEmail
 }
 
 async function sendPasswordResetEmail({ email, token }) {
-  const configuredFrontend = String(
-    process.env.FRONTEND_URL
-    || process.env.APP_BASE_URL
-    || process.env.FRONTEND_PUBLIC_URL
-    || 'https://collegeo.in'
-  ).trim();
-  const frontendUrl = configuredFrontend.replace(/\/$/, '');
-  const resetUrl = `${frontendUrl}/reset-password?token=${encodeURIComponent(token)}`;
+  const resetUrl = new URL('/reset-password', FRONTEND_URL);
+  resetUrl.searchParams.set('token', token);
   const template = buildPasswordResetEmail({
-    resetUrl,
+    resetUrl: resetUrl.toString(),
     expiresMinutes: Math.floor(RESET_TOKEN_TTL_MS / (60 * 1000)),
     supportEmail: process.env.SUPPORT_EMAIL || 'support@collegeos.in'
   });
@@ -306,6 +305,206 @@ async function sendPasswordResetEmail({ email, token }) {
     text: template.text,
     html: template.html
   });
+}
+
+function buildFrontendUrl(pathname, searchParams = {}) {
+  const url = new URL(pathname, FRONTEND_URL);
+  Object.entries(searchParams).forEach(([key, value]) => {
+    if (value === null || typeof value === 'undefined' || value === '') return;
+    url.searchParams.set(key, String(value));
+  });
+  return url.toString();
+}
+
+function buildAuthErrorRedirect(code, message) {
+  return buildFrontendUrl('/login', {
+    auth_error: code || 'google_auth_failed',
+    auth_error_message: message || ''
+  });
+}
+
+function buildGoogleAuthorizationUrl(state) {
+  const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  url.searchParams.set('client_id', GOOGLE_CLIENT_ID);
+  url.searchParams.set('redirect_uri', GOOGLE_CALLBACK_URL);
+  url.searchParams.set('response_type', 'code');
+  url.searchParams.set('scope', GOOGLE_OAUTH_SCOPES);
+  url.searchParams.set('access_type', 'online');
+  url.searchParams.set('prompt', 'select_account');
+  url.searchParams.set('include_granted_scopes', 'true');
+  url.searchParams.set('state', state);
+  return url.toString();
+}
+
+async function exchangeGoogleAuthorizationCode(code) {
+  const tokenRequest = new URLSearchParams({
+    code,
+    client_id: GOOGLE_CLIENT_ID,
+    client_secret: GOOGLE_CLIENT_SECRET,
+    redirect_uri: GOOGLE_CALLBACK_URL,
+    grant_type: 'authorization_code'
+  });
+
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: tokenRequest.toString()
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error_description || payload.error || 'Google authorization code exchange failed');
+  }
+
+  if (!payload.id_token) {
+    throw new Error('Google authorization response did not include an ID token');
+  }
+
+  return payload;
+}
+
+async function verifyGoogleIdToken(idToken) {
+  const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error_description || payload.error || 'Google ID token validation failed');
+  }
+
+  const issuer = String(payload.iss || '').trim();
+  if (!['https://accounts.google.com', 'accounts.google.com'].includes(issuer)) {
+    throw new Error('Google token issuer is invalid');
+  }
+
+  if (String(payload.aud || '') !== GOOGLE_CLIENT_ID) {
+    throw new Error('Google token audience mismatch');
+  }
+
+  if (String(payload.email_verified || '').toLowerCase() !== 'true') {
+    throw new Error('Google email must be verified');
+  }
+
+  const normalizedEmail = normalizeEmail(payload.email || '');
+  if (!isEmail(normalizedEmail)) {
+    throw new Error('Google email is invalid');
+  }
+
+  return {
+    googleId: String(payload.sub || '').trim(),
+    email: normalizedEmail,
+    fullName: String(payload.name || payload.given_name || normalizedEmail.split('@')[0] || 'Student').trim(),
+    profilePicture: String(payload.picture || '').trim(),
+    emailVerified: true,
+    raw: payload
+  };
+}
+
+async function upsertGoogleUser(client, googleProfile) {
+  const googleId = String(googleProfile?.googleId || '').trim();
+  const normalizedEmail = normalizeEmail(googleProfile?.email || '');
+  const fullName = String(googleProfile?.fullName || '').trim() || 'Student';
+  const profilePicture = String(googleProfile?.profilePicture || '').trim();
+
+  if (!googleId) {
+    throw new Error('Google account id is missing');
+  }
+  if (!isEmail(normalizedEmail)) {
+    throw new Error('Google email is invalid');
+  }
+  if (!googleProfile?.emailVerified) {
+    throw new Error('Google email must be verified');
+  }
+
+  const byGoogleResult = await client.query(
+    'SELECT * FROM users WHERE google_id = $1 LIMIT 1 FOR UPDATE',
+    [googleId]
+  );
+  let userRow = byGoogleResult.rows[0] || null;
+
+  if (!userRow) {
+    const byEmailResult = await client.query(
+      'SELECT * FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1 FOR UPDATE',
+      [normalizedEmail]
+    );
+    userRow = byEmailResult.rows[0] || null;
+  }
+
+  const referralCode = `COL${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+
+  if (!userRow) {
+    const insertResult = await client.query(
+      `INSERT INTO users (
+         full_name, email, password_hash, referral_code, role, subscription_tier,
+         signup_provider, auth_provider, google_id, profile_picture,
+         is_email_verified, email_verified, email_verified_at,
+         is_mobile_verified, phone_verified, last_login_at, created_at, updated_at
+       ) VALUES (
+         $1, $2, $3, $4, 'student', 'free',
+         'google', 'google', $5, $6,
+         TRUE, TRUE, CURRENT_TIMESTAMP,
+         FALSE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+       )
+       RETURNING *`,
+      [
+        fullName,
+        normalizedEmail,
+        await bcrypt.hash(crypto.randomBytes(24).toString('hex'), 12),
+        referralCode,
+        googleId,
+        profilePicture || null
+      ]
+    );
+    userRow = insertResult.rows[0];
+  } else {
+    const updateResult = await client.query(
+      `UPDATE users
+       SET full_name = COALESCE(NULLIF($2, ''), full_name),
+           email = $3,
+           google_id = COALESCE(google_id, $4),
+           profile_picture = COALESCE(NULLIF($5, ''), profile_picture),
+           auth_provider = 'google',
+           signup_provider = 'google',
+           is_email_verified = TRUE,
+           email_verified = TRUE,
+           email_verified_at = COALESCE(email_verified_at, CURRENT_TIMESTAMP),
+           last_login_at = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1
+       RETURNING *`,
+      [
+        userRow.id,
+        fullName,
+        normalizedEmail,
+        googleId,
+        profilePicture
+      ]
+    );
+    userRow = updateResult.rows[0] || userRow;
+  }
+
+  await client.query(
+    `INSERT INTO user_profiles (user_id, current_streak, onboarding_completed, onboarding_step, academic_scope)
+     VALUES ($1, 0, FALSE, 'academic_profile', '{}'::jsonb)
+     ON CONFLICT (user_id) DO UPDATE SET
+       updated_at = CURRENT_TIMESTAMP`,
+    [userRow.id]
+  );
+
+  return userRow;
+}
+
+async function resolveGoogleLandingPath(client, userId) {
+  const profileResult = await client.query(
+    `SELECT onboarding_completed
+     FROM user_profiles
+     WHERE user_id = $1
+     LIMIT 1`,
+    [userId]
+  );
+
+  const onboardingCompleted = Boolean(profileResult.rows[0]?.onboarding_completed);
+  return onboardingCompleted ? '/dashboard' : '/academic-onboarding';
 }
 
 function maskEmailForLog(email) {
@@ -572,13 +771,18 @@ async function ensureAuthSchema() {
     ALTER TABLE users
       ADD COLUMN IF NOT EXISTS mobile VARCHAR(24),
       ADD COLUMN IF NOT EXISTS phone VARCHAR(24),
+      ADD COLUMN IF NOT EXISTS google_id VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS profile_picture TEXT,
+      ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(40) DEFAULT 'email',
       ADD COLUMN IF NOT EXISTS is_email_verified BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE,
       ADD COLUMN IF NOT EXISTS is_mobile_verified BOOLEAN DEFAULT FALSE,
       ADD COLUMN IF NOT EXISTS phone_verified BOOLEAN DEFAULT FALSE,
       ADD COLUMN IF NOT EXISTS signup_provider VARCHAR(40) DEFAULT 'email',
       ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP,
       ADD COLUMN IF NOT EXISTS phone_verified_at TIMESTAMP,
       ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0,
       ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP,
       ADD COLUMN IF NOT EXISTS last_failed_login_at TIMESTAMP,
@@ -592,6 +796,7 @@ async function ensureAuthSchema() {
 
   await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS users_mobile_unique_idx ON users(mobile) WHERE mobile IS NOT NULL');
   await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique_lower_idx ON users (LOWER(email))');
+  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS users_google_id_unique_idx ON users (google_id) WHERE google_id IS NOT NULL');
 
   await pool.query(`
     ALTER TABLE user_profiles
@@ -661,7 +866,7 @@ router.get('/config', async (_req, res) => {
     const authConfig = deepMerge(DEFAULT_AUTH_EXPERIENCE_CONFIG, experienceConfig.auth || {});
     authConfig.oauth = {
       ...(authConfig.oauth || {}),
-      googleClientId: GOOGLE_OAUTH_CLIENT_ID || String(experienceConfig?.auth?.oauth?.googleClientId || '')
+      googleClientId: GOOGLE_CLIENT_ID || String(experienceConfig?.auth?.oauth?.googleClientId || '')
     };
 
     const contactConfig = contactConfigResult.rows[0]?.value_json || {};
@@ -704,6 +909,100 @@ router.get('/captcha/challenge', (req, res) => {
     expiresAt: challenge.expiresAt,
     expiresInSeconds: Math.floor(CAPTCHA_TTL_MS / 1000)
   });
+});
+
+router.get('/google', async (req, res) => {
+  const rateBlocked = enforceRateLimit(req, res, 'auth:google_start', 20, 15 * 60 * 1000);
+  if (rateBlocked) return;
+
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_CALLBACK_URL) {
+    return res.redirect(303, buildAuthErrorRedirect('google_unavailable', 'Google login is not configured on this server'));
+  }
+
+  const state = crypto.randomBytes(24).toString('hex');
+  req.session.googleOAuth = {
+    state,
+    createdAt: Date.now()
+  };
+
+  req.session.save((saveError) => {
+    if (saveError) {
+      return res.redirect(303, buildAuthErrorRedirect('google_session_error', 'Could not prepare Google login'));
+    }
+
+    return res.redirect(302, buildGoogleAuthorizationUrl(state));
+  });
+});
+
+router.get('/google/callback', async (req, res) => {
+  const rateBlocked = enforceRateLimit(req, res, 'auth:google_callback', 20, 15 * 60 * 1000);
+  if (rateBlocked) return;
+
+  const oauthError = String(req.query?.error || '').trim();
+  if (oauthError) {
+    return res.redirect(303, buildAuthErrorRedirect('google_denied', 'Google sign-in was cancelled or denied'));
+  }
+
+  const code = String(req.query?.code || '').trim();
+  const state = String(req.query?.state || '').trim();
+  const sessionState = String(req.session?.googleOAuth?.state || '').trim();
+
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_CALLBACK_URL) {
+    return res.redirect(303, buildAuthErrorRedirect('google_unavailable', 'Google login is not configured on this server'));
+  }
+
+  if (!code || !state || !sessionState || state !== sessionState) {
+    return res.redirect(303, buildAuthErrorRedirect('google_state_invalid', 'Your Google login session expired. Please try again.'));
+  }
+
+  delete req.session.googleOAuth;
+
+  try {
+    const tokenPayload = await exchangeGoogleAuthorizationCode(code);
+    const googleProfile = await verifyGoogleIdToken(tokenPayload.id_token);
+
+    const client = await pool.connect();
+    let landingPath = '/dashboard';
+    let userRow = null;
+
+    try {
+      await client.query('BEGIN');
+      userRow = await upsertGoogleUser(client, googleProfile);
+      landingPath = await resolveGoogleLandingPath(client, userRow.id);
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+    req.session.regenerate((sessionError) => {
+      if (sessionError) {
+        return res.redirect(303, buildAuthErrorRedirect('google_session_error', 'Could not start a secure session'));
+      }
+
+      req.session.userId = userRow.id;
+      req.session.user = {
+        id: userRow.id,
+        full_name: userRow.full_name,
+        email: userRow.email,
+        role: userRow.role,
+        subscription_tier: userRow.subscription_tier,
+        auth_provider: 'google',
+        signup_provider: userRow.signup_provider,
+        profile_picture: userRow.profile_picture || null
+      };
+      req.session.role = userRow.role;
+      req.session.cookie.maxAge = STANDARD_SESSION_MAX_AGE_MS;
+      req.session.save(() => {
+        return res.redirect(303, buildFrontendUrl(landingPath));
+      });
+    });
+  } catch (error) {
+    console.error('[auth:google] callback failed', error.message);
+    return res.redirect(303, buildAuthErrorRedirect('google_auth_failed', 'Google sign-in failed. Please try again.'));
+  }
 });
 
 router.post('/signup', async (req, res) => {
@@ -1539,7 +1838,7 @@ router.get('/me', async (req, res) => {
   if (!req.session.userId) return res.json({ user: null });
   const { rows } = await pool.query(
     `SELECT id, full_name, email, mobile, college_name, university_id, university_name, custom_university, role, subscription_tier, payment_status, subscription_started_at, subscription_expiry,
-            is_email_verified, is_mobile_verified, last_login_at
+            google_id, profile_picture, auth_provider, email_verified, is_email_verified, is_mobile_verified, last_login_at, updated_at
      FROM users
      WHERE id = $1`,
     [req.session.userId]

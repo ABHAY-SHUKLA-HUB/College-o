@@ -60,11 +60,6 @@ const authBootstrapState = {
   universityQueryPromise: null
 };
 
-const googleAuthState = {
-  scriptPromise: null,
-  initialized: false
-};
-
 async function warmDashboardBootstrap() {
   if (!window.CollegeOSApi?.warmupRequests) return;
   const warmupFn = window.CollegeOSApi.warmupRequestsOnce || window.CollegeOSApi.warmupRequests;
@@ -1291,96 +1286,37 @@ function getActiveAuthMessagesTarget() {
   return document.querySelector('[data-auth-view]:not(.hidden)')?.dataset.authView === 'signup' ? 'signup' : 'login';
 }
 
-function loadGoogleIdentityScript() {
-  if (window.google?.accounts?.id) return Promise.resolve(true);
-  if (googleAuthState.scriptPromise) return googleAuthState.scriptPromise;
-
-  googleAuthState.scriptPromise = new Promise((resolve, reject) => {
-    const existing = document.querySelector('script[data-google-identity="true"]');
-    if (existing) {
-      existing.addEventListener('load', () => resolve(true), { once: true });
-      existing.addEventListener('error', () => reject(new Error('Google sign-in could not load.')), { once: true });
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.dataset.googleIdentity = 'true';
-    script.onload = () => resolve(true);
-    script.onerror = () => reject(new Error('Google sign-in could not load.'));
-    document.head.appendChild(script);
-  }).finally(() => {
-    googleAuthState.scriptPromise = null;
-  });
-
-  return googleAuthState.scriptPromise;
-}
-
-async function handleGoogleCredentialResponse(credentialResponse) {
-  const credential = String(credentialResponse?.credential || '').trim();
-  const messageTarget = getActiveAuthMessagesTarget();
-  if (!credential) {
-    setAuthMessages(messageTarget, 'Google sign-in did not return a valid credential.');
-    return;
-  }
-
-  setAuthMessages(messageTarget, '', 'Completing Google sign-in...');
-
-  try {
-    await window.CollegeOSApi.googleSignup({ credential });
-    setAuthMessages(messageTarget, '', 'Google sign-in successful. Finalizing your workspace...');
-    await completePostLoginFlow();
-  } catch (error) {
-    setAuthMessages(messageTarget, error.message || 'Google sign-in failed.');
-  }
-}
-
-async function renderGoogleAuthButtons() {
+function renderGoogleAuthButtons() {
   const clientId = getGoogleClientId();
   const slots = document.querySelectorAll('[data-google-auth-slot]');
 
   slots.forEach((slot) => {
-    slot.classList.toggle('hidden', !clientId);
     slot.replaceChildren();
-    if (!clientId) {
-      slot.dataset.rendered = 'false';
-    }
+    slot.classList.toggle('hidden', !clientId);
+
+    if (!clientId) return;
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'google-auth-button';
+    button.setAttribute('aria-label', 'Continue with Google');
+    button.innerHTML = `
+      <span class="google-auth-icon" aria-hidden="true"><i class="fa-brands fa-google"></i></span>
+      <span class="google-auth-label">Continue with Google</span>
+      <span class="google-auth-spinner" aria-hidden="true"><i class="fa-solid fa-spinner fa-spin"></i></span>
+    `;
+
+    button.addEventListener('click', () => {
+      const messageTarget = getActiveAuthMessagesTarget();
+      setAuthMessages(messageTarget, '', 'Redirecting to Google...');
+      setLoading(button, 'Redirecting to Google', true);
+      window.setTimeout(() => {
+        window.location.assign('/api/auth/google');
+      }, 120);
+    });
+
+    slot.appendChild(button);
   });
-
-  if (!clientId || !slots.length) return;
-
-  try {
-    await loadGoogleIdentityScript();
-    if (!window.google?.accounts?.id) return;
-
-    if (!googleAuthState.initialized) {
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: handleGoogleCredentialResponse
-      });
-      googleAuthState.initialized = true;
-    }
-
-    slots.forEach((slot) => {
-      if (!slot.isConnected || slot.dataset.rendered === 'true') return;
-      window.google.accounts.id.renderButton(slot, {
-        theme: 'outline',
-        size: 'large',
-        type: 'standard',
-        text: 'continue_with',
-        shape: 'pill',
-        width: Math.max(280, Math.min(slot.clientWidth || 340, 420))
-      });
-      slot.dataset.rendered = 'true';
-    });
-  } catch (_error) {
-    slots.forEach((slot) => {
-      slot.classList.add('hidden');
-      slot.dataset.rendered = 'false';
-    });
-  }
 }
 
 async function loadAuthExperienceConfig() {
@@ -2551,6 +2487,28 @@ function hydrateRememberedFields() {
   }
 }
 
+function hydrateAuthErrorFromQuery() {
+  if (typeof window === 'undefined' || !window.location) return;
+
+  const params = new URLSearchParams(window.location.search);
+  const authError = params.get('auth_error');
+  if (!authError) return;
+
+  const fallbackMessages = {
+    google_unavailable: 'Google login is not configured for this environment.',
+    google_session_error: 'Could not prepare Google login. Please try again.',
+    google_state_invalid: 'Your Google login session expired. Please try again.',
+    google_denied: 'Google sign-in was cancelled or denied.',
+    google_auth_failed: 'Google sign-in failed. Please try again.'
+  };
+
+  const message = params.get('auth_error_message') || fallbackMessages[authError] || 'Google sign-in failed. Please try again.';
+  setAuthMessages('login', message);
+  if (window.history?.replaceState) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   void loadAuthExperienceConfig();
   initAuthEntranceMotion();
@@ -2572,6 +2530,7 @@ document.addEventListener('DOMContentLoaded', () => {
   bindSignup();
   bindSignupVerificationUi();
   bindOnboarding();
+  hydrateAuthErrorFromQuery();
 
   // Start CAPTCHA generation immediately so the login form does not wait on slower bootstrap work.
   setCaptchaReady('login', false, 'Preparing secure CAPTCHA...', null);

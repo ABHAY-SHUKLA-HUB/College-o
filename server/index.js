@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 const path = require('path');
+const crypto = require('crypto');
 const express = require('express');
 const compression = require('compression');
 const session = require('express-session');
@@ -341,6 +342,59 @@ app.options('*', (req, res) => {
 // 6. Static file serving - serve assets before session/csrf middleware.
 app.use('/assets', express.static(path.join(__dirname, '..', 'assets'), assetStaticOptions));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'), assetStaticOptions));
+
+app.get('/api/auth/captcha/challenge', (req, res) => {
+  const startedAt = Date.now();
+  const requestId = crypto.randomBytes(8).toString('hex');
+
+  console.info('[auth:captcha] request received', {
+    requestId,
+    ip: req.ip || 'unknown',
+    path: req.path,
+    origin: req.headers.origin || '',
+    userAgent: req.headers['user-agent'] || ''
+  });
+
+  try {
+    const challengeBuilder = authRoutes.buildCaptchaChallenge;
+    const challenge = typeof challengeBuilder === 'function'
+      ? challengeBuilder(req)
+      : null;
+
+    if (!challenge) {
+      throw new Error('Captcha challenge builder unavailable');
+    }
+
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.json({
+      ok: true,
+      captchaId: challenge.id,
+      captcha: challenge,
+      question: challenge.question,
+      challenge: challenge.challengeText,
+      challengeText: challenge.challengeText,
+      prompt: challenge.prompt,
+      captchaText: challenge.captchaText,
+      expiresAt: challenge.expiresAt,
+      expiresInSeconds: 300
+    });
+
+    console.info('[auth:captcha] captcha generated', {
+      requestId,
+      responseTimeMs: Date.now() - startedAt,
+      captchaId: challenge.id
+    });
+  } catch (error) {
+    console.warn('[auth:captcha] captcha failed', {
+      requestId,
+      responseTimeMs: Date.now() - startedAt,
+      reason: error?.message || String(error)
+    });
+    res.status(500).json({ ok: false, error: 'Captcha generation failed' });
+  }
+});
 
 // 7. Session middleware
 app.use(session(sessionOptions));

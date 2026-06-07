@@ -279,6 +279,10 @@ const captchaState = {
   admin: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false, retryAttempted: false, retryCount: 0, loadFailed: false }
 };
 
+const CAPTCHA_REQUEST_TIMEOUT_MS = 5000;
+const CAPTCHA_RETRY_DELAY_MS = 450;
+const CAPTCHA_MAX_AUTO_RETRIES = 1;
+
 const CAPTCHA_STORAGE_KEY = 'collegeOsCaptchaState';
 
 function hasCaptchaUi(scope) {
@@ -410,15 +414,10 @@ function getCaptchaElements(scope) {
 function setCaptchaUiState(scope, { loading = false, message = '', error = false } = {}) {
   const { box, input, refreshButton, status, submitButton } = getCaptchaElements(scope);
   if (box) box.classList.toggle('is-loading', loading);
+  if (box) box.setAttribute('aria-busy', loading ? 'true' : 'false');
   if (status) status.textContent = message && (loading || error) ? message : '';
   if (input) input.disabled = loading || !captchaState[scope].ready;
-  if (input) {
-    const inputFieldHost = input.closest('.field');
-    if (inputFieldHost) {
-      inputFieldHost.classList.toggle('hidden', !captchaState[scope].ready);
-    }
-  }
-  if (refreshButton) refreshButton.disabled = loading;
+  if (refreshButton) refreshButton.disabled = false;
   if (submitButton) submitButton.disabled = loading || !captchaState[scope].ready;
 }
 
@@ -494,27 +493,30 @@ async function refreshCaptcha(scope, { force = false } = {}) {
 
   const requestId = (captchaState[scope].requestId || 0) + 1;
   captchaState[scope].requestId = requestId;
-  setCaptchaReady(scope, false, force ? 'Refreshing CAPTCHA...' : 'Preparing secure CAPTCHA...');
+  setCaptchaReady(scope, false, force ? 'Refreshing captcha...' : 'Preparing captcha...');
 
   const fetchPromise = (async () => {
     try {
       if (window.CollegeOSApi?.getCaptchaChallenge) {
-        // Use a timeout to avoid infinite loading
         const apiCall = window.CollegeOSApi.getCaptchaChallenge(force ? { forceRefresh: true } : {});
-        const timeoutMs = 5000;
-        const timeoutPromise = new Promise((resolve, reject) => setTimeout(() => reject(new Error('CAPTCHA_TIMEOUT')), timeoutMs));
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('CAPTCHA_TIMEOUT')), CAPTCHA_REQUEST_TIMEOUT_MS));
         let payload;
         try {
           const result = await Promise.race([apiCall, timeoutPromise]);
           payload = result;
         } catch (err) {
-          // Timeout or fetch error
+          if (!force && captchaState[scope].retryCount < CAPTCHA_MAX_AUTO_RETRIES) {
+            captchaState[scope].retryCount += 1;
+            setCaptchaReady(scope, false, 'Captcha is taking longer than expected. Retrying...', null);
+            await new Promise((resolve) => setTimeout(resolve, CAPTCHA_RETRY_DELAY_MS));
+            return refreshCaptcha(scope, { force: true });
+          }
+
           captchaState[scope].serverChallenge = null;
           captchaState[scope].loadFailed = true;
           if (captchaState[scope].requestId === requestId) {
-            setCaptchaReady(scope, false, 'Captcha failed to load. Click Refresh to try again.', null);
+            setCaptchaReady(scope, false, 'Captcha failed to load. Click Refresh Captcha to try again.', null);
           }
-          // Clear promise reference below
           return captchaState[scope].serverChallenge;
         }
 
@@ -533,7 +535,7 @@ async function refreshCaptcha(scope, { force = false } = {}) {
         const resolvedContent = resolveCaptchaContent(challenge);
         if (!resolvedContent) {
           captchaState[scope].loadFailed = true;
-          setCaptchaReady(scope, false, 'Captcha failed to load. Click Refresh to try again.', challenge);
+          setCaptchaReady(scope, false, 'Captcha failed to load. Click Refresh Captcha to try again.', challenge);
           return null;
         }
 
@@ -543,10 +545,17 @@ async function refreshCaptcha(scope, { force = false } = {}) {
         setCaptchaReady(scope, true, 'Captcha ready.', challenge);
       }
     } catch (e) {
+      if (!force && captchaState[scope].retryCount < CAPTCHA_MAX_AUTO_RETRIES) {
+        captchaState[scope].retryCount += 1;
+        setCaptchaReady(scope, false, 'Captcha is taking longer than expected. Retrying...', null);
+        await new Promise((resolve) => setTimeout(resolve, CAPTCHA_RETRY_DELAY_MS));
+        return refreshCaptcha(scope, { force: true });
+      }
+
       captchaState[scope].serverChallenge = null;
       captchaState[scope].loadFailed = true;
       if (captchaState[scope].requestId === requestId) {
-        setCaptchaReady(scope, false, 'Captcha failed to load. Click Refresh to try again.', null);
+        setCaptchaReady(scope, false, 'Captcha failed to load. Click Refresh Captcha to try again.', null);
       }
     } finally {
       if (captchaState[scope].requestId === requestId) {
@@ -579,7 +588,7 @@ async function ensureCaptchaPayload(scope) {
   let payload = getCaptchaPayload(scope);
   if (payload) return payload;
   if (captchaState[scope].loadFailed) {
-    throw new Error('Captcha failed to load. Click Refresh to try again.');
+    throw new Error('Captcha failed to load. Click Refresh Captcha to try again.');
   }
   try {
     await refreshCaptcha(scope);
@@ -589,7 +598,7 @@ async function ensureCaptchaPayload(scope) {
   }
   payload = getCaptchaPayload(scope);
   if (!payload) {
-    throw new Error('Captcha could not load. Refresh captcha.');
+    throw new Error('Captcha could not load. Refresh Captcha.');
   }
   return payload;
 }
@@ -2706,10 +2715,13 @@ document.addEventListener('DOMContentLoaded', () => {
   hydrateAuthErrorFromQuery();
 
   // Start CAPTCHA generation immediately so the login form does not wait on slower bootstrap work.
-  setCaptchaReady('login', false, 'Preparing secure CAPTCHA...', null);
-  setCaptchaReady('signup', false, 'Preparing secure CAPTCHA...', null);
+  setCaptchaReady('login', false, 'Preparing captcha...', null);
+  setCaptchaReady('signup', false, 'Preparing captcha...', null);
   void refreshCaptcha('login');
   void refreshCaptcha('signup');
+  if (window.CollegeOSApi?.startHealthPing) {
+    window.CollegeOSApi.startHealthPing({ intervalMs: 10 * 60 * 1000, immediate: true });
+  }
 
   byId('refreshLoginCaptcha')?.addEventListener('click', () => refreshCaptcha('login', { force: true }));
   byId('refreshSignupCaptcha')?.addEventListener('click', () => refreshCaptcha('signup', { force: true }));

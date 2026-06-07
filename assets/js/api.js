@@ -134,6 +134,48 @@ function formatErrorMessage(error, fallback = 'Something went wrong.') {
   return text || fallback;
 }
 
+async function pingHealth() {
+  try {
+    const response = await rawFetch(resolveApiUrl('/api/health'), {
+      method: 'GET',
+      credentials: 'omit',
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Health ping failed (${response.status})`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    return { ok: false, error: formatErrorMessage(error, 'Health ping failed') };
+  }
+}
+
+function startHealthPing({ intervalMs = 10 * 60 * 1000, immediate = true } = {}) {
+  if (typeof window === 'undefined') return null;
+
+  const state = window.__collegeOsHealthPingState || { timer: null, started: false };
+  window.__collegeOsHealthPingState = state;
+
+  if (state.started) return state.timer;
+  state.started = true;
+
+  const runPing = () => {
+    void pingHealth();
+  };
+
+  if (immediate) {
+    runPing();
+  }
+
+  state.timer = window.setInterval(runPing, Math.max(60_000, Number(intervalMs) || 600_000));
+  return state.timer;
+}
+
 const apiUrl = normalizeUrl(
   window.API_URL || window.API_BASE_URL || window.VITE_API_URL || window.CollegeOSApiConfig?.apiUrl,
   DEFAULT_API_URL
@@ -845,6 +887,8 @@ async function safeTrackEvent(eventType, eventPayload = {}, source = 'web') {
 window.CollegeOSApi = {
   warmupRequests,
   clearSessionCache,
+  pingHealth,
+  startHealthPing,
   getAuthConfig: () => apiFetch('/api/auth/config'),
   getDashboardBootstrap: () => apiFetch('/api/dashboard/bootstrap'),
   getCaptchaChallenge: (options = {}) => {

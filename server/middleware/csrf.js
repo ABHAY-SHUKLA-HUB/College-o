@@ -33,6 +33,26 @@ function validateToken(token, secret) {
  */
 function csrfInit() {
   return (req, res, next) => {
+    const normalizedPath = String(req.path || '').replace(/\/+$/, '') || '/';
+    const publicAuthEndpoints = new Set([
+      '/api/auth/login',
+      '/api/auth/login/email-otp',
+      '/api/auth/signup',
+      '/api/auth/google',
+      '/api/auth/password/forgot',
+      '/api/auth/password/reset',
+      '/api/auth/captcha/challenge',
+      '/api/auth/verification/request',
+      '/api/auth/verification/verify',
+      '/api/health',
+      '/api/health/live',
+      '/api/health/ready'
+    ]);
+
+    if (publicAuthEndpoints.has(normalizedPath)) {
+      return next();
+    }
+
     // Generate token on first request or if missing
     if (!req.session.csrfToken) {
       req.session.csrfToken = generateToken();

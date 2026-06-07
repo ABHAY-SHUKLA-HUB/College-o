@@ -36,6 +36,7 @@ const DEV_RATE_LIMIT_MULTIPLIER = IS_DEV ? Number(process.env.AUTH_RATE_LIMIT_DE
 const CAPTCHA_TTL_MS = 5 * 60 * 1000;
 const CAPTCHA_SECRET = process.env.AUTH_CAPTCHA_SECRET || process.env.SESSION_SECRET || 'dev-captcha-secret';
 const CAPTCHA_DEV_BYPASS = String(process.env.AUTH_CAPTCHA_DEV_BYPASS || '').toLowerCase() === 'true';
+const CAPTCHA_CHALLENGE_CACHE_CONTROL = 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
 const OTP_QA_ASSIST_ENABLED = process.env.NODE_ENV !== 'production' && process.env.OTP_QA_ASSIST_ENABLED === 'true';
 const OTP_QA_ASSIST_SECRET = String(process.env.OTP_QA_ASSIST_SECRET || '');
 const OTP_MOBILE_ENABLED = String(process.env.OTP_MOBILE_ENABLED || '').toLowerCase() === 'true';
@@ -913,26 +914,58 @@ router.get('/config', async (_req, res) => {
 });
 
 router.get('/captcha/challenge', (req, res) => {
+  const startedAt = Date.now();
+  const requestId = crypto.randomBytes(8).toString('hex');
   // CAPTCHA gets its own limiter so normal refreshes do not trip the login limiter.
   const rateBlocked = enforceRateLimit(req, res, 'auth:captcha_challenge', 180, 60 * 1000);
-  if (rateBlocked) return;
-  
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  if (rateBlocked) {
+    console.warn('[auth:captcha] challenge rate-limited', {
+      requestId,
+      ip: getRequesterIp(req),
+      path: req.path,
+      responseTimeMs: Date.now() - startedAt
+    });
+    return;
+  }
+
+  console.info('[auth:captcha] request received', {
+    requestId,
+    ip: getRequesterIp(req),
+    path: req.path,
+    origin: req.headers.origin || '',
+    userAgent: req.headers['user-agent'] || ''
+  });
+
+  res.setHeader('Cache-Control', CAPTCHA_CHALLENGE_CACHE_CONTROL);
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
-  const challenge = buildCaptchaChallenge(req);
-  res.json({
-    ok: true,
-    captchaId: challenge.id,
-    captcha: challenge,
-    question: challenge.question,
-    challenge: challenge.challengeText,
-    challengeText: challenge.challengeText,
-    prompt: challenge.prompt,
-    captchaText: challenge.captchaText,
-    expiresAt: challenge.expiresAt,
-    expiresInSeconds: Math.floor(CAPTCHA_TTL_MS / 1000)
-  });
+  try {
+    const challenge = buildCaptchaChallenge(req);
+    res.json({
+      ok: true,
+      captchaId: challenge.id,
+      captcha: challenge,
+      question: challenge.question,
+      challenge: challenge.challengeText,
+      challengeText: challenge.challengeText,
+      prompt: challenge.prompt,
+      captchaText: challenge.captchaText,
+      expiresAt: challenge.expiresAt,
+      expiresInSeconds: Math.floor(CAPTCHA_TTL_MS / 1000)
+    });
+    console.info('[auth:captcha] captcha generated', {
+      requestId,
+      responseTimeMs: Date.now() - startedAt,
+      captchaId: challenge.id
+    });
+  } catch (error) {
+    console.warn('[auth:captcha] captcha failed', {
+      requestId,
+      responseTimeMs: Date.now() - startedAt,
+      reason: error?.message || String(error)
+    });
+    res.status(500).json({ ok: false, error: 'Captcha generation failed' });
+  }
 });
 
 router.get('/google', async (req, res) => {
@@ -1887,4 +1920,5 @@ router.get('/me', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.buildCaptchaChallenge = buildCaptchaChallenge;
 module.exports.ensureAuthSchema = ensureAuthSchema;

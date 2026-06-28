@@ -1,6 +1,7 @@
 const https = require('https');
 const net = require('net');
-const dns = require('dns').promises;
+const dns = require('dns');
+const dnsPromises = dns.promises;
 const nodemailer = require('nodemailer');
 
 const GMAIL_SMTP_HOST = 'smtp.gmail.com';
@@ -99,7 +100,9 @@ function getTransporterOptions() {
     port,
     secure: false,
     requireTLS: true,
+    servername: GMAIL_SMTP_HOST,
     auth: { user, pass },
+    lookup: (hostname, options, callback) => dns.lookup(hostname, { family: 4 }, callback),
     connectionTimeout: 30000,
     greetingTimeout: 30000,
     socketTimeout: 30000,
@@ -131,13 +134,14 @@ function delay(ms) {
 
 async function logGmailDnsLookup() {
   try {
-    const results = await dns.lookup(GMAIL_SMTP_HOST, { all: true });
-    console.log('[Mailer] DNS lookup for smtp.gmail.com', {
-      addresses: results.map((entry) => ({ address: entry.address, family: entry.family }))
+    const result = await dnsPromises.lookup(GMAIL_SMTP_HOST, { family: 4 });
+    console.log('[Mailer] DNS IPv4 lookup for smtp.gmail.com', {
+      address: result.address,
+      family: result.family
     });
-    return { ok: true, results };
+    return { ok: true, address: result.address, family: result.family };
   } catch (error) {
-    console.warn('[Mailer] DNS lookup for smtp.gmail.com failed', {
+    console.warn('[Mailer] DNS IPv4 lookup for smtp.gmail.com failed', {
       code: error?.code,
       message: error?.message
     });
@@ -145,9 +149,9 @@ async function logGmailDnsLookup() {
   }
 }
 
-async function probeTcpConnection() {
+async function probeTcpConnection(ipv4Address) {
   return new Promise((resolve) => {
-    const socket = net.createConnection({ host: GMAIL_SMTP_HOST, port: GMAIL_SMTP_PORT });
+    const socket = net.createConnection({ host: ipv4Address || GMAIL_SMTP_HOST, port: GMAIL_SMTP_PORT });
     let settled = false;
 
     const finish = (result) => {
@@ -160,13 +164,18 @@ async function probeTcpConnection() {
     socket.setTimeout(30000);
 
     socket.once('connect', () => {
-      console.log('[Mailer] TCP connection to smtp.gmail.com:587 succeeded');
+      console.log('[Mailer] TCP connection to smtp.gmail.com:587 succeeded', {
+        host: ipv4Address || GMAIL_SMTP_HOST,
+        port: GMAIL_SMTP_PORT
+      });
       finish({ ok: true });
     });
 
     socket.once('timeout', () => {
       const error = Object.assign(new Error('TCP connection timeout'), { code: 'ETIMEDOUT' });
       console.warn('[Mailer] TCP connection to smtp.gmail.com:587 failed', {
+        host: ipv4Address || GMAIL_SMTP_HOST,
+        port: GMAIL_SMTP_PORT,
         code: error.code,
         message: error.message
       });
@@ -175,6 +184,8 @@ async function probeTcpConnection() {
 
     socket.once('error', (error) => {
       console.warn('[Mailer] TCP connection to smtp.gmail.com:587 failed', {
+        host: ipv4Address || GMAIL_SMTP_HOST,
+        port: GMAIL_SMTP_PORT,
         code: error?.code,
         message: error?.message
       });
@@ -319,8 +330,8 @@ async function initMailerTransporter() {
       throw new Error('Mailer not configured. Set OTP_SMTP_HOST, OTP_SMTP_USER and OTP_SMTP_PASS.');
     }
 
-    await logGmailDnsLookup();
-    const tcpProbe = await probeTcpConnection();
+    const dnsResult = await logGmailDnsLookup();
+    const tcpProbe = await probeTcpConnection(dnsResult?.address);
     const tx = getTransporter();
     const verification = await verifyTransporterWithRetry(tx);
 

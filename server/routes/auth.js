@@ -1114,6 +1114,8 @@ router.post('/signup', async (req, res) => {
     return res.status(400).json({ error: 'Please verify OTP before signup.' });
   }
 
+  console.log('[auth:signup] OTP verified', { email: normalizedEmail, channel: selectedVerificationMethod });
+
   const client = await pool.connect();
   try {
     const exists = await client.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1', [normalizedEmail]);
@@ -1155,6 +1157,8 @@ router.post('/signup', async (req, res) => {
       [user.rows[0].id, 'Welcome to College OS. Start your first quiz to earn XP.', 'welcome']
     );
 
+    console.log('[auth:signup] user created', { userId: user.rows[0].id, role: user.rows[0].role });
+
     req.session.regenerate((sessionError) => {
       if (sessionError) {
         return res.status(500).json({ error: 'Could not start secure session' });
@@ -1164,8 +1168,23 @@ router.post('/signup', async (req, res) => {
       req.session.user = user.rows[0];
       req.session.role = user.rows[0].role;
       req.session.cookie.maxAge = STANDARD_SESSION_MAX_AGE_MS;
+      req.session.save((saveError) => {
+        if (saveError) {
+          return res.status(500).json({ error: 'Could not save secure session' });
+        }
 
-      return res.status(201).json({ user: user.rows[0] });
+        console.log('[auth:signup] session generated', { userId: user.rows[0].id, role: user.rows[0].role });
+        console.log('[auth:signup] response sent', { userId: user.rows[0].id, redirectUrl: '/dashboard' });
+
+        return res.status(201).json({
+          success: true,
+          message: 'Signup successful',
+          user: user.rows[0],
+          role: user.rows[0].role,
+          token: null,
+          redirectUrl: '/dashboard'
+        });
+      });
     });
     return;
   } finally {

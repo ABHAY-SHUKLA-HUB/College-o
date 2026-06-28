@@ -2120,7 +2120,7 @@ function bindMobileOtp() {
 }
 
 async function registerAccount(signupData) {
-  await window.CollegeOSApi.signup({
+  const payload = await window.CollegeOSApi.signup({
     fullName: signupData.fullName,
     email: signupData.email,
     mobile: signupData.mobile,
@@ -2129,6 +2129,8 @@ async function registerAccount(signupData) {
     verificationToken: signupVerificationState.verificationToken,
     captcha: await ensureCaptchaPayload('signup')
   });
+
+  return payload;
 }
 
 function bindSignupVerificationUi() {
@@ -2193,10 +2195,19 @@ function bindSignupVerificationUi() {
 
         signupVerificationState.verificationToken = verificationPayload?.verificationToken || '';
         signupVerificationState.verified = true;
+        console.log('[auth:signup] OTP verified');
         setSignupOtpStatus('', 'Verification successful. Completing signup...');
 
-        await registerAccount(data);
-        setAuthMessages('signup', '', 'Account created successfully. Redirecting to onboarding...');
+        const signupResult = await registerAccount(data);
+        const createdUser = signupResult?.user || null;
+        const sessionUser = await waitForSessionReady(6000);
+        window.collegeOsCurrentUser = sessionUser || createdUser || null;
+        console.log('[auth:signup] user created or found', {
+          userId: (sessionUser || createdUser)?.id || null,
+          role: signupResult?.role || sessionUser?.role || createdUser?.role || 'student'
+        });
+
+        setAuthMessages('signup', '', 'Account created successfully. Redirecting to your dashboard...');
 
         const timer = signupVerificationState.timer;
         if (timer) {
@@ -2211,11 +2222,14 @@ function bindSignupVerificationUi() {
         signupVerificationState.modalOpen = false;
         document.body.style.overflow = '';
 
-        openOnboardingModal({
-          categoryId: data.categoryId,
-          branchId: data.branchId,
-          semesterId: data.semesterId
-        });
+        console.log('[auth:signup] frontend redirect target', '/dashboard');
+        window.setTimeout(() => {
+          try {
+            window.location.assign('/dashboard');
+          } catch {
+            window.location.href = '/dashboard';
+          }
+        }, 150);
       } catch (error) {
         setSignupOtpStatus(normalizeAuthErrorMessage(error.message, 'Verification failed. Please try again.'), '');
       } finally {

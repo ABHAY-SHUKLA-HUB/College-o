@@ -1,6 +1,66 @@
 {
   "rewrites": [
     {
+      "source": "/college-feed",
+      "destination": "/college-feed.html"
+    },
+    {
+      "source": "/forum",
+      "destination": "/forum.html"
+    },
+    {
+      "source": "/support-hub",
+      "destination": "/support-hub.html"
+    },
+    {
+      "source": "/support-dashboard",
+      "destination": "/support-dashboard.html"
+    },
+    {
+      "source": "/forms",
+      "destination": "/create-support-request.html"
+    },
+    {
+      "source": "/leaderboard",
+      "destination": "/leaderboards.html"
+    },
+    {
+      "source": "/help-center",
+      "destination": "/help-center.html"
+    },
+    {
+      "source": "/contact-us",
+      "destination": "/contact-us.html"
+    },
+    {
+      "source": "/about-us",
+      "destination": "/about-us.html"
+    },
+    {
+      "source": "/membership",
+      "destination": "/pricing.html"
+    },
+    {
+      "source": "/feedback",
+      "destination": "/feedback.html"
+    },
+    {
+      "source": "/referrals",
+      "destination": "/referrals.html"
+    },
+    {
+      "source": "/notifications",
+      "destination": "/notifications.html"
+    },
+    {
+      "source": "/profile",
+      "destination": "/profile.html"
+    },
+    {
+      "source": "/settings",
+      "destination": "/settings.html"
+    },
+    {
       "source": "/login",
       "destination": "/index.html"
     },
@@ -71,14 +131,6 @@
     {
       "source": "/settings",
       "destination": "/settings.html"
-    },
-    {
-      "source": "/support-dashboard",
-      "destination": "/support-dashboard.html"
-    },
-    {
-      "source": "/support-hub",
-      "destination": "/support-hub.html"
     },
     {
       "source": "/contribute",
@@ -182,6 +234,71 @@
     {
       "source": "/support-hub.html",
       "destination": "/support-hub",
+      "permanent": true
+    },
+    {
+      "source": "/leaderboards.html",
+      "destination": "/leaderboard",
+      "permanent": true
+    },
+    {
+      "source": "/pricing.html",
+      "destination": "/membership",
+      "permanent": true
+    },
+    {
+      "source": "/create-support-request.html",
+      "destination": "/forms",
+      "permanent": true
+    },
+    {
+      "source": "/college-feed.html",
+      "destination": "/college-feed",
+      "permanent": true
+    },
+    {
+      "source": "/forum.html",
+      "destination": "/forum",
+      "permanent": true
+    },
+    {
+      "source": "/help-center.html",
+      "destination": "/help-center",
+      "permanent": true
+    },
+    {
+      "source": "/contact-us.html",
+      "destination": "/contact-us",
+      "permanent": true
+    },
+    {
+      "source": "/about-us.html",
+      "destination": "/about-us",
+      "permanent": true
+    },
+    {
+      "source": "/feedback.html",
+      "destination": "/feedback",
+      "permanent": true
+    },
+    {
+      "source": "/referrals.html",
+      "destination": "/referrals",
+      "permanent": true
+    },
+    {
+      "source": "/notifications.html",
+      "destination": "/notifications",
+      "permanent": true
+    },
+    {
+      "source": "/profile.html",
+      "destination": "/profile",
+      "permanent": true
+    },
+    {
+      "source": "/settings.html",
+      "destination": "/settings",
       "permanent": true
     },
     {

@@ -237,6 +237,9 @@ const CLEAN_ROUTE_MAP = {
   'settings.html': '/settings',
   'support-dashboard.html': '/support-dashboard',
   'support-hub.html': '/support-hub',
+  'pricing.html': '/membership',
+  'leaderboards.html': '/leaderboard',
+  'create-support-request.html': '/forms',
   'academic-contribution-hub.html': '/contribute'
 };
 

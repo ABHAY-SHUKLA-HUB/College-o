@@ -100,4 +100,35 @@ router.delete('/mine/:id', requireAuth, async (req, res) => {
   res.json({ message: 'Notification deleted successfully' });
 });
 
+router.get('/stream', (req, res) => {
+  // SSE stream endpoint for real-time notifications
+  // Check authentication
+  if (!req.session?.userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  // Set SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+
+  // Send initial connection confirmation
+  res.write('data: {"status": "connected"}\n\n');
+
+  // Set up heartbeat to keep connection alive
+  const heartbeatInterval = setInterval(() => {
+    res.write(':heartbeat\n\n');
+  }, 30000);
+
+  // Handle client disconnect
+  req.on('close', () => {
+    clearInterval(heartbeatInterval);
+    res.end();
+  });
+
+  // Prevent timeout
+  req.socket.setTimeout(0);
+});
+
 module.exports = router;

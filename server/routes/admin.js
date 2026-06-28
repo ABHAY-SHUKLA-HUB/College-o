@@ -7,6 +7,7 @@ const { pool } = require('../db/pool');
 const { requireAdmin } = require('../middleware/auth');
 const { isEmail, normalizeEmail } = require('../utils/validation');
 const { createUploadMiddleware, saveUploadedFile } = require('../services/uploadService');
+const { getOtpTestEmail, sendSystemEmail } = require('../utils/mailer');
 
 const router = express.Router();
 
@@ -196,6 +197,31 @@ router.get('/dashboard', requireAdmin, async (_req, res) => {
     dailyActiveUsers: dailyActiveUsers.rows[0].total,
     liveSessions: liveSessionTotals.rows[0]
   });
+});
+
+router.get('/test-smtp', requireAdmin, async (_req, res) => {
+  const to = getOtpTestEmail();
+  if (!to) {
+    return res.status(500).json({ success: false, message: 'OTP test email is not configured.' });
+  }
+
+  const result = await sendSystemEmail({
+    to,
+    subject: 'College OS SMTP test',
+    text: 'This is a test email from College OS to verify SMTP delivery on Render.',
+    html: '<p>This is a test email from College OS to verify SMTP delivery on Render.</p>'
+  });
+
+  if (!result.sent) {
+    console.warn('[Admin SMTP Test] send failed', {
+      reason: result.reason,
+      code: result.error?.code,
+      message: result.error?.message
+    });
+    return res.status(500).json({ success: false, message: 'Failed to send SMTP test email.' });
+  }
+
+  return res.json({ success: true, message: 'SMTP test email sent.' });
 });
 
 router.get('/membership-payments', requireAdmin, async (req, res) => {

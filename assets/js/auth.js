@@ -1689,6 +1689,19 @@ function setSignupOtpStatus(error = '', success = '') {
   setText('signupOtpSuccess', success);
 }
 
+function withTimeout(promise, timeoutMs, timeoutMessage) {
+  let timeoutId = null;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+    }
+  });
+}
+
 function canCloseSignupOtpModal() {
   return signupVerificationState.allowClose && !signupVerificationState.verifyInProgress;
 }
@@ -1812,12 +1825,12 @@ async function requestSignupVerificationCode({ isResend = false } = {}) {
   try {
     const captcha = await ensureCaptchaPayload('signup');
     const target = data.email;
-    const payload = await window.CollegeOSApi.requestVerificationCode({
+    const payload = await withTimeout(window.CollegeOSApi.requestVerificationCode({
       channel: 'email',
       target,
       purpose: 'signup',
       captcha
-    });
+    }), 20_000, 'Sending OTP is taking longer than expected. Please try again.');
     signupVerificationState.method = 'email';
     signupVerificationState.requested = true;
     setSignupOtpStatus('', payload.message || 'OTP sent successfully.');
@@ -1825,6 +1838,9 @@ async function requestSignupVerificationCode({ isResend = false } = {}) {
     return true;
   } catch (error) {
     let message = normalizeAuthErrorMessage(error.message, 'Failed to send verification code.');
+    if (/taking longer than expected/i.test(message)) {
+      message = 'Sending OTP is taking longer than expected. Please try again.';
+    }
     if (error?.status === 429) {
       const retry = Number(error?.retryAfter || 0) || 30;
       message = `Too many requests. Please wait ${retry} seconds before retrying.`;
@@ -1833,6 +1849,8 @@ async function requestSignupVerificationCode({ isResend = false } = {}) {
     }
     setSignupOtpStatus(message, '');
     setAuthMessages('signup', message);
+    const resendBtn = byId('signupOtpResendBtn');
+    if (resendBtn) resendBtn.disabled = false;
     return false;
   } finally {
     signupVerificationState.requestInProgress = false;

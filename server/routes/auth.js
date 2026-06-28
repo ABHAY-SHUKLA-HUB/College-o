@@ -288,12 +288,21 @@ async function sendOtpEmail({ otp, originalTarget, channel, purpose, targetEmail
     expiresMinutes: Math.floor(OTP_TTL_MS / (60 * 1000))
   });
 
-  await sendSystemEmail({
+  return await sendSystemEmail({
     to,
     subject: template.subject,
     text: template.text,
     html: template.html
   });
+}
+
+function getOtpEmailFailureResponse(result, error) {
+  const reason = String(result?.reason || error?.safeReason || '').trim();
+  if (reason === 'config missing') return { status: 503, reason: 'config missing' };
+  if (reason === 'SMTP auth failed') return { status: 503, reason: 'SMTP auth failed' };
+  if (reason === 'timeout') return { status: 503, reason: 'timeout' };
+  if (reason === 'provider blocked') return { status: 503, reason: 'provider blocked' };
+  return { status: 500, reason: reason || 'provider blocked' };
 }
 
 async function sendPasswordResetEmail({ email, token }) {
@@ -1451,10 +1460,23 @@ router.post('/verification/request', async (req, res) => {
     }
 
     const targetEmail = channel === 'email' ? target : undefined;
-    await sendOtpEmail({ otp: code, originalTarget: target, channel, purpose, targetEmail });
+    const emailResult = await sendOtpEmail({ otp: code, originalTarget: target, channel, purpose, targetEmail });
+    if (emailResult && emailResult.sent === false) {
+      throw new Error('Failed to send OTP email. Please try again.');
+    }
   } catch (error) {
     otpStore.delete(key);
-    return res.status(500).json({ error: 'Failed to send OTP email. Please try again.' });
+    console.error('[OTP_EMAIL] request failed', {
+      name: error?.name,
+      code: error?.code,
+      command: error?.command,
+      response: error?.response,
+      message: error?.message
+    });
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to send OTP email. Please try again.'
+    });
   }
 
   return res.json({

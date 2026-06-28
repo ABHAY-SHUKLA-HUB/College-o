@@ -1,4 +1,6 @@
-require('dotenv').config();
+if (String(process.env.NODE_ENV || '').toLowerCase() !== 'production') {
+  require('dotenv').config();
+}
 
 const path = require('path');
 const crypto = require('crypto');
@@ -49,6 +51,7 @@ const supportModerationRoutes = require('./routes/support-moderation');
 const adminSupportGovernanceRoutes = require('./routes/admin-support-governance');
 const academicsContentMgmtRoutes = require('./routes/academics-content-management');
 const studentLibraryUnifiedRoutes = require('./routes/student-library-unified');
+const { initMailerTransporter, validateOtpSmtpEnv } = require('./utils/mailer');
 // Socket / realtime integration
 const { initSocket } = require('./services/socketManager');
 
@@ -343,6 +346,36 @@ app.options('*', (req, res) => {
 app.use('/assets', express.static(path.join(__dirname, '..', 'assets'), assetStaticOptions));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'), assetStaticOptions));
 
+// Page route serving - serve specific HTML pages directly
+app.get('/referrals', (_req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+  res.sendFile(path.join(__dirname, '..', 'referrals.html'));
+});
+app.get('/feedback', (_req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+  res.sendFile(path.join(__dirname, '..', 'feedback.html'));
+});
+app.get('/pricing', (_req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+  res.sendFile(path.join(__dirname, '..', 'pricing.html'));
+});
+app.get('/contact-us', (_req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+  res.sendFile(path.join(__dirname, '..', 'contact-us.html'));
+});
+app.get('/about-us', (_req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+  res.sendFile(path.join(__dirname, '..', 'about-us.html'));
+});
+app.get('/help-center', (_req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+  res.sendFile(path.join(__dirname, '..', 'help-center.html'));
+});
+app.get('/my-tickets', (_req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+  res.sendFile(path.join(__dirname, '..', 'my-tickets.html'));
+});
+
 app.get('/api/auth/captcha/challenge', (req, res) => {
   const startedAt = Date.now();
   const requestId = crypto.randomBytes(8).toString('hex');
@@ -510,6 +543,58 @@ app.use('/api/admin/support-governance', adminSupportGovernanceRoutes);
 app.use('/api', academicsContentMgmtRoutes);
 app.use('/api', studentLibraryUnifiedRoutes);
 
+// Safe notifications stream endpoint (fallback for missing SSE or polling)
+app.get('/api/notifications/stream', (req, res) => {
+  try {
+    // Set headers for SSE (Server-Sent Events) or polling
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    // Send initial connection message
+    res.write('data: {"type":"connected","message":"Notification stream connected"}\n\n');
+
+    // Keep connection alive with heartbeat
+    const heartbeat = setInterval(() => {
+      res.write(':\n\n');
+    }, 30_000);
+
+    // Clean up on disconnect
+    req.on('close', () => {
+      clearInterval(heartbeat);
+      res.end();
+    });
+
+    // Send a keep-alive message immediately for polling clients
+    setTimeout(() => {
+      res.write('data: {"type":"heartbeat","timestamp":"' + new Date().toISOString() + '"}\n\n');
+    }, 1000);
+  } catch (error) {
+    console.warn('[Notifications Stream] error:', error.message);
+    res.status(500).json({ ok: false, error: 'Stream unavailable' });
+  }
+});
+
+// Map direct page routes to HTML files
+const PAGE_ROUTES = new Map([
+  ['/referrals', 'referrals.html'],
+  ['/feedback', 'feedback.html'],
+  ['/pricing', 'pricing.html'],
+  ['/contact-us', 'contact-us.html'],
+  ['/about-us', 'about-us.html'],
+  ['/help-center', 'help-center.html'],
+  ['/my-tickets', 'my-tickets.html']
+]);
+
+// Serve mapped page routes directly
+PAGE_ROUTES.forEach((file, route) => {
+  app.get(route, (_req, res) => {
+    res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    return res.sendFile(path.join(__dirname, '..', file));
+  });
+});
+
 app.use((req, res, next) => {
   if (req.path.startsWith('/api') || req.path.startsWith('/assets/') || req.path.startsWith('/uploads/')) {
     return next();
@@ -597,6 +682,16 @@ process.on('uncaughtException', (err) => {
 });
 
 async function startServer() {
+  try {
+    validateOtpSmtpEnv();
+    await initMailerTransporter();
+  } catch (error) {
+    console.warn('[Mailer] OTP transporter setup failed', {
+      code: error?.code,
+      message: error?.message
+    });
+  }
+
   await pool.query('SELECT 1');
   await ensureDatabaseBootstrap();
   if (typeof liveSessionRoutes.runLiveSessionMaintenance === 'function') {

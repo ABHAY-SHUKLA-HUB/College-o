@@ -39,24 +39,6 @@ function hasResendFallback() {
   return Boolean(getResendApiKey() && getResendFromEmail() && getOtpTestEmail());
 }
 
-function getRequiredOtpVars() {
-  return [
-    ['OTP_EMAIL_PROVIDER', String(process.env.OTP_EMAIL_PROVIDER || '').trim()],
-    ['OTP_RESEND_API_KEY', getResendApiKey()],
-    ['OTP_RESEND_FROM_EMAIL', getResendFromEmail()],
-    ['OTP_TEST_EMAIL', getOtpTestEmail()]
-  ];
-}
-
-function validateOtpSmtpEnv() {
-  const required = getRequiredOtpVars().map(([name, value]) => ({
-    name,
-    present: Boolean(value)
-  }));
-
-  return required.every((item) => item.present);
-}
-
 function resolveEmailProvider() {
   const explicit = getEmailProvider();
   const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
@@ -82,6 +64,18 @@ function resolveEmailProvider() {
 
 function logProviderSelection(provider, source) {
   console.log('[Mailer] email provider selected', { provider, source });
+}
+
+function logResendStartupStatus() {
+  console.log('[Mailer] Active provider: resend');
+  console.log('[Mailer] Resend API key present:', Boolean(getResendApiKey()));
+  console.log('[Mailer] Resend from email:', getResendFromEmail() || '(missing)');
+}
+
+function logSmtpStartupStatus() {
+  console.log('[Mailer] Active provider: smtp');
+  console.log('[Mailer] SMTP user present:', Boolean(getSmtpUser()));
+  console.log('[Mailer] SMTP host present:', Boolean(String(process.env.OTP_SMTP_HOST || '').trim()));
 }
 
 function getTransporterOptions() {
@@ -172,6 +166,16 @@ async function initMailerTransporter() {
   activeProvider = provider;
   logProviderSelection(provider, 'startup');
 
+  if (provider === 'resend') {
+    logResendStartupStatus();
+    return provider;
+  }
+
+  if (provider === 'smtp') {
+    logSmtpStartupStatus();
+    return provider;
+  }
+
   return provider;
 }
 
@@ -226,7 +230,6 @@ module.exports = {
   getOtpTestEmail,
   getTransporter,
   initMailerTransporter,
-  validateOtpSmtpEnv,
   resolveEmailProvider,
   sendSystemEmail
 };

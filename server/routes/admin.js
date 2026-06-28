@@ -199,7 +199,7 @@ router.get('/dashboard', requireAdmin, async (_req, res) => {
   });
 });
 
-router.get('/test-smtp', requireAdmin, async (_req, res) => {
+async function sendAdminEmailTest(req, res) {
   const to = getOtpTestEmail();
   if (!to) {
     return res.status(500).json({ success: false, message: 'OTP test email is not configured.' });
@@ -207,22 +207,25 @@ router.get('/test-smtp', requireAdmin, async (_req, res) => {
 
   const result = await sendSystemEmail({
     to,
-    subject: 'College OS SMTP test',
-    text: 'This is a test email from College OS to verify SMTP delivery on Render.',
-    html: '<p>This is a test email from College OS to verify SMTP delivery on Render.</p>'
+    subject: 'College OS Verification Code',
+    text: 'This is a test email from College OS to verify the active email provider on Render.',
+    html: '<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#0f172a"><h2>College OS Verification Code</h2><p>This is a test email from College OS to verify the active email provider on Render.</p><p>If you received this, email delivery is working.</p></div>'
   });
 
   if (!result.sent) {
-    console.warn('[Admin SMTP Test] send failed', {
+    console.warn('[Admin Email Test] send failed', {
       reason: result.reason,
       code: result.error?.code,
       message: result.error?.message
     });
-    return res.status(500).json({ success: false, message: 'Failed to send SMTP test email.' });
+    return res.status(500).json({ success: false, message: 'Failed to send test email.' });
   }
 
-  return res.json({ success: true, message: 'SMTP test email sent.' });
-});
+  return res.json({ success: true, message: 'Test email sent.' });
+}
+
+router.get('/test-email', requireAdmin, sendAdminEmailTest);
+router.get('/test-smtp', requireAdmin, sendAdminEmailTest);
 
 router.get('/membership-payments', requireAdmin, async (req, res) => {
   const status = String(req.query.status || 'all').toLowerCase();

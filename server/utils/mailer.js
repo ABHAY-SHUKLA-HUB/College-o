@@ -1,26 +1,30 @@
-const https = require('https');
-const net = require('net');
-const dns = require('dns');
-const dnsPromises = dns.promises;
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-const GMAIL_SMTP_HOST = 'smtp.gmail.com';
-const GMAIL_SMTP_PORT = 587;
-const SMTP_VERIFY_ATTEMPTS = 3;
-const SMTP_VERIFY_BACKOFF_MS = [1000, 2000, 4000];
+const DEFAULT_EMAIL_PROVIDER = 'resend';
 
+let nodemailer = null;
 let transporter = null;
-let startupVerificationPromise = null;
-let activeProvider = 'gmail_smtp';
+let resendClient = null;
+let activeProvider = null;
 
-function getSmtpHost() {
-  return String(process.env.OTP_SMTP_HOST || '').trim();
+function getMailFrom() {
+  return String(process.env.OTP_RESEND_FROM_EMAIL || '').trim();
 }
 
-function getSmtpPort() {
-  const raw = process.env.OTP_SMTP_PORT || 587;
-  const port = Number(raw);
-  return Number.isFinite(port) && port > 0 ? port : 587;
+function getOtpTestEmail() {
+  return String(process.env.OTP_TEST_EMAIL || '').trim();
+}
+
+function getEmailProvider() {
+  return String(process.env.OTP_EMAIL_PROVIDER || '').trim().toLowerCase();
+}
+
+function getResendApiKey() {
+  return String(process.env.OTP_RESEND_API_KEY || '').trim();
+}
+
+function getResendFromEmail() {
+  return String(process.env.OTP_RESEND_FROM_EMAIL || '').trim();
 }
 
 function getSmtpUser() {
@@ -31,67 +35,61 @@ function getSmtpPass() {
   return String(process.env.OTP_SMTP_PASS || '').replace(/\s+/g, '').trim();
 }
 
-function getMailFrom() {
-  return String(process.env.OTP_FROM_EMAIL || '').trim();
-}
-
-function getOtpTestEmail() {
-  return String(process.env.OTP_TEST_EMAIL || '').trim();
-}
-
-function getResendApiKey() {
-  return String(process.env.OTP_RESEND_API_KEY || process.env.RESEND_API_KEY || '').trim();
-}
-
-function getResendFromEmail() {
-  return String(process.env.OTP_RESEND_FROM_EMAIL || process.env.RESEND_FROM_EMAIL || getMailFrom() || '').trim();
-}
-
 function hasResendFallback() {
   return Boolean(getResendApiKey() && getResendFromEmail() && getOtpTestEmail());
 }
 
-function getRequiredOtpSmtpVars() {
+function getRequiredOtpVars() {
   return [
-    ['OTP_SMTP_HOST', getSmtpHost()],
-    ['OTP_SMTP_PORT', String(process.env.OTP_SMTP_PORT || '').trim()],
-    ['OTP_SMTP_USER', getSmtpUser()],
-    ['OTP_SMTP_PASS', getSmtpPass()],
-    ['OTP_FROM_EMAIL', getMailFrom()],
+    ['OTP_EMAIL_PROVIDER', String(process.env.OTP_EMAIL_PROVIDER || '').trim()],
+    ['OTP_RESEND_API_KEY', getResendApiKey()],
+    ['OTP_RESEND_FROM_EMAIL', getResendFromEmail()],
     ['OTP_TEST_EMAIL', getOtpTestEmail()]
   ];
 }
 
-function getOptionalFallbackVars() {
-  return [
-    ['OTP_RESEND_API_KEY', getResendApiKey()],
-    ['OTP_RESEND_FROM_EMAIL', getResendFromEmail()]
-  ];
+function validateOtpSmtpEnv() {
+  const required = getRequiredOtpVars().map(([name, value]) => ({
+    name,
+    present: Boolean(value)
+  }));
+
+  return required.every((item) => item.present);
 }
 
-function validateOtpSmtpEnv() {
-  const required = getRequiredOtpSmtpVars().map(([name, value]) => ({
-    name,
-    present: Boolean(value)
-  }));
-  const fallback = getOptionalFallbackVars().map(([name, value]) => ({
-    name,
-    present: Boolean(value)
-  }));
+function resolveEmailProvider() {
+  const explicit = getEmailProvider();
+  const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
 
-  console.log('[Mailer] OTP env status', { required, fallback });
+  if (explicit === 'resend' || explicit === 'smtp') {
+    return explicit;
+  }
 
-  return {
-    valid: required.every((item) => item.present),
-    fallbackConfigured: hasResendFallback()
-  };
+  if (isProduction) {
+    return 'resend';
+  }
+
+  if (hasResendFallback()) {
+    return 'resend';
+  }
+
+  if (getSmtpUser() && getSmtpPass()) {
+    return 'smtp';
+  }
+
+  return DEFAULT_EMAIL_PROVIDER;
+}
+
+function logProviderSelection(provider, source) {
+  console.log('[Mailer] email provider selected', { provider, source });
 }
 
 function getTransporterOptions() {
-  const host = GMAIL_SMTP_HOST;
-  const port = GMAIL_SMTP_PORT;
-  const user = getSmtpUser();
-  const pass = getSmtpPass();
+  const host = String(process.env.OTP_SMTP_HOST || 'smtp.gmail.com').trim();
+  const rawPort = process.env.OTP_SMTP_PORT || 587;
+  const port = Number(rawPort);
+  const user = String(process.env.OTP_SMTP_USER || '').trim();
+  const pass = String(process.env.OTP_SMTP_PASS || '').replace(/\s+/g, '').trim();
 
   if (!host || !user || !pass) return null;
 
@@ -100,9 +98,12 @@ function getTransporterOptions() {
     port,
     secure: false,
     requireTLS: true,
-    servername: GMAIL_SMTP_HOST,
+    servername: 'smtp.gmail.com',
     auth: { user, pass },
-    lookup: (hostname, options, callback) => dns.lookup(hostname, { family: 4 }, callback),
+    lookup: (hostname, options, callback) => {
+      const dns = require('dns');
+      return dns.lookup(hostname, { family: 4 }, callback);
+    },
     connectionTimeout: 30000,
     greetingTimeout: 30000,
     socketTimeout: 30000,
@@ -124,284 +125,99 @@ function getTransporter() {
     throw new Error('Mailer not configured. Set OTP_SMTP_HOST, OTP_SMTP_USER and OTP_SMTP_PASS.');
   }
 
+  if (!nodemailer) {
+    nodemailer = require('nodemailer');
+  }
   transporter = nodemailer.createTransport(options);
   return transporter;
 }
 
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function logGmailDnsLookup() {
-  try {
-    const result = await dnsPromises.lookup(GMAIL_SMTP_HOST, { family: 4 });
-    console.log('[Mailer] DNS IPv4 lookup for smtp.gmail.com', {
-      address: result.address,
-      family: result.family
-    });
-    return { ok: true, address: result.address, family: result.family };
-  } catch (error) {
-    console.warn('[Mailer] DNS IPv4 lookup for smtp.gmail.com failed', {
-      code: error?.code,
-      message: error?.message
-    });
-    return { ok: false, error };
-  }
-}
-
-async function probeTcpConnection(ipv4Address) {
-  return new Promise((resolve) => {
-    const socket = net.createConnection({ host: ipv4Address || GMAIL_SMTP_HOST, port: GMAIL_SMTP_PORT });
-    let settled = false;
-
-    const finish = (result) => {
-      if (settled) return;
-      settled = true;
-      socket.destroy();
-      resolve(result);
-    };
-
-    socket.setTimeout(30000);
-
-    socket.once('connect', () => {
-      console.log('[Mailer] TCP connection to smtp.gmail.com:587 succeeded', {
-        host: ipv4Address || GMAIL_SMTP_HOST,
-        port: GMAIL_SMTP_PORT
-      });
-      finish({ ok: true });
-    });
-
-    socket.once('timeout', () => {
-      const error = Object.assign(new Error('TCP connection timeout'), { code: 'ETIMEDOUT' });
-      console.warn('[Mailer] TCP connection to smtp.gmail.com:587 failed', {
-        host: ipv4Address || GMAIL_SMTP_HOST,
-        port: GMAIL_SMTP_PORT,
-        code: error.code,
-        message: error.message
-      });
-      finish({ ok: false, error });
-    });
-
-    socket.once('error', (error) => {
-      console.warn('[Mailer] TCP connection to smtp.gmail.com:587 failed', {
-        host: ipv4Address || GMAIL_SMTP_HOST,
-        port: GMAIL_SMTP_PORT,
-        code: error?.code,
-        message: error?.message
-      });
-      finish({ ok: false, error });
-    });
-  });
-}
-
 function logMailerError(prefix, error) {
-  console.error(prefix, {
-    name: error?.name,
-    message: error?.message,
-    code: error?.code,
-    command: error?.command,
-    response: error?.response
-  });
+  console.error(prefix, { message: error?.message, code: error?.code });
 }
 
-function isConnectivityError(error) {
-  const code = String(error?.code || '').toUpperCase();
-  const message = String(error?.message || '').toLowerCase();
-  return code === 'ETIMEDOUT' || code === 'ECONNREFUSED' || /timeout|refused|unreachable|eai_again|network/.test(message);
-}
-
-async function verifyTransporterWithRetry(transporterInstance) {
-  let lastError = null;
-
-  for (let attempt = 1; attempt <= SMTP_VERIFY_ATTEMPTS; attempt += 1) {
-    try {
-      await transporterInstance.verify();
-      return { ok: true };
-    } catch (error) {
-      lastError = error;
-      logMailerError(`[Mailer] SMTP verification attempt ${attempt} failed`, error);
-      if (attempt < SMTP_VERIFY_ATTEMPTS) {
-        await delay(SMTP_VERIFY_BACKOFF_MS[attempt - 1] || SMTP_VERIFY_BACKOFF_MS[SMTP_VERIFY_BACKOFF_MS.length - 1]);
-      }
-    }
-  }
-
-  return { ok: false, error: lastError };
-}
-
-function getMailerFailureReason(error) {
-  const message = String(error?.message || '').toLowerCase();
-  const code = String(error?.code || '').toUpperCase();
-  const response = String(error?.response || '').toLowerCase();
-  const combined = `${message} ${response}`;
-
-  if (!isMailerConfigured()) return 'config missing';
-  if (code === 'EAUTH' || /auth|credentials|username or password not accepted/.test(combined)) return 'SMTP auth failed';
-  if (code === 'ETIMEDOUT' || code === 'ECONNREFUSED' || code === 'ESOCKET' || /timeout|timed out|refused/.test(combined)) return 'SMTP unreachable';
-  if (/blocked|not permitted|relay denied|sender address rejected|mail from|provider/.test(combined)) return 'provider blocked';
-  return 'provider blocked';
-}
-
-async function sendViaResend({ to, from, subject, text, html }) {
+function getResendClient() {
+  if (resendClient) return resendClient;
   const apiKey = getResendApiKey();
-  const resendFrom = getResendFromEmail();
+  if (!apiKey) return null;
+  resendClient = new Resend(apiKey);
+  return resendClient;
+}
 
-  if (!apiKey || !resendFrom) {
+async function sendViaResend({ to, subject, text, html }) {
+  const resendFrom = getResendFromEmail();
+  const client = getResendClient();
+
+  if (!client || !resendFrom) {
     return { sent: false, reason: 'config missing' };
   }
 
-  const payload = JSON.stringify({
-    from: resendFrom,
-    to,
-    subject,
-    text: text || '',
-    html: html || undefined
-  });
-
-  return await new Promise((resolve) => {
-    const request = https.request(
-      {
-        hostname: 'api.resend.com',
-        path: '/emails',
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(payload)
-        },
-        timeout: 30000
-      },
-      (response) => {
-        let body = '';
-        response.setEncoding('utf8');
-        response.on('data', (chunk) => {
-          body += chunk;
-        });
-        response.on('end', () => {
-          if (response.statusCode && response.statusCode >= 200 && response.statusCode < 300) {
-            resolve({ sent: true, provider: 'resend_api' });
-            return;
-          }
-
-          const error = new Error(`Resend API request failed (${response.statusCode || 'unknown'})`);
-          error.code = `RESEND_${response.statusCode || 'ERROR'}`;
-          error.response = body;
-          console.warn('[Mailer] Resend API request failed', {
-            code: error.code,
-            message: error.message,
-            response: body
-          });
-          resolve({ sent: false, reason: 'provider blocked', error });
-        });
-      }
-    );
-
-    request.on('timeout', () => {
-      const error = new Error('Resend API request timeout');
-      error.code = 'ETIMEDOUT';
-      request.destroy(error);
+  try {
+    const result = await client.emails.send({
+      from: resendFrom,
+      to,
+      subject,
+      text: text || '',
+      html: html || undefined
     });
 
-    request.on('error', (error) => {
-      console.warn('[Mailer] Resend API request failed', {
-        code: error?.code,
-        message: error?.message
-      });
-      resolve({ sent: false, reason: 'provider blocked', error });
-    });
-
-    request.write(payload);
-    request.end();
-  });
+    return { sent: true, provider: 'resend', id: result?.data?.id || null };
+  } catch (error) {
+    return { sent: false, reason: 'provider blocked', error };
+  }
 }
 
 async function initMailerTransporter() {
-  if (startupVerificationPromise) return startupVerificationPromise;
+  const provider = resolveEmailProvider();
+  activeProvider = provider;
+  logProviderSelection(provider, 'startup');
 
-  startupVerificationPromise = (async () => {
-    validateOtpSmtpEnv();
-
-    if (!isMailerConfigured()) {
-      if (hasResendFallback()) {
-        activeProvider = 'resend_api';
-        console.log('[Mailer] Gmail SMTP config missing, using Resend API fallback');
-        return null;
-      }
-      throw new Error('Mailer not configured. Set OTP_SMTP_HOST, OTP_SMTP_USER and OTP_SMTP_PASS.');
-    }
-
-    const dnsResult = await logGmailDnsLookup();
-    const tcpProbe = await probeTcpConnection(dnsResult?.address);
-    const tx = getTransporter();
-    const verification = await verifyTransporterWithRetry(tx);
-
-    if (verification.ok) {
-      activeProvider = 'gmail_smtp';
-      console.log('[Mailer] SMTP connected successfully');
-      return tx;
-    }
-
-    const verificationError = verification.error || tcpProbe.error;
-    if (isConnectivityError(verificationError) && hasResendFallback()) {
-      activeProvider = 'resend_api';
-      console.warn('[Mailer] Gmail SMTP unreachable, falling back to Resend API');
-      return null;
-    }
-
-    activeProvider = 'gmail_smtp';
-    return null;
-  })().catch((error) => {
-    console.warn('[Mailer] OTP transporter setup failed', {
-      code: error?.code,
-      message: error?.message
-    });
-    return null;
-  });
-
-  return startupVerificationPromise;
+  return provider;
 }
 
 async function sendSystemEmail({ to, subject, text, html }) {
   if (!to) return { sent: false, reason: 'missing_recipient' };
   if (!subject || (!text && !html)) return { sent: false, reason: 'invalid_payload' };
 
-  const from = getMailFrom();
+  const provider = activeProvider || resolveEmailProvider();
+  const from = provider === 'resend' ? getResendFromEmail() : getMailFrom();
+
   if (!from) return { sent: false, reason: 'config missing' };
 
-  if (activeProvider === 'resend_api') {
-    return await sendViaResend({ to, from, subject, text, html });
-  }
-
-  if (!isMailerConfigured()) {
-    if (hasResendFallback()) {
-      activeProvider = 'resend_api';
-      return await sendViaResend({ to, from, subject, text, html });
+  if (provider === 'resend') {
+    const result = await sendViaResend({ to, subject, text, html });
+    if (result.sent) {
+      console.log('[Mailer] email sent successfully', { provider: 'resend' });
+      return result;
     }
-    return { sent: false, reason: 'config missing' };
+    console.warn('[Mailer] send failed', { provider: 'resend' });
+    return result;
   }
 
-  const tx = getTransporter();
-
-  try {
-    await tx.sendMail({
-      from,
-      to,
-      subject,
-      text: text || '',
-      html: html || undefined
-    });
-    return { sent: true, provider: 'gmail_smtp' };
-  } catch (error) {
-    logMailerError('OTP email failed:', error);
-
-    if (isConnectivityError(error) && hasResendFallback()) {
-      console.warn('[Mailer] Gmail SMTP unreachable during send, falling back to Resend API');
-      activeProvider = 'resend_api';
-      return await sendViaResend({ to, from, subject, text, html });
+  if (provider === 'smtp') {
+    if (!isMailerConfigured()) {
+      return { sent: false, reason: 'config missing' };
     }
 
-    return { sent: false, reason: getMailerFailureReason(error), error };
+    const tx = getTransporter();
+
+    try {
+      await tx.sendMail({
+        from,
+        to,
+        subject,
+        text: text || '',
+        html: html || undefined
+      });
+      console.log('[Mailer] email sent successfully', { provider: 'smtp' });
+      return { sent: true, provider: 'smtp' };
+    } catch (error) {
+      logMailerError('[Mailer] send failed', error);
+      return { sent: false, reason: 'provider blocked', error };
+    }
   }
+
+  return { sent: false, reason: 'config missing' };
 }
 
 module.exports = {
@@ -411,6 +227,6 @@ module.exports = {
   getTransporter,
   initMailerTransporter,
   validateOtpSmtpEnv,
-  getMailerFailureReason,
+  resolveEmailProvider,
   sendSystemEmail
 };

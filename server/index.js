@@ -51,7 +51,7 @@ const supportModerationRoutes = require('./routes/support-moderation');
 const adminSupportGovernanceRoutes = require('./routes/admin-support-governance');
 const academicsContentMgmtRoutes = require('./routes/academics-content-management');
 const studentLibraryUnifiedRoutes = require('./routes/student-library-unified');
-const { initMailerTransporter, validateOtpSmtpEnv } = require('./utils/mailer');
+const { initMailerTransporter } = require('./utils/mailer');
 // Socket / realtime integration
 const { initSocket } = require('./services/socketManager');
 
@@ -683,7 +683,6 @@ process.on('uncaughtException', (err) => {
 
 async function startServer() {
   try {
-    validateOtpSmtpEnv();
     await initMailerTransporter();
   } catch (error) {
     console.warn('[Mailer] OTP transporter setup failed', {

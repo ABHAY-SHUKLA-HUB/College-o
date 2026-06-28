@@ -45,6 +45,19 @@ function setAuthMessages(scope, error = '', success = '') {
   setText(`${scope}Success`, success);
 }
 
+function persistSignupAuthState(user) {
+  if (!user || typeof user !== 'object') return;
+  window.collegeOsCurrentUser = user;
+
+  try {
+    const serialized = JSON.stringify(user);
+    window.sessionStorage?.setItem('collegeOsCurrentUser', serialized);
+    window.localStorage?.setItem('collegeOsCurrentUser', serialized);
+  } catch {
+    // Best-effort only; the session cookie is the source of truth.
+  }
+}
+
 const DASHBOARD_BOOTSTRAP_PATHS = [
   '/api/dashboard/personalized',
   '/api/dashboard/stats',
@@ -2200,11 +2213,30 @@ function bindSignupVerificationUi() {
 
         const signupResult = await registerAccount(data);
         const createdUser = signupResult?.user || null;
-        const sessionUser = await waitForSessionReady(6000);
-        window.collegeOsCurrentUser = sessionUser || createdUser || null;
-        console.log('[auth:signup] user created or found', {
-          userId: (sessionUser || createdUser)?.id || null,
-          role: signupResult?.role || sessionUser?.role || createdUser?.role || 'student'
+        const responseUser = signupResult?.user || null;
+        console.log('[auth:signup] signup complete response received', {
+          success: Boolean(signupResult?.success),
+          hasUser: Boolean(responseUser),
+          role: signupResult?.role || responseUser?.role || 'student',
+          redirectUrl: signupResult?.redirectUrl || '/dashboard'
+        });
+
+        persistSignupAuthState(responseUser);
+
+        let sessionUser = null;
+        try {
+          sessionUser = await waitForSessionReady(2000);
+        } catch {
+          sessionUser = null;
+        }
+
+        if (sessionUser) {
+          persistSignupAuthState(sessionUser);
+        }
+
+        console.log('[auth:signup] session saved', {
+          hasSessionUser: Boolean(sessionUser),
+          userId: (sessionUser || responseUser || createdUser)?.id || null
         });
 
         setAuthMessages('signup', '', 'Account created successfully. Redirecting to your dashboard...');
@@ -2222,7 +2254,7 @@ function bindSignupVerificationUi() {
         signupVerificationState.modalOpen = false;
         document.body.style.overflow = '';
 
-        console.log('[auth:signup] frontend redirect target', '/dashboard');
+        console.log('[auth:signup] redirecting to /dashboard');
         window.setTimeout(() => {
           try {
             window.location.assign('/dashboard');
@@ -2231,6 +2263,11 @@ function bindSignupVerificationUi() {
           }
         }, 150);
       } catch (error) {
+        console.error('[auth:signup] post-otp handoff failed', {
+          message: error?.message,
+          code: error?.code,
+          status: error?.status
+        });
         setSignupOtpStatus(normalizeAuthErrorMessage(error.message, 'Verification failed. Please try again.'), '');
       } finally {
         signupVerificationState.verifyInProgress = false;

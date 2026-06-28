@@ -27,6 +27,21 @@ function addScopedAcademicClause({ clauses, params, alias, scope }) {
     params.push(scope.semesterId);
     clauses.push(`(${alias}.semester_id = $${params.length} OR ${alias}.semester_id IS NULL)`);
   }
+
+  if (scope.collegeId) {
+    params.push(scope.collegeId);
+    clauses.push(`(${alias}.college_id = $${params.length} OR ${alias}.college_id IS NULL)`);
+  }
+
+  if (scope.courseId) {
+    params.push(scope.courseId);
+    clauses.push(`(${alias}.course_id = $${params.length} OR ${alias}.course_id IS NULL)`);
+  }
+
+  if (scope.yearId) {
+    params.push(scope.yearId);
+    clauses.push(`(${alias}.year_id = $${params.length} OR ${alias}.year_id IS NULL)`);
+  }
 }
 
 async function resolveAcademicScope(req, res) {
@@ -35,7 +50,7 @@ async function resolveAcademicScope(req, res) {
   const isAdmin = role === 'admin' || role === 'super_admin';
 
   const profileResult = await pool.query(
-    `SELECT category_id, branch_id, semester_id
+    `SELECT category_id, branch_id, semester_id, college_id, course_id, year_id
      FROM user_profiles
      WHERE user_id = $1
      LIMIT 1`,
@@ -46,6 +61,9 @@ async function resolveAcademicScope(req, res) {
   const profileBranchId = toPositiveInt(profile.branch_id);
   const profileSemesterId = toPositiveInt(profile.semester_id);
   const profileCategoryId = toPositiveInt(profile.category_id);
+  const profileCollegeId = toPositiveInt(profile.college_id);
+  const profileCourseId = toPositiveInt(profile.course_id);
+  const profileYearId = toPositiveInt(profile.year_id);
 
   const requestedBranchId = toPositiveInt(req.query.branch || req.query.branchId);
   const requestedSemesterId = toPositiveInt(req.query.semester || req.query.semesterId);
@@ -70,6 +88,9 @@ async function resolveAcademicScope(req, res) {
       categoryId: profileCategoryId,
       branchId: profileBranchId,
       semesterId: profileSemesterId || requestedSemesterId || null,
+      collegeId: profileCollegeId || null,
+      courseId: profileCourseId || null,
+      yearId: profileYearId || null,
       isAdmin: false
     };
   }
@@ -78,6 +99,9 @@ async function resolveAcademicScope(req, res) {
     categoryId: profileCategoryId,
     branchId: requestedBranchId || profileBranchId || null,
     semesterId: requestedSemesterId || profileSemesterId || null,
+    collegeId: profileCollegeId || null,
+    courseId: profileCourseId || null,
+    yearId: profileYearId || null,
     isAdmin: true
   };
 }

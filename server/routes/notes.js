@@ -25,12 +25,15 @@ router.get('/', requireAuth, async (req, res) => {
   
   // Get user's academic profile
   const userProfile = await pool.query(
-    `SELECT branch_id, semester_id, category_id FROM user_profiles WHERE user_id = $1`,
+    `SELECT branch_id, semester_id, category_id, college_id, course_id, year_id FROM user_profiles WHERE user_id = $1`,
     [userId]
   );
   
   const userBranchId = branchId || (userProfile.rows[0]?.branch_id);
   const userSemesterId = semesterId || (userProfile.rows[0]?.semester_id);
+  const userCollegeId = userProfile.rows[0]?.college_id;
+  const userCourseId = userProfile.rows[0]?.course_id;
+  const userYearId = userProfile.rows[0]?.year_id;
 
   const params = [];
   const clauses = [];
@@ -48,6 +51,21 @@ router.get('/', requireAuth, async (req, res) => {
   if (userSemesterId) {
     params.push(userSemesterId);
     clauses.push(`(semester_id = $${params.length} OR semester_id IS NULL)`);
+  }
+
+  if (userCollegeId) {
+    params.push(userCollegeId);
+    clauses.push(`(college_id = $${params.length} OR college_id IS NULL)`);
+  }
+
+  if (userCourseId) {
+    params.push(userCourseId);
+    clauses.push(`(course_id = $${params.length} OR course_id IS NULL)`);
+  }
+
+  if (userYearId) {
+    params.push(userYearId);
+    clauses.push(`(year_id = $${params.length} OR year_id IS NULL)`);
   }
 
   if (subject) {

@@ -1,9 +1,18 @@
 const express = require('express');
 const { pool } = require('../db/pool');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 let academicsSchemaReady = false;
+
+router.use(async (_req, _res, next) => {
+  try {
+    await ensureAcademicsSchema();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 function setPublicCacheHeaders(res, maxAgeSeconds = 300) {
   res.setHeader('Cache-Control', `public, max-age=${maxAgeSeconds}, stale-while-revalidate=${Math.max(maxAgeSeconds * 3, 60)}`);
@@ -14,13 +23,96 @@ async function ensureAcademicsSchema() {
   if (academicsSchemaReady) return;
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS academic_colleges (
+      id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+      code VARCHAR(60),
+      name VARCHAR(180) NOT NULL,
+      label VARCHAR(220),
+      description TEXT,
+      display_order INTEGER DEFAULT 0,
+      is_active BOOLEAN DEFAULT TRUE,
+      created_by INTEGER REFERENCES users(id),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS academic_courses (
+      id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+      college_id INTEGER REFERENCES academic_colleges(id) ON DELETE SET NULL,
+      code VARCHAR(60),
+      name VARCHAR(180) NOT NULL,
+      label VARCHAR(220),
+      description TEXT,
+      display_order INTEGER DEFAULT 0,
+      is_active BOOLEAN DEFAULT TRUE,
+      created_by INTEGER REFERENCES users(id),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS academic_years (
+      id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+      year_value INTEGER NOT NULL UNIQUE,
+      label VARCHAR(80),
+      description TEXT,
+      display_order INTEGER DEFAULT 0,
+      is_active BOOLEAN DEFAULT TRUE,
+      created_by INTEGER REFERENCES users(id),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await pool.query(`
     ALTER TABLE user_profiles
       ADD COLUMN IF NOT EXISTS learning_goals JSONB,
       ADD COLUMN IF NOT EXISTS onboarding_payload JSONB,
       ADD COLUMN IF NOT EXISTS onboarding_step VARCHAR(40) DEFAULT 'academic_profile',
       ADD COLUMN IF NOT EXISTS batch_year INTEGER,
       ADD COLUMN IF NOT EXISTS course_name VARCHAR(120),
+      ADD COLUMN IF NOT EXISTS college_id INTEGER REFERENCES academic_colleges(id),
+      ADD COLUMN IF NOT EXISTS course_id INTEGER REFERENCES academic_courses(id),
+      ADD COLUMN IF NOT EXISTS year_id INTEGER REFERENCES academic_years(id),
       ADD COLUMN IF NOT EXISTS academic_scope JSONB DEFAULT '{}'::jsonb
+  `);
+
+  await pool.query(`
+    ALTER TABLE notes
+      ADD COLUMN IF NOT EXISTS college_id INTEGER REFERENCES academic_colleges(id),
+      ADD COLUMN IF NOT EXISTS course_id INTEGER REFERENCES academic_courses(id),
+      ADD COLUMN IF NOT EXISTS year_id INTEGER REFERENCES academic_years(id)
+  `);
+
+  await pool.query(`
+    ALTER TABLE previous_papers
+      ADD COLUMN IF NOT EXISTS college_id INTEGER REFERENCES academic_colleges(id),
+      ADD COLUMN IF NOT EXISTS course_id INTEGER REFERENCES academic_courses(id),
+      ADD COLUMN IF NOT EXISTS year_id INTEGER REFERENCES academic_years(id)
+  `);
+
+  await pool.query(`
+    ALTER TABLE materials
+      ADD COLUMN IF NOT EXISTS college_id INTEGER REFERENCES academic_colleges(id),
+      ADD COLUMN IF NOT EXISTS course_id INTEGER REFERENCES academic_courses(id),
+      ADD COLUMN IF NOT EXISTS year_id INTEGER REFERENCES academic_years(id)
+  `);
+
+  await pool.query(`
+    ALTER TABLE quizzes
+      ADD COLUMN IF NOT EXISTS college_id INTEGER REFERENCES academic_colleges(id),
+      ADD COLUMN IF NOT EXISTS course_id INTEGER REFERENCES academic_courses(id),
+      ADD COLUMN IF NOT EXISTS year_id INTEGER REFERENCES academic_years(id)
+  `);
+
+  await pool.query(`
+    ALTER TABLE mock_tests
+      ADD COLUMN IF NOT EXISTS college_id INTEGER REFERENCES academic_colleges(id),
+      ADD COLUMN IF NOT EXISTS course_id INTEGER REFERENCES academic_courses(id),
+      ADD COLUMN IF NOT EXISTS year_id INTEGER REFERENCES academic_years(id)
   `);
 
   await pool.query(`
@@ -79,6 +171,239 @@ async function ensureAcademicsSchema() {
 // ============================================
 // ACADEMIC ONBOARDING ENDPOINTS
 // ============================================
+
+router.get('/colleges', async (_req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, code, name, label, description, display_order
+       FROM academic_colleges
+       WHERE is_active = TRUE
+       ORDER BY display_order ASC, name ASC`
+    );
+    setPublicCacheHeaders(res, 600);
+    res.json({ colleges: rows });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch colleges' });
+  }
+});
+
+router.get('/courses', async (req, res) => {
+  try {
+    const collegeId = Number(req.query.collegeId);
+    const params = [];
+    const where = [];
+
+    if (collegeId) {
+      params.push(collegeId);
+      where.push(`college_id = $${params.length}`);
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const { rows } = await pool.query(
+      `SELECT id, college_id, code, name, label, description, display_order
+       FROM academic_courses
+       ${whereSql}
+       WHERE is_active = TRUE
+       ORDER BY display_order ASC, name ASC`,
+      params
+    );
+    setPublicCacheHeaders(res, 600);
+    res.json({ courses: rows });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch courses' });
+  }
+});
+
+router.get('/years', async (_req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, year_value, label, description, display_order
+       FROM academic_years
+       WHERE is_active = TRUE
+       ORDER BY display_order ASC, year_value ASC`
+    );
+    setPublicCacheHeaders(res, 600);
+    res.json({ years: rows });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch years' });
+  }
+});
+
+router.get('/admin/colleges', requireAdmin, async (_req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, code, name, label, description, display_order, is_active
+       FROM academic_colleges
+       ORDER BY display_order ASC, name ASC`
+    );
+    res.json({ colleges: rows });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch colleges' });
+  }
+});
+
+router.post('/admin/colleges', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO academic_colleges (code, name, label, description, display_order, is_active, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, code, name, label, description, display_order, is_active`,
+      [
+        String(req.body.code || '').trim() || null,
+        String(req.body.name || '').trim(),
+        req.body.label || null,
+        req.body.description || null,
+        Number(req.body.displayOrder || 0),
+        typeof req.body.isActive === 'undefined' ? true : Boolean(req.body.isActive),
+        req.session.userId
+      ]
+    );
+    res.status(201).json({ college: rows[0] });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create college' });
+  }
+});
+
+router.put('/admin/colleges/:id', requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { rows } = await pool.query(
+      `UPDATE academic_colleges
+       SET code = COALESCE($1, code), name = COALESCE($2, name), label = COALESCE($3, label), description = COALESCE($4, description), display_order = COALESCE($5, display_order), is_active = COALESCE($6, is_active), updated_at = CURRENT_TIMESTAMP
+       WHERE id = $7
+       RETURNING id, code, name, label, description, display_order, is_active`,
+      [
+        req.body.code ? String(req.body.code).trim() || null : null,
+        req.body.name ? String(req.body.name).trim() : null,
+        req.body.label || null,
+        req.body.description || null,
+        req.body.displayOrder ? Number(req.body.displayOrder) : null,
+        typeof req.body.isActive === 'undefined' ? null : Boolean(req.body.isActive),
+        id
+      ]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'College not found' });
+    res.json({ college: rows[0] });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update college' });
+  }
+});
+
+router.get('/admin/courses', requireAdmin, async (req, res) => {
+  try {
+    const collegeId = Number(req.query.collegeId);
+    const params = [];
+    const where = [];
+    if (collegeId) {
+      params.push(collegeId);
+      where.push(`college_id = $${params.length}`);
+    }
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const { rows } = await pool.query(
+      `SELECT id, college_id, code, name, label, description, display_order, is_active
+       FROM academic_courses
+       ${whereSql}
+       ORDER BY display_order ASC, name ASC`,
+      params
+    );
+    res.json({ courses: rows });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch courses' });
+  }
+});
+
+router.post('/admin/courses', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO academic_courses (college_id, code, name, label, description, display_order, is_active, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, college_id, code, name, label, description, display_order, is_active`,
+      [
+        req.body.collegeId ? Number(req.body.collegeId) : null,
+        String(req.body.code || '').trim() || null,
+        String(req.body.name || '').trim(),
+        req.body.label || null,
+        req.body.description || null,
+        Number(req.body.displayOrder || 0),
+        typeof req.body.isActive === 'undefined' ? true : Boolean(req.body.isActive),
+        req.session.userId
+      ]
+    );
+    res.status(201).json({ course: rows[0] });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create course' });
+  }
+});
+
+router.put('/admin/courses/:id', requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { rows } = await pool.query(
+      `UPDATE academic_courses
+       SET college_id = COALESCE($1, college_id), code = COALESCE($2, code), name = COALESCE($3, name), label = COALESCE($4, label), description = COALESCE($5, description), display_order = COALESCE($6, display_order), is_active = COALESCE($7, is_active), updated_at = CURRENT_TIMESTAMP
+       WHERE id = $8
+       RETURNING id, college_id, code, name, label, description, display_order, is_active`,
+      [
+        req.body.collegeId ? Number(req.body.collegeId) : null,
+        req.body.code ? String(req.body.code).trim() || null : null,
+        req.body.name ? String(req.body.name).trim() : null,
+        req.body.label || null,
+        req.body.description || null,
+        req.body.displayOrder ? Number(req.body.displayOrder) : null,
+        typeof req.body.isActive === 'undefined' ? null : Boolean(req.body.isActive),
+        id
+      ]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Course not found' });
+    res.json({ course: rows[0] });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update course' });
+  }
+});
+
+router.get('/admin/years', requireAdmin, async (_req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, year_value, label, description, display_order, is_active
+       FROM academic_years
+       ORDER BY display_order ASC, year_value ASC`
+    );
+    res.json({ years: rows });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch years' });
+  }
+});
+
+router.post('/admin/years', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO academic_years (year_value, label, description, display_order, is_active, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, year_value, label, description, display_order, is_active`,
+      [Number(req.body.yearValue), req.body.label || null, req.body.description || null, Number(req.body.displayOrder || 0), typeof req.body.isActive === 'undefined' ? true : Boolean(req.body.isActive), req.session.userId]
+    );
+    res.status(201).json({ year: rows[0] });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create year' });
+  }
+});
+
+router.put('/admin/years/:id', requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { rows } = await pool.query(
+      `UPDATE academic_years
+       SET year_value = COALESCE($1, year_value), label = COALESCE($2, label), description = COALESCE($3, description), display_order = COALESCE($4, display_order), is_active = COALESCE($5, is_active), updated_at = CURRENT_TIMESTAMP
+       WHERE id = $6
+       RETURNING id, year_value, label, description, display_order, is_active`,
+      [req.body.yearValue ? Number(req.body.yearValue) : null, req.body.label || null, req.body.description || null, req.body.displayOrder ? Number(req.body.displayOrder) : null, typeof req.body.isActive === 'undefined' ? null : Boolean(req.body.isActive), id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Year not found' });
+    res.json({ year: rows[0] });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update year' });
+  }
+});
 
 /**
  * GET /academics/categories
@@ -229,6 +554,9 @@ router.post('/onboarding/complete', requireAuth, async (req, res) => {
       preferredStudyMode,
       batchYear,
       courseName,
+      collegeId,
+      courseId,
+      yearId,
       onboardingPayload
     } = req.body;
 
@@ -253,27 +581,30 @@ router.post('/onboarding/complete', requireAuth, async (req, res) => {
     const profileResult = await pool.query(
       `INSERT INTO user_profiles (
         user_id, category_id, branch_id, semester_id,
-        batch_year, course_name,
+        batch_year, course_name, college_id, course_id, year_id,
         target_exam, weak_subjects, career_interest, preferred_study_mode,
         learning_goals, onboarding_payload, onboarding_completed, onboarding_step, academic_scope, current_streak
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, TRUE, 'complete', $13::jsonb, 0)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, TRUE, 'complete', $16::jsonb, 0)
       ON CONFLICT (user_id) DO UPDATE SET
         category_id = $2,
         branch_id = $3,
         semester_id = $4,
         batch_year = $5,
         course_name = $6,
-        target_exam = $7,
-        weak_subjects = $8,
-        career_interest = $9,
-        preferred_study_mode = $10,
-        learning_goals = $11,
-        onboarding_payload = $12,
+        college_id = $7,
+        course_id = $8,
+        year_id = $9,
+        target_exam = $10,
+        weak_subjects = $11,
+        career_interest = $12,
+        preferred_study_mode = $13,
+        learning_goals = $14,
+        onboarding_payload = $15,
         onboarding_completed = TRUE,
         onboarding_step = 'complete',
-        academic_scope = jsonb_build_object('categoryId', $2, 'branchId', $3, 'semesterId', $4, 'batchYear', $5, 'courseName', $6),
+        academic_scope = jsonb_build_object('categoryId', $2, 'branchId', $3, 'semesterId', $4, 'batchYear', $5, 'courseName', $6, 'collegeId', $7, 'courseId', $8, 'yearId', $9),
         updated_at = CURRENT_TIMESTAMP
-      RETURNING id, user_id, category_id, branch_id, semester_id, batch_year, course_name, onboarding_completed, onboarding_step`,
+      RETURNING id, user_id, category_id, branch_id, semester_id, batch_year, course_name, college_id, course_id, year_id, onboarding_completed, onboarding_step`,
       [
         userId,
         categoryId,
@@ -281,13 +612,16 @@ router.post('/onboarding/complete', requireAuth, async (req, res) => {
         semesterId,
         Number(batchYear) || null,
         courseName || null,
+        collegeId ? Number(collegeId) : null,
+        courseId ? Number(courseId) : null,
+        yearId ? Number(yearId) : null,
         targetExam || null,
         JSON.stringify(weakSubjects || []),
         careerInterest || null,
         preferredStudyMode || null,
         JSON.stringify(Array.isArray(learningGoals) ? learningGoals : []),
         onboardingPayload && typeof onboardingPayload === 'object' ? JSON.stringify(onboardingPayload) : JSON.stringify({}),
-        JSON.stringify({ categoryId, branchId, semesterId, batchYear: Number(batchYear) || null, courseName: courseName || null })
+        JSON.stringify({ categoryId, branchId, semesterId, batchYear: Number(batchYear) || null, courseName: courseName || null, collegeId: collegeId ? Number(collegeId) : null, courseId: courseId ? Number(courseId) : null, yearId: yearId ? Number(yearId) : null })
       ]
     );
 
@@ -330,16 +664,23 @@ router.get('/profile', requireAuth, async (req, res) => {
     const profileResult = await pool.query(
       `SELECT 
         up.id, up.user_id, up.category_id, up.branch_id, up.semester_id,
+        up.college_id, up.course_id, up.year_id, up.batch_year,
         up.target_exam, up.weak_subjects, up.career_interest, up.preferred_study_mode,
         up.learning_goals, up.onboarding_payload,
         up.onboarding_completed,
         ac.name as category_name, ac.label as category_label,
         ab.code as branch_code, ab.name as branch_name, ab.label as branch_label,
-        asr.semester_number, asr.year_number, asr.label as semester_label
+        asr.semester_number, asr.year_number, asr.label as semester_label,
+        col.name as college_name, col.label as college_label,
+        cou.name as course_name, cou.label as course_label,
+        yr.label as year_label
        FROM user_profiles up
        LEFT JOIN academic_categories ac ON ac.id = up.category_id
        LEFT JOIN academic_branches ab ON ab.id = up.branch_id
        LEFT JOIN academic_semesters asr ON asr.id = up.semester_id
+       LEFT JOIN academic_colleges col ON col.id = up.college_id
+       LEFT JOIN academic_courses cou ON cou.id = up.course_id
+       LEFT JOIN academic_years yr ON yr.id = up.year_id
        WHERE up.user_id = $1`,
       [userId]
     );
@@ -359,6 +700,9 @@ router.get('/profile', requireAuth, async (req, res) => {
         categoryId: profile.category_id,
         branchId: profile.branch_id,
         semesterId: profile.semester_id,
+        collegeId: profile.college_id,
+        courseId: profile.course_id,
+        yearId: profile.year_id,
         batchYear: profile.batch_year,
         courseName: profile.course_name,
         targetExam: profile.target_exam,
@@ -388,6 +732,21 @@ router.get('/profile', requireAuth, async (req, res) => {
           semesterNumber: profile.semester_number,
           yearNumber: profile.year_number,
           label: profile.semester_label
+        },
+        college: {
+          id: profile.college_id,
+          name: profile.college_name,
+          label: profile.college_label
+        },
+        course: {
+          id: profile.course_id,
+          name: profile.course_name,
+          label: profile.course_label
+        },
+        year: {
+          id: profile.year_id,
+          yearValue: profile.batch_year,
+          label: profile.year_label
         }
       },
       onboarding_completed: profile.onboarding_completed
@@ -417,7 +776,11 @@ router.put('/profile', requireAuth, async (req, res) => {
       careerInterest,
       preferredStudyMode,
       onboardingStep,
-      academicScope
+      academicScope,
+      onboardingCompleted,
+      collegeId,
+      courseId,
+      yearId
     } = req.body;
 
     const currentProfile = await pool.query(
@@ -445,6 +808,8 @@ router.put('/profile', requireAuth, async (req, res) => {
       }
     }
 
+    const nextOnboardingCompleted = Boolean(onboardingCompleted) || String(onboardingStep || '').toLowerCase() === 'complete';
+
     const updateResult = await pool.query(
       `UPDATE user_profiles SET
         category_id = COALESCE($2, category_id),
@@ -459,9 +824,13 @@ router.put('/profile', requireAuth, async (req, res) => {
         learning_goals = COALESCE($11, learning_goals),
         onboarding_step = COALESCE($12, onboarding_step),
         academic_scope = COALESCE($13::jsonb, academic_scope),
+        onboarding_completed = COALESCE($14, onboarding_completed),
+        college_id = COALESCE($15, college_id),
+        course_id = COALESCE($16, course_id),
+        year_id = COALESCE($17, year_id),
         updated_at = CURRENT_TIMESTAMP
        WHERE user_id = $1
-       RETURNING id, user_id, category_id, branch_id, semester_id, batch_year, course_name, onboarding_step`,
+       RETURNING id, user_id, category_id, branch_id, semester_id, batch_year, course_name, onboarding_step, onboarding_completed`,
       [
         userId,
         categoryId || null,
@@ -475,7 +844,11 @@ router.put('/profile', requireAuth, async (req, res) => {
         preferredStudyMode || null,
         Array.isArray(learningGoals) ? JSON.stringify(learningGoals) : null,
         onboardingStep || currentProfile.rows[0].onboarding_step || null,
-        academicScope ? JSON.stringify(academicScope) : null
+        academicScope ? JSON.stringify(academicScope) : null,
+        nextOnboardingCompleted ? true : null,
+        collegeId ? Number(collegeId) : null,
+        courseId ? Number(courseId) : null,
+        yearId ? Number(yearId) : null
       ]
     );
 

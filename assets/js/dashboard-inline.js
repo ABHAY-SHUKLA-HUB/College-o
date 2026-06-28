@@ -5,6 +5,178 @@ document.addEventListener('DOMContentLoaded', async () => {
     return String(value || '').replace(/[&<>"]|'/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   }
 
+  function ensureOnboardingModalStyles() {
+    if (document.getElementById('collegeos-onboarding-modal-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'collegeos-onboarding-modal-styles';
+    style.textContent = `
+      .collegeos-onboarding-modal { position: fixed; inset: 0; z-index: 2200; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); }
+      .collegeos-onboarding-modal.hidden { display: none; }
+      .collegeos-onboarding-dialog { width: min(620px, 100%); max-height: min(90vh, 760px); overflow: auto; border-radius: 22px; background: linear-gradient(160deg, #ffffff, #f8fbff); box-shadow: 0 24px 70px rgba(15, 23, 42, 0.26); border: 1px solid rgba(191, 219, 254, 0.7); padding: 1.3rem; }
+      .collegeos-onboarding-dialog h3 { margin: 0 0 0.35rem; font-size: 1.2rem; color: #0f172a; }
+      .collegeos-onboarding-dialog p { margin: 0 0 1rem; color: #475569; line-height: 1.5; }
+      .collegeos-onboarding-grid { display: grid; gap: 0.75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .collegeos-onboarding-field { display: flex; flex-direction: column; gap: 0.35rem; }
+      .collegeos-onboarding-field label { font-size: 0.84rem; font-weight: 700; color: #334155; }
+      .collegeos-onboarding-field input, .collegeos-onboarding-field select { border: 1px solid #dbe5f1; border-radius: 12px; padding: 0.7rem 0.8rem; font-size: 0.95rem; background: #fff; color: #0f172a; }
+      .collegeos-onboarding-field.full { grid-column: 1 / -1; }
+      .collegeos-onboarding-actions { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1rem; }
+      .collegeos-onboarding-actions button { border: 0; border-radius: 999px; padding: 0.7rem 1rem; font-weight: 700; cursor: pointer; }
+      .collegeos-onboarding-actions .save-btn { background: linear-gradient(135deg, #2563eb, #3b82f6); color: #fff; }
+      .collegeos-onboarding-actions .save-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+      .collegeos-onboarding-status { min-height: 1.2rem; font-size: 0.9rem; margin-top: 0.8rem; color: #2563eb; }
+      .collegeos-onboarding-status.error { color: #dc2626; }
+      @media (max-width: 640px) { .collegeos-onboarding-grid { grid-template-columns: 1fr; } }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function ensureOnboardingModal() {
+    ensureOnboardingModalStyles();
+    let modal = document.getElementById('collegeosOnboardingModal');
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'collegeosOnboardingModal';
+    modal.className = 'collegeos-onboarding-modal hidden';
+    modal.innerHTML = `
+      <div class="collegeos-onboarding-dialog" role="dialog" aria-modal="true" aria-labelledby="collegeosOnboardingTitle">
+        <h3 id="collegeosOnboardingTitle">Complete your profile</h3>
+        <p>Tell us a little more about your college, course, and current semester so your dashboard stays personalized.</p>
+        <form id="collegeosOnboardingForm">
+          <div class="collegeos-onboarding-grid">
+            <div class="collegeos-onboarding-field full">
+              <label for="collegeosOnboardingFullName">Full Name</label>
+              <input id="collegeosOnboardingFullName" name="fullName" type="text" required />
+            </div>
+            <div class="collegeos-onboarding-field full">
+              <label for="collegeosOnboardingCollege">College</label>
+              <input id="collegeosOnboardingCollege" name="collegeName" type="text" required />
+            </div>
+            <div class="collegeos-onboarding-field">
+              <label for="collegeosOnboardingCourse">Course</label>
+              <input id="collegeosOnboardingCourse" name="courseName" type="text" required />
+            </div>
+            <div class="collegeos-onboarding-field">
+              <label for="collegeosOnboardingBranch">Branch</label>
+              <input id="collegeosOnboardingBranch" name="branchName" type="text" required />
+            </div>
+            <div class="collegeos-onboarding-field">
+              <label for="collegeosOnboardingSemester">Semester</label>
+              <input id="collegeosOnboardingSemester" name="semesterName" type="text" required />
+            </div>
+            <div class="collegeos-onboarding-field">
+              <label for="collegeosOnboardingYear">Year</label>
+              <input id="collegeosOnboardingYear" name="yearValue" type="number" min="2000" max="2100" required />
+            </div>
+          </div>
+          <div class="collegeos-onboarding-status" id="collegeosOnboardingStatus"></div>
+          <div class="collegeos-onboarding-actions">
+            <button class="save-btn" type="submit">Save & Continue</button>
+          </div>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const form = modal.querySelector('#collegeosOnboardingForm');
+    form?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const status = modal.querySelector('#collegeosOnboardingStatus');
+      const submitButton = form.querySelector('button[type="submit"]');
+      const formData = new FormData(form);
+      const payload = Object.fromEntries(formData.entries());
+
+      if (!payload.fullName || !payload.collegeName || !payload.courseName || !payload.branchName || !payload.semesterName || !payload.yearValue) {
+        status.textContent = 'Please fill in every field before continuing.';
+        status.classList.add('error');
+        return;
+      }
+
+      submitButton.disabled = true;
+      submitButton.textContent = 'Saving...';
+      status.textContent = '';
+      status.classList.remove('error');
+
+      try {
+        await Promise.all([
+          window.CollegeOSApi.updateProfile({
+            fullName: payload.fullName,
+            collegeName: payload.collegeName,
+            courseBranch: `${payload.courseName} · ${payload.branchName}`,
+            semester: payload.semesterName,
+            targetExam: payload.yearValue
+          }).catch(() => null),
+          window.CollegeOSApi.updateAcademicProfile({
+            courseName: payload.courseName,
+            batchYear: Number(payload.yearValue) || null,
+            onboardingStep: 'complete',
+            onboardingCompleted: true
+          }).catch(() => null)
+        ]);
+
+        if (window.collegeOsCurrentUser) {
+          window.collegeOsCurrentUser.full_name = payload.fullName;
+          window.collegeOsCurrentUser.college_name = payload.collegeName;
+        }
+
+        status.textContent = 'Profile saved. Welcome to your dashboard.';
+        status.classList.remove('error');
+        window.setTimeout(() => {
+          modal.classList.add('hidden');
+          document.body.classList.remove('collegeos-onboarding-open');
+        }, 350);
+      } catch (error) {
+        status.textContent = error?.message || 'We could not save your profile. Please try again.';
+        status.classList.add('error');
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Save & Continue';
+      }
+    });
+
+    return modal;
+  }
+
+  function showOnboardingModal(profileData = null) {
+    const modal = ensureOnboardingModal();
+    if (!modal) return;
+    const profile = profileData?.profile || null;
+    const user = window.collegeOsCurrentUser || {};
+    const fullName = user.full_name || user.fullName || user.name || '';
+    const collegeName = user.college_name || user.collegeName || '';
+    const courseName = profile?.courseName || profile?.course_name || '';
+    const branchName = profile?.branch?.name || profile?.branchName || profile?.branch?.label || '';
+    const semesterName = profile?.semester?.label || profile?.semesterLabel || '';
+    const yearValue = profile?.batchYear || profile?.year || '';
+
+    modal.querySelector('#collegeosOnboardingFullName').value = fullName;
+    modal.querySelector('#collegeosOnboardingCollege').value = collegeName;
+    modal.querySelector('#collegeosOnboardingCourse').value = courseName;
+    modal.querySelector('#collegeosOnboardingBranch').value = branchName;
+    modal.querySelector('#collegeosOnboardingSemester').value = semesterName;
+    modal.querySelector('#collegeosOnboardingYear').value = yearValue;
+    modal.querySelector('#collegeosOnboardingStatus').textContent = '';
+    modal.classList.remove('hidden');
+    document.body.classList.add('collegeos-onboarding-open');
+    window.setTimeout(() => {
+      modal.querySelector('#collegeosOnboardingFullName')?.focus();
+    }, 20);
+  }
+
+  function handleOnboardingRequirement(event) {
+    const payload = event?.detail || {};
+    const profileData = payload.profileData || window.__collegeOsPendingOnboardingRequirement?.profileData || null;
+    if (window.__collegeOsOnboardingPromptShown) return;
+    window.__collegeOsOnboardingPromptShown = true;
+    showOnboardingModal(profileData);
+  }
+
+  window.addEventListener('collegeos:onboarding-required', handleOnboardingRequirement);
+  if (window.__collegeOsPendingOnboardingRequirement) {
+    handleOnboardingRequirement({ detail: { profileData: window.__collegeOsPendingOnboardingRequirement.profileData } });
+  }
+
   async function emitDashboardEvent(eventType, eventPayload = {}) {
     if (!window.CollegeOSApi?.trackLearnerEvent) return;
     try {
@@ -223,6 +395,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   setDashboardLoading(true);
   try {
+    console.log('[dashboard] Student portal loaded successfully');
+
     const [personalizedPayload, experiencePayload] = await Promise.all([
       window.CollegeOSApi.getPersonalizedDashboard().catch(() => null),
       window.CollegeOSApi.getStudentExperienceConfig().catch(() => null)

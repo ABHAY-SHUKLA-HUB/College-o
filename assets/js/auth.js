@@ -2208,24 +2208,34 @@ function bindSignupVerificationUi() {
 
         signupVerificationState.verificationToken = verificationPayload?.verificationToken || '';
         signupVerificationState.verified = true;
-        console.log('[auth:signup] OTP verified');
+        console.log('[auth] OTP verified');
         setSignupOtpStatus('', 'Verification successful. Completing signup...');
 
         const signupResult = await registerAccount(data);
-        const createdUser = signupResult?.user || null;
+        const success = Boolean(signupResult?.success);
         const responseUser = signupResult?.user || null;
-        console.log('[auth:signup] signup complete response received', {
-          success: Boolean(signupResult?.success),
+        const redirectTarget = String(signupResult?.redirectUrl || '/dashboard').trim() || '/dashboard';
+        console.log('[auth:signup] verify response', {
+          success,
           hasUser: Boolean(responseUser),
           role: signupResult?.role || responseUser?.role || 'student',
-          redirectUrl: signupResult?.redirectUrl || '/dashboard'
+          redirectUrl: redirectTarget
         });
 
         persistSignupAuthState(responseUser);
 
+        const fallbackTimer = window.setTimeout(() => {
+          console.log('[auth:signup] redirect fallback fired');
+          try {
+            window.location.assign(redirectTarget);
+          } catch {
+            window.location.href = redirectTarget;
+          }
+        }, 1500);
+
         let sessionUser = null;
         try {
-          sessionUser = await waitForSessionReady(2000);
+          sessionUser = await waitForSessionReady(1500);
         } catch {
           sessionUser = null;
         }
@@ -2234,9 +2244,9 @@ function bindSignupVerificationUi() {
           persistSignupAuthState(sessionUser);
         }
 
-        console.log('[auth:signup] session saved', {
+        console.log('[auth] Session created', {
           hasSessionUser: Boolean(sessionUser),
-          userId: (sessionUser || responseUser || createdUser)?.id || null
+          userId: (sessionUser || responseUser)?.id || null
         });
 
         setAuthMessages('signup', '', 'Account created successfully. Redirecting to your dashboard...');
@@ -2254,14 +2264,17 @@ function bindSignupVerificationUi() {
         signupVerificationState.modalOpen = false;
         document.body.style.overflow = '';
 
-        console.log('[auth:signup] redirecting to /dashboard');
-        window.setTimeout(() => {
+        window.clearTimeout(fallbackTimer);
+        console.log('[auth] Redirecting to dashboard');
+        try {
+          window.location.assign(redirectTarget || '/dashboard');
+        } catch {
           try {
-            window.location.assign('/dashboard');
+            window.location.href = redirectTarget || '/dashboard';
           } catch {
             window.location.href = '/dashboard';
           }
-        }, 150);
+        }
       } catch (error) {
         console.error('[auth:signup] post-otp handoff failed', {
           message: error?.message,

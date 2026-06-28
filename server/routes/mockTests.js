@@ -218,8 +218,20 @@ async function buildDashboardPayload(userId) {
          mt.semester_id IS NULL
          OR mt.semester_id = $3
        )
+       AND (
+         mt.college_id IS NULL
+         OR mt.college_id = $4
+       )
+       AND (
+         mt.course_id IS NULL
+         OR mt.course_id = $5
+       )
+       AND (
+         mt.year_id IS NULL
+         OR mt.year_id = $6
+       )
      ORDER BY mt.scheduled_at DESC NULLS LAST, mt.id DESC`,
-    [userId, profile?.branch_id || null, profile?.semester_id || null]
+    [userId, profile?.branch_id || null, profile?.semester_id || null, profile?.college_id || null, profile?.course_id || null, profile?.year_id || null]
   );
 
   const tests = testsResult.rows.map((test) => {

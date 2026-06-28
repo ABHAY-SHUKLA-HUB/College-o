@@ -1327,6 +1327,9 @@ window.CollegeOSApi = {
 
   // Academic Profile & Onboarding APIs
   getAcademicCategories: () => apiFetch('/api/academics/categories'),
+  getAcademicColleges: () => apiFetch('/api/academics/colleges'),
+  getAcademicCourses: (collegeId) => apiFetch(`/api/academics/courses${collegeId ? `?collegeId=${encodeURIComponent(collegeId)}` : ''}`),
+  getAcademicYears: () => apiFetch('/api/academics/years'),
   getAcademicBranches: (categoryId) => apiFetch(`/api/academics/branches?categoryId=${categoryId}`),
   getAcademicSemesters: () => apiFetch('/api/academics/semesters'),
   getAcademicSubjects: (branchId, semesterId) => {
@@ -1338,6 +1341,15 @@ window.CollegeOSApi = {
   getOnboardingConfig: () => apiFetch('/api/academics/onboarding/config'),
   completeAcademicOnboarding: (data) => apiFetch('/api/academics/onboarding/complete', { method: 'POST', body: JSON.stringify(data) }),
   updateAcademicProfile: (data) => apiFetch('/api/academics/profile', { method: 'PUT', body: JSON.stringify(data) }),
+  adminGetAcademicColleges: () => apiFetch('/api/academics/admin/colleges'),
+  adminCreateAcademicCollege: (data) => apiFetch('/api/academics/admin/colleges', { method: 'POST', body: JSON.stringify(data) }),
+  adminUpdateAcademicCollege: (id, data) => apiFetch(`/api/academics/admin/colleges/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminGetAcademicCourses: (collegeId = '') => apiFetch(`/api/academics/admin/courses${collegeId ? `?collegeId=${encodeURIComponent(collegeId)}` : ''}`),
+  adminCreateAcademicCourse: (data) => apiFetch('/api/academics/admin/courses', { method: 'POST', body: JSON.stringify(data) }),
+  adminUpdateAcademicCourse: (id, data) => apiFetch(`/api/academics/admin/courses/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminGetAcademicYears: () => apiFetch('/api/academics/admin/years'),
+  adminCreateAcademicYear: (data) => apiFetch('/api/academics/admin/years', { method: 'POST', body: JSON.stringify(data) }),
+  adminUpdateAcademicYear: (id, data) => apiFetch(`/api/academics/admin/years/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 
   // Admin Academic Content Management APIs
   getAcademicContentOverview: () => apiFetch('/api/admin/academics/content-overview'),

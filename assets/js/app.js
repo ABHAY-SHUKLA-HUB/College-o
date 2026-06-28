@@ -819,10 +819,14 @@ async function enforceAcademicOnboarding() {
     const profileData = await window.CollegeOSApi.getStudentAcademicProfile();
     const completed = profileData?.onboarding_completed === true && Boolean(profileData?.profile);
     if (!completed) {
-      window.location.href = 'academic-onboarding.html';
+      console.log('[dashboard] Onboarding required');
+      window.__collegeOsPendingOnboardingRequirement = { profileData };
+      window.dispatchEvent(new CustomEvent('collegeos:onboarding-required', { detail: { profileData } }));
+    } else {
+      console.log('[dashboard] Onboarding completed');
     }
-  } catch {
-    // Do not block page rendering if academic profile API is temporarily unavailable.
+  } catch (error) {
+    console.warn('[dashboard] Onboarding check failed', error);
   }
 }
 

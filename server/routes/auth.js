@@ -1118,6 +1118,8 @@ router.post('/signup', async (req, res) => {
 
   const client = await pool.connect();
   try {
+    console.log('[auth:signup] creating user', { email: normalizedEmail, hasMobile: Boolean(normalizedMobile) });
+
     const exists = await client.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1', [normalizedEmail]);
     if (exists.rowCount > 0) return res.status(409).json({ error: 'Email already registered' });
 
@@ -1136,6 +1138,7 @@ router.post('/signup', async (req, res) => {
         fullName,
         normalizedEmail,
         normalizedMobile,
+        null,
         hash,
         referralCode,
         Boolean(normalizedMobile)
@@ -1173,8 +1176,8 @@ router.post('/signup', async (req, res) => {
           return res.status(500).json({ error: 'Could not save secure session' });
         }
 
-        console.log('[auth:signup] session generated', { userId: user.rows[0].id, role: user.rows[0].role });
-        console.log('[auth:signup] response sent', { userId: user.rows[0].id, redirectUrl: '/dashboard' });
+        console.log('[auth:signup] session created', { userId: user.rows[0].id, role: user.rows[0].role });
+        console.log('[auth:signup] redirecting to dashboard', { userId: user.rows[0].id, redirectUrl: '/dashboard' });
 
         return res.status(201).json({
           success: true,
@@ -1187,6 +1190,11 @@ router.post('/signup', async (req, res) => {
       });
     });
     return;
+  } catch (error) {
+    console.error('[auth:signup] signup completion failed', { email: normalizedEmail, error: error?.message || 'unknown_error' });
+    if (!res.headersSent) {
+      return res.status(500).json({ error: 'Signup could not be completed. Please try again.' });
+    }
   } finally {
     client.release();
   }

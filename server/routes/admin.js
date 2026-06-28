@@ -569,7 +569,10 @@ router.post('/content/notes', requireAdmin, upload.single('file'), async (req, r
     academicSubject,
     accessType,
     status,
-    isCommon
+    isCommon,
+    collegeId,
+    courseId,
+    yearId
   } = req.body;
 
   if (!subject || !chapter) {
@@ -595,9 +598,9 @@ router.post('/content/notes', requireAdmin, upload.single('file'), async (req, r
   const { rows } = await pool.query(
     `INSERT INTO notes (
       subject, chapter, content, difficulty, format_type, created_by, college_name, pdf_url,
-      category_id, branch_id, semester_id, academic_subject, access_type, status, is_common
+      category_id, branch_id, semester_id, academic_subject, access_type, status, is_common, college_id, course_id, year_id
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
      RETURNING id, subject, chapter, college_name, pdf_url, category_id, branch_id, semester_id, created_at`,
     [
       subject,
@@ -614,7 +617,10 @@ router.post('/content/notes', requireAdmin, upload.single('file'), async (req, r
       academicSubject || null,
       accessType || 'free',
       status || 'published',
-      parsedIsCommon
+      parsedIsCommon,
+      collegeId ? Number(collegeId) : null,
+      courseId ? Number(courseId) : null,
+      yearId ? Number(yearId) : null
     ]
   );
 
@@ -632,7 +638,10 @@ router.post('/content/papers', requireAdmin, upload.single('file'), async (req, 
     semesterId,
     accessType,
     status,
-    isCommon
+    isCommon,
+    collegeId,
+    courseId,
+    yearId
   } = req.body;
 
   if (!subject || !examName || !year) {
@@ -656,9 +665,9 @@ router.post('/content/papers', requireAdmin, upload.single('file'), async (req, 
   const { rows } = await pool.query(
     `INSERT INTO previous_papers (
       subject, exam_name, year, paper_url, summary_note_url, college_name, uploaded_by,
-      category_id, branch_id, semester_id, access_type, status, is_common
+      category_id, branch_id, semester_id, access_type, status, is_common, college_id, course_id, year_id
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
      RETURNING id, subject, exam_name, year, paper_url, college_name, branch_id, semester_id, created_at`,
     [
       subject,
@@ -673,7 +682,10 @@ router.post('/content/papers', requireAdmin, upload.single('file'), async (req, 
       semesterId ? Number(semesterId) : null,
       accessType || 'free',
       status || 'published',
-      parsedIsCommon
+      parsedIsCommon,
+      collegeId ? Number(collegeId) : null,
+      courseId ? Number(courseId) : null,
+      yearId ? Number(yearId) : null
     ]
   );
 
@@ -815,7 +827,10 @@ router.post('/materials', requireAdmin, upload.single('file'), async (req, res) 
     semesterId,
     accessType,
     status,
-    isCommon
+    isCommon,
+    collegeId,
+    courseId,
+    yearId
   } = req.body;
   if (!title || !category || !subject) {
     return res.status(400).json({ error: 'title, category, subject are required' });
@@ -838,9 +853,9 @@ router.post('/materials', requireAdmin, upload.single('file'), async (req, res) 
   const { rows } = await pool.query(
     `INSERT INTO materials (
       title, category, subject, description, file_url, uploaded_by,
-      category_id, branch_id, semester_id, access_type, status, is_common
+      category_id, branch_id, semester_id, access_type, status, is_common, college_id, course_id, year_id
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
      RETURNING id, title, category, subject, file_url, category_id, branch_id, semester_id, created_at`,
     [
       title,
@@ -854,7 +869,10 @@ router.post('/materials', requireAdmin, upload.single('file'), async (req, res) 
       semesterId ? Number(semesterId) : null,
       accessType || 'free',
       status || 'published',
-      parsedIsCommon
+      parsedIsCommon,
+      collegeId ? Number(collegeId) : null,
+      courseId ? Number(courseId) : null,
+      yearId ? Number(yearId) : null
     ]
   );
 

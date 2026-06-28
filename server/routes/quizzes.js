@@ -10,6 +10,8 @@ router.get('/', async (req, res) => {
   const subject = req.query.subject;
   const branchId = req.query.branchId;
   const semesterId = req.query.semesterId;
+  const params = [viewerId];
+  let where = 'WHERE q.status = \'published\'';
   
   // Get viewer's academic profile if logged in
   let userBranchId = null;
@@ -17,17 +19,27 @@ router.get('/', async (req, res) => {
   
   if (viewerId) {
     const profileResult = await pool.query(
-      `SELECT branch_id, semester_id FROM user_profiles WHERE user_id = $1`,
+      `SELECT branch_id, semester_id, college_id, course_id, year_id FROM user_profiles WHERE user_id = $1`,
       [viewerId]
     );
     if (profileResult.rows[0]) {
       userBranchId = branchId || profileResult.rows[0].branch_id;
       userSemesterId = semesterId || profileResult.rows[0].semester_id;
+      const profile = profileResult.rows[0];
+      if (profile.college_id) {
+        params.push(profile.college_id);
+        where += ` AND (q.college_id = $${params.length} OR q.college_id IS NULL)`;
+      }
+      if (profile.course_id) {
+        params.push(profile.course_id);
+        where += ` AND (q.course_id = $${params.length} OR q.course_id IS NULL)`;
+      }
+      if (profile.year_id) {
+        params.push(profile.year_id);
+        where += ` AND (q.year_id = $${params.length} OR q.year_id IS NULL)`;
+      }
     }
   }
-  
-  const params = [viewerId];
-  let where = 'WHERE q.status = \'published\'';
   
   // Filter by branch
   if (userBranchId) {

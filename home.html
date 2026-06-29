@@ -79,7 +79,12 @@
       margin: 0;
       font-size: clamp(1.75rem, 3vw, 2.45rem);
       line-height: 1.15;
+      -webkit-line-clamp: unset;
+      -webkit-box-orient: vertical;
+      word-break: break-word;
       text-wrap: balance;
+      /* Fallback for Safari < 17.4 */
+      overflow-wrap: break-word;
     }
 
     .hero-subtitle {

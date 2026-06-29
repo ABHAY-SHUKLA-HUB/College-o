@@ -86,7 +86,13 @@
     initAdminCaptcha();
   });
 
-  window.addEventListener('load', initAdminCaptcha);
+  // Load captcha on DOMContentLoaded for faster performance
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAdminCaptcha);
+  } else {
+    // DOM already loaded, initialize immediately
+    initAdminCaptcha();
+  }
 
   new MutationObserver(() => {
     const msg = legacyError.textContent.trim();

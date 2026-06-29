@@ -124,7 +124,10 @@
       color: #0f172a;
       font-weight: 800;
       font-family: 'Sora', 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+      word-break: break-word;
       text-wrap: balance;
+      /* Fallback for Safari < 17.4 */
+      overflow-wrap: break-word;
     }
 
     .brand-copy {
@@ -694,7 +697,10 @@
       letter-spacing: -0.03em;
       color: #0f172a;
       font-family: 'Sora', 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+      word-break: break-word;
       text-wrap: balance;
+      /* Fallback for Safari < 17.4 */
+      overflow-wrap: break-word;
     }
 
     .auth-view p {

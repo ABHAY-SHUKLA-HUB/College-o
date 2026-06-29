@@ -292,9 +292,9 @@ const captchaState = {
   admin: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false, retryAttempted: false, retryCount: 0, loadFailed: false }
 };
 
-const CAPTCHA_REQUEST_TIMEOUT_MS = 5000;
-const CAPTCHA_RETRY_DELAY_MS = 450;
-const CAPTCHA_MAX_AUTO_RETRIES = 1;
+const CAPTCHA_REQUEST_TIMEOUT_MS = 4000;
+const CAPTCHA_RETRY_DELAY_MS = 300;
+const CAPTCHA_MAX_AUTO_RETRIES = 2;
 
 const CAPTCHA_STORAGE_KEY = 'collegeOsCaptchaState';
 

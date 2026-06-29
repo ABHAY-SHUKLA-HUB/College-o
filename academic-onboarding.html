@@ -57,7 +57,7 @@
     .cat-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
     .cat-card {
       border:2px solid #ebebeb; border-radius:12px; padding:18px 12px 14px;
-      cursor:pointer; transition:all .2s; text-align:center; user-select:none;
+      cursor:pointer; transition:all .2s; text-align:center; -webkit-user-select:none; user-select:none;
     }
     .cat-card:hover { border-color:#b8acf6; background:#fafaff; transform:translateY(-2px); box-shadow:0 6px 18px rgba(102,126,234,.12); }
     .cat-card.selected { border-color:#667eea; background:#f0efff; box-shadow:0 4px 16px rgba(102,126,234,.2); }
@@ -76,7 +76,7 @@
     .branch-list::-webkit-scrollbar-thumb { background:#c4b5fd; border-radius:4px; }
     .branch-item {
       display:flex; align-items:center; gap:12px; padding:11px 14px;
-      border:2px solid #ebebeb; border-radius:10px; cursor:pointer; transition:all .18s; user-select:none;
+      border:2px solid #ebebeb; border-radius:10px; cursor:pointer; transition:all .18s; -webkit-user-select:none; user-select:none;
     }
     .branch-item:hover { border-color:#b8acf6; background:#fafaff; }
     .branch-item.selected { border-color:#667eea; background:#f0efff; }
@@ -92,7 +92,7 @@
     .sem-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); gap:10px; }
     .sem-pill {
       padding:14px 8px 10px; border:2px solid #ebebeb; border-radius:12px;
-      text-align:center; cursor:pointer; transition:all .2s; user-select:none;
+      text-align:center; cursor:pointer; transition:all .2s; -webkit-user-select:none; user-select:none;
     }
     .sem-pill:hover { border-color:#b8acf6; background:#fafaff; transform:translateY(-2px); box-shadow:0 5px 14px rgba(102,126,234,.12); }
     .sem-pill.selected { border-color:#667eea; background:#f0efff; box-shadow:0 4px 14px rgba(102,126,234,.22); }

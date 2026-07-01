@@ -59,15 +59,6 @@ const navGroups = [
       { href: 'settings.html', label: 'Settings', icon: 'fa-gear', key: 'settings' }
     ]
   },
-  {
-    title: 'Company',
-    items: [
-      { href: 'about-us.html', label: 'About Us', icon: 'fa-building', key: 'aboutUs' },
-      { href: 'contact-us.html', label: 'Contact Us', icon: 'fa-headset', key: 'contactUs' },
-      { href: 'help-center.html', label: 'Help Center', icon: 'fa-circle-question', key: 'helpCenter' },
-      { href: 'my-tickets.html', label: 'My Tickets', icon: 'fa-ticket', key: 'myTickets' }
-    ]
-  }
 ];
 
 const navItems = navGroups.flatMap((group) => group.items);
@@ -93,10 +84,6 @@ const iconColors = {
   supportDashboard: '#026b8f',
   referrals: '#7b3f00',
   feedback: '#b76a00',
-  aboutUs: '#1e4fd8',
-  contactUs: '#0f7b6c',
-  helpCenter: '#444',
-  myTickets: '#7c3aed',
   liveHub: '#1a73e8'
 };
 
@@ -121,11 +108,7 @@ const tooltipMap = {
   'Support Hub': 'Get structured 24/7 peer academic help',
   'Support Dashboard': 'Track your support activity and points',
   Referrals: 'Invite and earn rewards',
-  Feedback: 'Share your product experience',
-  'About Us': 'Learn about the College OS team and mission',
-  'Contact Us': 'Reach our support team directly',
-  'Help Center': 'Browse FAQs and help articles',
-  'My Tickets': 'View and track your support tickets'
+  Feedback: 'Share your product experience'
 };
 
 const routeWarmupMap = {

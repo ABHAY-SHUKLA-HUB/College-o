@@ -570,15 +570,23 @@ async function upsertGoogleUser(client, googleProfile) {
 
 async function resolveGoogleLandingPath(client, userId) {
   const profileResult = await client.query(
-    `SELECT onboarding_completed
+    `SELECT category_id, branch_id, semester_id, college_id, course_id, year_id
      FROM user_profiles
      WHERE user_id = $1
      LIMIT 1`,
     [userId]
   );
 
-  const onboardingCompleted = Boolean(profileResult.rows[0]?.onboarding_completed);
-  return onboardingCompleted ? '/dashboard' : '/academic-onboarding';
+  const profile = profileResult.rows[0] || {};
+  const profileComplete = Boolean(
+    profile.category_id &&
+    profile.branch_id &&
+    profile.semester_id &&
+    profile.college_id &&
+    profile.course_id &&
+    profile.year_id
+  );
+  return profileComplete ? '/dashboard' : '/academic-onboarding';
 }
 
 function maskEmailForLog(email) {

@@ -2208,49 +2208,21 @@ async function completePostLoginFlow(preferredCategoryId = null, preferredBranch
   try {
     const profilePayload = await window.CollegeOSApi.getStudentAcademicProfile();
     const profile = profilePayload?.profile;
-    
-    // Check if academic profile is complete (college_id, course_id, branch_id, year_id, semester_id)
-    const academicProfileComplete = profile && 
-      profile.college_id && 
-      profile.course_id && 
-      profile.branch_id && 
-      profile.year_id && 
-      profile.semester_id;
+    const academicProfileComplete = Boolean(
+      profile &&
+      profile.collegeId &&
+      profile.courseId &&
+      profile.branchId &&
+      profile.yearId &&
+      profile.semesterId
+    );
 
-    // If old onboarding_completed flag exists but academic profile is incomplete, show new wizard
-    const onboardingCompleted = Boolean(profilePayload?.onboarding_completed);
-    
     if (!academicProfileComplete) {
-      // Show new academic profile setup wizard
-      openAcademicProfileSetup({
-        collegeId: preferredCategoryId || profile?.college_id || null,
-        courseId: profile?.course_id || null,
-        branchId: preferredBranchId || profile?.branch_id || null,
-        yearId: profile?.year_id || null,
-        semesterId: preferredSemesterId || profile?.semester_id || null
-      });
+      window.location.href = '/academic-onboarding';
       return;
     }
-
-    // If using old onboarding system, keep backward compatibility
-    if (!onboardingCompleted && !academicProfileComplete) {
-      openOnboardingModal({
-        categoryId: preferredCategoryId || profile?.categoryId || null,
-        branchId: preferredBranchId || profile?.branchId || null,
-        semesterId: preferredSemesterId || profile?.semesterId || null,
-        onboardingStep: profile?.onboardingStep || 1
-      });
-      return;
-    }
-  } catch {
-    // If any error, show new academic profile setup as fallback
-    openAcademicProfileSetup({
-      collegeId: preferredCategoryId || null,
-      courseId: null,
-      branchId: preferredBranchId || null,
-      yearId: null,
-      semesterId: preferredSemesterId || null
-    });
+  } catch (_error) {
+    window.location.href = '/academic-onboarding';
     return;
   }
 

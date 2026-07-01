@@ -366,7 +366,7 @@
       });
       if(!res.ok){ var e=await res.json(); throw new Error(e.error||'Setup failed'); }
       showSuccess();
-      setTimeout(function(){ window.location.href='dashboard.html'; },2400);
+      setTimeout(function(){ window.location.href='/dashboard'; },2400);
     }catch(err){
       btnNext.disabled=false;
       btnNext.textContent='Complete Setup';

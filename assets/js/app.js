@@ -817,14 +817,23 @@ async function enforceAcademicOnboarding() {
 
   try {
     const profileData = await window.CollegeOSApi.getStudentAcademicProfile();
-    const completed = profileData?.onboarding_completed === true && Boolean(profileData?.profile);
-    if (!completed) {
+    const profile = profileData?.profile;
+    const profileComplete = Boolean(
+      profile &&
+      profile.collegeId &&
+      profile.courseId &&
+      profile.branchId &&
+      profile.yearId &&
+      profile.semesterId
+    );
+
+    if (!profileComplete) {
       console.log('[dashboard] Onboarding required');
-      window.__collegeOsPendingOnboardingRequirement = { profileData };
-      window.dispatchEvent(new CustomEvent('collegeos:onboarding-required', { detail: { profileData } }));
-    } else {
-      console.log('[dashboard] Onboarding completed');
+      window.location.replace('/academic-onboarding');
+      return;
     }
+
+    console.log('[dashboard] Onboarding completed');
   } catch (error) {
     console.warn('[dashboard] Onboarding check failed', error);
   }

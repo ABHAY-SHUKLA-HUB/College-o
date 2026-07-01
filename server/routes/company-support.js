@@ -63,7 +63,7 @@ const DEFAULT_ABOUT_CONFIG = {
     primaryLabel: 'Start Learning Free',
     primaryHref: 'login.html?mode=signup',
     secondaryLabel: 'Explore Features',
-    secondaryHref: 'home.html'
+    secondaryHref: '/dashboard'
   }
 };
 

@@ -16,7 +16,6 @@ const navGroups = [
   {
     title: 'Main',
     items: [
-      { href: 'home.html', label: 'Home', icon: 'fa-house', key: 'home' },
       { href: 'dashboard.html', label: 'Dashboard', icon: 'fa-gauge-high', key: 'dashboard' }
     ]
   },
@@ -112,13 +111,6 @@ const tooltipMap = {
 };
 
 const routeWarmupMap = {
-  'home.html': [
-    '/api/dashboard/bootstrap',
-    '/api/quizzes/attempts/me',
-    '/api/mock-tests/dashboard',
-    '/api/roadmaps/me',
-    '/api/notes/mine'
-  ],
   'dashboard.html': [
     '/api/dashboard/bootstrap',
     '/api/quizzes/attempts/me',
@@ -207,7 +199,6 @@ const CLEAN_ROUTE_MAP = {
   'index.html': '/',
   'login.html': '/login',
   'signup.html': '/signup',
-  'home.html': '/home',
   'dashboard.html': '/dashboard',
   'study.html': '/study',
   'mock-tests.html': '/mock-tests',

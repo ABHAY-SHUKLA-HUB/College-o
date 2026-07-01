@@ -132,7 +132,6 @@ const CLEAN_PAGE_ROUTES = new Map([
   ['/login', 'login.html'],
   ['/signup', 'signup.html'],
   ['/academic-onboarding', 'academic-onboarding.html'],
-  ['/home', 'home.html'],
   ['/dashboard', 'dashboard.html'],
   ['/study', 'study.html'],
   ['/mock-test', 'mock-tests.html'],
@@ -627,6 +626,8 @@ PAGE_ROUTES.forEach((file, route) => {
     return res.sendFile(path.join(__dirname, '..', file));
   });
 });
+
+app.get(['/home', '/home.html'], (_req, res) => res.redirect(301, '/dashboard'));
 
 app.use((req, res, next) => {
   if (req.path.startsWith('/api') || req.path.startsWith('/assets/') || req.path.startsWith('/uploads/')) {

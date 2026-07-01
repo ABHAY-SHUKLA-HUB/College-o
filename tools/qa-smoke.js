@@ -120,7 +120,7 @@ async function run() {
     }
 
     // Check several clean routes
-    const routes = ['/home','/dashboard','/study','/mock-tests','/notes','/profile','/reset-password','/live-hub'];
+    const routes = ['/dashboard','/study','/mock-tests','/notes','/profile','/reset-password','/live-hub'];
     for (const r of routes) {
       const res = await safeGoto(`${BASE}${r}`);
       if (!res) continue;

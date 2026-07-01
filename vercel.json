@@ -69,10 +69,6 @@
       "destination": "/signup.html"
     },
     {
-      "source": "/home",
-      "destination": "/home.html"
-    },
-    {
       "source": "/dashboard",
       "destination": "/dashboard.html"
     },
@@ -177,7 +173,7 @@
     },
     {
       "source": "/home.html",
-      "destination": "/home",
+      "destination": "/dashboard",
       "permanent": true
     },
     {

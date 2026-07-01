@@ -32,22 +32,12 @@ const navGroups = [
     ]
   },
   {
-    title: 'Achievements',
-    items: [
-      { href: 'leaderboards.html', label: 'Leaderboard', icon: 'fa-trophy', key: 'leaderboard' },
-      { href: 'certificates.html', label: 'Certificate', icon: 'fa-graduation-cap', key: 'certificate' }
-    ]
-  },
-  {
     title: 'Community',
     items: [
       { href: 'college-feed.html', label: 'Campus Feed', icon: 'fa-newspaper', key: 'campusFeed' },
-      { href: 'notifications.html', label: 'Notifications', icon: 'fa-bell', key: 'notifications' },
       { href: 'forum.html', label: 'Forum', icon: 'fa-comments', key: 'forum' },
       { href: 'support-hub.html', label: 'Support Hub', icon: 'fa-life-ring', key: 'supportHub' },
-      { href: 'support-dashboard.html', label: 'Support Dashboard', icon: 'fa-chart-line', key: 'supportDashboard' },
-      { href: 'referrals.html', label: 'Referrals', icon: 'fa-handshake', key: 'referrals' },
-      { href: 'feedback.html', label: 'Feedback', icon: 'fa-star', key: 'feedback' }
+      { href: 'support-dashboard.html', label: 'Support Dashboard', icon: 'fa-chart-line', key: 'supportDashboard', roles: ['admin', 'super_admin', 'support_admin', 'support'] }
     ]
   },
   {
@@ -169,6 +159,9 @@ const routeWarmupMap = {
     '/api/profile/me',
     '/api/academics/profile'
   ],
+  'certificates.html': ['/api/certificates/mine', '/api/profile/me'],
+  'leaderboards.html': ['/api/leaderboard?range=monthly', '/api/profile/me'],
+  'college-feed.html': ['/api/campus-feed/me/summary', '/api/campus-feed/posts/trending?limit=8', '/api/profile/me'],
   'profile.html': [
     '/api/profile/me',
     '/api/academics/profile',
@@ -214,7 +207,10 @@ const CLEAN_ROUTE_MAP = {
   'pricing.html': '/membership',
   'leaderboards.html': '/leaderboard',
   'create-support-request.html': '/forms',
-  'academic-contribution-hub.html': '/contribute'
+  'academic-contribution-hub.html': '/contribute',
+  'certificates.html': '/certificates',
+  'leaderboards.html': '/leaderboard',
+  'college-feed.html': '/campus-feed'
 };
 
 function cleanRouteForPage(file) {
@@ -305,6 +301,11 @@ function navHtml() {
   return navGroups
     .map((group) => {
       const links = group.items
+        .filter((item) => {
+          if (!Array.isArray(item.roles) || !item.roles.length) return true;
+          const role = String(window.collegeOsCurrentUser?.role || '').toLowerCase();
+          return item.roles.some((allowed) => String(allowed || '').toLowerCase() === role);
+        })
         .map((item) => {
           const active = item.action ? '' : (current === normalizeRoutePath(item.href).split('/').pop().toLowerCase() ? 'active' : '');
           const color = iconColors[item.key] || '#0f7b6c';
@@ -316,9 +317,16 @@ function navHtml() {
         })
         .join('');
 
+      if (!links) return '';
       return `<section class="nav-group"><p class="nav-group-title">${group.title}</p>${links}</section>`;
     })
     .join('');
+}
+
+function renderSidebarNav() {
+  const navList = document.querySelector('.sidebar-nav-wrap .nav-list');
+  if (!navList) return;
+  navList.innerHTML = navHtml();
 }
 
 function mobileNavHtml() {
@@ -496,6 +504,7 @@ function mountShell() {
       <header class="topbar">
         <a class="topbar-brand" href="/dashboard" aria-label="College OS home"><i class="fa-solid fa-graduation-cap"></i><strong id="pageTitle">College OS</strong></a>
         <div class="quick-icons">
+          <a class="icon-chip" href="/notifications" id="topbarNotifBtn" title="Notifications"><i class="fa-solid fa-bell"></i><span class="nav-badge" id="notifNavBadge" style="display:none;">0</span></a>
           <a class="icon-chip" href="/roadmap"><i class="fa-solid fa-map"></i> Roadmap</a>
           <a class="icon-chip" href="/ai-tools"><i class="fa-solid fa-sparkles"></i> AI Tools</a>
           <a class="icon-chip" href="/notes"><i class="fa-solid fa-file-lines"></i> Notes</a>
@@ -749,6 +758,7 @@ async function applyAuthGuard() {
   }
 
   window.collegeOsCurrentUser = user;
+  renderSidebarNav();
 
   // If explicit unauthorized, redirect to login for protected pages
   if (!user && lastError && (lastError.status === 401 || lastError.status === 403)) {

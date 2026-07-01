@@ -145,6 +145,9 @@ const CLEAN_PAGE_ROUTES = new Map([
   ['/settings', 'settings.html'],
   ['/support-dashboard', 'support-dashboard.html'],
   ['/support-hub', 'support-hub.html'],
+  ['/certificates', 'certificates.html'],
+  ['/leaderboard', 'leaderboards.html'],
+  ['/campus-feed', 'college-feed.html'],
   ['/contribute', 'academic-contribution-hub.html']
   ,['/reset-password', 'reset-password.html']
   ,['/admin-login', 'admin-login.html']

@@ -129,6 +129,12 @@ a {
   box-shadow: 0 12px 28px rgba(6, 23, 51, 0.07);
 }
 
+.co-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .co-nav-btn,
 .co-btn-primary {
   min-height: 46px;
@@ -168,6 +174,91 @@ a {
 .co-btn-secondary:hover {
   transform: translateY(-2px);
   background: #fff;
+}
+
+.co-contact {
+  padding: 58px 0 90px;
+}
+
+.co-contact-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 28px;
+  align-items: center;
+}
+
+.co-contact-copy {
+  max-width: 620px;
+}
+
+.co-contact-copy h2 {
+  margin-top: 18px;
+  font-size: clamp(34px, 4.2vw, 56px);
+  line-height: 1.04;
+}
+
+.co-contact-copy p {
+  margin-top: 20px;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.85;
+  max-width: 620px;
+}
+
+.co-contact-actions {
+  margin-top: 30px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.co-contact-card {
+  padding: 36px;
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow-soft);
+}
+
+.co-contact-icon {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border-radius: 24px;
+  background: rgba(10, 103, 217, 0.08);
+  color: var(--blue);
+  font-size: 32px;
+}
+
+.co-contact-card small {
+  display: inline-flex;
+  margin-top: 20px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(10, 103, 217, 0.08);
+  color: var(--blue);
+  font-weight: 800;
+}
+
+.co-contact-card h3 {
+  margin-top: 18px;
+  color: var(--navy);
+  font-size: 28px;
+  line-height: 1.1;
+  font-weight: 950;
+}
+
+.co-contact-card p {
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+.co-contact-card a {
+  display: inline-block;
+  margin-top: 24px;
 }
 
 /* HERO */
@@ -1061,11 +1152,16 @@ a {
 
   .co-brand,
   .co-nav-links,
-  .co-nav-btn {
+  .co-nav-actions {
     justify-self: center;
   }
 
   .co-nav-links {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .co-nav-actions {
     flex-wrap: wrap;
     justify-content: center;
   }
@@ -1137,7 +1233,9 @@ a {
     letter-spacing: -2px;
   }
 
-  .co-actions {
+  .co-actions,
+  .co-nav-actions,
+  .co-contact-actions {
     flex-direction: column;
   }
 
@@ -1145,6 +1243,10 @@ a {
   .co-btn-secondary,
   .co-nav-btn {
     width: 100%;
+  }
+
+  .co-contact-grid {
+    grid-template-columns: 1fr;
   }
 
   .co-ecosystem {

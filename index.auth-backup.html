@@ -30,8 +30,11 @@
       <a href="#faq">FAQ</a>
     </div>
 
-    <a href="login.html" class="co-nav-btn">Student Login</a>
-    <a href="login.html?mode=signup" class="co-nav-btn" style="margin-left: 10px;">Sign Up</a>
+    <div class="co-nav-actions">
+      <a href="login.html" class="co-btn-primary">Student Login</a>
+      <a href="login.html?mode=signup" class="co-btn-secondary">Sign Up</a>
+      <a href="mailto:support@collegeo.in" class="co-btn-secondary">Contact Us</a>
+    </div>
   </nav>
 </header>
 
@@ -385,6 +388,39 @@
     </div>
   </section>
 
+  <!-- CONTACT SUPPORT -->
+  <section class="co-section co-contact" id="contact">
+    <div class="co-contact-grid">
+      <div class="co-contact-copy">
+        <div class="co-eyebrow">Need Help?</div>
+        <h2>Have questions or need assistance with your College OS account?</h2>
+        <p>
+          Have a question, found a bug, or need assistance with your account?
+          Our support team is always ready to help. Feel free to email us anytime,
+          and we'll get back to you as soon as possible.
+        </p>
+        <div class="co-contact-actions">
+          <button type="button" class="co-btn-secondary" id="copySupportEmailBtn">
+            Copy Email
+          </button>
+          <a href="mailto:support@collegeo.in" class="co-btn-primary">
+            Email Support
+          </a>
+        </div>
+      </div>
+
+      <article class="co-contact-card">
+        <div class="co-contact-icon">✉️</div>
+        <small>Support Email</small>
+        <h3>support@collegeo.in</h3>
+        <p>
+          Our support team is ready to help you with account setup, bug reports,
+          or any questions about using College OS.
+        </p>
+      </article>
+    </div>
+  </section>
+
   <!-- ABOUT -->
   <section class="co-section co-about">
     <div class="about-grid">
@@ -491,6 +527,16 @@
   document.addEventListener("keydown", function (event) {
     if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "a") {
       window.location.href = "admin-login.html";
+    }
+  });
+
+  document.getElementById('copySupportEmailBtn')?.addEventListener('click', async function () {
+    try {
+      await navigator.clipboard.writeText('support@collegeo.in');
+      this.textContent = 'Copied!';
+      setTimeout(() => { this.textContent = 'Copy Email'; }, 1800);
+    } catch (error) {
+      window.alert('support@collegeo.in');
     }
   });
 </script>

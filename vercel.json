@@ -77,6 +77,10 @@
       "destination": "/dashboard.html"
     },
     {
+      "source": "/academic-onboarding",
+      "destination": "/academic-onboarding.html"
+    },
+    {
       "source": "/admin-dashboard",
       "destination": "/admin-dashboard.html"
     },
@@ -309,6 +313,11 @@
     {
       "source": "/signup.html",
       "destination": "/signup",
+      "permanent": true
+    },
+    {
+      "source": "/academic-onboarding.html",
+      "destination": "/academic-onboarding",
       "permanent": true
     },
     {

@@ -2222,7 +2222,8 @@ async function completePostLoginFlow(preferredCategoryId = null, preferredBranch
       return;
     }
   } catch (_error) {
-    window.location.href = '/academic-onboarding';
+    console.warn('[auth] Academic profile check failed; redirecting to dashboard', _error);
+    window.location.href = '/dashboard';
     return;
   }
 

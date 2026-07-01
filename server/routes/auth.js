@@ -1242,7 +1242,7 @@ router.post('/signup', async (req, res) => {
         }
 
         console.log('[auth:signup] session created', { userId: user.rows[0].id, role: user.rows[0].role });
-        console.log('[auth:signup] redirecting to dashboard', { userId: user.rows[0].id, redirectUrl: '/dashboard' });
+        console.log('[auth:signup] redirecting to onboarding', { userId: user.rows[0].id, redirectUrl: '/academic-onboarding' });
 
         return res.status(201).json({
           success: true,
@@ -1250,7 +1250,7 @@ router.post('/signup', async (req, res) => {
           user: user.rows[0],
           role: user.rows[0].role,
           token: null,
-          redirectUrl: '/dashboard'
+          redirectUrl: '/academic-onboarding'
         });
       });
     });

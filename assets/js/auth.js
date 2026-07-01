@@ -2205,28 +2205,6 @@ async function requestSignupVerificationCode({ isResend = false } = {}) {
 }
 
 async function completePostLoginFlow(preferredCategoryId = null, preferredBranchId = null, preferredSemesterId = null) {
-  try {
-    const profilePayload = await window.CollegeOSApi.getStudentAcademicProfile();
-    const profile = profilePayload?.profile;
-    const academicProfileComplete = Boolean(
-      profile &&
-      profile.collegeId &&
-      profile.courseId &&
-      profile.branchId &&
-      profile.yearId &&
-      profile.semesterId
-    );
-
-    if (!academicProfileComplete) {
-      window.location.href = '/academic-onboarding';
-      return;
-    }
-  } catch (_error) {
-    console.warn('[auth] Academic profile check failed; redirecting to dashboard', _error);
-    window.location.href = '/dashboard';
-    return;
-  }
-
   window.location.href = '/dashboard';
 }
 

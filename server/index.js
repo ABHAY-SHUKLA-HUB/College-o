@@ -84,6 +84,8 @@ const PgSession = pgSessionFactory(session);
 const port = Number(process.env.PORT || 3000);
 const host = process.env.HOST || '0.0.0.0';
 
+const app = express();
+
 // Render sits behind a proxy; trust the first hop so req.ip and secure cookies are correct.
 app.set('trust proxy', 1);
 

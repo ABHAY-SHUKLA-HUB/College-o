@@ -505,8 +505,13 @@ function mountShell() {
         </div>
       </section>
     </aside>
+    <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" aria-hidden="true" aria-label="Close navigation"></button>
     <section class="main-area">
       <header class="topbar">
+        <button class="icon-chip mobile-sidebar-toggle" id="mobileSidebarToggle" type="button" aria-expanded="false" aria-label="Open navigation" title="Open navigation">
+          <i class="fa-solid fa-bars"></i>
+          <span class="mobile-sidebar-toggle-label">Menu</span>
+        </button>
         <a class="topbar-brand" href="/dashboard" aria-label="College OS home"><i class="fa-solid fa-graduation-cap"></i><strong id="pageTitle">College OS</strong></a>
         <div class="quick-icons">
           <a class="icon-chip" href="/notifications" id="topbarNotifBtn" title="Notifications"><i class="fa-solid fa-bell"></i><span class="nav-badge" id="notifNavBadge" style="display:none;">0</span></a>
@@ -524,6 +529,44 @@ function mountShell() {
   `;
 }
 
+function bindMobileSidebar() {
+  const shell = document.querySelector('.app-shell');
+  const toggle = document.getElementById('mobileSidebarToggle');
+  const backdrop = document.getElementById('sidebarBackdrop');
+  const sidebar = document.querySelector('.sidebar');
+  if (!shell || !toggle || !backdrop || !sidebar) return;
+
+  const syncForViewport = () => {
+    if (!isMobileViewport()) {
+      closeMobileSidebar();
+      return;
+    }
+    shell.classList.remove('sidebar-collapsed');
+    closeMobileSidebar();
+  };
+
+  toggle.addEventListener('click', () => {
+    if (!isMobileViewport()) return;
+    const isOpen = shell.classList.contains('mobile-sidebar-open');
+    setMobileSidebarOpen(!isOpen);
+  });
+
+  backdrop.addEventListener('click', closeMobileSidebar);
+
+  sidebar.addEventListener('click', (event) => {
+    const target = event.target instanceof Element ? event.target.closest('a, button') : null;
+    if (!target || !isMobileViewport()) return;
+    closeMobileSidebar();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeMobileSidebar();
+  });
+
+  window.addEventListener('resize', syncForViewport, { passive: true });
+  syncForViewport();
+}
+
 function bindSidebarCollapse() {
   const shell = document.querySelector('.app-shell');
   const toggle = document.getElementById('sidebarToggle');
@@ -533,6 +576,10 @@ function bindSidebarCollapse() {
   const key = 'collegeos_sidebar_collapsed';
 
   function applyState(collapsed) {
+    if (isMobileViewport()) {
+      shell.classList.remove('sidebar-collapsed');
+      return;
+    }
     shell.classList.toggle('sidebar-collapsed', collapsed);
     toggle.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
     toggle.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
@@ -543,10 +590,22 @@ function bindSidebarCollapse() {
   applyState(saved);
 
   toggle.addEventListener('click', () => {
+    if (isMobileViewport()) {
+      openMobileSidebar();
+      return;
+    }
     const collapsed = !shell.classList.contains('sidebar-collapsed');
     applyState(collapsed);
     window.localStorage.setItem(key, collapsed ? '1' : '0');
   });
+
+  window.addEventListener('resize', () => {
+    if (isMobileViewport()) {
+      shell.classList.remove('sidebar-collapsed');
+      return;
+    }
+    applyState(window.localStorage.getItem(key) === '1');
+  }, { passive: true });
 }
 
 async function hydrateSidebarProfile() {
@@ -693,6 +752,37 @@ function setContentLoadingState(isLoading) {
   target.classList.toggle('content-loading', isLoading);
   target.setAttribute('aria-busy', isLoading ? 'true' : 'false');
   document.body.classList.toggle('app-loading', isLoading);
+}
+
+function isMobileViewport() {
+  return Boolean(window.matchMedia && window.matchMedia('(max-width: 980px)').matches);
+}
+
+function setMobileSidebarOpen(isOpen) {
+  const shell = document.querySelector('.app-shell');
+  const backdrop = document.getElementById('sidebarBackdrop');
+  const toggle = document.getElementById('mobileSidebarToggle');
+  if (!shell) return;
+
+  shell.classList.toggle('mobile-sidebar-open', isOpen);
+  document.body.classList.toggle('sidebar-open', isOpen);
+
+  if (toggle) {
+    toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    toggle.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
+  }
+
+  if (backdrop) {
+    backdrop.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+  }
+}
+
+function closeMobileSidebar() {
+  setMobileSidebarOpen(false);
+}
+
+function openMobileSidebar() {
+  setMobileSidebarOpen(true);
 }
 
 function mountContent() {
@@ -1068,6 +1158,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindAdminShortcut();
   mountShell();
   bindNavigationPrefetch();
+  bindMobileSidebar();
   bindSidebarCollapse();
   mountContent();
   setTitle();

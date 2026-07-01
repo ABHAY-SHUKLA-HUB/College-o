@@ -1071,7 +1071,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   try {
     await applyAuthGuard();
-    await enforceAcademicOnboarding();
     bindLogout();
 
     setContentLoadingState(false);

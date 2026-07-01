@@ -222,6 +222,11 @@ function pageName() {
   return file.toLowerCase();
 }
 
+// Expose protected page names to the client-side for guard checks
+window.PROTECTED_PAGES = [
+  'dashboard', 'dashboard.html', 'study', 'study.html', 'mock-test', 'mock-tests.html', 'mock-tests', 'notes', 'notes-library.html', 'contribute', 'academic-contribution-hub.html', 'roadmap', 'study-roadmap.html', 'live-hub', 'live-hub.html', 'ai-tools', 'ai-tools.html', 'college-feed', 'college-feed.html', 'forum', 'forum.html', 'support-hub', 'support-hub.html', 'profile', 'profile.html', 'membership', 'pricing.html', 'settings', 'settings.html'
+];
+
 function normalizeRoutePath(href) {
   if (!href) return href;
   try {
@@ -759,6 +764,21 @@ async function applyAuthGuard() {
 
   window.collegeOsCurrentUser = user;
   renderSidebarNav();
+
+  // Ensure protected pages are blocked until auth check completes
+  const file = pageName();
+  const isProtected = (function() {
+    const p = window.PROTECTED_PAGES || [];
+    const name = String(file || '').toLowerCase();
+    if (!p.length) return false;
+    return p.includes(name) || p.includes(name.replace(/\.html$/i, ''));
+  })();
+
+  if (!user && isProtected) {
+    setContentLoadingState(false);
+    goToRoute('/login', { replace: true });
+    return;
+  }
 
   // If explicit unauthorized, redirect to login for protected pages
   if (!user && lastError && (lastError.status === 401 || lastError.status === 403)) {

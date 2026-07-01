@@ -74,7 +74,7 @@ const {
   notFoundHandler,
   globalErrorHandler
 } = require('./middleware/logging');
-const { requireAdmin } = require('./middleware/auth');
+const { requireAuth, requireAdmin } = require('./middleware/auth');
 
 const app = express();
 const PgSession = pgSessionFactory(session);
@@ -220,7 +220,8 @@ if (isProduction) {
 const assetStaticOptions = {
   etag: true,
   lastModified: true,
-  maxAge: isProduction ? '30d' : '1h',
+  // In development keep max-age low to avoid stale client caches; production remains long-lived.
+  maxAge: isProduction ? '30d' : 0,
   immutable: isProduction,
   setHeaders(res, filePath) {
     if (filePath.endsWith('.html')) {
@@ -623,10 +624,50 @@ const PAGE_ROUTES = new Map([
 ]);
 
 // Serve mapped page routes directly
+// Protected pages set (clean paths)
+const PROTECTED_PAGE_PATHS = new Set([
+  '/dashboard', '/study', '/mock-test', '/mock-tests', '/notes', '/contribute', '/roadmap', '/live-hub', '/ai-tools', '/campus-feed', '/forum', '/support-hub', '/profile', '/membership', '/settings'
+]);
+
+// Routes that have been removed or consolidated; users should be redirected
+const REMOVED_ROUTE_PATHS = new Set([
+  '/home', '/homepage', '/contact-us', '/contactus', '/about-us', '/help-center', '/my-tickets', '/leaderboard', '/certificate', '/referrals', '/feedback', '/support-dashboard'
+]);
+
 PAGE_ROUTES.forEach((file, route) => {
-  app.get(route, (_req, res) => {
-    res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
-    return res.sendFile(path.join(__dirname, '..', file));
+  app.get(route, (req, res) => {
+    // If this route is considered protected, enforce redirect to login for unauthenticated users
+    try {
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+      const cleanPath = route.toLowerCase();
+
+      // Handle removed/consolidated routes: redirect unauthenticated users to login,
+      // authenticated students to dashboard, and enforce access for support dashboard.
+      if (REMOVED_ROUTE_PATHS.has(cleanPath)) {
+        if (!req.session || !req.session.userId) {
+          return res.redirect(302, '/login');
+        }
+        // If support-dashboard, only allow admins/support roles
+        if (cleanPath === '/support-dashboard') {
+          const role = req.session.role || '';
+          if (!['admin', 'super_admin', 'support', 'support_admin'].includes(role)) {
+            return res.status(403).send('Forbidden');
+          }
+        }
+        // For other removed paths, send logged-in users to dashboard
+        return res.redirect(302, '/dashboard');
+      }
+
+      if (PROTECTED_PAGE_PATHS.has(cleanPath)) {
+        if (!req.session || !req.session.userId) {
+          return res.redirect(302, '/login');
+        }
+      }
+
+      return res.sendFile(path.join(__dirname, '..', file));
+    } catch (err) {
+      return res.status(500).send('Server error');
+    }
   });
 });
 
@@ -640,10 +681,43 @@ app.use((req, res, next) => {
   const pathKey = req.path.toLowerCase();
   if (/\.html$/i.test(pathKey)) {
     const cleanPath = pathKey.replace(/\.html$/i, '');
+    // If the clean path is protected, require session
+    if (REMOVED_ROUTE_PATHS && REMOVED_ROUTE_PATHS.has(cleanPath)) {
+      if (!req.session || !req.session.userId) return res.redirect(302, '/login');
+      if (cleanPath === '/support-dashboard') {
+        const role = req.session.role || '';
+        if (!['admin', 'super_admin', 'support', 'support_admin'].includes(role)) return res.status(403).send('Forbidden');
+      }
+      return res.redirect(302, '/dashboard');
+    }
+
+    if (PROTECTED_PAGE_PATHS && PROTECTED_PAGE_PATHS.has(cleanPath)) {
+      if (!req.session || !req.session.userId) {
+        return res.redirect(302, '/login');
+      }
+    }
+
     return res.redirect(301, CLEAN_PAGE_ROUTES.has(cleanPath) ? cleanPath : cleanPath || '/');
   }
 
   if (CLEAN_PAGE_ROUTES.has(pathKey)) {
+    // If this clean route was removed, redirect appropriately
+    if (REMOVED_ROUTE_PATHS && REMOVED_ROUTE_PATHS.has(pathKey)) {
+      if (!req.session || !req.session.userId) return res.redirect(302, '/login');
+      if (pathKey === '/support-dashboard') {
+        const role = req.session.role || '';
+        if (!['admin', 'super_admin', 'support', 'support_admin'].includes(role)) return res.status(403).send('Forbidden');
+      }
+      return res.redirect(302, '/dashboard');
+    }
+
+    // For protected clean routes enforce auth before serving the HTML
+    if (PROTECTED_PAGE_PATHS && PROTECTED_PAGE_PATHS.has(pathKey)) {
+      if (!req.session || !req.session.userId) {
+        return res.redirect(302, '/login');
+      }
+    }
+
     return res.sendFile(path.join(__dirname, '..', CLEAN_PAGE_ROUTES.get(pathKey)));
   }
 

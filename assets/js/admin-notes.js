@@ -1,3 +1,94 @@
+// Academic Structure State for New System
+const academicStructureState = {
+  colleges: [],
+  courses: [],
+  branches: [],
+  years: [],
+  semesters: []
+};
+
+// Load new academic structure data
+async function loadAcademicStructure() {
+  try {
+    const [colleges, courses, branches, years, semesters] = await Promise.all([
+      fetch('/api/academics/admin/colleges').then(r => r.json()),
+      fetch('/api/academics/admin/courses').then(r => r.json()),
+      fetch('/api/academics/admin/branches').then(r => r.json()),
+      fetch('/api/academics/admin/years').then(r => r.json()),
+      fetch('/api/academics/admin/semesters').then(r => r.json())
+    ]);
+
+    academicStructureState.colleges = colleges.data || [];
+    academicStructureState.courses = courses.data || [];
+    academicStructureState.branches = branches.data || [];
+    academicStructureState.years = years.data || [];
+    academicStructureState.semesters = semesters.data || [];
+
+    populateAcademicStructureDropdowns();
+  } catch (error) {
+    console.error('Error loading academic structure:', error);
+  }
+}
+
+// Populate academic structure dropdowns
+function populateAcademicStructureDropdowns() {
+  const collegeSelect = document.getElementById('noteCollegeId');
+  if (collegeSelect) {
+    collegeSelect.innerHTML = '<option value="">All Colleges (Common)</option>' +
+      academicStructureState.colleges
+        .filter(c => c.is_active !== false)
+        .map(c => `<option value="${c.id}">${c.name}</option>`)
+        .join('');
+
+    collegeSelect.addEventListener('change', (e) => {
+      const courseSelect = document.getElementById('noteCourseId');
+      const collegeId = e.target.value;
+      
+      if (collegeId) {
+        const filtered = academicStructureState.courses.filter(c => c.college_id == collegeId && c.is_active !== false);
+        courseSelect.innerHTML = '<option value="">All Courses</option>' +
+          filtered.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      } else {
+        courseSelect.innerHTML = '<option value="">All Courses (Common)</option>';
+      }
+    });
+  }
+
+  const courseSelect = document.getElementById('noteCourseId');
+  if (courseSelect) {
+    courseSelect.addEventListener('change', (e) => {
+      const branchSelect = document.getElementById('noteBranchId');
+      const courseId = e.target.value;
+      
+      if (courseId) {
+        const filtered = academicStructureState.branches.filter(b => b.course_id == courseId && b.is_active !== false);
+        branchSelect.innerHTML = '<option value="">All Branches</option>' +
+          filtered.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+      } else {
+        branchSelect.innerHTML = '<option value="">All Branches (Common)</option>';
+      }
+    });
+  }
+
+  const yearSelect = document.getElementById('noteYearId');
+  if (yearSelect) {
+    yearSelect.innerHTML = '<option value="">All Years (Common)</option>' +
+      academicStructureState.years
+        .filter(y => y.is_active !== false)
+        .map(y => `<option value="${y.id}">Year ${y.year}</option>`)
+        .join('');
+  }
+
+  const semesterSelect = document.getElementById('noteSemesterId');
+  if (semesterSelect) {
+    semesterSelect.innerHTML = '<option value="">All Semesters (Common)</option>' +
+      academicStructureState.semesters
+        .filter(s => s.is_active !== false)
+        .map(s => `<option value="${s.id}">Semester ${s.semester}</option>`)
+        .join('');
+  }
+}
+
 async function ensureAdminSession() {
   try {
     await window.CollegeOSApi.adminDashboard();
@@ -182,6 +273,7 @@ document.getElementById('notesFilterStatus').addEventListener('change', loadNote
 
 (async () => {
   await ensureAdminSession();
-  await loadAcademicOptions();
+  await loadAcademicStructure(); // Load new academic structure
+  await loadAcademicOptions();   // Load legacy options
   await loadNotes();
 })();

@@ -616,6 +616,316 @@ async function ensureCaptchaPayload(scope) {
   return payload;
 }
 
+const turnstileState = {
+  login: {
+    widgetId: null,
+    token: '',
+    ready: false,
+    bypass: false,
+    loadFailed: false,
+    renderPromise: null,
+    pendingResolve: null,
+    pendingReject: null
+  },
+  signup: {
+    widgetId: null,
+    token: '',
+    ready: false,
+    bypass: false,
+    loadFailed: false,
+    renderPromise: null,
+    pendingResolve: null,
+    pendingReject: null
+  }
+};
+
+const TURNSTILE_SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+let turnstileScriptPromise = null;
+
+function isLocalDevHost() {
+  const hostname = String(window.location.hostname || '').toLowerCase();
+  return hostname === 'localhost' || hostname === '127.0.0.1';
+}
+
+function getTurnstileSiteKey() {
+  return String(
+    authExperienceState.turnstile?.siteKey
+    || window.TURNSTILE_SITE_KEY
+    || window.CollegeOSApiConfig?.turnstileSiteKey
+    || ''
+  ).trim();
+}
+
+function getTurnstileContainer(scope) {
+  return byId(`${scope}CaptchaChallenge`);
+}
+
+function getTurnstileStatusNode(scope) {
+  return byId(`${scope}CaptchaStatus`);
+}
+
+function getTurnstileHiddenInput(scope) {
+  return byId(`${scope}CaptchaInput`);
+}
+
+function getTurnstileSubmitButtons(scope) {
+  if (scope === 'login') {
+    return [byId('loginSubmitBtn'), byId('sendOtpBtn'), byId('verifyOtpBtn'), byId('resendOtpBtn'), byId('forgotPasswordBtn')].filter(Boolean);
+  }
+
+  if (scope === 'signup') {
+    return [byId('signupSubmitBtn')].filter(Boolean);
+  }
+
+  return [];
+}
+
+function syncTurnstileUiState(scope, { loading = false, message = '', error = false } = {}) {
+  const state = turnstileState[scope];
+  const statusNode = getTurnstileStatusNode(scope);
+  const hiddenInput = getTurnstileHiddenInput(scope);
+  const box = byId(`${scope}CaptchaBox`);
+
+  if (!state) return;
+  if (statusNode) {
+    statusNode.textContent = message || '';
+    statusNode.classList.toggle('error', Boolean(error));
+  }
+
+  if (hiddenInput) {
+    hiddenInput.value = state.token || '';
+  }
+
+  if (box) {
+    box.classList.toggle('is-loading', Boolean(loading));
+    box.setAttribute('aria-busy', loading ? 'true' : 'false');
+  }
+
+  getTurnstileSubmitButtons(scope).forEach((button) => {
+    button.disabled = Boolean(loading || !state.ready);
+  });
+}
+
+function setTurnstileToken(scope, token) {
+  const state = turnstileState[scope];
+  if (!state) return;
+
+  state.token = String(token || '').trim();
+  state.ready = Boolean(state.token || state.bypass);
+  state.loadFailed = false;
+
+  if (state.pendingResolve) {
+    state.pendingResolve(state.token);
+    state.pendingResolve = null;
+    state.pendingReject = null;
+    state.renderPromise = null;
+  }
+
+  syncTurnstileUiState(scope, {
+    loading: false,
+    message: state.ready ? 'Security check ready.' : 'Security check unavailable. Please reset it.',
+    error: !state.ready
+  });
+}
+
+function clearTurnstileToken(scope, message = 'Security check requires a new verification.') {
+  const state = turnstileState[scope];
+  if (!state) return;
+
+  state.token = '';
+  state.ready = Boolean(state.bypass);
+  syncTurnstileUiState(scope, {
+    loading: false,
+    message,
+    error: true
+  });
+}
+
+async function loadTurnstileScript() {
+  if (window.turnstile) return window.turnstile;
+  if (turnstileScriptPromise) return turnstileScriptPromise;
+
+  turnstileScriptPromise = new Promise((resolve, reject) => {
+    let existingScript = document.querySelector('script[data-turnstile-client="true"]');
+    if (!existingScript) {
+      existingScript = document.querySelector('script[src*="challenges.cloudflare.com/turnstile/v0/api.js"]');
+      if (existingScript) {
+        existingScript.dataset.turnstileClient = 'true';
+      }
+    }
+
+    if (existingScript) {
+      const handleLoad = () => resolve(window.turnstile || null);
+      const handleError = () => reject(new Error('Turnstile script failed to load'));
+      existingScript.addEventListener('load', handleLoad, { once: true });
+      existingScript.addEventListener('error', handleError, { once: true });
+      if (window.turnstile) {
+        resolve(window.turnstile);
+      }
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = TURNSTILE_SCRIPT_SRC;
+    script.async = true;
+    script.defer = true;
+    script.dataset.turnstileClient = 'true';
+    script.onload = () => resolve(window.turnstile || null);
+    script.onerror = () => reject(new Error('Turnstile script failed to load'));
+    document.head.appendChild(script);
+  });
+
+  return turnstileScriptPromise;
+}
+
+function hasTurnstileToken(scope) {
+  const state = turnstileState[scope];
+  return Boolean(state && (state.token || state.bypass));
+}
+
+async function refreshTurnstile(scope, { force = false } = {}) {
+  const state = turnstileState[scope];
+  const container = getTurnstileContainer(scope);
+  const siteKey = getTurnstileSiteKey();
+
+  if (!state || !container) return null;
+
+  if (isLocalDevHost()) {
+    state.bypass = true;
+    setTurnstileToken(scope, '');
+    syncTurnstileUiState(scope, {
+      loading: false,
+      message: 'Security verification disabled for localhost development.',
+      error: false
+    });
+    return { turnstileToken: '', captchaToken: '', website: String(byId(`${scope}Website`)?.value || '') };
+  }
+
+  if (!siteKey) {
+    state.bypass = true;
+    setTurnstileToken(scope, '');
+    syncTurnstileUiState(scope, {
+      loading: false,
+      message: 'Security check disabled in development.',
+      error: false
+    });
+    return { turnstileToken: '', captchaToken: '', website: String(byId(`${scope}Website`)?.value || '') };
+  }
+
+  state.bypass = false;
+
+  try {
+    await loadTurnstileScript();
+  } catch (error) {
+    state.loadFailed = true;
+    clearTurnstileToken(scope, 'Security check failed to load. Please try again.');
+    throw error;
+  }
+
+  if (!window.turnstile) {
+    state.loadFailed = true;
+    clearTurnstileToken(scope, 'Security check unavailable. Please try again.');
+    throw new Error('Turnstile is unavailable');
+  }
+
+  if (state.widgetId !== null && force) {
+    try {
+      window.turnstile.reset(state.widgetId);
+    } catch {
+      // ignore reset errors
+    }
+    state.token = '';
+    state.ready = false;
+  }
+
+  if (state.widgetId === null) {
+    state.renderPromise = new Promise((resolve, reject) => {
+      state.pendingResolve = resolve;
+      state.pendingReject = reject;
+    });
+
+    container.innerHTML = '';
+    state.widgetId = window.turnstile.render(container, {
+      sitekey: siteKey,
+      theme: 'light',
+      callback: (token) => setTurnstileToken(scope, token),
+      'expired-callback': () => {
+        clearTurnstileToken(scope, 'Security check expired. Please verify again.');
+        try {
+          if (state.widgetId !== null) window.turnstile.reset(state.widgetId);
+        } catch {
+          // ignore
+        }
+      },
+      'error-callback': () => {
+        state.loadFailed = true;
+        clearTurnstileToken(scope, 'Security check failed. Please reset it and try again.');
+      },
+      'timeout-callback': () => {
+        clearTurnstileToken(scope, 'Security check expired. Please verify again.');
+      }
+    });
+  } else if (force) {
+    state.renderPromise = new Promise((resolve, reject) => {
+      state.pendingResolve = resolve;
+      state.pendingReject = reject;
+    });
+
+    state.token = '';
+    state.ready = false;
+    syncTurnstileUiState(scope, {
+      loading: true,
+      message: 'Resetting security check...',
+      error: false
+    });
+
+    try {
+      window.turnstile.reset(state.widgetId);
+    } catch {
+      state.loadFailed = true;
+      clearTurnstileToken(scope, 'Security check failed. Please reset it and try again.');
+    }
+  }
+
+  syncTurnstileUiState(scope, {
+    loading: false,
+    message: state.ready ? 'Security check ready.' : 'Complete the security check to continue.',
+    error: !state.ready
+  });
+
+  if (state.renderPromise) {
+    return state.renderPromise;
+  }
+
+  return state.token || '';
+}
+
+async function ensureTurnstilePayload(scope) {
+  if (hasTurnstileToken(scope)) {
+    return {
+      turnstileToken: String(turnstileState[scope].token || ''),
+      captchaToken: String(turnstileState[scope].token || ''),
+      website: String(byId(`${scope}Website`)?.value || '')
+    };
+  }
+
+  if (turnstileState[scope]?.loadFailed) {
+    throw new Error('Security check failed. Please reset it and try again.');
+  }
+
+  const token = await refreshTurnstile(scope, { force: false });
+  const resolvedToken = String(token || turnstileState[scope]?.token || '').trim();
+  if (!resolvedToken && !turnstileState[scope]?.bypass) {
+    throw new Error('Security verification failed. Please try again.');
+  }
+
+  return {
+    turnstileToken: resolvedToken,
+    captchaToken: resolvedToken,
+    website: String(byId(`${scope}Website`)?.value || '')
+  };
+}
+
 async function waitForSessionReady(timeoutMs = 5000, intervalMs = 300) {
   if (!window.CollegeOSApi) return null;
   const start = Date.now();
@@ -972,6 +1282,10 @@ const authExperienceState = {
   },
   oauth: {
     googleClientId: ''
+  },
+  turnstile: {
+    enabled: true,
+    siteKey: ''
   },
   support: {
     email: 'support@collegeos.in',
@@ -1419,6 +1733,7 @@ async function loadAuthExperienceConfig() {
     authExperienceState.branding = { ...authExperienceState.branding, ...(incoming.branding || {}) };
     authExperienceState.text = { ...authExperienceState.text, ...(incoming.text || {}) };
     authExperienceState.oauth = { ...authExperienceState.oauth, ...(incoming.oauth || {}) };
+    authExperienceState.turnstile = { ...authExperienceState.turnstile, ...(incoming.turnstile || {}) };
     authExperienceState.signup = {
       ...authExperienceState.signup,
       ...(incoming.signup || {}),
@@ -1429,6 +1744,14 @@ async function loadAuthExperienceConfig() {
     };
     authExperienceState.support = { ...authExperienceState.support, ...(incoming.support || {}) };
     authExperienceState.legal = { ...authExperienceState.legal, ...(incoming.legal || {}) };
+    const turnstileSiteKey = String(authExperienceState.turnstile?.siteKey || '').trim();
+    if (turnstileSiteKey) {
+      window.TURNSTILE_SITE_KEY = turnstileSiteKey;
+      window.CollegeOSApiConfig = {
+        ...(window.CollegeOSApiConfig || {}),
+        turnstileSiteKey
+      };
+    }
   } catch (_error) {
     // Keep local defaults when config is not reachable.
   }
@@ -1664,21 +1987,19 @@ function bindForgotPassword() {
       return;
     }
 
-    // Quick client-side validation to avoid unnecessary server calls
-    if (!verifyCaptcha('login')) {
-      setAuthMessages('login', captchaState.login.ready ? 'Captcha answer is incorrect. Please try again.' : 'Captcha could not load. Refresh captcha.');
-      return;
-    }
-
+    setLoading(forgotBtn, 'Sending reset link', true);
     try {
-      const captcha = await ensureCaptchaPayload('login');
+      const security = await ensureTurnstilePayload('login');
       await window.CollegeOSApi.forgotPassword({
         email,
-        captcha
+        ...security
       });
       setAuthMessages('login', '', 'If the account exists, a reset link has been sent to your email.');
     } catch (error) {
       setAuthMessages('login', error.message || 'Unable to process reset request');
+    } finally {
+      setLoading(forgotBtn, 'Forgot password?', false);
+      void refreshTurnstile('login', { force: true });
     }
   });
 }
@@ -1836,18 +2157,19 @@ async function requestSignupVerificationCode({ isResend = false } = {}) {
   setSignupOtpStatus('', '');
 
   try {
-    const captcha = await ensureCaptchaPayload('signup');
+    const security = await ensureTurnstilePayload('signup');
     const target = data.email;
     const payload = await withTimeout(window.CollegeOSApi.requestVerificationCode({
       channel: 'email',
       target,
       purpose: 'signup',
-      captcha
+      ...security
     }), 20_000, 'Sending OTP is taking longer than expected. Please try again.');
     signupVerificationState.method = 'email';
     signupVerificationState.requested = true;
     setSignupOtpStatus('', payload.message || 'OTP sent successfully.');
     startVerificationResendTimer(Number(payload.resendAfterSeconds || 30));
+    void refreshTurnstile('signup', { force: true });
     return true;
   } catch (error) {
     let message = normalizeAuthErrorMessage(error.message, 'Failed to send verification code.');
@@ -1864,6 +2186,7 @@ async function requestSignupVerificationCode({ isResend = false } = {}) {
     setAuthMessages('signup', message);
     const resendBtn = byId('signupOtpResendBtn');
     if (resendBtn) resendBtn.disabled = false;
+    void refreshTurnstile('signup', { force: true });
     return false;
   } finally {
     signupVerificationState.requestInProgress = false;
@@ -1885,9 +2208,32 @@ async function completePostLoginFlow(preferredCategoryId = null, preferredBranch
   try {
     const profilePayload = await window.CollegeOSApi.getStudentAcademicProfile();
     const profile = profilePayload?.profile;
-    const onboardingCompleted = Boolean(profilePayload?.onboarding_completed);
+    
+    // Check if academic profile is complete (college_id, course_id, branch_id, year_id, semester_id)
+    const academicProfileComplete = profile && 
+      profile.college_id && 
+      profile.course_id && 
+      profile.branch_id && 
+      profile.year_id && 
+      profile.semester_id;
 
-    if (!onboardingCompleted) {
+    // If old onboarding_completed flag exists but academic profile is incomplete, show new wizard
+    const onboardingCompleted = Boolean(profilePayload?.onboarding_completed);
+    
+    if (!academicProfileComplete) {
+      // Show new academic profile setup wizard
+      openAcademicProfileSetup({
+        collegeId: preferredCategoryId || profile?.college_id || null,
+        courseId: profile?.course_id || null,
+        branchId: preferredBranchId || profile?.branch_id || null,
+        yearId: profile?.year_id || null,
+        semesterId: preferredSemesterId || profile?.semester_id || null
+      });
+      return;
+    }
+
+    // If using old onboarding system, keep backward compatibility
+    if (!onboardingCompleted && !academicProfileComplete) {
       openOnboardingModal({
         categoryId: preferredCategoryId || profile?.categoryId || null,
         branchId: preferredBranchId || profile?.branchId || null,
@@ -1897,16 +2243,66 @@ async function completePostLoginFlow(preferredCategoryId = null, preferredBranch
       return;
     }
   } catch {
-    openOnboardingModal({
-      categoryId: preferredCategoryId || null,
+    // If any error, show new academic profile setup as fallback
+    openAcademicProfileSetup({
+      collegeId: preferredCategoryId || null,
+      courseId: null,
       branchId: preferredBranchId || null,
-      semesterId: preferredSemesterId || null,
-      onboardingStep: 1
+      yearId: null,
+      semesterId: preferredSemesterId || null
     });
     return;
   }
 
   window.location.href = '/dashboard';
+}
+
+// Open new academic profile setup wizard
+function openAcademicProfileSetup(prefill = {}) {
+  // Create modal for academic profile setup
+  const modal = document.createElement('div');
+  modal.id = 'academicProfileSetupModal';
+  modal.style.cssText = `
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.5); z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+  `;
+  
+  modal.innerHTML = `
+    <iframe 
+      id="academicSetupIframe"
+      src="/academic-profile-setup.html"
+      style="width: 100%; height: 100%; border: none; background: transparent;"
+    ></iframe>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Handle postMessage from iframe
+  window.addEventListener('message', (event) => {
+    if (event.data.type === 'onboarding-complete') {
+      modal.remove();
+      window.location.href = '/dashboard';
+    } else if (event.data.type === 'onboarding-skip') {
+      modal.remove();
+      window.location.href = '/dashboard';
+    }
+  });
+
+  // Send prefill data to iframe
+  setTimeout(() => {
+    const iframe = document.getElementById('academicSetupIframe');
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage({ 
+        type: 'onboarding-data',
+        collegeId: prefill.collegeId,
+        courseId: prefill.courseId,
+        branchId: prefill.branchId,
+        yearId: prefill.yearId,
+        semesterId: prefill.semesterId
+      }, '*');
+    }
+  }, 500);
 }
 
 function bindEmailLogin() {
@@ -1917,11 +2313,6 @@ function bindEmailLogin() {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     setAuthMessages('login');
-
-    if (!verifyCaptcha('login')) {
-      setAuthMessages('login', captchaState.login.ready ? 'Captcha answer is incorrect. Please try again.' : 'Captcha could not load. Refresh captcha.');
-      return;
-    }
 
     const email = byId('loginEmail').value.trim();
     const password = byId('loginPassword').value;
@@ -1946,8 +2337,8 @@ function bindEmailLogin() {
         throw new Error('Authentication service is unavailable right now.');
       }
 
-      const captcha = await ensureCaptchaPayload('login');
-      await window.CollegeOSApi.login({ email, password, rememberMe, captcha });
+      const security = await ensureTurnstilePayload('login');
+      await window.CollegeOSApi.login({ email, password, rememberMe, ...security });
 
       // Wait for session cookie to be available and /api/auth/me to return the user
       const sessionUser = await waitForSessionReady(6000);
@@ -1962,8 +2353,8 @@ function bindEmailLogin() {
       await completePostLoginFlow();
     } catch (error) {
       const message = error?.message || 'Login failed';
-      if (/captcha/i.test(message)) {
-        setAuthMessages('login', 'Captcha could not load. Refresh captcha.');
+      if (/security/i.test(message)) {
+        setAuthMessages('login', 'Security check could not load. Reset it and try again.');
       } else if (/too many failed attempts/i.test(message)) {
         const otpInput = byId('mobileNumber');
         if (otpInput) otpInput.value = email;
@@ -1974,11 +2365,12 @@ function bindEmailLogin() {
       } else {
         setAuthMessages('login', message);
       }
-      if (/captcha/i.test(message) || error?.status === 429) {
-        try { await refreshCaptcha('login', { force: true }); } catch { /* ignore */ }
+      if (/security/i.test(message) || error?.status === 429) {
+        try { await refreshTurnstile('login', { force: true }); } catch { /* ignore */ }
       }
     } finally {
       setLoading(submitBtn, 'Sign In', false);
+      void refreshTurnstile('login', { force: true });
     }
   });
 }
@@ -1997,11 +2389,6 @@ function bindMobileOtp() {
   requestForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     setAuthMessages('login');
-
-    if (!verifyCaptcha('login')) {
-      setAuthMessages('login', captchaState.login.ready ? 'Captcha answer is incorrect. Please try again.' : 'Captcha could not load. Refresh captcha.');
-      return;
-    }
 
     const email = String(mobileInput.value || '').trim().toLowerCase();
     if (!/^[^\s@]+@gmail\.com$/i.test(email)) {
@@ -2029,22 +2416,23 @@ function bindMobileOtp() {
         throw new Error('Email OTP is temporarily unavailable. Please use password login.');
       }
 
-      const captcha = await ensureCaptchaPayload('login');
+      const security = await ensureTurnstilePayload('login');
 
       const payload = await window.CollegeOSApi.requestVerificationCode({ 
         channel: 'email', 
         target: email, 
         purpose: 'login',
-        captcha
+        ...security
       });
       otpState.email = email;
       verifyForm.classList.remove('hidden');
       setAuthMessages('login', '', payload?.message || 'OTP sent successfully.');
       startOtpResendTimer(30, 'otpResendTimer', 'resendOtpBtn');
+      void refreshTurnstile('login', { force: true });
     } catch (error) {
       const msg = error?.message || 'Failed to send OTP';
-      if (/captcha/i.test(msg)) {
-        setAuthMessages('login', 'Captcha could not load. Refresh captcha.');
+      if (/security/i.test(msg)) {
+        setAuthMessages('login', 'Security check could not load. Reset it and try again.');
       } else if (error?.status === 429) {
         const retry = Number(error?.retryAfter || 0) || 30;
         setAuthMessages('login', `Too many requests. Please wait ${retry} seconds before retrying.`);
@@ -2052,8 +2440,8 @@ function bindMobileOtp() {
       } else {
         setAuthMessages('login', msg);
       }
-      if (/captcha/i.test(msg)) {
-        try { await refreshCaptcha('login', { force: true }); } catch { /* ignore */ }
+      if (/security/i.test(msg) || error?.status === 429) {
+        try { await refreshTurnstile('login', { force: true }); } catch { /* ignore */ }
       }
     } finally {
       setLoading(sendBtn, 'Send OTP', false);
@@ -2078,24 +2466,25 @@ function bindMobileOtp() {
 
     setLoading(verifyBtn, 'Verifying OTP', true);
     try {
-      const captcha = await ensureCaptchaPayload('login');
-      await window.CollegeOSApi.loginWithEmailOtp({ email, code: otp, captcha });
+      const security = await ensureTurnstilePayload('login');
+      await window.CollegeOSApi.loginWithEmailOtp({ email, code: otp, ...security });
       // Wait for session to be established server-side
       await waitForSessionReady(6000);
       setAuthMessages('login', '', 'OTP verified. Welcome back.');
       await completePostLoginFlow();
     } catch (error) {
       const msg = error?.message || 'OTP verification failed';
-      if (/captcha/i.test(msg)) {
-        setAuthMessages('login', 'Captcha could not load. Refresh captcha.');
+      if (/security/i.test(msg)) {
+        setAuthMessages('login', 'Security check could not load. Reset it and try again.');
       } else {
         setAuthMessages('login', msg);
       }
-      if (/captcha/i.test(msg) || error?.status === 429) {
-        try { await refreshCaptcha('login', { force: true }); } catch { /* ignore */ }
+      if (/security/i.test(msg) || error?.status === 429) {
+        try { await refreshTurnstile('login', { force: true }); } catch { /* ignore */ }
       }
     } finally {
       setLoading(verifyBtn, 'Verify OTP and Login', false);
+      void refreshTurnstile('login', { force: true });
     }
   });
 
@@ -2106,24 +2495,25 @@ function bindMobileOtp() {
       if (window.__collegeOsOtpGlobals?.cooldownUntil && Date.now() < window.__collegeOsOtpGlobals.cooldownUntil) return;
       setLoading(resendBtn, 'Resending', true);
       try {
-        const captcha = await ensureCaptchaPayload('login');
+        const security = await ensureTurnstilePayload('login');
         const payload = await window.CollegeOSApi.requestVerificationCode({ 
           channel: 'email', 
           target: otpState.email, 
           purpose: 'login',
-          captcha
+          ...security
         });
         setAuthMessages('login', '', payload?.message || 'OTP resent successfully.');
         startOtpResendTimer(30, 'otpResendTimer', 'resendOtpBtn');
+        void refreshTurnstile('login', { force: true });
       } catch (error) {
         const msg = error?.message || 'Unable to resend OTP';
-        if (/captcha/i.test(msg)) {
-          setAuthMessages('login', 'Captcha could not load. Refresh captcha.');
+        if (/security/i.test(msg)) {
+          setAuthMessages('login', 'Security check could not load. Reset it and try again.');
         } else {
           setAuthMessages('login', msg);
         }
-        if (/captcha/i.test(msg) || error?.status === 429) {
-          try { await refreshCaptcha('login', { force: true }); } catch { /* ignore */ }
+        if (/security/i.test(msg) || error?.status === 429) {
+          try { await refreshTurnstile('login', { force: true }); } catch { /* ignore */ }
         }
       } finally {
         setLoading(resendBtn, 'Resend OTP', false);
@@ -2133,6 +2523,7 @@ function bindMobileOtp() {
 }
 
 async function registerAccount(signupData) {
+  const security = await ensureTurnstilePayload('signup');
   const payload = await window.CollegeOSApi.signup({
     fullName: signupData.fullName,
     email: signupData.email,
@@ -2140,7 +2531,7 @@ async function registerAccount(signupData) {
     password: signupData.password,
     verificationMethod: signupVerificationState.method,
     verificationToken: signupVerificationState.verificationToken,
-    captcha: await ensureCaptchaPayload('signup')
+    ...security
   });
 
   return payload;
@@ -2330,11 +2721,6 @@ function bindSignup() {
       return;
     }
 
-    if (!verifyCaptcha('signup')) {
-      setAuthMessages('signup', captchaState.signup.ready ? 'Captcha answer is incorrect. Please try again.' : 'Captcha could not load. Refresh captcha.');
-      return;
-    }
-
     const fullName = byId('signupName').value.trim();
     const email = byId('signupEmail').value.trim().toLowerCase();
     const mobile = byId('signupMobile').value.trim();
@@ -2387,6 +2773,7 @@ function bindSignup() {
     if (otpInputEl) otpInputEl.value = '';
     openSignupOtpModal({ focusInput: true });
     setAuthMessages('signup', '', 'Verification required. Complete OTP in the popup to finish signup.');
+    void refreshTurnstile('signup', { force: true });
   });
 }
 
@@ -2766,7 +3153,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const isAdminPath = pathname.startsWith('/admin') || pathname.includes('admin-login.html');
 
   // Always load config but skip full student auth initialization on admin pages
-  void loadAuthExperienceConfig();
+  const authConfigPromise = loadAuthExperienceConfig();
   if (isAdminPath) {
     // Minimal admin-only initialization: prepare captcha utilities and admin shortcut.
     bindAdminShortcut();
@@ -2796,17 +3183,24 @@ document.addEventListener('DOMContentLoaded', () => {
   bindOnboarding();
   hydrateAuthErrorFromQuery();
 
-  // Start CAPTCHA generation immediately so the login form does not wait on slower bootstrap work.
-  setCaptchaReady('login', false, 'Preparing captcha...', null);
-  setCaptchaReady('signup', false, 'Preparing captcha...', null);
-  void refreshCaptcha('login');
-  void refreshCaptcha('signup');
+  // Start Turnstile generation immediately so the login form does not wait on slower bootstrap work.
+  void refreshTurnstile('login');
+  void refreshTurnstile('signup');
+  authConfigPromise.then(() => {
+    if (getTurnstileSiteKey()) {
+      void refreshTurnstile('login', { force: true });
+      void refreshTurnstile('signup', { force: true });
+    }
+  }).catch(() => {
+    // Ignore config load failures here; initial render may already indicate a disabled or failed captcha.
+  });
+
   if (window.CollegeOSApi?.startHealthPing) {
     window.CollegeOSApi.startHealthPing({ intervalMs: 10 * 60 * 1000, immediate: true });
   }
 
-  byId('refreshLoginCaptcha')?.addEventListener('click', () => refreshCaptcha('login', { force: true }));
-  byId('refreshSignupCaptcha')?.addEventListener('click', () => refreshCaptcha('signup', { force: true }));
+  byId('refreshLoginCaptcha')?.addEventListener('click', () => refreshTurnstile('login', { force: true }));
+  byId('refreshSignupCaptcha')?.addEventListener('click', () => refreshTurnstile('signup', { force: true }));
 
   void loadAcademicOptions();
   void loadOnboardingConfig();

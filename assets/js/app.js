@@ -799,7 +799,7 @@ async function applyAuthGuard() {
     return;
   }
 
-  if (user && ['login.html', 'signup.html', 'login', 'signup', 'index.html'].includes(pageName())) {
+  if (user && ['login.html', 'signup.html', 'login', 'signup'].includes(pageName())) {
     setContentLoadingState(false);
     goToRoute('/dashboard', { replace: true });
     return;

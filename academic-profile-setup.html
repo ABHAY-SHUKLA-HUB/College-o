@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Complete Your Profile — College OS</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .wizard-container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.22);
+      width: 100%;
+      max-width: 560px;
+      padding: 40px;
+      animation: slideUp 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(32px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .wizard-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border-radius: 50px;
+      padding: 6px 16px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+    }
+
+    .wizard-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: #1a1a2e;
+      margin-bottom: 6px;
+    }
+
+    .wizard-subtitle {
+      color: #888;
+      font-size: 14px;
+    }
+
+    /* Progress Bar */
+    .progress-container {
+      margin-bottom: 32px;
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: #efefef;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      width: 20%;
+      transition: width 0.4s ease;
+    }
+
+    .progress-text {
+      font-size: 12px;
+      color: #999;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    /* Step Container */
+    .step {
+      display: none;
+      animation: fadeIn 0.35s ease;
+    }
+
+    .step.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateX(8px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .step-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 8px;
+    }
+
+    .step-description {
+      font-size: 13px;
+      color: #999;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    /* Form Fields */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .form-group select,
+    .form-group input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #ebebeb;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #fafaff;
+      transition: all 0.2s;
+    }
+
+    .form-group select:focus,
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      background: white;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-group select:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Error Message */
+    .error-message {
+      display: none;
+      margin-top: 8px;
+      padding: 10px 12px;
+      background: #fee2e2;
+      border-left: 3px solid #ef4444;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #b91c1c;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    /* Loading State */
+    .loading {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #667eea;
+    }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(102, 126, 234, 0.2);
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Buttons */
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 28px;
+    }
+
+    .btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-back {
+      flex: 0;
+      background: #efefef;
+      color: #666;
+      border: 2px solid transparent;
+    }
+
+    .btn-back:hover {
+      background: #e0e0e0;
+    }
+
+    .btn-next {
+      flex: 1;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+    }
+
+    .btn-next:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.42);
+    }
+
+    .btn-next:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-skip {
+      flex: 0;
+      background: transparent;
+      color: #667eea;
+      border: 2px solid #667eea;
+      padding: 10px 16px;
+    }
+
+    .btn-skip:hover {
+      background: #f0efff;
+    }
+
+    /* Success Screen */
+    .success-screen {
+      display: none;
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .success-screen.active {
+      display: block;
+      animation: fadeIn 0.35s ease;
+    }
+
+    .success-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 22px;
+      box-shadow: 0 8px 24px rgba(34, 197, 94, 0.35);
+      animation: scaleIn 0.45s cubic-bezier(0.17, 0.89, 0.32, 1.49);
+    }
+
+    @keyframes scaleIn {
+      from { transform: scale(0); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .success-icon svg {
+      width: 40px;
+      height: 40px;
+    }
+
+    .success-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: #1a1a2e;
+      margin-bottom: 10px;
+    }
+
+    .success-message {
+      color: #888;
+      font-size: 14px;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    .profile-summary {
+      background: #f9f9f9;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      font-size: 13px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .summary-item:last-child {
+      border-bottom: none;
+    }
+
+    .summary-label {
+      color: #999;
+      font-weight: 600;
+    }
+
+    .summary-value {
+      color: #1a1a2e;
+      font-weight: 700;
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .wizard-container {
+        padding: 24px 16px;
+      }
+
+      .wizard-title {
+        font-size: 22px;
+      }
+
+      .step-title {
+        font-size: 16px;
+      }
+
+      .button-group {
+        flex-direction: column;
+      }
+
+      .btn-back {
+        order: 2;
+      }
+
+      .btn-next {
+        order: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="wizard-container">
+  <div class="wizard-header">
+    <div class="logo-badge">
+      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5zm0 7v-7m0 0L3 9m9 5 9-5"/>
+      </svg>
+      College OS
+    </div>
+    <h1 class="wizard-title">Complete Your Profile</h1>
+    <p class="wizard-subtitle">Set up your academic structure to get personalized content</p>
+  </div>
+
+  <div class="progress-container">
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-text" id="progressText">Step 1 of 5</div>
+  </div>
+
+  <!-- Step 1: College Selection -->
+  <div class="step active" data-step="1">
+    <h2 class="step-title">Select Your College</h2>
+    <p class="step-description">Which college are you studying at?</p>
+    <div class="form-group">
+      <label>College</label>
+      <select id="collegeSelect" required>
+        <option value="">-- Loading colleges --</option>
+      </select>
+      <div class="error-message" id="collegeError"></div>
+    </div>
+  </div>
+
+  <!-- Step 2: Course Selection -->
+  <div class="step" data-step="2">
+    <h2 class="step-title">Select Your Course</h2>
+    <p class="step-description">What course are you enrolled in?</p>
+    <div class="form-group">
+      <label>Course</label>
+      <select id="courseSelect" required>
+        <option value="">-- Select a course --</option>
+      </select>
+      <div class="error-message" id="courseError"></div>
+    </div>
+  </div>
+
+  <!-- Step 3: Branch Selection -->
+  <div class="step" data-step="3">
+    <h2 class="step-title">Select Your Branch</h2>
+    <p class="step-description">What's your specialization or branch?</p>
+    <div class="form-group">
+      <label>Branch</label>
+      <select id="branchSelect" required>
+        <option value="">-- Select a branch --</option>
+      </select>
+      <div class="error-message" id="branchError"></div>
+    </div>
+  </div>
+
+  <!-- Step 4: Year Selection -->
+  <div class="step" data-step="4">
+    <h2 class="step-title">Select Your Academic Year</h2>
+    <p class="step-description">Which year are you currently in?</p>
+    <div class="form-group">
+      <label>Year</label>
+      <select id="yearSelect" required>
+        <option value="">-- Select a year --</option>
+      </select>
+      <div class="error-message" id="yearError"></div>
+    </div>
+  </div>
+
+  <!-- Step 5: Semester Selection -->
+  <div class="step" data-step="5">
+    <h2 class="step-title">Select Your Semester</h2>
+    <p class="step-description">Which semester are you currently in?</p>
+    <div class="form-group">
+      <label>Semester</label>
+      <select id="semesterSelect" required>
+        <option value="">-- Select a semester --</option>
+      </select>
+      <div class="error-message" id="semesterError"></div>
+    </div>
+  </div>
+
+  <!-- Success Screen -->
+  <div class="success-screen" id="successScreen">
+    <div class="success-icon">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+      </svg>
+    </div>
+    <h2 class="success-title">All Set!</h2>
+    <p class="success-message">Your academic profile has been successfully created. You'll now see personalized content based on your selection.</p>
+    <div class="profile-summary">
+      <div class="summary-item">
+        <span class="summary-label">College</span>
+        <span class="summary-value" id="summaryCollege">-</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Course</span>
+        <span class="summary-value" id="summaryCourse">-</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Branch</span>
+        <span class="summary-value" id="summaryBranch">-</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Year</span>
+        <span class="summary-value" id="summaryYear">-</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Semester</span>
+        <span class="summary-value" id="summarySemester">-</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Buttons -->
+  <div class="button-group">
+    <button class="btn btn-back" id="backBtn" style="display: none;" onclick="previousStep()">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+      </svg>
+      Back
+    </button>
+    <button class="btn btn-next" id="nextBtn" onclick="nextStep()">
+      Next
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+      </svg>
+    </button>
+    <button class="btn btn-skip" id="skipBtn" onclick="skipOnboarding()" style="display: none;">Skip</button>
+  </div>
+</div>
+
+<script>
+  // State
+  const state = {
+    currentStep: 1,
+    totalSteps: 5,
+    data: {
+      collegeId: null,
+      courseId: null,
+      branchId: null,
+      yearId: null,
+      semesterId: null
+    },
+    academicData: {
+      colleges: [],
+      courses: [],
+      branches: [],
+      years: [],
+      semesters: []
+    }
+  };
+
+  // Initialize
+  document.addEventListener('DOMContentLoaded', () => {
+    loadAcademicData();
+    updateUI();
+  });
+
+  // Load academic structure data
+  async function loadAcademicData() {
+    try {
+      const [colleges, courses, branches, years, semesters] = await Promise.all([
+        fetch('/api/academics/colleges').then(r => r.json()),
+        fetch('/api/academics/courses').then(r => r.json()),
+        fetch('/api/academics/branches').then(r => r.json()),
+        fetch('/api/academics/years').then(r => r.json()),
+        fetch('/api/academics/semesters').then(r => r.json())
+      ]);
+
+      state.academicData.colleges = colleges.data || [];
+      state.academicData.courses = courses.data || [];
+      state.academicData.branches = branches.data || [];
+      state.academicData.years = years.data || [];
+      state.academicData.semesters = semesters.data || [];
+
+      populateColleges();
+      populateYears();
+      populateSemesters();
+    } catch (error) {
+      console.error('Error loading academic data:', error);
+      showError('collegeError', 'Failed to load colleges. Please refresh the page.');
+    }
+  }
+
+  // Populate dropdowns
+  function populateColleges() {
+    const select = document.getElementById('collegeSelect');
+    select.innerHTML = '<option value="">-- Select College --</option>' +
+      state.academicData.colleges
+        .filter(c => c.is_active !== false)
+        .map(c => `<option value="${c.id}">${c.name}</option>`)
+        .join('');
+    
+    select.addEventListener('change', (e) => {
+      state.data.collegeId = parseInt(e.target.value);
+      state.data.courseId = null;
+      state.data.branchId = null;
+      populateCourses();
+      clearError('collegeError');
+    });
+  }
+
+  function populateCourses() {
+    const select = document.getElementById('courseSelect');
+    if (!state.data.collegeId) {
+      select.innerHTML = '<option value="">-- Select a course --</option>';
+      select.disabled = true;
+      return;
+    }
+
+    const filtered = state.academicData.courses.filter(c =>
+      c.college_id === state.data.collegeId && c.is_active !== false
+    );
+
+    select.disabled = false;
+    select.innerHTML = '<option value="">-- Select a course --</option>' +
+      filtered.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+    select.addEventListener('change', (e) => {
+      state.data.courseId = parseInt(e.target.value);
+      state.data.branchId = null;
+      populateBranches();
+      clearError('courseError');
+    });
+  }
+
+  function populateBranches() {
+    const select = document.getElementById('branchSelect');
+    if (!state.data.courseId) {
+      select.innerHTML = '<option value="">-- Select a branch --</option>';
+      select.disabled = true;
+      return;
+    }
+
+    const filtered = state.academicData.branches.filter(b =>
+      b.course_id === state.data.courseId && b.is_active !== false
+    );
+
+    select.disabled = false;
+    select.innerHTML = '<option value="">-- Select a branch --</option>' +
+      filtered.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+
+    select.addEventListener('change', (e) => {
+      state.data.branchId = parseInt(e.target.value);
+      clearError('branchError');
+    });
+  }
+
+  function populateYears() {
+    const select = document.getElementById('yearSelect');
+    select.innerHTML = '<option value="">-- Select a year --</option>' +
+      state.academicData.years
+        .filter(y => y.is_active !== false)
+        .map(y => `<option value="${y.id}">Year ${y.year}${y.label ? ` - ${y.label}` : ''}</option>`)
+        .join('');
+
+    select.addEventListener('change', (e) => {
+      state.data.yearId = parseInt(e.target.value);
+      clearError('yearError');
+    });
+  }
+
+  function populateSemesters() {
+    const select = document.getElementById('semesterSelect');
+    select.innerHTML = '<option value="">-- Select a semester --</option>' +
+      state.academicData.semesters
+        .filter(s => s.is_active !== false)
+        .map(s => `<option value="${s.id}">Semester ${s.semester}${s.label ? ` - ${s.label}` : ''}</option>`)
+        .join('');
+
+    select.addEventListener('change', (e) => {
+      state.data.semesterId = parseInt(e.target.value);
+      clearError('semesterError');
+    });
+  }
+
+  // Navigation
+  function nextStep() {
+    if (!validateCurrentStep()) return;
+
+    if (state.currentStep === state.totalSteps) {
+      completeOnboarding();
+      return;
+    }
+
+    state.currentStep++;
+    updateUI();
+  }
+
+  function previousStep() {
+    if (state.currentStep > 1) {
+      state.currentStep--;
+      updateUI();
+    }
+  }
+
+  function validateCurrentStep() {
+    const errors = {
+      1: () => !state.data.collegeId ? 'Please select a college' : null,
+      2: () => !state.data.courseId ? 'Please select a course' : null,
+      3: () => !state.data.branchId ? 'Please select a branch' : null,
+      4: () => !state.data.yearId ? 'Please select an academic year' : null,
+      5: () => !state.data.semesterId ? 'Please select a semester' : null
+    };
+
+    const errorMsg = errors[state.currentStep]?.();
+    if (errorMsg) {
+      const errorId = ['', 'collegeError', 'courseError', 'branchError', 'yearError', 'semesterError'][state.currentStep];
+      showError(errorId, errorMsg);
+      return false;
+    }
+    return true;
+  }
+
+  function updateUI() {
+    // Show/hide steps
+    document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
+    document.querySelector(`[data-step="${state.currentStep}"]`)?.classList.add('active');
+
+    // Update progress
+    const progress = (state.currentStep / state.totalSteps) * 100;
+    document.getElementById('progressFill').style.width = progress + '%';
+    document.getElementById('progressText').textContent = `Step ${state.currentStep} of ${state.totalSteps}`;
+
+    // Update buttons
+    document.getElementById('backBtn').style.display = state.currentStep > 1 ? 'flex' : 'none';
+    document.getElementById('nextBtn').textContent = state.currentStep === state.totalSteps ? 'Complete' : 
+      (state.currentStep === 1 ? 'Next' : 'Next');
+    
+    // Restore button content
+    const svg = `<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+    </svg>`;
+    if (state.currentStep === state.totalSteps) {
+      document.getElementById('nextBtn').innerHTML = 'Complete';
+    } else {
+      document.getElementById('nextBtn').innerHTML = 'Next ' + svg;
+    }
+  }
+
+  async function completeOnboarding() {
+    try {
+      const nextBtn = document.getElementById('nextBtn');
+      nextBtn.disabled = true;
+      nextBtn.innerHTML = '<div class="spinner"></div> Saving...';
+
+      const payload = {
+        college_id: state.data.collegeId,
+        course_id: state.data.courseId,
+        branch_id: state.data.branchId,
+        year_id: state.data.yearId,
+        semester_id: state.data.semesterId
+      };
+
+      const response = await fetch('/api/academics/profile/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) throw new Error('Failed to save profile');
+
+      // Show success screen
+      document.querySelectorAll('.step').forEach(s => s.style.display = 'none');
+      document.getElementById('successScreen').classList.add('active');
+
+      // Populate summary
+      const college = state.academicData.colleges.find(c => c.id === state.data.collegeId);
+      const course = state.academicData.courses.find(c => c.id === state.data.courseId);
+      const branch = state.academicData.branches.find(b => b.id === state.data.branchId);
+      const year = state.academicData.years.find(y => y.id === state.data.yearId);
+      const semester = state.academicData.semesters.find(s => s.id === state.data.semesterId);
+
+      document.getElementById('summaryCollege').textContent = college?.name || '-';
+      document.getElementById('summaryCourse').textContent = course?.name || '-';
+      document.getElementById('summaryBranch').textContent = branch?.name || '-';
+      document.getElementById('summaryYear').textContent = year ? `Year ${year.year}` : '-';
+      document.getElementById('summarySemester').textContent = semester ? `Semester ${semester.semester}` : '-';
+
+      // Hide buttons
+      document.querySelector('.button-group').style.display = 'none';
+      document.getElementById('progressText').textContent = 'All Set!';
+
+      // Notify parent window (if in iframe)
+      window.parent.postMessage({ type: 'onboarding-complete', data: payload }, '*');
+
+      // Redirect after 3 seconds
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 3000);
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+      showError('semesterError', 'Failed to save profile. Please try again.');
+      document.getElementById('nextBtn').disabled = false;
+      document.getElementById('nextBtn').innerHTML = 'Complete';
+    }
+  }
+
+  function skipOnboarding() {
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'onboarding-skip' }, '*');
+    }
+    window.location.href = '/dashboard';
+  }
+
+  // Error handling
+  function showError(elementId, message) {
+    const el = document.getElementById(elementId);
+    if (el) {
+      el.textContent = message;
+      el.classList.add('show');
+    }
+  }
+
+  function clearError(elementId) {
+    const el = document.getElementById(elementId);
+    if (el) {
+      el.classList.remove('show');
+    }
+  }
+
+  // Handle postMessage from parent
+  window.addEventListener('message', (event) => {
+    if (event.data.type === 'onboarding-data') {
+      // Prefill data if provided
+      if (event.data.collegeId) {
+        state.data.collegeId = event.data.collegeId;
+        document.getElementById('collegeSelect').value = event.data.collegeId;
+        populateCourses();
+      }
+    }
+  });
+</script>
+</body>
+</html>

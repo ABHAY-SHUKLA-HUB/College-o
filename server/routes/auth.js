@@ -7,15 +7,16 @@ const { isEmail, isStrongPassword, normalizeEmail } = require('../utils/validati
 const { ensureUniversityCatalogSchema } = require('../utils/universities');
 const { sendSystemEmail } = require('../utils/mailer');
 const { buildOtpEmail, buildPasswordResetEmail } = require('../utils/emailTemplates');
+const { extractTurnstileToken, verifyTurnstileToken } = require('../utils/turnstile');
 
 const router = express.Router();
 let authSchemaEnsured = false;
 
 const OTP_TTL_MS = 5 * 60 * 1000;
-const OTP_RESEND_MS = 30 * 1000;
+const OTP_RESEND_MS = 60 * 1000;
 const OTP_MAX_VERIFY_ATTEMPTS = 5;
-const OTP_MAX_REQUESTS_PER_WINDOW = 5;
-const OTP_REQUEST_WINDOW_MS = 10 * 60 * 1000;
+const OTP_MAX_REQUESTS_PER_WINDOW = 3;
+const OTP_REQUEST_WINDOW_MS = 15 * 60 * 1000;
 const PASSWORD_POLICY_MESSAGE = 'Password must be at least 6 characters and include uppercase, lowercase, number, and special character.';
 
 const LOGIN_LOCK_THRESHOLD = 5;
@@ -153,6 +154,60 @@ function enforceRateLimit(req, res, scope, maxAttempts = 20, blockMs = 10 * 60 *
   }
 
   return null;
+}
+
+function consumeWindowQuota(key, limit, windowMs) {
+  const now = Date.now();
+  const existing = RATE_LIMIT_STATE.get(key);
+  if (!existing || existing.resetAt <= now) {
+    const fresh = { count: 0, resetAt: now + windowMs };
+    RATE_LIMIT_STATE.set(key, fresh);
+    return { allowed: true, record: fresh, retryAfter: 0 };
+  }
+
+  if (existing.count >= limit) {
+    return {
+      allowed: false,
+      record: existing,
+      retryAfter: Math.max(1, Math.ceil((existing.resetAt - now) / 1000))
+    };
+  }
+
+  existing.count += 1;
+  return { allowed: true, record: existing, retryAfter: 0 };
+}
+
+function hasHoneypotHit(req) {
+  return Boolean(String(req.body?.website || '').trim());
+}
+
+function rejectSecurityFailure(res, message = 'Security verification failed. Please try again.', status = 400) {
+  return res.status(status).json({ error: message });
+}
+
+async function requirePublicSecurityCheck(req, res) {
+  if (hasHoneypotHit(req)) {
+    console.warn('[auth:security] honeypot triggered', {
+      path: req.path,
+      ip: getRequesterIp(req)
+    });
+    rejectSecurityFailure(res);
+    return false;
+  }
+
+  const turnstileToken = extractTurnstileToken(req.body || {});
+  const verification = await verifyTurnstileToken(turnstileToken, getRequesterIp(req));
+  if (!verification.ok) {
+    const message = verification.message || 'Security verification failed. Please try again.';
+    if (/expired/i.test(message)) {
+      rejectSecurityFailure(res, 'Security check expired. Please verify again.');
+      return false;
+    }
+    rejectSecurityFailure(res, message);
+    return false;
+  }
+
+  return true;
 }
 
 function buildCaptchaChallenge(_req) {
@@ -893,6 +948,10 @@ router.get('/config', async (_req, res) => {
       googleCallbackUrl: GOOGLE_CALLBACK_URL || String(experienceConfig?.auth?.oauth?.googleCallbackUrl || ''),
       googleClientSecretConfigured: Boolean(GOOGLE_CLIENT_SECRET)
     };
+    authConfig.turnstile = {
+      enabled: String(process.env.TURNSTILE_ENABLED || 'true').toLowerCase() !== 'false',
+      siteKey: String(process.env.TURNSTILE_SITE_KEY || experienceConfig?.auth?.turnstile?.siteKey || '').trim()
+    };
 
     if (process.env.DEBUG_AUTH === 'true') {
       console.log('[auth:config] google oauth', {
@@ -1075,19 +1134,17 @@ router.post('/signup', async (req, res) => {
   const rateBlocked = enforceRateLimit(req, res, 'auth:signup', 12, 10 * 60 * 1000);
   if (rateBlocked) return;
 
+  const securityOk = await requirePublicSecurityCheck(req, res);
+  if (!securityOk) return;
+
   const {
     fullName,
     email,
     password,
     mobile,
     verificationMethod,
-    verificationToken,
-    captcha
+    verificationToken
   } = req.body;
-
-  if (!verifyCaptchaPayload(req, captcha)) {
-    return res.status(400).json({ error: 'Captcha validation failed' });
-  }
 
   if (!fullName || !isEmail(email) || !password) {
     return res.status(400).json({ error: 'Missing or invalid signup fields' });
@@ -1304,10 +1361,10 @@ router.post('/login', async (req, res) => {
   const rateBlocked = enforceRateLimit(req, res, 'auth:login', 25, 15 * 60 * 1000);
   if (rateBlocked) return;
 
-  const { email, password, rememberMe, captcha } = req.body;
-  if (!verifyCaptchaPayload(req, captcha)) {
-    return res.status(400).json({ error: 'Captcha validation failed' });
-  }
+  const securityOk = await requirePublicSecurityCheck(req, res);
+  if (!securityOk) return;
+
+  const { email, password, rememberMe } = req.body;
 
   if (!isEmail(email) || typeof password !== 'string' || !password) {
     return res.status(401).json({ error: 'Invalid email or password' });
@@ -1386,7 +1443,7 @@ router.post('/login', async (req, res) => {
 
 router.post('/verification/request', async (req, res) => {
   // Apply a slightly relaxed rate limit in development to ease debugging.
-  const maxAttempts = Math.max(5, Math.floor(30 * DEV_RATE_LIMIT_MULTIPLIER));
+  const maxAttempts = 10;
   // lightweight dedupe: if the same IP+target+purpose repeats within 1.5s, don't consume rate-limit counters
   const channel = String(req.body.channel || 'email').toLowerCase();
   const target = String(req.body.target || '').trim().toLowerCase();
@@ -1404,11 +1461,8 @@ router.post('/verification/request', async (req, res) => {
   const rateBlocked = enforceRateLimit(req, res, 'auth:otp_request', maxAttempts, 15 * 60 * 1000);
   if (rateBlocked) return;
 
-  const captcha = req.body.captcha;
-
-  if (!verifyCaptchaPayload(req, captcha)) {
-    return res.status(400).json({ error: 'Captcha validation failed' });
-  }
+  const securityOk = await requirePublicSecurityCheck(req, res);
+  if (!securityOk) return;
 
   if (!['email', 'mobile'].includes(channel)) {
     return res.status(400).json({ error: 'channel must be email or mobile' });
@@ -1430,28 +1484,33 @@ router.post('/verification/request', async (req, res) => {
     return res.status(400).json({ error: 'Mobile OTP is currently unavailable' });
   }
 
+  const targetQuota = consumeWindowQuota(`auth:otp_request_target:${purpose}:${channel}:${target}`, OTP_MAX_REQUESTS_PER_WINDOW, OTP_REQUEST_WINDOW_MS);
+  if (!targetQuota.allowed) {
+    return sendRateLimitedResponse(res, targetQuota.retryAfter, 'Too many attempts. Please try again later.');
+  }
+
+  const ipQuota = consumeWindowQuota(`auth:otp_request_ip:${getRequesterIp(req)}`, 10, OTP_REQUEST_WINDOW_MS);
+  if (!ipQuota.allowed) {
+    return sendRateLimitedResponse(res, ipQuota.retryAfter, 'Too many attempts. Please try again later.');
+  }
+
   clearExpiredOtps();
   // reuse earlier `now` from dedupe region
   const key = getOtpStoreKey({ purpose, channel, target });
   const existing = otpStore.get(key);
 
-  // CRITICAL FIX: Enforce global per-IP rate limit (prevents spam of ANY target)
-  const ipMax = Math.max(10, Math.floor(30 * DEV_RATE_LIMIT_MULTIPLIER));
-  const ipRateLimited = enforceRateLimit(req, res, 'auth:otp_request_global', ipMax, 15 * 60 * 1000);
-  if (ipRateLimited) return;
-  
-  // Per-target rate limit (5 requests per 10min to SAME email/phone)
+  // Per-target rate limit (3 requests per 15min to SAME email/phone)
   if (existing?.requestWindowStartedAt && now - existing.requestWindowStartedAt <= OTP_REQUEST_WINDOW_MS) {
     if (Number(existing.requestCount || 0) >= OTP_MAX_REQUESTS_PER_WINDOW) {
-      return sendRateLimitedResponse(res, OTP_RESEND_MS / 1000, 'Too many OTP requests. Please try again later.');
+      return sendRateLimitedResponse(res, OTP_RESEND_MS / 1000, 'Too many attempts. Please try again later.');
     }
   }
 
-  // Per-target rate limit (30-second cooldown between OTP sends)
+  // Per-target rate limit (60-second cooldown between OTP sends)
   if (existing?.nextAllowedAt && now < existing.nextAllowedAt) {
     const retryAfter = Math.ceil((existing.nextAllowedAt - now) / 1000);
     console.warn('[OTP_RATE_LIMIT] resend cooldown', { ip: getRequesterIp(req), target, purpose, retryAfter, requestCount: existing.requestCount });
-    return sendRateLimitedResponse(res, retryAfter, 'Please wait before requesting a new OTP/code');
+    return sendRateLimitedResponse(res, retryAfter, 'Too many attempts. Please try again later.');
   }
 
   const code = String(randomInt(100000, 999999));
@@ -1481,7 +1540,7 @@ router.post('/verification/request', async (req, res) => {
         return res.json({
           message: 'If the account exists, OTP has been sent.',
           expiresInSeconds: 300,
-          resendAfterSeconds: 30
+          resendAfterSeconds: Math.floor(OTP_RESEND_MS / 1000)
         });
       }
     }
@@ -1509,7 +1568,7 @@ router.post('/verification/request', async (req, res) => {
   return res.json({
     message: 'OTP sent successfully',
     expiresInSeconds: 300,
-    resendAfterSeconds: 30
+    resendAfterSeconds: Math.floor(OTP_RESEND_MS / 1000)
   });
 });
 
@@ -1603,13 +1662,11 @@ router.post('/login/email-otp', async (req, res) => {
   const rateBlocked = enforceRateLimit(req, res, 'auth:login_email_otp', 25, 15 * 60 * 1000);
   if (rateBlocked) return;
 
+  const securityOk = await requirePublicSecurityCheck(req, res);
+  if (!securityOk) return;
+
   const email = String(req.body.email || '').trim().toLowerCase();
   const code = String(req.body.code || '').trim();
-  const captcha = req.body.captcha;
-
-  if (!verifyCaptchaPayload(req, captcha)) {
-    return res.status(400).json({ error: 'Captcha validation failed' });
-  }
 
   if (!isEmail(email)) return res.status(400).json({ error: 'Valid email is required' });
   if (!/^\d{6}$/.test(code)) return res.status(400).json({ error: 'OTP must be 6 digits' });
@@ -1694,24 +1751,18 @@ router.post('/password/forgot', async (req, res) => {
   const rateBlocked = enforceRateLimit(req, res, 'auth:forgot_password', 12, 15 * 60 * 1000);
   if (rateBlocked) return;
 
-  const email = normalizeEmail(req.body?.email || '');
-  const captcha = req.body?.captcha;
-  if (captcha && !verifyCaptchaPayload(req, captcha)) {
-    return res.status(400).json({ error: 'Captcha validation failed' });
-  }
+  const securityOk = await requirePublicSecurityCheck(req, res);
+  if (!securityOk) return;
 
-  // CRITICAL FIX: Add per-email rate limiting (max 3 per 30 min per email)
+  const email = normalizeEmail(req.body?.email || '');
+
+  // Per-email rate limiting (max 3 per 15 min per email)
   const emailKey = `forgot:email:${email}`;
-  const now = Date.now();
-  const emailRecord = RATE_LIMIT_STATE.get(emailKey);
-  
-  if (!emailRecord || emailRecord.resetAt <= now) {
-    RATE_LIMIT_STATE.set(emailKey, { count: 1, resetAt: now + (30 * 60 * 1000), blockedUntil: 0 });
-  } else if (emailRecord.count >= 3) {
+  const emailQuota = consumeWindowQuota(emailKey, 3, OTP_REQUEST_WINDOW_MS);
+
+  if (!emailQuota.allowed) {
     // Still return success message to avoid email enumeration
     return res.json({ message: 'If an account exists, a reset link has been sent.' });
-  } else {
-    emailRecord.count += 1;
   }
 
   if (!isEmail(email)) {

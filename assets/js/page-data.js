@@ -159,8 +159,8 @@ async function loadReferrals() {
   const byId = (id) => document.getElementById(id);
 
   function buildReferralLink(referralCode) {
-    const base = `${window.location.origin}/signup.html`;
-    return referralCode ? `${base}?ref=${encodeURIComponent(referralCode)}` : base;
+    const base = `${window.location.origin}/login.html?mode=signup`;
+    return referralCode ? `${base}&ref=${encodeURIComponent(referralCode)}` : base;
   }
 
   function getStatusClass(status) {

@@ -13,7 +13,7 @@ const DEFAULT_ABOUT_CONFIG = {
     description:
       'College OS is a student-first learning platform built to help engineering and degree students ace exams, build skills, and launch careers — all in one place.',
     ctaLabel: 'Get Started Free',
-    ctaHref: 'signup.html',
+    ctaHref: 'login.html?mode=signup',
     highlightStats: [
       { value: '10,000+', label: 'Students Enrolled' },
       { value: '500+', label: 'Study Resources' },
@@ -61,7 +61,7 @@ const DEFAULT_ABOUT_CONFIG = {
     title: 'Join Thousands of Students Already Learning Smarter',
     description: 'Start free today. Upgrade to Premium when you\'re ready for the full experience.',
     primaryLabel: 'Start Learning Free',
-    primaryHref: 'signup.html',
+    primaryHref: 'login.html?mode=signup',
     secondaryLabel: 'Explore Features',
     secondaryHref: 'home.html'
   }

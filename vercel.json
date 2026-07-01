@@ -62,11 +62,11 @@
     },
     {
       "source": "/login",
-      "destination": "/index.html"
+      "destination": "/login.html"
     },
     {
       "source": "/signup",
-      "destination": "/index.html"
+      "destination": "/signup.html"
     },
     {
       "source": "/home",

@@ -5,6 +5,85 @@ const { requireAuth, requireAdmin } = require('../middleware/auth');
 const router = express.Router();
 let academicsSchemaReady = false;
 
+function academicList(rows, key) {
+  return { data: rows, [key]: rows };
+}
+
+async function seedAcademicDefaults() {
+  const collegeSeed = [
+    ['CUP', 'Chandigarh University Uttar Pradesh', 'Chandigarh University Uttar Pradesh', 1],
+    ['CU', 'Chandigarh University', 'Chandigarh University', 2]
+  ];
+
+  for (const [code, name, label, displayOrder] of collegeSeed) {
+    await pool.query(
+      `INSERT INTO academic_colleges (code, name, label, display_order, is_active)
+       SELECT seed.code, seed.name, seed.label, seed.display_order, TRUE
+       FROM (VALUES ($1::text, $2::text, $3::text, $4::integer)) AS seed(code, name, label, display_order)
+       WHERE NOT EXISTS (
+         SELECT 1 FROM academic_colleges
+         WHERE LOWER(name) = LOWER($2::text) OR LOWER(COALESCE(code, '')) = LOWER($1::text)
+       )`,
+      [code, name, label, displayOrder]
+    );
+  }
+
+  const collegeRows = await pool.query(`SELECT id, name FROM academic_colleges WHERE is_active = TRUE`);
+  const collegeByName = Object.fromEntries(collegeRows.rows.map((row) => [String(row.name).toLowerCase(), row.id]));
+
+  const cuupId = collegeByName['chandigarh university uttar pradesh'];
+  const cuId = collegeByName['chandigarh university'];
+
+  if (cuupId) {
+    const courses = [
+      ['BTECH', 'B.Tech', 'Bachelor of Technology', 1],
+      ['MBA', 'MBA', 'Master of Business Administration', 2],
+      ['BCA', 'BCA', 'Bachelor of Computer Applications', 3],
+      ['MCA', 'MCA', 'Master of Computer Applications', 4]
+    ];
+    for (const [code, name, label, displayOrder] of courses) {
+      await pool.query(
+        `INSERT INTO academic_courses (college_id, code, name, label, display_order, is_active)
+         SELECT seed.college_id, seed.code, seed.name, seed.label, seed.display_order, TRUE
+         FROM (VALUES ($1::integer, $2::text, $3::text, $4::text, $5::integer)) AS seed(college_id, code, name, label, display_order)
+         WHERE NOT EXISTS (
+           SELECT 1 FROM academic_courses WHERE college_id = $1::integer AND LOWER(name) = LOWER($3::text)
+         )`,
+        [cuupId, code, name, label, displayOrder]
+      );
+    }
+  }
+
+  if (cuId) {
+    await pool.query(
+      `INSERT INTO academic_courses (college_id, code, name, label, display_order, is_active)
+       SELECT $1::integer, 'GEN', 'General Studies', 'General Studies', 1, TRUE
+       WHERE NOT EXISTS (
+         SELECT 1 FROM academic_courses WHERE college_id = $1::integer AND LOWER(name) = 'general studies'
+       )`,
+      [cuId]
+    );
+  }
+
+  for (let yearValue = 1; yearValue <= 5; yearValue += 1) {
+    await pool.query(
+      `INSERT INTO academic_years (year_value, label, display_order, is_active)
+       SELECT $1::integer, $2::text, $3::integer, TRUE
+       WHERE NOT EXISTS (SELECT 1 FROM academic_years WHERE year_value = $1::integer)`,
+      [yearValue, `Year ${yearValue}`, yearValue]
+    );
+  }
+
+  for (let semesterNumber = 1; semesterNumber <= 8; semesterNumber += 1) {
+    await pool.query(
+      `INSERT INTO academic_semesters (semester_number, year_number, label, display_order, is_active)
+       SELECT $1::integer, $2::integer, $3::text, $4::integer, TRUE
+       WHERE NOT EXISTS (SELECT 1 FROM academic_semesters WHERE semester_number = $1::integer AND COALESCE(year_number, 0) = $2::integer)`,
+      [semesterNumber, Math.ceil(semesterNumber / 2), `Semester ${semesterNumber}`, semesterNumber]
+    );
+  }
+}
+
 router.use(async (_req, _res, next) => {
   try {
     await ensureAcademicsSchema();
@@ -131,6 +210,21 @@ async function ensureAcademicsSchema() {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS academic_semesters (
+      id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+      semester_number INTEGER NOT NULL,
+      year_number INTEGER,
+      label VARCHAR(80),
+      description TEXT,
+      display_order INTEGER DEFAULT 0,
+      is_active BOOLEAN DEFAULT TRUE,
+      created_by INTEGER REFERENCES users(id),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS onboarding_step_config (
       id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
       step_key VARCHAR(80) UNIQUE NOT NULL,
@@ -165,6 +259,8 @@ async function ensureAcademicsSchema() {
     )
   `);
 
+  await seedAcademicDefaults();
+
   academicsSchemaReady = true;
 }
 
@@ -181,7 +277,7 @@ router.get('/colleges', async (_req, res) => {
        ORDER BY display_order ASC, name ASC`
     );
     setPublicCacheHeaders(res, 600);
-    res.json({ colleges: rows });
+    res.json(academicList(rows, 'colleges'));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch colleges' });
   }
@@ -202,13 +298,12 @@ router.get('/courses', async (req, res) => {
     const { rows } = await pool.query(
       `SELECT id, college_id, code, name, label, description, display_order
        FROM academic_courses
-       ${whereSql}
-       WHERE is_active = TRUE
+       ${whereSql ? `${whereSql} AND` : 'WHERE'} is_active = TRUE
        ORDER BY display_order ASC, name ASC`,
       params
     );
     setPublicCacheHeaders(res, 600);
-    res.json({ courses: rows });
+    res.json(academicList(rows, 'courses'));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch courses' });
   }
@@ -223,7 +318,7 @@ router.get('/years', async (_req, res) => {
        ORDER BY display_order ASC, year_value ASC`
     );
     setPublicCacheHeaders(res, 600);
-    res.json({ years: rows });
+    res.json(academicList(rows, 'years'));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch years' });
   }
@@ -236,7 +331,7 @@ router.get('/admin/colleges', requireAdmin, async (_req, res) => {
        FROM academic_colleges
        ORDER BY display_order ASC, name ASC`
     );
-    res.json({ colleges: rows });
+    res.json(academicList(rows, 'colleges'));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch colleges' });
   }
@@ -258,7 +353,7 @@ router.post('/admin/colleges', requireAdmin, async (req, res) => {
         req.session.userId
       ]
     );
-    res.status(201).json({ college: rows[0] });
+    res.status(201).json({ data: rows[0], college: rows[0] });
   } catch (error) {
     res.status(500).json({ error: 'Failed to create college' });
   }
@@ -283,7 +378,7 @@ router.put('/admin/colleges/:id', requireAdmin, async (req, res) => {
       ]
     );
     if (!rows[0]) return res.status(404).json({ error: 'College not found' });
-    res.json({ college: rows[0] });
+    res.json({ data: rows[0], college: rows[0] });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update college' });
   }
@@ -306,7 +401,7 @@ router.get('/admin/courses', requireAdmin, async (req, res) => {
        ORDER BY display_order ASC, name ASC`,
       params
     );
-    res.json({ courses: rows });
+    res.json(academicList(rows, 'courses'));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch courses' });
   }
@@ -319,7 +414,7 @@ router.post('/admin/courses', requireAdmin, async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING id, college_id, code, name, label, description, display_order, is_active`,
       [
-        req.body.collegeId ? Number(req.body.collegeId) : null,
+        req.body.collegeId ? Number(req.body.collegeId) : (req.body.college_id ? Number(req.body.college_id) : null),
         String(req.body.code || '').trim() || null,
         String(req.body.name || '').trim(),
         req.body.label || null,
@@ -329,7 +424,7 @@ router.post('/admin/courses', requireAdmin, async (req, res) => {
         req.session.userId
       ]
     );
-    res.status(201).json({ course: rows[0] });
+    res.status(201).json({ data: rows[0], course: rows[0] });
   } catch (error) {
     res.status(500).json({ error: 'Failed to create course' });
   }
@@ -344,7 +439,7 @@ router.put('/admin/courses/:id', requireAdmin, async (req, res) => {
        WHERE id = $8
        RETURNING id, college_id, code, name, label, description, display_order, is_active`,
       [
-        req.body.collegeId ? Number(req.body.collegeId) : null,
+        req.body.collegeId ? Number(req.body.collegeId) : (req.body.college_id ? Number(req.body.college_id) : null),
         req.body.code ? String(req.body.code).trim() || null : null,
         req.body.name ? String(req.body.name).trim() : null,
         req.body.label || null,
@@ -355,7 +450,7 @@ router.put('/admin/courses/:id', requireAdmin, async (req, res) => {
       ]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Course not found' });
-    res.json({ course: rows[0] });
+    res.json({ data: rows[0], course: rows[0] });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update course' });
   }
@@ -364,11 +459,11 @@ router.put('/admin/courses/:id', requireAdmin, async (req, res) => {
 router.get('/admin/years', requireAdmin, async (_req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT id, year_value, label, description, display_order, is_active
+      `SELECT id, year_value, year_value AS "year", label, description, display_order, is_active
        FROM academic_years
        ORDER BY display_order ASC, year_value ASC`
     );
-    res.json({ years: rows });
+    res.json(academicList(rows, 'years'));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch years' });
   }
@@ -376,13 +471,14 @@ router.get('/admin/years', requireAdmin, async (_req, res) => {
 
 router.post('/admin/years', requireAdmin, async (req, res) => {
   try {
+    const yearValue = Number(req.body.yearValue ?? req.body.year ?? req.body.year_value);
     const { rows } = await pool.query(
       `INSERT INTO academic_years (year_value, label, description, display_order, is_active, created_by)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, year_value, label, description, display_order, is_active`,
-      [Number(req.body.yearValue), req.body.label || null, req.body.description || null, Number(req.body.displayOrder || 0), typeof req.body.isActive === 'undefined' ? true : Boolean(req.body.isActive), req.session.userId]
+      [yearValue, req.body.label || null, req.body.description || null, Number(req.body.displayOrder ?? req.body.display_order ?? 0), typeof req.body.isActive === 'undefined' ? true : Boolean(req.body.isActive), req.session.userId]
     );
-    res.status(201).json({ year: rows[0] });
+    res.status(201).json({ data: rows[0], year: rows[0] });
   } catch (error) {
     res.status(500).json({ error: 'Failed to create year' });
   }
@@ -391,17 +487,161 @@ router.post('/admin/years', requireAdmin, async (req, res) => {
 router.put('/admin/years/:id', requireAdmin, async (req, res) => {
   try {
     const id = Number(req.params.id);
+    const yearValue = req.body.yearValue ?? req.body.year ?? req.body.year_value;
+    const displayOrder = req.body.displayOrder ?? req.body.display_order;
     const { rows } = await pool.query(
       `UPDATE academic_years
        SET year_value = COALESCE($1, year_value), label = COALESCE($2, label), description = COALESCE($3, description), display_order = COALESCE($4, display_order), is_active = COALESCE($5, is_active), updated_at = CURRENT_TIMESTAMP
        WHERE id = $6
        RETURNING id, year_value, label, description, display_order, is_active`,
-      [req.body.yearValue ? Number(req.body.yearValue) : null, req.body.label || null, req.body.description || null, req.body.displayOrder ? Number(req.body.displayOrder) : null, typeof req.body.isActive === 'undefined' ? null : Boolean(req.body.isActive), id]
+      [yearValue === undefined || yearValue === null || yearValue === '' ? null : Number(yearValue), req.body.label || null, req.body.description || null, displayOrder === undefined || displayOrder === null || displayOrder === '' ? null : Number(displayOrder), typeof req.body.isActive === 'undefined' ? null : Boolean(req.body.isActive), id]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Year not found' });
-    res.json({ year: rows[0] });
+    res.json({ data: rows[0], year: rows[0] });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update year' });
+  }
+});
+
+// ===== BRANCHES ADMIN ENDPOINTS =====
+router.get('/admin/branches', requireAdmin, async (_req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, category_id AS course_id, category_id, code, name, label, description, display_order, is_active
+       FROM academic_branches
+       ORDER BY display_order ASC`
+    );
+    res.json({ data: rows });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch branches' });
+  }
+});
+
+router.post('/admin/branches', requireAdmin, async (req, res) => {
+  try {
+    const courseId = req.body.course_id ?? req.body.category_id ?? req.body.categoryId;
+    const { name, code, label, description, display_order, is_active } = req.body;
+    if (!name || !courseId) {
+      return res.status(400).json({ error: 'name and course_id are required' });
+    }
+
+    const { rows } = await pool.query(
+      `INSERT INTO academic_branches (category_id, name, code, label, description, display_order, is_active, created_by, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)
+       RETURNING id, category_id AS course_id, category_id, code, name, label, description, display_order, is_active`,
+      [Number(courseId), name, code || null, label || null, description || null, display_order || 0, is_active !== false, req.user?.id || null]
+    );
+    res.status(201).json({ data: rows[0] });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create branch' });
+  }
+});
+
+router.put('/admin/branches/:id', requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const courseId = req.body.course_id ?? req.body.category_id ?? req.body.categoryId;
+    const { name, code, label, description, display_order, is_active } = req.body;
+
+    const { rows } = await pool.query(
+      `UPDATE academic_branches
+       SET category_id = COALESCE($1, category_id), name = COALESCE($2, name), code = COALESCE($3, code), 
+           label = COALESCE($4, label), description = COALESCE($5, description), display_order = COALESCE($6, display_order),
+           is_active = COALESCE($7, is_active), updated_at = CURRENT_TIMESTAMP
+       WHERE id = $8
+       RETURNING id, category_id AS course_id, category_id, code, name, label, description, display_order, is_active`,
+      [courseId ? Number(courseId) : null, name || null, code || null, label || null, description || null, display_order !== undefined ? display_order : null, is_active !== undefined ? is_active : null, id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Branch not found' });
+    res.json({ data: rows[0] });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update branch' });
+  }
+});
+
+router.delete('/admin/branches/:id', requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { rows } = await pool.query(
+      `UPDATE academic_branches SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id`,
+      [id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Branch not found' });
+    res.json({ message: 'Branch deleted' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete branch' });
+  }
+});
+
+// ===== SEMESTERS ADMIN ENDPOINTS =====
+router.get('/admin/semesters', requireAdmin, async (_req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, semester_number, semester_number AS semester, year_number, label, description, display_order, is_active
+       FROM academic_semesters
+       ORDER BY display_order ASC`
+    );
+    res.json(academicList(rows, 'semesters'));
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch semesters' });
+  }
+});
+
+router.post('/admin/semesters', requireAdmin, async (req, res) => {
+  try {
+    const semesterNumber = req.body.semesterNumber ?? req.body.semester ?? req.body.semester_number;
+    const yearNumber = req.body.yearNumber ?? req.body.year ?? req.body.year_number;
+    const { label, description, display_order, is_active } = req.body;
+    if (semesterNumber === undefined || semesterNumber === null || semesterNumber === '') {
+      return res.status(400).json({ error: 'semesterNumber is required' });
+    }
+
+    const { rows } = await pool.query(
+      `INSERT INTO academic_semesters (semester_number, year_number, label, description, display_order, is_active, created_by, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+       RETURNING id, semester_number, semester_number AS semester, year_number, label, description, display_order, is_active`,
+      [Number(semesterNumber), yearNumber === undefined || yearNumber === null || yearNumber === '' ? null : Number(yearNumber), label || null, description || null, display_order || 0, is_active !== false, req.user?.id || null]
+    );
+    res.status(201).json({ data: rows[0], semester: rows[0] });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create semester' });
+  }
+});
+
+router.put('/admin/semesters/:id', requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const semesterNumber = req.body.semesterNumber ?? req.body.semester ?? req.body.semester_number;
+    const yearNumber = req.body.yearNumber ?? req.body.year ?? req.body.year_number;
+    const displayOrder = req.body.displayOrder ?? req.body.display_order;
+    const { label, description, display_order, is_active } = req.body;
+
+    const { rows } = await pool.query(
+      `UPDATE academic_semesters
+       SET semester_number = COALESCE($1, semester_number), year_number = COALESCE($2, year_number), label = COALESCE($3, label), description = COALESCE($4, description),
+           display_order = COALESCE($5, display_order), is_active = COALESCE($6, is_active), updated_at = CURRENT_TIMESTAMP
+       WHERE id = $7
+       RETURNING id, semester_number, semester_number AS semester, year_number, label, description, display_order, is_active`,
+      [semesterNumber === undefined || semesterNumber === null || semesterNumber === '' ? null : Number(semesterNumber), yearNumber === undefined || yearNumber === null || yearNumber === '' ? null : Number(yearNumber), label || null, description || null, displayOrder === undefined || displayOrder === null || displayOrder === '' ? null : Number(displayOrder), is_active !== undefined ? is_active : null, id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Semester not found' });
+    res.json({ data: rows[0], semester: rows[0] });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update semester' });
+  }
+});
+
+router.delete('/admin/semesters/:id', requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { rows } = await pool.query(
+      `UPDATE academic_semesters SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id`,
+      [id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Semester not found' });
+    res.json({ message: 'Semester deleted' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete semester' });
   }
 });
 
@@ -426,24 +666,28 @@ router.get('/categories', async (req, res) => {
 
 /**
  * GET /academics/branches?categoryId=1
- * Get branches for a specific category
+ * Get branches for a specific category or all active branches when no category is provided
  */
 router.get('/branches', async (req, res) => {
   try {
     const categoryId = Number(req.query.categoryId);
-    if (!categoryId) {
-      return res.status(400).json({ error: 'categoryId required' });
+    const params = [];
+    const where = ['is_active = TRUE'];
+
+    if (categoryId) {
+      params.push(categoryId);
+      where.push(`category_id = $${params.length}`);
     }
 
     const { rows } = await pool.query(
       `SELECT id, code, name, label, description, display_order
        FROM academic_branches
-       WHERE category_id = $1 AND is_active = TRUE
-       ORDER BY display_order ASC`,
-      [categoryId]
+       WHERE ${where.join(' AND ')}
+       ORDER BY display_order ASC, name ASC`,
+      params
     );
     setPublicCacheHeaders(res, 300);
-    res.json({ branches: rows });
+    res.json(academicList(rows, 'branches'));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch branches' });
   }
@@ -462,7 +706,7 @@ router.get('/semesters', async (req, res) => {
        ORDER BY display_order ASC`
     );
     setPublicCacheHeaders(res, 600);
-    res.json({ semesters: rows });
+    res.json(academicList(rows, 'semesters'));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch semesters' });
   }

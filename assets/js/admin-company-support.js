@@ -99,7 +99,7 @@
         headline: val('aboutHeadline'),
         description: val('aboutHeroDesc'),
         ctaLabel: base.hero?.ctaLabel || 'Get Started Free',
-        ctaHref: base.hero?.ctaHref || 'signup.html',
+        ctaHref: base.hero?.ctaHref || 'login.html?mode=signup',
         highlightStats: base.hero?.highlightStats || []
       },
       mission: {

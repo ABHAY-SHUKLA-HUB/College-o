@@ -76,30 +76,42 @@
               <label>Chapter / Topic *</label>
               <input name="chapter" required />
             </div>
+            <!-- Academic Structure Mapping -->
             <div class="co-admin-field">
               <label>College</label>
-              <select name="collegeName">
-                <option value="">All Colleges</option>
-                <option>Chandigarh University Mohali</option>
-                <option>Chandigarh University UP</option>
+              <select id="noteCollegeId" name="college_id">
+                <option value="">All Colleges (Common)</option>
               </select>
             </div>
             <div class="co-admin-field">
+              <label>Course</label>
+              <select id="noteCourseId" name="course_id">
+                <option value="">All Courses (Common)</option>
+              </select>
+            </div>
+            <div class="co-admin-field">
+              <label>Branch</label>
+              <select id="noteBranchId" name="branch_id">
+                <option value="">All Branches (Common)</option>
+              </select>
+            </div>
+            <div class="co-admin-field">
+              <label>Academic Year</label>
+              <select id="noteYearId" name="year_id">
+                <option value="">All Years (Common)</option>
+              </select>
+            </div>
+            <div class="co-admin-field">
+              <label>Semester</label>
+              <select id="noteSemesterId" name="semester_id">
+                <option value="">All Semesters (Common)</option>
+              </select>
+            </div>
+            <!-- Legacy fields for backward compatibility -->
+            <div class="co-admin-field" style="display: none;">
               <label>Category *</label>
-              <select id="noteCategoryId" name="categoryId" required>
+              <select id="noteCategoryId" name="categoryId">
                 <option value="">Select category</option>
-              </select>
-            </div>
-            <div class="co-admin-field">
-              <label>Branch / Course *</label>
-              <select id="noteBranchId" name="branchId" required disabled>
-                <option value="">Select branch or course</option>
-              </select>
-            </div>
-            <div class="co-admin-field">
-              <label>Semester *</label>
-              <select id="noteSemesterId" name="semesterId" required>
-                <option value="">Select semester</option>
               </select>
             </div>
             <div class="co-admin-field">
@@ -136,7 +148,7 @@
               <input type="file" name="file" accept="application/pdf" required />
             </div>
             <div class="co-admin-field full">
-              <label><input type="checkbox" name="isCommon" /> Common for all branches/courses</label>
+              <label><input type="checkbox" name="isCommon" /> Common for all (ignore academic structure)</label>
             </div>
           </div>
           <div class="actions" style="margin-top:16px;">

@@ -10,6 +10,7 @@ const session = require('express-session');
 const pgSessionFactory = require('connect-pg-simple');
 const { pool } = require('./db/pool');
 const { ensureDatabaseBootstrap } = require('./db/bootstrap');
+const { initializeAcademicStructure } = require('./db/academic-migration');
 
 const authRoutes = require('./routes/auth');
 const metaRoutes = require('./routes/meta');
@@ -93,6 +94,12 @@ function parseOrigins(input) {
 const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
 const PROD_BACKEND_ORIGIN = 'https://college-o.onrender.com';
 const jitsiDomain = String(process.env.JITSI_DOMAIN || 'meet.jit.si').trim() || 'meet.jit.si';
+const localDevOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'https://localhost:3000',
+  'https://127.0.0.1:3000'
+];
 const productionFrontendOrigins = [
   'https://college-o.vercel.app',
   'https://college-o-33sg7jg49-abhayshukla2072006-2030s-projects.vercel.app',
@@ -122,8 +129,8 @@ const PUBLIC_READ_PATHS = new Set([
 ]);
 
 const CLEAN_PAGE_ROUTES = new Map([
-  ['/login', 'index.html'],
-  ['/signup', 'index.html'],
+  ['/login', 'login.html'],
+  ['/signup', 'signup.html'],
   ['/academic-onboarding', 'academic-onboarding.html'],
   ['/home', 'home.html'],
   ['/dashboard', 'dashboard.html'],
@@ -252,22 +259,48 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       // Allow the Jitsi external API and Agora SDK to be loaded as scripts.
       // Inline HTML pages in this app still depend on embedded scripts.
-      scriptSrc: ["'self'", "'unsafe-inline'", `https://${jitsiDomain}`, 'https://meet.jit.si', 'https://download.agora.io', 'https://accounts.google.com', 'https://www.gstatic.com'],
+      scriptSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        `https://${jitsiDomain}`,
+        'https://meet.jit.si',
+        'https://download.agora.io',
+        'https://accounts.google.com',
+        'https://www.gstatic.com',
+        'https://challenges.cloudflare.com',
+        ...(!isProduction ? localDevOrigins : [])
+      ],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'https:'],
       // Allow framing Jitsi (embedded meeting) from meet.jit.si
-      frameSrc: ["'self'", `https://${jitsiDomain}`, 'https://meet.jit.si'],
-      connectSrc: ["'self'", PROD_BACKEND_ORIGIN, `https://${jitsiDomain}`, 'https://meet.jit.si', 'https://download.agora.io', 'https://accounts.google.com', 'https://oauth2.googleapis.com'],
+      frameSrc: [
+        "'self'",
+        `https://${jitsiDomain}`,
+        'https://meet.jit.si',
+        'https://challenges.cloudflare.com',
+        ...(!isProduction ? localDevOrigins : [])
+      ],
+      connectSrc: [
+        "'self'",
+        PROD_BACKEND_ORIGIN,
+        `https://${jitsiDomain}`,
+        'https://meet.jit.si',
+        'https://download.agora.io',
+        'https://accounts.google.com',
+        'https://oauth2.googleapis.com',
+        'https://challenges.cloudflare.com',
+        ...(!isProduction ? localDevOrigins : [])
+      ],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
-      upgradeInsecureRequests: isProduction ? [] : []
+      ...(isProduction ? { upgradeInsecureRequests: [] } : {})
     }
   },
-  hsts: {
+  hsts: isProduction ? {
     maxAge: 31536000,  // 1 year
     includeSubDomains: true,
-    preload: isProduction
-  },
+    preload: true
+  } : false,
   // Disable frameguard (X-Frame-Options) because it conflicts with modern CSP frame-src
   frameguard: false,
   noSniff: true,
@@ -693,6 +726,7 @@ async function startServer() {
 
   await pool.query('SELECT 1');
   await ensureDatabaseBootstrap();
+  await initializeAcademicStructure();
   if (typeof liveSessionRoutes.runLiveSessionMaintenance === 'function') {
     liveSessionRoutes.runLiveSessionMaintenance().catch((error) => {
       console.warn('[Live Session Maintenance] initial run failed:', error.message);

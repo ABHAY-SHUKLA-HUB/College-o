@@ -120,7 +120,7 @@
     } else {
       setText('aboutCtaTitle', ctaSec.title || '');
       setText('aboutCtaDesc', ctaSec.description || '');
-      setHref('aboutCtaPrimary', ctaSec.primaryHref || 'signup.html', ctaSec.primaryLabel || 'Start Learning Free');
+      setHref('aboutCtaPrimary', ctaSec.primaryHref || 'login.html?mode=signup', ctaSec.primaryLabel || 'Start Learning Free');
       setHref('aboutCtaSecondary', ctaSec.secondaryHref || 'home.html', ctaSec.secondaryLabel || 'Explore Features');
     }
   }

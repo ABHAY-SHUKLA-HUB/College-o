@@ -74,9 +74,12 @@ const {
   notFoundHandler,
   globalErrorHandler
 } = require('./middleware/logging');
+const jwt = require('jsonwebtoken');
 const { requireAuth, requireAdmin } = require('./middleware/auth');
-
-const app = express();
+const { requireRole, requireStudent, requireSupport, requireSuperAdmin, auditAction } = require('./middleware/rbac');
+const { validateLoginRequest, validateSignupRequest, rejectUnexpectedFields } = require('./middleware/inputValidation');
+const { rateLimitLogin, rateLimitOTP, rateLimitPasswordReset } = require('./middleware/rateLimitAdvanced');
+const { logSecurityEvent, logLoginAttempt, logUnauthorizedAccess } = require('./middleware/auditLog');
 const PgSession = pgSessionFactory(session);
 const port = Number(process.env.PORT || 3000);
 const host = process.env.HOST || '0.0.0.0';
@@ -633,6 +636,44 @@ const PROTECTED_PAGE_PATHS = new Set([
 const REMOVED_ROUTE_PATHS = new Set([
   '/home', '/homepage', '/contact-us', '/contactus', '/about-us', '/help-center', '/my-tickets', '/leaderboard', '/certificate', '/referrals', '/feedback', '/support-dashboard'
 ]);
+
+// Strictly protect the live-hub page: require an authenticated session or a valid join token
+app.get(['/live-hub', '/live-hub.html'], async (req, res) => {
+  try {
+    res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+
+    // Allow authenticated users
+    if (req.session && req.session.userId) {
+      return res.sendFile(path.join(__dirname, '..', 'live-hub.html'));
+    }
+
+    // Allow one-time join tokens (signed JWTs) - validate signature and session existence
+    const joinToken = req.query.joinToken || req.query.jointoken || req.query.token || null;
+    if (!joinToken) {
+      return res.redirect(302, '/login');
+    }
+
+    try {
+      const secret = String(process.env.LIVE_SESSION_TOKEN_SECRET || process.env.SESSION_SECRET || 'unsafe-dev-secret');
+      const payload = jwt.verify(joinToken, secret, { issuer: 'college-os', audience: 'live-session' });
+      const sid = payload?.sid || payload?.sessionId || null;
+      if (!sid) return res.redirect(302, '/login');
+
+      // Ensure the referenced live session exists and is not ended/cancelled
+      const { rows } = await pool.query('SELECT id, status FROM live_sessions WHERE session_id = $1 LIMIT 1', [sid]);
+      if (!rows[0]) return res.status(403).send('Invalid or expired join token');
+      const status = String(rows[0].status || '').toLowerCase();
+      if (['ended', 'cancelled'].includes(status)) return res.status(403).send('Session not available');
+
+      return res.sendFile(path.join(__dirname, '..', 'live-hub.html'));
+    } catch (err) {
+      console.warn('[live-hub] token validation failed', String(err?.message || err));
+      return res.redirect(302, '/login');
+    }
+  } catch (err) {
+    return res.status(500).send('Server error');
+  }
+});
 
 PAGE_ROUTES.forEach((file, route) => {
   app.get(route, (req, res) => {

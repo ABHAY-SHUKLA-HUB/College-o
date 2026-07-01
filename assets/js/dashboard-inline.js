@@ -397,10 +397,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     console.log('[dashboard] Student portal loaded successfully');
 
-    const [personalizedPayload, experiencePayload] = await Promise.all([
-      window.CollegeOSApi.getPersonalizedDashboard().catch(() => null),
-      window.CollegeOSApi.getStudentExperienceConfig().catch(() => null)
-    ]);
+    // Lightweight caching to avoid duplicate API calls when user rapidly navigates
+    const cacheKey = 'collegeos_dashboard_cache_v1';
+    const cacheTTL = 30 * 1000; // 30 seconds
+    let cached = window[cacheKey] || null;
+    if (cached && (Date.now() - cached.ts) < cacheTTL) {
+      // Use cached payloads to reduce load
+      var personalizedPayload = cached.personalizedPayload;
+      var experiencePayload = cached.experiencePayload;
+    } else {
+      var [personalizedPayload, experiencePayload] = await Promise.all([
+        window.CollegeOSApi.getPersonalizedDashboard().catch(() => null),
+        window.CollegeOSApi.getStudentExperienceConfig().catch(() => null)
+      ]);
+      window[cacheKey] = { ts: Date.now(), personalizedPayload, experiencePayload };
+    }
 
     let profilePayload = null;
     let academicPayload = null;
@@ -434,6 +445,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const runtimeExperienceConfig = experiencePayload?.config || experiencePayload || null;
+
+    // Store dashboard data for lazy loaders
+    const dashboardData = {
+      personalizedPayload,
+      experiencePayload,
+      profilePayload,
+      academicPayload,
+      statsPayload,
+      roadmapPayload,
+      aiPayload,
+      subscriptionPayload,
+      quizAttemptsPayload,
+      mockDashboardPayload
+    };
 
     const user = personalizedPayload?.profile ? { full_name: personalizedPayload.profile.fullName } : (profilePayload?.user || profilePayload || {});
     const academic = personalizedPayload?.profile ? {
@@ -637,10 +662,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       '<div class="dash-empty">Continue learning suggestions will appear here.</div>'
     );
 
+    // Lightweight skeletons for lower-priority sections
+    const skeleton = '<div class="dash-empty">Loading…</div>';
+    ['recommendedList', 'recommendedNotesList', 'recommendedQuizzesList', 'recommendedMocksList', 'recentActivityList', 'studyTimeBars', 'quizAccuracyBars', 'roadmapTrendBars', 'weakTopicsList', 'achievementList'].forEach((id) => {
+      const n = document.getElementById(id);
+      if (n) n.innerHTML = skeleton;
+    });
+
+    // Render immediate/high-priority sections
     render(
       'recommendedList',
-      [
-        ...recommendedRoadmaps.slice(0, 2).map((item) => `<article class="dash-item"><div class="dash-item-main"><span class="dash-item-icon"><i class="fa-solid ${htmlEscape(item.icon_name || item.iconName || 'fa-route')}"></i></span><div><h3>${htmlEscape(item.title || 'Career roadmap')}</h3><p>${htmlEscape(item.tagline || item.description || 'Recommended based on your current learning profile.')}</p><div class="dash-pill-row"><span class="dash-pill">${htmlEscape(branchName || 'All branches')}</span><span class="dash-pill">${htmlEscape(item.access_type || item.accessType || 'free')}</span></div></div></div><div class="dash-item-actions"><a class="dash-mini-btn" href="study-roadmap.html">Open Track</a></div></article>`),
+      [...recommendedRoadmaps.slice(0, 2).map((item) => `<article class="dash-item"><div class="dash-item-main"><span class="dash-item-icon"><i class="fa-solid ${htmlEscape(item.icon_name || item.iconName || 'fa-route')}"></i></span><div><h3>${htmlEscape(item.title || 'Career roadmap')}</h3><p>${htmlEscape(item.tagline || item.description || 'Recommended based on your current learning profile.')}</p><div class="dash-pill-row"><span class="dash-pill">${htmlEscape(branchName || 'All branches')}</span><span class="dash-pill">${htmlEscape(item.access_type || item.accessType || 'free')}</span></div></div></div><div class="dash-item-actions"><a class="dash-mini-btn" href="study-roadmap.html">Open Track</a></div></article>`),
         `<article class="dash-item"><div class="dash-item-main"><span class="dash-item-icon"><i class="fa-solid fa-book-open"></i></span><div><h3>Branch resources and notes</h3><p>Revision resources for ${htmlEscape(branchName || 'your course')} are prioritized to support your next milestone.</p><div class="dash-pill-row"><span class="dash-pill">${htmlEscape(semesterLabel || 'Current semester')}</span><span class="dash-pill">Progress ${roadmapProgress}%</span></div></div></div><div class="dash-item-actions"><a class="dash-mini-btn" href="notes-library.html">View Resources</a><a class="dash-mini-btn" href="quiz-library.html">Recommended Quizzes</a></div></article>`
       ],
       '<div class="dash-empty">No recommendations available yet.</div>'
@@ -658,72 +690,91 @@ document.addEventListener('DOMContentLoaded', async () => {
       '<div class="dash-empty">Daily tasks unavailable.</div>'
     );
 
-    render(
-      'recentActivityList',
-      [
+    // Lazy load lower-priority sections when they become visible
+    const observerTargets = [
+      { id: 'dashRecommendedSection', loader: loadRecommendedSection },
+      { id: 'dashAnalyticsSection', loader: loadAnalyticsSection },
+      { id: 'dashWeakTopicsSection', loader: loadWeakTopicsSection },
+      { id: 'dashActivitySection', loader: loadActivitySection }
+    ];
+
+    const io = new IntersectionObserver((entries, obs) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const id = entry.target.id;
+        const target = observerTargets.find((t) => t.id === id);
+        if (target) {
+          try { target.loader(dashboardData); } catch { /* swallow */ }
+        }
+        obs.unobserve(entry.target);
+      });
+    }, { root: null, rootMargin: '200px', threshold: 0.05 });
+
+    observerTargets.forEach((t) => {
+      const node = document.getElementById(t.id);
+      if (node) {
+        io.observe(node);
+      } else {
+        // If missing, run loader immediately
+        try { t.loader(dashboardData); } catch { /* ignore */ }
+      }
+    });
+
+    // Define lazy loaders
+    function loadRecommendedSection(data) {
+      // recommended columns
+      const p = data.personalizedPayload || {};
+      const notes = p.sections?.recommendedNotes || [];
+      const quizzes = p.sections?.recommendedQuizzes || [];
+      const mocks = p.sections?.recommendedMockTests || [];
+      renderRecommendedColumn('recommendedNotesList', notes, 'fa-file-lines', 'No note recommendations available yet.', (item) => `notes-library.html?search=${encodeURIComponent(item.subject || item.chapter || '')}`);
+      renderRecommendedColumn('recommendedQuizzesList', quizzes, 'fa-clipboard-question', 'No quiz recommendations available yet.', () => 'quiz-library.html');
+      renderRecommendedColumn('recommendedMocksList', mocks, 'fa-flask', 'No mock-test recommendations available yet.', () => 'mock-tests.html');
+    }
+
+    function loadAnalyticsSection(data) {
+      const p = data.mockDashboardPayload || {};
+      const quizAttempts = data.quizAttemptsPayload?.attempts || [];
+      const mockRecentAttempts = (data.mockDashboardPayload && data.mockDashboardPayload.recentAttempts) || [];
+      const dayBuckets = last7Days().map((day) => ({ key: day.toISOString().slice(0, 10), label: shortDay(day) }));
+
+      const studySeries = dayBuckets.map((bucket) => {
+        const totalSeconds = mockRecentAttempts
+          .filter((item) => dateKey(item.attempted_at || item.attemptedAt) === bucket.key)
+          .reduce((sum, item) => sum + Number(item.time_spent_seconds || item.timeSpentSeconds || 0), 0);
+        return { label: bucket.label, value: totalSeconds / 3600 };
+      });
+
+      const accuracySeries = dayBuckets.map((bucket) => {
+        const rows = quizAttempts.filter((item) => dateKey(item.attempted_at || item.attemptedAt) === bucket.key);
+        if (!rows.length) return { label: bucket.label, value: 0 };
+        const avg = rows.reduce((sum, row) => sum + Number(row.score_percent || row.scorePercent || 0), 0) / rows.length;
+        return { label: bucket.label, value: avg };
+      });
+
+      const roadmapSeries = dayBuckets.map((bucket, idx) => ({ label: bucket.label, value: Math.max(0, Math.min(100, Math.round((data.statsPayload?.roadmapProgress || 0) - ((dayBuckets.length - 1 - idx) * 3)))) }));
+
+      renderWeeklyBars('studyTimeBars', 'studyTimeAxis', studySeries, 2, (v) => `${v.toFixed(1)} hour(s)`);
+      renderWeeklyBars('quizAccuracyBars', 'quizAccuracyAxis', accuracySeries, 100, (v) => `${Math.round(v)}%`);
+      renderWeeklyBars('roadmapTrendBars', 'roadmapTrendAxis', roadmapSeries, 100, (v) => `${Math.round(v)}%`);
+    }
+
+    function loadWeakTopicsSection(data) {
+      const weakTopics = (data.mockDashboardPayload && data.mockDashboardPayload.aiInsights && data.mockDashboardPayload.aiInsights.weakTopics) || [];
+      renderWeakTopics(weakTopics);
+    }
+
+    function loadActivitySection(data) {
+      const p = data.personalizedPayload || {};
+      const notices = p.sections?.announcements || [];
+      const recent = [
         `<article class="timeline-item"><h4>Notes opened</h4><p>${savedNotes} saved notes available for quick revision.</p></article>`,
-        `<article class="timeline-item"><h4>Quizzes attempted</h4><p>${quizAttempts.length} total attempts tracked so far.</p></article>`,
-        `<article class="timeline-item"><h4>Roadmap steps completed</h4><p>Current roadmap completion is ${roadmapProgress}%. Next: ${htmlEscape(nextMilestone)}.</p></article>`,
-        `<article class="timeline-item"><h4>Achievements unlocked</h4><p>${certCount} certificates earned and streak at ${streak} day(s).</p></article>`,
-        ...(personalizedAnnouncements[0]
-          ? [`<article class="timeline-item"><h4>Branch announcement</h4><p>${htmlEscape(personalizedAnnouncements[0].title || personalizedAnnouncements[0].message || 'New update')}</p></article>`]
-          : [])
-      ],
-      '<div class="dash-empty">No activity yet. Start learning to populate your activity feed.</div>'
-    );
-
-    renderRecommendedColumn(
-      'recommendedNotesList',
-      personalizedNotes,
-      'fa-file-lines',
-      'No note recommendations available yet.',
-      (item) => `notes-library.html?search=${encodeURIComponent(item.subject || item.chapter || '')}`
-    );
-    renderRecommendedColumn(
-      'recommendedQuizzesList',
-      personalizedQuizzes,
-      'fa-clipboard-question',
-      'No quiz recommendations available yet.',
-      () => 'quiz-library.html'
-    );
-    renderRecommendedColumn(
-      'recommendedMocksList',
-      personalizedMockTests,
-      'fa-flask',
-      'No mock-test recommendations available yet.',
-      () => 'mock-tests.html'
-    );
-
-    renderWeakTopics(weakTopics);
-
-    const dayBuckets = last7Days().map((day) => ({
-      key: day.toISOString().slice(0, 10),
-      label: shortDay(day)
-    }));
-
-    const studySeries = dayBuckets.map((bucket) => {
-      const totalSeconds = mockRecentAttempts
-        .filter((item) => dateKey(item.attempted_at || item.attemptedAt) === bucket.key)
-        .reduce((sum, item) => sum + Number(item.time_spent_seconds || item.timeSpentSeconds || 0), 0);
-      return { label: bucket.label, value: totalSeconds / 3600 };
-    });
-
-    const accuracySeries = dayBuckets.map((bucket) => {
-      const rows = quizAttempts.filter((item) => dateKey(item.attempted_at || item.attemptedAt) === bucket.key);
-      if (!rows.length) return { label: bucket.label, value: 0 };
-      const avg = rows.reduce((sum, row) => sum + Number(row.score_percent || row.scorePercent || 0), 0) / rows.length;
-      return { label: bucket.label, value: avg };
-    });
-
-    const roadmapSeries = dayBuckets.map((bucket, idx) => {
-      const base = Math.max(0, roadmapProgress - ((dayBuckets.length - 1 - idx) * 3));
-      const normalized = Math.max(0, Math.min(roadmapProgress, base));
-      return { label: bucket.label, value: normalized };
-    });
-
-    renderWeeklyBars('studyTimeBars', 'studyTimeAxis', studySeries, 2, (v) => `${v.toFixed(1)} hour(s)`);
-    renderWeeklyBars('quizAccuracyBars', 'quizAccuracyAxis', accuracySeries, 100, (v) => `${Math.round(v)}%`);
-    renderWeeklyBars('roadmapTrendBars', 'roadmapTrendAxis', roadmapSeries, 100, (v) => `${Math.round(v)}%`);
+        `<article class="timeline-item"><h4>Quizzes attempted</h4><p>${(data.quizAttemptsPayload && data.quizAttemptsPayload.attempts ? data.quizAttemptsPayload.attempts.length : 0)} total attempts tracked so far.</p></article>`,
+        `<article class="timeline-item"><h4>Roadmap steps completed</h4><p>Current roadmap completion is ${data.statsPayload?.roadmapProgress || roadmapProgress}%. Next: ${htmlEscape(nextMilestone)}.</p></article>`
+      ];
+      if (personalizedAnnouncements[0]) recent.push(`<article class="timeline-item"><h4>Branch announcement</h4><p>${htmlEscape(personalizedAnnouncements[0].title || personalizedAnnouncements[0].message || 'New update')}</p></article>`);
+      render('recentActivityList', recent, '<div class="dash-empty">No activity yet. Start learning to populate your activity feed.</div>');
+    }
 
     render(
       'achievementList',

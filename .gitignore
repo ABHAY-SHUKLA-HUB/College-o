@@ -22,6 +22,9 @@ logs/
 runtime-logs/
 *.log
 
+# 📋 Generated QA reports
+reports/
+
 # 📁 Uploads (user data)
 uploads/*
 !uploads/sample/

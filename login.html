@@ -2689,88 +2689,180 @@
         padding: 10px 11px;
       }
     }
+
+    /* Simplified SaaS auth layout override: centered card and auth-only surface. */
+    .auth-shell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: clamp(16px, 2.8vw, 28px);
+      background:
+        radial-gradient(circle at 12% 12%, rgba(46, 120, 191, 0.15), transparent 36%),
+        radial-gradient(circle at 86% 88%, rgba(15, 118, 110, 0.13), transparent 40%),
+        linear-gradient(160deg, #eaf2fb 0%, #f4f8fd 50%, #edf5fc 100%);
+    }
+
+    .auth-layout {
+      width: 100%;
+      max-width: 560px;
+      min-height: auto;
+      display: block;
+      background: transparent;
+      box-shadow: none;
+      border-radius: 0;
+      gap: 0;
+    }
+
+    .auth-right {
+      padding: 0;
+      width: 100%;
+      background: transparent !important;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 560px;
+      margin: 0 auto;
+      border-radius: 22px;
+      border: 1px solid rgba(176, 198, 220, 0.78);
+      background: linear-gradient(180deg, #ffffff 0%, #f9fcff 100%);
+      box-shadow: 0 24px 48px rgba(15, 23, 42, 0.14), 0 4px 10px rgba(15, 23, 42, 0.05);
+      padding: clamp(18px, 2.3vw, 28px);
+      transform: none !important;
+    }
+
+    .auth-logo-icon {
+      color: #1f6ba8;
+    }
+
+    .auth-logo-text {
+      font-size: 1.16rem;
+      font-weight: 800;
+      color: #0f2540;
+    }
+
+    .auth-logo-subtext {
+      color: #4c6782;
+      letter-spacing: 0.09em;
+      font-weight: 700;
+    }
+
+    .google-auth-panel .provider-note,
+    .auth-proof-row,
+    .auth-top,
+    .footer-note {
+      display: none !important;
+    }
+
+    .auth-tabs {
+      margin-bottom: 16px;
+    }
+
+    .login-method-toggle {
+      margin: 0 auto 14px;
+    }
+
+    .field input,
+    .field select,
+    .field textarea,
+    .university-search,
+    .btn-full,
+    .google-auth-button,
+    .captcha-box .field input,
+    .captcha-actions .btn-tertiary {
+      min-height: 46px;
+    }
+
+    .auth-footer {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid #d7e4f2;
+      display: grid;
+      justify-items: start;
+      gap: 8px;
+    }
+
+    .switch-copy,
+    .legal-consent {
+      margin: 0;
+    }
+
+    .support-help-row {
+      margin: 14px 0 2px;
+      text-align: center;
+    }
+
+    .support-help-row .support-link {
+      color: #0f766e;
+      font-size: 0.84rem;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+    }
+
+    .support-help-row .support-link:hover {
+      color: #0a5a54;
+      text-decoration: underline;
+    }
+
+    @media (max-width: 760px) {
+      .auth-shell {
+        padding: 12px;
+      }
+
+      .auth-layout,
+      .auth-card {
+        max-width: 100%;
+      }
+
+      .auth-card {
+        border-radius: 16px;
+        padding: 16px 14px;
+      }
+
+      .auth-tabs {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .auth-tab {
+        min-height: 44px;
+      }
+
+      .auth-footer {
+        gap: 10px;
+      }
+
+      .support-help-row {
+        margin-top: 12px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .auth-shell {
+        padding: 10px;
+      }
+
+      .auth-card {
+        padding: 14px 12px;
+      }
+
+      .login-method-btn,
+      .auth-tab,
+      .btn-full {
+        font-size: 0.84rem;
+      }
+    }
   </style>
 </head>
 <body>
   <main class="auth-shell">
     <div class="auth-layout">
-      <div class="auth-center-branding">
-        <div class="auth-center-branding-icon"><i class="fa-solid fa-graduation-cap"></i></div>
-        <div class="auth-center-branding-text">College OS</div>
-      </div>
-
-      <section class="auth-left" id="authLeftPanel">
-        <p class="brand-kicker" id="authBrandKicker">College OS Student Access</p>
-        <h1 class="brand-title" id="authBrandHeadline">The student operating system for focused outcomes and faster wins.</h1>
-        <p class="brand-copy" id="authBrandDescription">Sign in to continue with AI-guided study flows, verified access controls, and momentum tracking designed for serious learners.</p>
-
-        <ul class="feature-list" id="authFeatureList">
-          <li><i class="fa-solid fa-check"></i><span>Secure sign-in with session protection</span></li>
-          <li><i class="fa-solid fa-check"></i><span>Branch-aware learning paths</span></li>
-          <li><i class="fa-solid fa-check"></i><span>Progress and mock analytics</span></li>
-        </ul>
-
-        <div class="brand-visual" aria-hidden="true">
-          <div class="visual-head">
-            <strong>Student Success Snapshot</strong>
-            <span class="visual-badge">Live</span>
-          </div>
-          <div class="visual-grid">
-            <div class="visual-card">
-              <span class="visual-label">Weekly Momentum</span>
-              <p class="visual-subhead">Active study minutes this week</p>
-              <ol class="visual-chart">
-                <li class="visual-bar"><span class="visual-bar-fill low"></span><span class="visual-bar-day">Mon</span></li>
-                <li class="visual-bar"><span class="visual-bar-fill mid"></span><span class="visual-bar-day">Tue</span></li>
-                <li class="visual-bar"><span class="visual-bar-fill mid"></span><span class="visual-bar-day">Wed</span></li>
-                <li class="visual-bar"><span class="visual-bar-fill high"></span><span class="visual-bar-day">Thu</span></li>
-                <li class="visual-bar"><span class="visual-bar-fill peak"></span><span class="visual-bar-day">Fri</span></li>
-                <li class="visual-bar"><span class="visual-bar-fill high"></span><span class="visual-bar-day">Sat</span></li>
-                <li class="visual-bar"><span class="visual-bar-fill mid"></span><span class="visual-bar-day">Sun</span></li>
-              </ol>
-              <div class="visual-meta">
-                <span><strong>8h 45m</strong> total focus time</span>
-                <span class="trend-up"><i class="fa-solid fa-arrow-trend-up"></i> +14%</span>
-              </div>
-            </div>
-            <div class="visual-metrics">
-              <div class="metric"><strong>92%</strong><span>consistency</span><em class="metric-delta">+4 this week</em></div>
-              <div class="metric"><strong>48h</strong><span>streak</span><em class="metric-delta">best this month</em></div>
-              <div class="metric"><strong>12</strong><span>modules</span><em class="metric-delta">3 in progress</em></div>
-              <div class="metric"><strong>4.8/5</strong><span>experience</span><em class="metric-delta">from peers</em></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="trust-row" id="authTrustList">
-          <div class="trust-point"><i class="fa-solid fa-circle-check"></i><span>Trusted by colleges and independent learners</span></div>
-          <div class="trust-point"><i class="fa-solid fa-circle-check"></i><span>OTP-ready account verification</span></div>
-          <div class="trust-point"><i class="fa-solid fa-circle-check"></i><span>Privacy-first data handling</span></div>
-        </div>
-
-        <div class="stat-pill" id="authStatPill" aria-label="College OS trust stat">
-          <strong id="authStatValue">10k+</strong>
-          <span id="authStatLabel">active learners</span>
-        </div>
-      </section>
-
       <section class="auth-right">
       <div class="auth-card" id="authRightPanel">
-        <div class="auth-top">
-          <span class="secure-chip"><i class="fa-solid fa-lock"></i> Secure Student Access</span>
-          <button type="button" class="support-link" id="supportLinkBtn">Need help? Contact support</button>
-        </div>
-
         <div class="auth-tabs">
           <span class="auth-tab-indicator" aria-hidden="true"></span>
           <button type="button" class="auth-tab active" data-auth-tab="login"><i class="fa-solid fa-right-to-bracket"></i> Login</button>
           <button type="button" class="auth-tab" data-auth-tab="signup"><i class="fa-solid fa-user-plus"></i> Sign Up</button>
-        </div>
-
-        <div class="auth-proof-row" aria-label="Security and trust signals">
-          <span class="auth-proof-item"><i class="fa-solid fa-shield-halved"></i> Session Protected</span>
-          <span class="auth-proof-item"><i class="fa-solid fa-key"></i> OTP Ready</span>
-          <span class="auth-proof-item"><i class="fa-solid fa-check-double"></i> Captcha Guarded</span>
         </div>
 
         <div class="auth-view" data-auth-view="login">
@@ -2787,12 +2879,8 @@
             <button type="button" class="login-method-btn" data-method="otp">OTP Login</button>
           </div>
 
-          <h2 id="loginTitle">Welcome back, build momentum</h2>
-          <p id="loginDescription">Enter your secure workspace to continue your streak, plans, and career-focused study flow.</p>
-
           <div class="google-auth-panel">
             <div class="google-auth-slot" data-google-auth-slot="login"></div>
-            <p class="provider-note">Use Google to sign in or create a new workspace account.</p>
           </div>
 
           <form id="loginForm" class="stack-form email-login-form">
@@ -2856,7 +2944,6 @@
           <p id="loginSuccess" class="form-success"></p>
 
           <div class="auth-footer">
-            <p class="footer-note"><i class="fa-solid fa-shield-halved"></i> Your session is encrypted and protected.</p>
             <p class="switch-copy">New here? <button type="button" class="auth-switch-link" data-auth-tab="signup">Switch to Sign Up</button></p>
             <p class="legal-consent" id="authConsentText"><span id="authConsentLabel">By continuing, you agree to</span> <button type="button" class="link-btn legal-link" data-legal-open="terms">Terms &amp; Conditions</button> and <button type="button" class="link-btn legal-link" data-legal-open="privacy">Privacy Policy</button>.</p>
           </div>
@@ -2999,11 +3086,12 @@
           <p id="signupSuccess" class="form-success"></p>
 
           <div class="auth-footer">
-            <p class="footer-note"><i class="fa-solid fa-user-shield"></i> Profile-first onboarding builds better recommendations.</p>
             <p class="switch-copy">Already have an account? <button type="button" class="auth-switch-link" data-auth-tab="login">Switch to Login</button></p>
             <p class="legal-consent" id="authConsentTextSignup"><span id="authConsentLabelSignup">By continuing, you agree to</span> <button type="button" class="link-btn legal-link" data-legal-open="terms">Terms &amp; Conditions</button> and <button type="button" class="link-btn legal-link" data-legal-open="privacy">Privacy Policy</button>.</p>
           </div>
         </div>
+
+        <p class="support-help-row"><button type="button" class="support-link" id="supportLinkBtn">Need help? Contact support</button></p>
       </div>
       </section>
     </div>

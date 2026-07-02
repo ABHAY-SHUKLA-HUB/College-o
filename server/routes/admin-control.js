@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const { pool } = require('../db/pool');
 const { requireAdmin } = require('../middleware/auth');
 const { ensureUniversityCatalogSchema } = require('../utils/universities');
+const { readStudentExperienceConfig, normalizeLiveHubConfig } = require('./dashboard');
 
 const router = express.Router();
 
@@ -3082,6 +3083,57 @@ router.get('/experience-config', requirePermission('settings.manage'), async (_r
   const result = await pool.query("SELECT value_json FROM platform_settings WHERE key = 'student_experience_config' LIMIT 1");
   const config = deepMerge(DEFAULT_STUDENT_EXPERIENCE_CONFIG, result.rows[0]?.value_json || {});
   res.json({ config });
+});
+
+router.get('/live-hub-visibility', requirePermission('settings.manage'), async (_req, res) => {
+  const config = normalizeLiveHubConfig(await readStudentExperienceConfig());
+  const enabled = config.liveHub.enabled !== false;
+  res.json({
+    enabled,
+    statusLabel: enabled
+      ? 'Live Hub is enabled for students'
+      : 'Live Hub is hidden behind Work in Progress message',
+    message: enabled
+      ? 'Students can open Live Hub normally.'
+      : 'Students will see a Work in Progress screen instead of Live Hub.'
+  });
+});
+
+router.put('/live-hub-visibility', requirePermission('settings.manage'), async (req, res) => {
+  const enabled = req.body?.enabled;
+  if (typeof enabled !== 'boolean') {
+    return res.status(400).json({ error: 'enabled must be a boolean' });
+  }
+
+  const currentResult = await pool.query("SELECT value_json FROM platform_settings WHERE key = 'student_experience_config' LIMIT 1");
+  const currentConfig = deepMerge(DEFAULT_STUDENT_EXPERIENCE_CONFIG, currentResult.rows[0]?.value_json || {});
+  const merged = {
+    ...currentConfig,
+    liveHub: {
+      ...(currentConfig.liveHub || {}),
+      enabled
+    }
+  };
+
+  await pool.query(
+    `INSERT INTO platform_settings (key, value_json, updated_by, updated_at)
+     VALUES ('student_experience_config', $1::jsonb, $2, CURRENT_TIMESTAMP)
+     ON CONFLICT (key)
+     DO UPDATE SET value_json = EXCLUDED.value_json, updated_by = EXCLUDED.updated_by, updated_at = CURRENT_TIMESTAMP`,
+    [JSON.stringify(merged), req.session.userId]
+  );
+
+  await writeAuditLog(req, 'settings.live_hub_visibility.update', 'platform_settings', 'student_experience_config', { enabled });
+
+  res.json({
+    message: enabled
+      ? 'Live Hub is enabled for students.'
+      : 'Live Hub is now hidden behind the Work in Progress screen.',
+    enabled,
+    statusLabel: enabled
+      ? 'Live Hub is enabled for students'
+      : 'Live Hub is hidden behind Work in Progress message'
+  });
 });
 
 router.put('/experience-config', requirePermission('settings.manage'), async (req, res) => {

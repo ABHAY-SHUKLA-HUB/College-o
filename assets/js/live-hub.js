@@ -48,6 +48,10 @@
     hostModeUnlockedSessionIds: new Set()
   };
 
+  function isLiveHubEnabled() {
+    return state.config?.liveHub?.enabled !== false;
+  }
+
   function toast(message, tone = 'info') {
     const hostId = 'collegeOsLiveHubToasts';
     let host = document.getElementById(hostId);
@@ -470,6 +474,40 @@
     `;
     document.body.appendChild(panel);
     return panel;
+  }
+
+  function renderWorkInProgressState() {
+    const content = document.getElementById('liveHubContent');
+    const title = document.getElementById('liveHubTitle');
+    const subtitle = document.getElementById('liveHubSubtitle');
+    const statusChip = document.getElementById('liveHubStatusChip');
+    const countChip = document.getElementById('liveHubCountChip');
+    const tabs = document.querySelectorAll('#liveHubPanel .live-hub-tabs .live-hub-tab');
+    const tabsWrap = document.querySelector('#liveHubPanel .live-hub-tabs');
+
+    if (title) title.textContent = state.config?.liveHub?.title || 'Unified Live Hub';
+    if (subtitle) subtitle.textContent = state.config?.liveHub?.subtitle || 'Mentorship sessions and hands-on labs in one place.';
+    if (statusChip) statusChip.textContent = 'Work in Progress';
+    if (countChip) countChip.textContent = 'Hidden';
+    if (tabsWrap) tabsWrap.hidden = true;
+    tabs.forEach((tab) => { tab.hidden = true; });
+
+    if (!content) return;
+    content.innerHTML = `
+      <div style="display:grid;place-items:center;min-height:360px;padding:12px;">
+        <div style="width:min(100%, 520px);background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(244,249,255,.98));border:1px solid rgba(148,163,184,.25);border-radius:22px;box-shadow:0 20px 44px rgba(15,23,42,.10);padding:28px 24px;text-align:center;display:grid;gap:14px;">
+          <div style="width:72px;height:72px;margin:0 auto;border-radius:20px;display:grid;place-items:center;background:linear-gradient(135deg, rgba(15,118,110,.14), rgba(14,165,233,.12));color:#0f766e;font-size:1.8rem;box-shadow:inset 0 1px 0 rgba(255,255,255,.7);"><i class="fa-solid fa-satellite-dish"></i></div>
+          <div>
+            <p style="margin:0;color:#0f766e;font-size:0.78rem;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;">Work in Progress</p>
+            <h4 style="margin:10px 0 8px;font-size:1.8rem;line-height:1.12;letter-spacing:-0.03em;color:#0f172a;">Live Hub is coming soon.</h4>
+            <p style="margin:0;color:#53657d;font-size:0.98rem;line-height:1.7;">We are improving live sessions for a better learning experience.</p>
+          </div>
+          <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;">
+            <button type="button" class="btn primary" data-live-hub-back-to-dashboard>Back to Dashboard</button>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   function ensureStage() {
@@ -1416,6 +1454,14 @@
     if (title) title.textContent = state.config?.liveHub?.title || 'Unified Live Hub';
     if (subtitle) subtitle.textContent = state.config?.liveHub?.subtitle || 'Mentorship sessions and hands-on labs in one place.';
 
+    const enabled = isLiveHubEnabled();
+    const tabsWrap = panel.querySelector('.live-hub-tabs');
+    if (tabsWrap) tabsWrap.hidden = !enabled;
+    if (!enabled) {
+      renderWorkInProgressState();
+      return;
+    }
+
     const tabs = panel.querySelectorAll('[data-live-hub-tab]');
     tabs.forEach((tab) => tab.classList.toggle('is-active', tab.dataset.liveHubTab === state.tab));
 
@@ -1426,6 +1472,8 @@
 
     if (statusChip) statusChip.textContent = liveCount ? `${liveCount} session${liveCount === 1 ? '' : 's'} live` : 'No session live right now';
     if (countChip) countChip.textContent = `${liveCount} live`;
+    if (tabsWrap) tabsWrap.hidden = false;
+    tabs.forEach((tab) => { tab.hidden = false; });
 
     const activeSessions = sessionsByTab(state.tab);
     if (!state.ready) {
@@ -1456,10 +1504,14 @@
   async function refreshFromServer() {
     if (!window.CollegeOSApi?.getStudentExperienceConfig || !window.CollegeOSApi?.liveSessionsUpcoming) return null;
     const [response, sessionsResponse] = await Promise.all([
+      window.CollegeOSApi.getLiveHubStatus ? window.CollegeOSApi.getLiveHubStatus().catch(() => null) : Promise.resolve(null),
       window.CollegeOSApi.getStudentExperienceConfig(),
       window.CollegeOSApi.liveSessionsUpcoming({ includeEnded: true, scope: 'student' })
     ]);
-    state.config = normalizeConfig(response);
+    state.config = normalizeConfig(response?.config || response || {});
+    if (response && typeof response.enabled === 'boolean') {
+      state.config.liveHub.enabled = response.enabled;
+    }
     state.sessions = Array.isArray(sessionsResponse?.sessions)
       ? sessionsResponse.sessions.map((session, index) => normalizeSession(session, index))
       : [];
@@ -1590,6 +1642,11 @@
   }
 
   async function joinSession(session) {
+    if (!isLiveHubEnabled()) {
+      openPanel();
+      renderPanel();
+      return;
+    }
     const currentStatus = deriveStatus(session);
     if (isTerminalStatus(session)) {
       clearActiveSessionPersistence();
@@ -1755,6 +1812,21 @@
       if (closeButton) {
         event.preventDefault();
         closePanel();
+        return;
+      }
+
+      const backToDashboard = event.target.closest('[data-live-hub-back-to-dashboard]');
+      if (backToDashboard) {
+        event.preventDefault();
+        try {
+          if (/\/dashboard(\.html)?$/i.test(window.location.pathname)) {
+            closePanel();
+          } else {
+            window.location.assign('/dashboard');
+          }
+        } catch {
+          window.location.assign('/dashboard');
+        }
         return;
       }
 

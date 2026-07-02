@@ -653,6 +653,20 @@ router.get('/experience-config', requireAuth, async (req, res) => {
   });
 });
 
+router.get('/live-hub/status', async (_req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+  const config = normalizeLiveHubConfig(await readStudentExperienceConfig());
+  res.json({
+    enabled: config.liveHub.enabled !== false,
+    title: config.liveHub.title,
+    subtitle: config.liveHub.subtitle,
+    sidebarLabel: config.liveHub.sidebarLabel,
+    message: config.liveHub.enabled !== false
+      ? 'Live Hub is enabled for students.'
+      : 'Live Hub is hidden behind a Work in Progress message.'
+  });
+});
+
 router.post('/live-hub/start', requireAuth, async (req, res) => {
   const sessionId = normalizeSessionId(req.body?.sessionId);
   const accessId = normalizeSessionId(req.body?.accessId);
@@ -777,3 +791,5 @@ router.post('/live-hub/agora-token', requireAuth, async (req, res) => {
 
 module.exports = router;
 module.exports.readStudentExperienceConfig = readStudentExperienceConfig;
+module.exports.normalizeLiveHubConfig = normalizeLiveHubConfig;
+module.exports.saveStudentExperienceConfig = saveStudentExperienceConfig;

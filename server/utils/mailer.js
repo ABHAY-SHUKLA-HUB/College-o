@@ -1,6 +1,7 @@
 const { Resend } = require('resend');
 
 const DEFAULT_EMAIL_PROVIDER = 'resend';
+const DEFAULT_EMAIL_FROM = 'College OS <noreply@collegeo.in>';
 
 let nodemailer = null;
 let transporter = null;
@@ -8,7 +9,7 @@ let resendClient = null;
 let activeProvider = null;
 
 function getMailFrom() {
-  return String(process.env.OTP_RESEND_FROM_EMAIL || '').trim();
+  return String(process.env.EMAIL_FROM || process.env.OTP_RESEND_FROM_EMAIL || DEFAULT_EMAIL_FROM).trim() || DEFAULT_EMAIL_FROM;
 }
 
 function getOtpTestEmail() {
@@ -24,7 +25,7 @@ function getResendApiKey() {
 }
 
 function getResendFromEmail() {
-  return String(process.env.OTP_RESEND_FROM_EMAIL || '').trim();
+  return String(process.env.EMAIL_FROM || process.env.OTP_RESEND_FROM_EMAIL || DEFAULT_EMAIL_FROM).trim() || DEFAULT_EMAIL_FROM;
 }
 
 function getSmtpUser() {
@@ -69,7 +70,8 @@ function logProviderSelection(provider, source) {
 function logResendStartupStatus() {
   console.log('[Mailer] Active provider: resend');
   console.log('[Mailer] Resend API key present:', Boolean(getResendApiKey()));
-  console.log('[Mailer] Resend from email:', getResendFromEmail() || '(missing)');
+  console.log('[Mailer] EMAIL_FROM configured:', Boolean(String(process.env.EMAIL_FROM || '').trim()));
+  console.log('[Mailer] Resend from email:', getResendFromEmail() || DEFAULT_EMAIL_FROM);
 }
 
 function logSmtpStartupStatus() {
@@ -130,6 +132,13 @@ function logMailerError(prefix, error) {
   console.error(prefix, { message: error?.message, code: error?.code });
 }
 
+function isLikelyResendSenderRejection(error) {
+  const message = String(error?.message || '').toLowerCase();
+  const code = String(error?.code || '').toLowerCase();
+  return /sender|from|domain|verify|verification|authorized|unauthorized/.test(message)
+    || /sender|domain|from/.test(code);
+}
+
 function getResendClient() {
   if (resendClient) return resendClient;
   const apiKey = getResendApiKey();
@@ -157,6 +166,14 @@ async function sendViaResend({ to, subject, text, html }) {
 
     return { sent: true, provider: 'resend', id: result?.data?.id || null };
   } catch (error) {
+    if (isLikelyResendSenderRejection(error)) {
+      console.error('[Mailer][Resend] sender rejected or domain not verified', {
+        from: resendFrom,
+        hint: 'Set EMAIL_FROM to a Resend-verified sender like College OS <noreply@collegeo.in> and verify collegeo.in in Resend.',
+        message: error?.message,
+        code: error?.code
+      });
+    }
     return { sent: false, reason: 'provider blocked', error };
   }
 }
@@ -194,7 +211,7 @@ async function sendSystemEmail({ to, subject, text, html }) {
       console.log('[Mailer] email sent successfully', { provider: 'resend' });
       return result;
     }
-    console.warn('[Mailer] send failed', { provider: 'resend' });
+    console.warn('[Mailer] send failed', { provider: 'resend', from, reason: result?.reason || 'provider blocked' });
     return result;
   }
 

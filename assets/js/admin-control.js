@@ -94,6 +94,16 @@ function getLiveDefaultProvider() {
   return provider === 'agora' ? 'agora' : 'jitsi';
 }
 
+function setLiveHubVisibilityStatus(enabled, note = '') {
+  const statusNode = cById('liveHubVisibilityStatus');
+  if (!statusNode) return;
+  const active = Boolean(enabled);
+  statusNode.className = `status-badge ${active ? 'ok' : 'warn'}`;
+  statusNode.textContent = note || (active
+    ? 'Live Hub is enabled for students'
+    : 'Live Hub is hidden behind Work in Progress message');
+}
+
 function escapeHtml(value) {
   return String(value || '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 }
@@ -2014,8 +2024,9 @@ async function saveExperienceConfig() {
 }
 
 async function loadLiveSessionControl() {
-  const [payload, liveSessions] = await Promise.all([
+  const [payload, visibility, liveSessions] = await Promise.all([
     window.CollegeOSApi.adminControlExperienceConfig(),
+    window.CollegeOSApi.adminControlLiveHubVisibility(),
     window.CollegeOSApi.liveSessionsUpcoming({ scope: 'admin', includeEnded: true })
   ]);
   const config = payload?.config || {};
@@ -2029,6 +2040,9 @@ async function loadLiveSessionControl() {
   cById('liveHubSidebarLabel').value = liveHub.sidebarLabel || 'Live Hub';
   cById('liveHubMentorshipDays').value = liveHub.mentorshipCycleDays ?? 15;
   cById('liveHubLabDays').value = liveHub.labCycleDays ?? 7;
+  setLiveHubVisibilityStatus(liveHub.enabled !== false, visibility?.enabled === false || visibility?.enabled === true
+    ? visibility.statusLabel
+    : undefined);
   const sessions = (liveSessions.sessions || []).map((session) => {
     const configSession = configSessionById.get(String(session.sessionId || session.id || '').trim()) || {};
     return mapLiveSessionApiToCard({
@@ -2066,6 +2080,10 @@ async function saveLiveSessionControl() {
     }
   });
 
+  await window.CollegeOSApi.adminControlUpdateLiveHubVisibility({
+    enabled: cById('liveHubEnabled').value === 'true'
+  });
+
   await window.CollegeOSApi.adminLiveSessionsSync({
     sessions: liveHubSessions.map((session) => ({
       sessionId: session.id,
@@ -2085,6 +2103,11 @@ async function saveLiveSessionControl() {
       hostCode: session.mentorAccessId || undefined
     }))
   });
+
+  setLiveHubVisibilityStatus(cById('liveHubEnabled').value === 'true');
+  window.alert(cById('liveHubEnabled').value === 'true'
+    ? 'Live Hub is enabled for students.'
+    : 'Live Hub is now hidden behind the Work in Progress screen.');
 
   window.alert('Live operations saved successfully.');
   await loadLiveSessionControl();

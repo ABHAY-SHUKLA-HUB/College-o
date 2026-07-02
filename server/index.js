@@ -837,6 +837,17 @@ process.on('uncaughtException', (err) => {
 
 async function startServer() {
   try {
+    console.info('[Startup] Environment summary', {
+      nodeEnv: process.env.NODE_ENV || 'development',
+      hasDatabaseUrl: Boolean(process.env.DATABASE_URL),
+      frontendUrl: String(process.env.FRONTEND_URL || process.env.FRONTEND_PUBLIC_URL || process.env.APP_BASE_URL || '').trim() || '(not set)',
+      adminEmailConfigured: Boolean(String(process.env.ADMIN_EMAIL || '').trim()),
+      adminPasswordConfigured: Boolean(String(process.env.ADMIN_PASSWORD || '').trim()),
+      turnstileEnabled: String(process.env.TURNSTILE_ENABLED || 'true').toLowerCase() !== 'false',
+      turnstileSiteKeyConfigured: Boolean(String(process.env.TURNSTILE_SITE_KEY || '').trim()),
+      turnstileSecretKeyConfigured: Boolean(String(process.env.TURNSTILE_SECRET_KEY || '').trim())
+    });
+
     await initMailerTransporter();
   } catch (error) {
     console.warn('[Mailer] OTP transporter setup failed', {
@@ -845,9 +856,15 @@ async function startServer() {
     });
   }
 
-  await pool.query('SELECT 1');
   await ensureDatabaseBootstrap();
-  await initializeAcademicStructure();
+  console.info('[Startup] DB connected and bootstrap complete');
+
+  const academicMigration = await initializeAcademicStructure();
+  console.info('[Startup] Academic migration complete', {
+    migrationPath: academicMigration?.migrationPath || '(unknown)',
+    statementsApplied: academicMigration?.statementsApplied ?? 0
+  });
+
   if (typeof liveSessionRoutes.runLiveSessionMaintenance === 'function') {
     liveSessionRoutes.runLiveSessionMaintenance().catch((error) => {
       console.warn('[Live Session Maintenance] initial run failed:', error.message);
@@ -867,6 +884,7 @@ async function startServer() {
   // Initialize real-time socket layer (Socket.IO)
   try {
     initSocket(server, { allowedOrigins: Array.from(allowedOrigins) });
+    console.info('[Startup] Socket.IO initialized');
   } catch (e) {
     console.warn('[Socket Init] failed to initialize socket manager:', e && e.message);
   }

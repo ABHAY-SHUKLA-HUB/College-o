@@ -43,7 +43,27 @@ function resolveSslConfig(connectionString) {
   return false;
 }
 
-const connectionString = String(process.env.DATABASE_URL || '').trim();
+function normalizeConnectionString(rawConnectionString) {
+  const value = String(rawConnectionString || '').trim();
+  if (!value) return '';
+
+  try {
+    const parsed = new URL(value);
+    const sslMode = String(parsed.searchParams.get('sslmode') || '').toLowerCase();
+
+    if (sslMode === 'prefer' || sslMode === 'require' || sslMode === 'verify-ca') {
+      parsed.searchParams.set('uselibpqcompat', 'true');
+      parsed.searchParams.set('sslmode', 'require');
+      return parsed.toString();
+    }
+
+    return parsed.toString();
+  } catch {
+    return value;
+  }
+}
+
+const connectionString = normalizeConnectionString(process.env.DATABASE_URL || '');
 if (!connectionString) {
   throw new Error('DATABASE_URL is required. Configure a real PostgreSQL connection string in .env.');
 }

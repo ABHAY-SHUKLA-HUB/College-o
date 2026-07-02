@@ -719,11 +719,12 @@
       display: flex;
       justify-content: center;
       min-height: 44px;
+      width: 100%;
     }
 
     .google-auth-button {
       width: 100%;
-      max-width: 420px;
+      max-width: 100%;
       min-height: 48px;
       display: inline-flex;
       align-items: center;
@@ -2791,7 +2792,7 @@
 
     .auth-layout {
       width: 100%;
-      max-width: 560px;
+      max-width: 760px;
       min-height: auto;
       display: block;
       background: transparent;
@@ -2807,14 +2808,14 @@
       display: grid;
       justify-items: center;
       align-content: start;
-      gap: 14px;
+      gap: 8px;
     }
 
     .auth-branding-top {
       display: grid;
       justify-items: center;
       gap: 6px;
-      margin: 2px 0 4px;
+      margin: 0 0 4px;
       text-align: center;
     }
 
@@ -2839,24 +2840,27 @@
     }
 
     .auth-branding-top .auth-logo-icon {
-      width: 46px;
-      height: 46px;
+      width: 60px;
+      height: 60px;
+      max-width: 60px;
+      max-height: 60px;
     }
 
     .auth-branding-top .auth-logo-text {
-      font-size: 1.02rem;
-      letter-spacing: 0.03em;
+      font-size: 1.85rem;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
     }
 
     .auth-branding-top .auth-logo-subtext {
-      font-size: 0.7rem;
-      letter-spacing: 0.14em;
+      font-size: 0.95rem;
+      letter-spacing: 0.12em;
       color: #6b7f95;
     }
 
     .auth-card {
       width: 100%;
-      max-width: 540px;
+      max-width: 720px;
       margin: 0 auto;
       border-radius: 22px;
       border: 1px solid rgba(180, 198, 220, 0.6);
@@ -2865,24 +2869,29 @@
         0 24px 54px rgba(15, 23, 42, 0.11),
         0 2px 6px rgba(15, 23, 42, 0.04),
         inset 0 1px 0 rgba(255, 255, 255, 0.8);
-      padding: clamp(16px, 2vw, 24px);
+      padding: clamp(32px, 3vw, 44px);
       transform: none !important;
     }
 
     .auth-logo-icon {
-      width: 42px;
-      height: 42px;
+      width: 60px;
+      height: 60px;
+      max-width: 60px;
+      max-height: 60px;
     }
 
     .auth-logo-text {
-      font-size: 1.08rem;
+      font-size: 1.95rem;
       font-weight: 800;
       color: #0f2540;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
     }
 
     .auth-logo-subtext {
       color: #5b718a;
-      letter-spacing: 0.11em;
+      font-size: 0.98rem;
+      letter-spacing: 0.12em;
       font-weight: 700;
     }
 
@@ -2971,26 +2980,33 @@
 
       .auth-layout,
       .auth-card {
-        max-width: 100%;
+        width: 94vw;
+        max-width: 94vw;
       }
 
       .auth-card {
         border-radius: 16px;
-        padding: 16px 14px;
+        padding: 24px 20px;
       }
 
       .auth-branding-top {
         gap: 4px;
-        margin-bottom: 2px;
+        margin-bottom: 0;
       }
 
       .auth-branding-top .auth-logo-icon {
-        width: 40px;
-        height: 40px;
+        width: 54px;
+        height: 54px;
+        max-width: 54px;
+        max-height: 54px;
       }
 
       .auth-branding-top .auth-logo-text {
-        font-size: 0.98rem;
+        font-size: 1.55rem;
+      }
+
+      .auth-branding-top .auth-logo-subtext {
+        font-size: 0.88rem;
       }
 
       .auth-footer {
@@ -3008,16 +3024,32 @@
       }
 
       .auth-card {
-        padding: 14px 12px;
+        width: 94vw;
+        max-width: 94vw;
+        padding: 22px 18px;
       }
 
       .auth-logo-icon {
-        width: 36px;
-        height: 36px;
+        width: 48px;
+        height: 48px;
+        max-width: 48px;
+        max-height: 48px;
+      }
+
+      .auth-branding-top .auth-logo-text {
+        font-size: 1.28rem;
+      }
+
+      .auth-branding-top .auth-logo-subtext {
+        font-size: 0.8rem;
       }
 
       .auth-branding-top .auth-logo {
         gap: 8px;
+      }
+
+      .auth-right {
+        gap: 6px;
       }
 
       .login-method-btn,

@@ -420,3 +420,160 @@ ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS is_helper BOOLEAN DEFAULT FAL
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS helper_badge VARCHAR(80);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_helper BOOLEAN DEFAULT FALSE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS helper_level VARCHAR(50) DEFAULT 'none';
+
+-- ============================================
+-- 10. ACADEMIC STRUCTURE COMPATIBILITY LAYER
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS academic_colleges (
+  id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  code VARCHAR(60),
+  name VARCHAR(180) NOT NULL,
+  label VARCHAR(220),
+  description TEXT,
+  display_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_by INTEGER REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS academic_colleges_name_unique_idx
+ON academic_colleges (LOWER(name));
+
+CREATE TABLE IF NOT EXISTS academic_courses (
+  id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  college_id INTEGER REFERENCES academic_colleges(id) ON DELETE SET NULL,
+  code VARCHAR(60),
+  name VARCHAR(180) NOT NULL,
+  label VARCHAR(220),
+  description TEXT,
+  display_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_by INTEGER REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS academic_courses_college_name_unique_idx
+ON academic_courses (college_id, LOWER(name));
+
+CREATE TABLE IF NOT EXISTS academic_years (
+  id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  year_value INTEGER NOT NULL UNIQUE,
+  label VARCHAR(80),
+  description TEXT,
+  display_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_by INTEGER REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS academic_semesters_scope_unique_idx
+ON academic_semesters (semester_number, COALESCE(year_number, 0));
+
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS category_id INTEGER REFERENCES academic_categories(id);
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS branch_id INTEGER REFERENCES academic_branches(id);
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS semester_id INTEGER REFERENCES academic_semesters(id);
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS college_id INTEGER REFERENCES academic_colleges(id);
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS course_id INTEGER REFERENCES academic_courses(id);
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS year_id INTEGER REFERENCES academic_years(id);
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS batch_year INTEGER;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS course_branch VARCHAR(120);
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS semester VARCHAR(40);
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT FALSE;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS onboarding_step VARCHAR(40) DEFAULT 'academic_profile';
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS academic_scope JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS career_interest VARCHAR(200);
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS weak_subjects JSONB;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS preferred_study_mode VARCHAR(50);
+
+CREATE OR REPLACE VIEW student_academic_profile AS
+SELECT
+  id,
+  user_id,
+  category_id,
+  branch_id,
+  semester_id,
+  college_id,
+  course_id,
+  year_id,
+  batch_year,
+  course_branch,
+  semester,
+  onboarding_completed,
+  onboarding_step,
+  academic_scope,
+  career_interest,
+  weak_subjects,
+  preferred_study_mode,
+  created_at,
+  updated_at
+FROM user_profiles;
+
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS category_id INTEGER REFERENCES academic_categories(id);
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS branch_id INTEGER REFERENCES academic_branches(id);
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS semester_id INTEGER REFERENCES academic_semesters(id);
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS college_id INTEGER REFERENCES academic_colleges(id);
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS course_id INTEGER REFERENCES academic_courses(id);
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS year_id INTEGER REFERENCES academic_years(id);
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS subject_id INTEGER REFERENCES academic_subjects(id);
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS academic_subject VARCHAR(120);
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS access_type VARCHAR(30) DEFAULT 'free';
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'published';
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS is_common BOOLEAN DEFAULT FALSE;
+
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS category_id INTEGER REFERENCES academic_categories(id);
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS branch_id INTEGER REFERENCES academic_branches(id);
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS semester_id INTEGER REFERENCES academic_semesters(id);
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS college_id INTEGER REFERENCES academic_colleges(id);
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS course_id INTEGER REFERENCES academic_courses(id);
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS year_id INTEGER REFERENCES academic_years(id);
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS subject_id INTEGER REFERENCES academic_subjects(id);
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS access_type VARCHAR(30) DEFAULT 'free';
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'published';
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS is_common BOOLEAN DEFAULT FALSE;
+
+ALTER TABLE mock_tests ADD COLUMN IF NOT EXISTS category_id INTEGER REFERENCES academic_categories(id);
+ALTER TABLE mock_tests ADD COLUMN IF NOT EXISTS branch_id INTEGER REFERENCES academic_branches(id);
+ALTER TABLE mock_tests ADD COLUMN IF NOT EXISTS semester_id INTEGER REFERENCES academic_semesters(id);
+ALTER TABLE mock_tests ADD COLUMN IF NOT EXISTS college_id INTEGER REFERENCES academic_colleges(id);
+ALTER TABLE mock_tests ADD COLUMN IF NOT EXISTS course_id INTEGER REFERENCES academic_courses(id);
+ALTER TABLE mock_tests ADD COLUMN IF NOT EXISTS year_id INTEGER REFERENCES academic_years(id);
+ALTER TABLE mock_tests ADD COLUMN IF NOT EXISTS access_type VARCHAR(30) DEFAULT 'free';
+ALTER TABLE mock_tests ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'published';
+ALTER TABLE mock_tests ADD COLUMN IF NOT EXISTS is_common BOOLEAN DEFAULT FALSE;
+
+ALTER TABLE previous_papers ADD COLUMN IF NOT EXISTS category_id INTEGER REFERENCES academic_categories(id);
+ALTER TABLE previous_papers ADD COLUMN IF NOT EXISTS branch_id INTEGER REFERENCES academic_branches(id);
+ALTER TABLE previous_papers ADD COLUMN IF NOT EXISTS semester_id INTEGER REFERENCES academic_semesters(id);
+ALTER TABLE previous_papers ADD COLUMN IF NOT EXISTS college_id INTEGER REFERENCES academic_colleges(id);
+ALTER TABLE previous_papers ADD COLUMN IF NOT EXISTS course_id INTEGER REFERENCES academic_courses(id);
+ALTER TABLE previous_papers ADD COLUMN IF NOT EXISTS year_id INTEGER REFERENCES academic_years(id);
+ALTER TABLE previous_papers ADD COLUMN IF NOT EXISTS subject_id INTEGER REFERENCES academic_subjects(id);
+ALTER TABLE previous_papers ADD COLUMN IF NOT EXISTS access_type VARCHAR(30) DEFAULT 'free';
+ALTER TABLE previous_papers ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'published';
+ALTER TABLE previous_papers ADD COLUMN IF NOT EXISTS is_common BOOLEAN DEFAULT FALSE;
+
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS category_id INTEGER REFERENCES academic_categories(id);
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS branch_id INTEGER REFERENCES academic_branches(id);
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS semester_id INTEGER REFERENCES academic_semesters(id);
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS college_id INTEGER REFERENCES academic_colleges(id);
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS course_id INTEGER REFERENCES academic_courses(id);
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS year_id INTEGER REFERENCES academic_years(id);
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS access_type VARCHAR(30) DEFAULT 'free';
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'published';
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS is_common BOOLEAN DEFAULT FALSE;
+
+CREATE INDEX IF NOT EXISTS idx_user_profiles_academic_scope ON user_profiles (college_id, course_id, category_id, branch_id, semester_id, year_id);
+CREATE INDEX IF NOT EXISTS idx_academic_courses_college_active_order ON academic_courses (college_id, is_active, display_order);
+CREATE INDEX IF NOT EXISTS idx_academic_years_active_order ON academic_years (is_active, display_order);
+CREATE INDEX IF NOT EXISTS idx_academic_branches_category_active_order ON academic_branches (category_id, is_active, display_order);
+CREATE INDEX IF NOT EXISTS idx_academic_semesters_active_order ON academic_semesters (is_active, display_order);
+CREATE INDEX IF NOT EXISTS idx_notes_academic_visibility ON notes (college_id, course_id, category_id, branch_id, semester_id);
+CREATE INDEX IF NOT EXISTS idx_quizzes_academic_visibility ON quizzes (college_id, course_id, category_id, branch_id, semester_id);
+CREATE INDEX IF NOT EXISTS idx_mock_tests_academic_visibility ON mock_tests (college_id, course_id, category_id, branch_id, semester_id);
+CREATE INDEX IF NOT EXISTS idx_previous_papers_academic_visibility ON previous_papers (college_id, course_id, category_id, branch_id, semester_id);
+CREATE INDEX IF NOT EXISTS idx_materials_academic_visibility ON materials (college_id, course_id, category_id, branch_id, semester_id);

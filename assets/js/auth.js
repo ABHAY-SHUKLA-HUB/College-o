@@ -802,13 +802,20 @@ async function refreshTurnstile(scope, { force = false } = {}) {
   }
 
   if (!siteKey) {
-    state.bypass = true;
-    setTurnstileToken(scope, '');
-    syncTurnstileUiState(scope, {
-      loading: false,
-      message: 'Security check disabled in development.',
-      error: false
-    });
+    if (isLocalDevHost()) {
+      state.bypass = true;
+      setTurnstileToken(scope, '');
+      syncTurnstileUiState(scope, {
+        loading: false,
+        message: 'Security check disabled in development.',
+        error: false
+      });
+      return { turnstileToken: '', captchaToken: '', website: String(byId(`${scope}Website`)?.value || '') };
+    }
+
+    state.bypass = false;
+    state.loadFailed = true;
+    clearTurnstileToken(scope, 'Security check is not configured for this environment.');
     return { turnstileToken: '', captchaToken: '', website: String(byId(`${scope}Website`)?.value || '') };
   }
 

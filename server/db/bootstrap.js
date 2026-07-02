@@ -35,7 +35,7 @@ async function ensureBootstrapImports() {
 async function ensureDatabaseBootstrap() {
   if (bootstrapPromise) return bootstrapPromise;
   bootstrapPromise = (async () => {
-    await query('SELECT 1');
+    await pool.query('SELECT 1');
     await ensureBootstrapImports();
   })();
   return bootstrapPromise;

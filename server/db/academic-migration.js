@@ -18,11 +18,15 @@ async function initializeAcademicStructure() {
   if (migrationExecuted) return;
 
   try {
-    const migrationPath = path.join(__dirname, '../../ACADEMIC_STRUCTURE_MIGRATION.sql');
-    
-    if (!fs.existsSync(migrationPath)) {
-      console.warn('⚠️  Academic structure migration file not found. Skipping migration.');
-      return;
+    const migrationCandidates = [
+      path.join(__dirname, '../../ACADEMIC_MIGRATION.sql'),
+      path.join(__dirname, '../../ACADEMIC_STRUCTURE_MIGRATION.sql')
+    ];
+
+    const migrationPath = migrationCandidates.find((candidatePath) => fs.existsSync(candidatePath));
+
+    if (!migrationPath) {
+      throw new Error(`Academic structure migration file not found. Looked for: ${migrationCandidates.join(', ')}`);
     }
 
     const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
@@ -47,7 +51,7 @@ async function initializeAcademicStructure() {
     }
 
     migrationExecuted = true;
-    console.log('✅ Academic structure schema initialized successfully');
+    return { ok: true, migrationPath, statementsApplied: statements.length };
   } catch (error) {
     console.error('❌ Failed to initialize academic structure schema:', error);
     throw error;

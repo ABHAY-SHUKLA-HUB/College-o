@@ -2,6 +2,7 @@ const { pool } = require('./pool');
 const logger = require('../services/logger');
 
 const TRANSIENT_CODES = new Set(['40001', '40P01', '57P01', '57P02', '57P03']);
+const PURE_SELECT_ONE = /^\s*select\s+1\s*;?\s*$/i;
 
 function isTransientError(error) {
   if (!error) return false;
@@ -17,7 +18,8 @@ async function sleep(ms) {
 async function query(text, params = [], options = {}) {
   const start = Date.now();
   const maxRetries = Math.max(0, Number(options.maxRetries ?? 1));
-  const slowThresholdMs = Number(options.slowThresholdMs ?? 150);
+  const isPureSelectOne = PURE_SELECT_ONE.test(String(text || ''));
+  const slowThresholdMs = Math.max(Number(options.slowThresholdMs ?? 150), isPureSelectOne ? 1000 : 0);
 
   let attempt = 0;
   for (;;) {

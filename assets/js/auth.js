@@ -1268,7 +1268,7 @@ const authExperienceState = {
     signupTitle: 'Create your account',
     signupDescription: 'Set up your profile in a few steps to unlock a branch-aware dashboard.',
     supportLinkLabel: 'Need help? Contact support',
-    footerConsentText: 'By continuing, you agree to Terms & Conditions and Privacy Policy.'
+    footerConsentText: 'By continuing, you agree to our'
   },
   signup: {
     fieldVisibility: {
@@ -1596,8 +1596,8 @@ function applyAuthExperienceConfig() {
   legalRows.forEach((node) => {
     node.classList.toggle('hidden', modules.legalFooter === false);
   });
-  setText('authConsentLabel', text.footerConsentText || 'By continuing, you agree to');
-  setText('authConsentLabelSignup', text.footerConsentText || 'By continuing, you agree to');
+  setText('authConsentLabel', text.footerConsentText || 'By continuing, you agree to our');
+  setText('authConsentLabelSignup', text.footerConsentText || 'By continuing, you agree to our');
 
   setText('authBrandKicker', branding.kicker || 'College OS Student Access');
   setText('authBrandHeadline', branding.headline || 'The student operating system for focused outcomes and faster wins.');

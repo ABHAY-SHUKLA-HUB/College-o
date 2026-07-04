@@ -65,7 +65,9 @@ function csrfInit() {
     res.cookie(CSRF_TOKEN_COOKIE, req.session.csrfToken, {
       httpOnly: false,  // Must be accessible to JavaScript for form submission
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      // The admin portal and API may be on different sites in production, so the
+      // CSRF token cookie must be readable in that cross-site session flow.
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 24 * 60 * 60 * 1000  // 24 hours
     });
 

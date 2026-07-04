@@ -11,11 +11,11 @@ const academicStructureState = {
 async function loadAcademicStructure() {
   try {
     const [colleges, courses, branches, years, semesters] = await Promise.all([
-      fetch('/api/academics/admin/colleges').then(r => r.json()),
-      fetch('/api/academics/admin/courses').then(r => r.json()),
-      fetch('/api/academics/admin/branches').then(r => r.json()),
-      fetch('/api/academics/admin/years').then(r => r.json()),
-      fetch('/api/academics/admin/semesters').then(r => r.json())
+      window.CollegeOSApiClient.request('/api/academics/admin/colleges'),
+      window.CollegeOSApiClient.request('/api/academics/admin/courses'),
+      window.CollegeOSApiClient.request('/api/academics/admin/branches'),
+      window.CollegeOSApiClient.request('/api/academics/admin/years'),
+      window.CollegeOSApiClient.request('/api/academics/admin/semesters')
     ]);
 
     academicStructureState.colleges = colleges.data || [];
@@ -173,12 +173,7 @@ async function loadNotes() {
     if (status) params.set('status', status);
 
     const suffix = params.toString() ? `?${params.toString()}` : '';
-    const response = await fetch(`/api/admin/academics/notes${suffix}`, { credentials: 'include' });
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || 'Failed to load notes');
-    }
+    const data = await window.CollegeOSApiClient.request(`/api/admin/academics/notes${suffix}`);
 
     if (data.notes && data.notes.length > 0) {
       tbody.innerHTML = data.notes.map((note) => `
@@ -205,17 +200,15 @@ async function deleteNote(id) {
   if (!confirm('Are you sure you want to delete this note?')) return;
 
   try {
-    const response = await fetch(`/api/admin/academics/notes/${id}`, {
+    await window.CollegeOSApiClient.request(`/api/admin/academics/notes/${id}`, {
       method: 'DELETE',
-      credentials: 'include'
     });
-
-    if (response.ok) {
-      loadNotes();
-    } else {
-      alert('Failed to delete note');
-    }
+    loadNotes();
   } catch (error) {
+    if (error.status === 401 || error.status === 403) {
+      window.location.href = 'admin-login.html';
+      return;
+    }
     alert('Error: ' + error.message);
   }
 }
@@ -227,24 +220,24 @@ document.getElementById('uploadNoteForm').addEventListener('submit', async (even
 
   try {
     status.textContent = 'Uploading...';
-    const response = await fetch('/api/admin/content/notes', {
+    const data = await window.CollegeOSApiClient.request('/api/admin/content/notes', {
       method: 'POST',
-      credentials: 'include',
       body: formData
     });
 
-    const data = await response.json();
-    if (response.ok) {
-      status.textContent = 'Note uploaded successfully!';
-      status.style.color = '#157f37';
-      event.target.reset();
-      document.getElementById('noteBranchId').innerHTML = '<option value="">Select branch or course</option>';
-      document.getElementById('noteBranchId').disabled = true;
-      loadNotes();
-    } else {
-      throw new Error(data.error);
-    }
+    status.textContent = `Note uploaded successfully! (#${data.note?.id || 'new'})`;
+    status.style.color = '#157f37';
+    event.target.reset();
+    document.getElementById('noteBranchId').innerHTML = '<option value="">Select branch or course</option>';
+    document.getElementById('noteBranchId').disabled = true;
+    loadNotes();
   } catch (error) {
+    if (error.status === 401 || error.status === 403) {
+      status.textContent = error.message || 'Admin login required.';
+      status.style.color = '#c6342d';
+      window.location.href = 'admin-login.html';
+      return;
+    }
     status.textContent = 'Error: ' + error.message;
     status.style.color = '#c6342d';
   }

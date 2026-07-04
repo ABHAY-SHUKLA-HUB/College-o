@@ -163,7 +163,12 @@ async function ensureAcademicsSchema() {
     ALTER TABLE notes
       ADD COLUMN IF NOT EXISTS college_id INTEGER REFERENCES academic_colleges(id),
       ADD COLUMN IF NOT EXISTS course_id INTEGER REFERENCES academic_courses(id),
-      ADD COLUMN IF NOT EXISTS year_id INTEGER REFERENCES academic_years(id)
+      ADD COLUMN IF NOT EXISTS year_id INTEGER REFERENCES academic_years(id),
+      ADD COLUMN IF NOT EXISTS college_name VARCHAR(180),
+      ADD COLUMN IF NOT EXISTS pdf_url TEXT,
+      ADD COLUMN IF NOT EXISTS source_type VARCHAR(40) DEFAULT 'admin_upload',
+      ADD COLUMN IF NOT EXISTS approval_status VARCHAR(30) DEFAULT 'published',
+      ADD COLUMN IF NOT EXISTS contributor_notes TEXT
   `);
 
   await pool.query(`

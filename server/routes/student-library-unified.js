@@ -157,10 +157,10 @@ router.get('/library/unified/notes', requireAuth, async (req, res) => {
         n.is_premium,
         n.created_at,
         CASE 
-          WHEN n.source_type = 'admin_upload' THEN 'Official Resource'
+          WHEN COALESCE(n.source_type, 'admin_upload') = 'admin_upload' THEN 'Official Resource'
           ELSE 'Community Resource'
         END as resource_type_label,
-        n.source_type,
+        COALESCE(n.source_type, 'admin_upload') as source_type,
         n.branch_id,
         n.semester_id,
         n.subject_id,
@@ -170,7 +170,7 @@ router.get('/library/unified/notes', requireAuth, async (req, res) => {
        LEFT JOIN users u ON u.id = n.created_by
        ${where}
        ORDER BY 
-         CASE WHEN n.source_type = 'admin_upload' THEN 1 ELSE 2 END,
+         CASE WHEN COALESCE(n.source_type, 'admin_upload') = 'admin_upload' THEN 1 ELSE 2 END,
          n.created_at DESC
        LIMIT 200`,
       params

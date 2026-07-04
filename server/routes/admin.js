@@ -598,9 +598,10 @@ router.post('/content/notes', requireAdmin, upload.single('file'), async (req, r
   const { rows } = await pool.query(
     `INSERT INTO notes (
       subject, chapter, content, difficulty, format_type, created_by, college_name, pdf_url,
-      category_id, branch_id, semester_id, academic_subject, access_type, status, is_common, college_id, course_id, year_id
+      category_id, branch_id, semester_id, academic_subject, access_type, status, is_common, college_id, course_id, year_id,
+      source_type, approval_status
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
      RETURNING id, subject, chapter, college_name, pdf_url, category_id, branch_id, semester_id, created_at`,
     [
       subject,
@@ -620,7 +621,9 @@ router.post('/content/notes', requireAdmin, upload.single('file'), async (req, r
       parsedIsCommon,
       collegeId ? Number(collegeId) : null,
       courseId ? Number(courseId) : null,
-      yearId ? Number(yearId) : null
+      yearId ? Number(yearId) : null,
+      'admin_upload',
+      'published'
     ]
   );
 

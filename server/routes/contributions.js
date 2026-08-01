@@ -197,7 +197,13 @@ router.get('/live/stream', requireAuth, async (req, res) => {
       'contribution_download_updated',
       'contribution_leaderboard_updated',
       'contribution_popularity_updated',
-      'notification_changed'
+      'notification_created',
+      'notification_updated',
+      'student_updated',
+      'membership_updated',
+      'certificate_updated',
+      'support_updated',
+      'live_session_updated'
     ].includes(evt.type)) {
       return;
     }

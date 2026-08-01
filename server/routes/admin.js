@@ -8,6 +8,7 @@ const { requireAdmin } = require('../middleware/auth');
 const { isEmail, normalizeEmail } = require('../utils/validation');
 const { createUploadMiddleware, saveUploadedFile } = require('../services/uploadService');
 const { getOtpTestEmail, sendSystemEmail } = require('../utils/mailer');
+const { publishRealtimeEvent, publishContentChanged } = require('../services/realtimeBus');
 
 const router = express.Router();
 
@@ -627,6 +628,7 @@ router.post('/content/notes', requireAdmin, upload.single('file'), async (req, r
     ]
   );
 
+  publishRealtimeEvent('content_changed', { contentType: 'notes', action: 'created', contentId: rows[0]?.id || null });
   res.status(201).json({ note: rows[0] });
 });
 
@@ -692,6 +694,7 @@ router.post('/content/papers', requireAdmin, upload.single('file'), async (req, 
     ]
   );
 
+  publishRealtimeEvent('content_changed', { contentType: 'papers', action: 'created', contentId: rows[0]?.id || null });
   res.status(201).json({ paper: rows[0] });
 });
 
@@ -772,6 +775,7 @@ router.delete('/papers/:id', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   const { rowCount } = await pool.query('DELETE FROM previous_papers WHERE id = $1', [id]);
   if (rowCount === 0) return res.status(404).json({ error: 'Paper not found' });
+  publishRealtimeEvent('content_changed', { contentType: 'papers', action: 'deleted', contentId: id });
   res.json({ message: 'Paper deleted successfully' });
 });
 
@@ -879,6 +883,7 @@ router.post('/materials', requireAdmin, upload.single('file'), async (req, res) 
     ]
   );
 
+  publishRealtimeEvent('content_changed', { contentType: 'materials', action: 'created', contentId: rows[0]?.id || null });
   res.status(201).json({ material: rows[0] });
 });
 
@@ -886,6 +891,7 @@ router.delete('/materials/:id', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   const { rowCount } = await pool.query('DELETE FROM materials WHERE id = $1', [id]);
   if (rowCount === 0) return res.status(404).json({ error: 'Material not found' });
+  publishRealtimeEvent('content_changed', { contentType: 'materials', action: 'deleted', contentId: id });
   res.json({ message: 'Material deleted successfully' });
 });
 
@@ -929,6 +935,7 @@ router.post('/quizzes', requireAdmin, async (req, res) => {
     }
 
     await client.query('COMMIT');
+    publishRealtimeEvent('content_changed', { contentType: 'quizzes', action: 'created', contentId: quiz.id || null });
     res.status(201).json({ quiz: { id: quiz.id, title, subject, question_count: questions.length } });
   } catch (error) {
     await client.query('ROLLBACK');
@@ -942,6 +949,7 @@ router.delete('/quizzes/:id', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   const { rowCount } = await pool.query('DELETE FROM admin_quizzes WHERE id = $1', [id]);
   if (rowCount === 0) return res.status(404).json({ error: 'Quiz not found' });
+  publishRealtimeEvent('content_changed', { contentType: 'quizzes', action: 'deleted', contentId: id });
   res.json({ message: 'Quiz deleted successfully' });
 });
 
@@ -1310,6 +1318,7 @@ router.post('/certificates', requireAdmin, async (req, res) => {
     certificateId: rows[0].id,
     issuedCount
   });
+  publishContentChanged('certificates', 'created', rows[0]?.id || null, { issuedCount, action });
 });
 
 router.put('/certificates/:id', requireAdmin, async (req, res) => {
@@ -1375,6 +1384,7 @@ router.put('/certificates/:id', requireAdmin, async (req, res) => {
   );
 
   if (rowCount === 0) return res.status(404).json({ error: 'Certificate not found' });
+  publishContentChanged('certificates', 'updated', id);
   res.json({ message: 'Certificate updated successfully' });
 });
 
@@ -1384,6 +1394,7 @@ router.post('/certificates/:id/issue', requireAdmin, async (req, res) => {
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid certificate id' });
 
   const issuedCount = await issueAdminCertificate(id);
+  publishContentChanged('certificates', 'issued', id, { issuedCount });
   res.json({ message: 'Certificate issued successfully', issuedCount });
 });
 
@@ -1401,6 +1412,7 @@ router.post('/certificates/:id/reissue', requireAdmin, async (req, res) => {
   );
 
   const issuedCount = await issueAdminCertificate(id);
+  publishContentChanged('certificates', 'reissued', id, { issuedCount });
   res.json({ message: 'Certificate reissued successfully', issuedCount });
 });
 
@@ -1418,6 +1430,7 @@ router.post('/certificates/:id/verify', requireAdmin, async (req, res) => {
   );
   await pool.query(`UPDATE admin_certificates SET status = 'Verified', updated_at = NOW() WHERE id = $1`, [id]);
 
+  publishContentChanged('certificates', 'verified', id);
   res.json({ message: 'Certificate verified successfully' });
 });
 
@@ -1435,6 +1448,7 @@ router.post('/certificates/:id/revoke', requireAdmin, async (req, res) => {
   );
   await pool.query(`UPDATE admin_certificates SET status = 'Revoked', updated_at = NOW() WHERE id = $1`, [id]);
 
+  publishContentChanged('certificates', 'revoked', id);
   res.json({ message: 'Certificate revoked successfully' });
 });
 
@@ -1452,6 +1466,7 @@ router.post('/certificates/bulk', requireAdmin, async (req, res) => {
       const count = await issueAdminCertificate(id);
       outcomes.push({ id, issuedCount: count });
     }
+    publishContentChanged('certificates', 'bulk_issued', 'bulk', { ids, outcomes });
     return res.json({ message: 'Bulk issue completed', outcomes });
   }
 
@@ -1470,6 +1485,7 @@ router.post('/certificates/bulk', requireAdmin, async (req, res) => {
        WHERE id = ANY($1::int[])`,
       [ids]
     );
+    publishContentChanged('certificates', 'bulk_verified', 'bulk', { ids });
     return res.json({ message: 'Bulk verify completed' });
   }
 
@@ -1488,6 +1504,7 @@ router.post('/certificates/bulk', requireAdmin, async (req, res) => {
        WHERE id = ANY($1::int[])`,
       [ids]
     );
+    publishContentChanged('certificates', 'bulk_revoked', 'bulk', { ids });
     return res.json({ message: 'Bulk revoke completed' });
   }
 
@@ -1519,6 +1536,7 @@ router.delete('/certificates/:id', requireAdmin, async (req, res) => {
 
   const { rowCount } = await pool.query('DELETE FROM admin_certificates WHERE id = $1', [id]);
   if (rowCount === 0) return res.status(404).json({ error: 'Certificate not found' });
+  publishContentChanged('certificates', 'deleted', id);
   res.json({ message: 'Certificate deleted successfully' });
 });
 
@@ -1547,12 +1565,14 @@ router.post('/roadmaps', requireAdmin, async (req, res) => {
   );
 
   res.status(201).json({ roadmap: rows[0] });
+  publishContentChanged('roadmaps', 'created', rows[0]?.id || null);
 });
 
 router.delete('/roadmaps/:id', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   const { rowCount } = await pool.query('DELETE FROM admin_roadmaps WHERE id = $1', [id]);
   if (rowCount === 0) return res.status(404).json({ error: 'Roadmap not found' });
+  publishContentChanged('roadmaps', 'deleted', id);
   res.json({ message: 'Roadmap deleted successfully' });
 });
 

@@ -143,12 +143,18 @@
       }
     }
 
+    const noteCache = new Map();
+    const quizCache = new Map();
+
     function renderNotesTable(notes) {
       if (!notes || notes.length === 0) {
         document.getElementById('notesTableBody').innerHTML =
           '<tr><td colspan="8" style="text-align: center; padding: 20px; color: #999;">No notes found</td></tr>';
         return;
       }
+
+      noteCache.clear();
+      notes.forEach((note) => noteCache.set(Number(note.id), note));
 
       const html = notes.map(note => `
         <tr>
@@ -196,6 +202,9 @@
           '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #999;">No quizzes found</td></tr>';
         return;
       }
+
+      quizCache.clear();
+      quizzes.forEach((quiz) => quizCache.set(Number(quiz.id), quiz));
 
       const html = quizzes.map(quiz => `
         <tr>
@@ -1193,31 +1202,85 @@
       document.getElementById('analyticsContent').innerHTML = html;
     }
 
-    function showCreateNoteForm() {
-      alert('Create note form - To be implemented');
-    }
+    async function editNote(noteId) {
+      const note = noteCache.get(Number(noteId));
+      if (!note) {
+        alert('Note not found. Refresh and try again.');
+        return;
+      }
 
-    function showCreateQuizForm() {
-      alert('Create quiz form - To be implemented');
-    }
+      const subject = prompt('Subject', note.subject || '')?.trim();
+      if (!subject) return;
+      const chapter = prompt('Chapter', note.chapter || '')?.trim();
+      if (!chapter) return;
+      const status = prompt('Status (published/draft/hidden)', note.status || 'published')?.trim() || note.status;
+      const accessType = prompt('Access type (free/premium)', note.access_type || 'free')?.trim() || note.access_type;
 
-    function editNote(noteId) {
-      alert(`Edit note ${noteId} - To be implemented`);
-    }
-
-    function deleteNote(noteId) {
-      if (confirm('Are you sure you want to delete this note?')) {
-        // Implement delete
+      try {
+        await window.CollegeOSApi.adminUpdateAcademicNote(noteId, {
+          subject,
+          chapter,
+          status,
+          accessType
+        });
+        await filterNotes();
+      } catch (error) {
+        alert(error.message || 'Failed to update note');
       }
     }
 
-    function editQuiz(quizId) {
-      alert(`Edit quiz ${quizId} - To be implemented`);
+    async function deleteNote(noteId) {
+      if (confirm('Are you sure you want to delete this note?')) {
+        try {
+          await window.CollegeOSApi.adminDeleteAcademicNote(noteId);
+          await filterNotes();
+        } catch (error) {
+          alert(error.message || 'Failed to delete note');
+        }
+      }
     }
 
-    function deleteQuiz(quizId) {
+    async function editQuiz(quizId) {
+      const quiz = quizCache.get(Number(quizId));
+      if (!quiz) {
+        alert('Quiz not found. Refresh and try again.');
+        return;
+      }
+
+      const subject = prompt('Subject', quiz.subject || '')?.trim();
+      if (!subject) return;
+      const chapter = prompt('Chapter', quiz.chapter || '')?.trim();
+      if (!chapter) return;
+      const difficulty = prompt('Difficulty (easy/medium/hard)', quiz.difficulty || 'medium')?.trim() || quiz.difficulty;
+      const status = prompt('Status (published/draft/hidden)', quiz.status || 'published')?.trim() || quiz.status;
+
+      try {
+        await window.CollegeOSApi.adminUpdateAcademicQuiz(quizId, {
+          subject,
+          chapter,
+          difficulty,
+          status,
+          questionCount: quiz.question_count,
+          accessType: quiz.access_type,
+          categoryId: quiz.category_id || null,
+          branchId: quiz.branch_id || null,
+          semesterId: quiz.semester_id || null,
+          isCommon: quiz.is_common
+        });
+        await filterQuizzes();
+      } catch (error) {
+        alert(error.message || 'Failed to update quiz');
+      }
+    }
+
+    async function deleteQuiz(quizId) {
       if (confirm('Are you sure you want to delete this quiz?')) {
-        // Implement delete
+        try {
+          await window.CollegeOSApi.adminDeleteAcademicQuiz(quizId);
+          await filterQuizzes();
+        } catch (error) {
+          alert(error.message || 'Failed to delete quiz');
+        }
       }
     }
   

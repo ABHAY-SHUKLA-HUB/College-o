@@ -133,6 +133,22 @@ const PUBLIC_READ_PATHS = new Set([
   '/api/academics/branches'
 ]);
 
+const ONBOARDING_PUBLIC_API_PATHS = [
+  '/api/auth/config',
+  '/api/auth/me',
+  '/api/auth/captcha/challenge',
+  '/api/academics/categories',
+  '/api/academics/colleges',
+  '/api/academics/courses',
+  '/api/academics/years',
+  '/api/academics/branches',
+  '/api/academics/semesters',
+  '/api/academics/subjects',
+  '/api/academics/onboarding/config',
+  '/api/academics/onboarding/complete',
+  '/api/academics/profile'
+];
+
 const CLEAN_PAGE_ROUTES = new Map([
   ['/login', 'login.html'],
   ['/signup', 'signup.html'],
@@ -160,7 +176,6 @@ const CLEAN_PAGE_ROUTES = new Map([
   ,['/admin-dashboard-mgmt', 'admin-dashboard-mgmt.html']
   ,['/admin-control', 'admin-control.html']
   ,['/admin-academics', 'admin-academics.html']
-  ,['/admin-academics-refactored', 'admin-academics-refactored.html']
   ,['/admin-materials', 'admin-materials.html']
   ,['/admin-notes', 'admin-notes.html']
   ,['/admin-certificates', 'admin-certificates.html']
@@ -180,6 +195,31 @@ function getRateLimitKey(req) {
 
 function isPublicReadRoute(req) {
   return req.method === 'GET' && PUBLIC_READ_PATHS.has(req.path);
+}
+
+function isOnboardingPublicApiPath(pathname) {
+  return ONBOARDING_PUBLIC_API_PATHS.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
+async function isStudentOnboardingComplete(userId) {
+  if (!userId) return false;
+  const { rows } = await pool.query(
+    `SELECT onboarding_completed, category_id, branch_id, semester_id, college_id, course_id, year_id
+     FROM user_profiles
+     WHERE user_id = $1
+     LIMIT 1`,
+    [userId]
+  );
+  const profile = rows[0] || {};
+  return Boolean(
+    profile.onboarding_completed &&
+    profile.category_id &&
+    profile.branch_id &&
+    profile.semester_id &&
+    profile.college_id &&
+    profile.course_id &&
+    profile.year_id
+  );
 }
 const hasLocalhostOrigin = configuredOrigins.some((origin) => /localhost|127\.0\.0\.1/i.test(origin));
 
@@ -513,13 +553,38 @@ app.use(securityEventLogger);
 // 13. Performance monitoring - alerts on slow endpoints
 app.use(performanceMonitor);
 
+app.use(async (req, res, next) => {
+  if (!req.path.startsWith('/api')) return next();
+  if (!req.session?.userId) return next();
+
+  const role = String(req.session.role || '').toLowerCase();
+  if (role === 'admin' || role === 'super_admin') return next();
+
+  if (isOnboardingPublicApiPath(req.path)) return next();
+
+  try {
+    const complete = await isStudentOnboardingComplete(req.session.userId);
+    if (!complete) {
+      return res.status(409).json({
+        error: 'Complete academic onboarding to access this feature.',
+        code: 'ONBOARDING_REQUIRED',
+        redirectUrl: '/academic-onboarding'
+      });
+    }
+  } catch (error) {
+    console.warn('[OnboardingGate] profile check failed', error.message);
+  }
+
+  return next();
+});
+
 // Admin page protection: serve admin HTML only when admin session exists.
 // Register AFTER session and csrf initialization so requireAdmin can access req.session.
 const adminPages = [
   '/admin-login.html', '/admin-login',
   '/admin-dashboard.html', '/admin-dashboard', '/admin-dashboard-mgmt',
   '/admin-control.html', '/admin-control',
-  '/admin-academics.html', '/admin-academics-refactored.html',
+  '/admin-academics.html',
   '/admin-materials.html', '/admin-notes.html', '/admin-certificates.html',
   '/admin-mock-tests.html', '/admin-quizzes.html', '/admin-papers.html',
   '/admin-roadmaps.html', '/admin-campus-feed.html', '/admin-ai-tools.html',
@@ -705,6 +770,29 @@ PAGE_ROUTES.forEach((file, route) => {
         if (!req.session || !req.session.userId) {
           return res.redirect(302, '/login');
         }
+        const role = String(req.session.role || '').toLowerCase();
+        if (role !== 'admin' && role !== 'super_admin') {
+          return pool.query(
+            `SELECT onboarding_completed, category_id, branch_id, semester_id, college_id, course_id, year_id
+             FROM user_profiles
+             WHERE user_id = $1
+             LIMIT 1`,
+            [req.session.userId]
+          ).then(({ rows }) => {
+            const profile = rows[0] || {};
+            const complete = Boolean(
+              profile.onboarding_completed &&
+              profile.category_id &&
+              profile.branch_id &&
+              profile.semester_id &&
+              profile.college_id &&
+              profile.course_id &&
+              profile.year_id
+            );
+            if (!complete) return res.redirect(302, '/academic-onboarding');
+            return res.sendFile(path.join(__dirname, '..', file));
+          }).catch(() => res.redirect(302, '/academic-onboarding'));
+        }
       }
 
       return res.sendFile(path.join(__dirname, '..', file));
@@ -716,7 +804,7 @@ PAGE_ROUTES.forEach((file, route) => {
 
 app.get(['/home', '/home.html'], (_req, res) => res.redirect(301, '/dashboard'));
 
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   if (req.path.startsWith('/api') || req.path.startsWith('/assets/') || req.path.startsWith('/uploads/')) {
     return next();
   }
@@ -738,6 +826,15 @@ app.use((req, res, next) => {
       if (!req.session || !req.session.userId) {
         return res.redirect(302, '/login');
       }
+      const role = String(req.session.role || '').toLowerCase();
+      if (role !== 'admin' && role !== 'super_admin') {
+        try {
+          const complete = await isStudentOnboardingComplete(req.session.userId);
+          if (!complete) return res.redirect(302, '/academic-onboarding');
+        } catch {
+          return res.redirect(302, '/academic-onboarding');
+        }
+      }
     }
 
     return res.redirect(301, CLEAN_PAGE_ROUTES.has(cleanPath) ? cleanPath : cleanPath || '/');
@@ -758,6 +855,15 @@ app.use((req, res, next) => {
     if (PROTECTED_PAGE_PATHS && PROTECTED_PAGE_PATHS.has(pathKey)) {
       if (!req.session || !req.session.userId) {
         return res.redirect(302, '/login');
+      }
+      const role = String(req.session.role || '').toLowerCase();
+      if (role !== 'admin' && role !== 'super_admin') {
+        try {
+          const complete = await isStudentOnboardingComplete(req.session.userId);
+          if (!complete) return res.redirect(302, '/academic-onboarding');
+        } catch {
+          return res.redirect(302, '/academic-onboarding');
+        }
       }
     }
 

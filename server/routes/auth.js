@@ -569,8 +569,12 @@ async function upsertGoogleUser(client, googleProfile) {
 }
 
 async function resolveGoogleLandingPath(client, userId) {
-  const profileResult = await client.query(
-    `SELECT category_id, branch_id, semester_id, college_id, course_id, year_id
+  return resolveStudentLandingPath(client, userId);
+}
+
+async function resolveStudentLandingPath(db, userId) {
+  const profileResult = await db.query(
+    `SELECT onboarding_completed, category_id, branch_id, semester_id, college_id, course_id, year_id
      FROM user_profiles
      WHERE user_id = $1
      LIMIT 1`,
@@ -579,6 +583,7 @@ async function resolveGoogleLandingPath(client, userId) {
 
   const profile = profileResult.rows[0] || {};
   const profileComplete = Boolean(
+    profile.onboarding_completed &&
     profile.category_id &&
     profile.branch_id &&
     profile.semester_id &&
@@ -586,6 +591,7 @@ async function resolveGoogleLandingPath(client, userId) {
     profile.course_id &&
     profile.year_id
   );
+
   return profileComplete ? '/dashboard' : '/academic-onboarding';
 }
 
@@ -867,6 +873,7 @@ async function ensureAuthSchema() {
       ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP,
       ADD COLUMN IF NOT EXISTS phone_verified_at TIMESTAMP,
       ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS last_login_user_agent TEXT,
       ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0,
       ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP,
@@ -1195,9 +1202,10 @@ router.post('/signup', async (req, res) => {
 
     const hash = await bcrypt.hash(password, 12);
     const referralCode = `COL${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const signupUserAgent = String(req.headers['user-agent'] || '').slice(0, 1024) || null;
     const user = await client.query(
-      `INSERT INTO users (full_name, email, mobile, phone, college_name, password_hash, referral_code, signup_provider, is_email_verified, is_mobile_verified, phone_verified, email_verified_at)
-       VALUES ($1, $2, $3, $4, NULL, $5, $6, 'email', TRUE, $7, $7, CURRENT_TIMESTAMP)
+      `INSERT INTO users (full_name, email, mobile, phone, college_name, password_hash, referral_code, signup_provider, is_email_verified, is_mobile_verified, phone_verified, email_verified_at, last_login_at, last_login_user_agent)
+       VALUES ($1, $2, $3, $4, NULL, $5, $6, 'email', TRUE, $7, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $8)
        RETURNING id, full_name, email, mobile, phone, college_name, referral_code, role, subscription_tier, signup_provider, is_email_verified, is_mobile_verified, phone_verified`,
       [
         fullName,
@@ -1206,7 +1214,8 @@ router.post('/signup', async (req, res) => {
         null,
         hash,
         referralCode,
-        Boolean(normalizedMobile)
+        Boolean(normalizedMobile),
+        signupUserAgent
       ]
     );
 
@@ -1304,11 +1313,12 @@ router.post('/google', async (req, res) => {
       if (!userRow) {
         const referralCode = `COL${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
         const temporaryPassword = await bcrypt.hash(crypto.randomBytes(24).toString('hex'), 12);
+        const googleUserAgent = String(req.headers['user-agent'] || '').slice(0, 1024) || null;
         const created = await client.query(
-          `INSERT INTO users (full_name, email, college_name, password_hash, referral_code, signup_provider, is_email_verified, email_verified_at, is_mobile_verified, phone_verified)
-           VALUES ($1, $2, NULL, $3, $4, 'google', TRUE, CURRENT_TIMESTAMP, FALSE, FALSE)
+          `INSERT INTO users (full_name, email, college_name, password_hash, referral_code, signup_provider, is_email_verified, email_verified_at, is_mobile_verified, phone_verified, last_login_at, last_login_user_agent)
+           VALUES ($1, $2, NULL, $3, $4, 'google', TRUE, CURRENT_TIMESTAMP, FALSE, FALSE, CURRENT_TIMESTAMP, $5)
            RETURNING *`,
-          [fullName, googleEmail, temporaryPassword, referralCode]
+          [fullName, googleEmail, temporaryPassword, referralCode, googleUserAgent]
         );
         userRow = created.rows[0];
 
@@ -1322,15 +1332,17 @@ router.post('/google', async (req, res) => {
           [userRow.id]
         );
       } else {
+        const googleUserAgent = String(req.headers['user-agent'] || '').slice(0, 1024) || null;
         await client.query(
           `UPDATE users
            SET full_name = COALESCE(NULLIF(full_name, ''), $2),
                signup_provider = 'google',
                is_email_verified = TRUE,
                email_verified_at = COALESCE(email_verified_at, CURRENT_TIMESTAMP),
-               last_login_at = CURRENT_TIMESTAMP
+               last_login_at = CURRENT_TIMESTAMP,
+               last_login_user_agent = $6
            WHERE id = $1`,
-          [userRow.id, fullName]
+          [userRow.id, fullName, normalizedEmail, googleId, profilePicture, googleUserAgent]
         );
         userRow = (await client.query('SELECT * FROM users WHERE id = $1', [userRow.id])).rows[0];
       }
@@ -1430,9 +1442,10 @@ router.post('/login', async (req, res) => {
     `UPDATE users
      SET failed_login_attempts = 0,
          locked_until = NULL,
-         last_login_at = CURRENT_TIMESTAMP
+         last_login_at = CURRENT_TIMESTAMP,
+         last_login_user_agent = $2
      WHERE id = $1`,
-    [user.id]
+    [user.id, String(req.headers['user-agent'] || '').slice(0, 1024) || null]
   );
 
   req.session.regenerate((sessionError) => {
@@ -1445,7 +1458,9 @@ router.post('/login', async (req, res) => {
     req.session.role = user.role;
     req.session.cookie.maxAge = rememberMe ? REMEMBER_ME_MAX_AGE_MS : STANDARD_SESSION_MAX_AGE_MS;
 
-    return res.json({ user });
+    return resolveStudentLandingPath(pool, user.id)
+      .then((redirectUrl) => res.json({ user, redirectUrl }))
+      .catch(() => res.json({ user, redirectUrl: '/academic-onboarding' }));
   });
 });
 
@@ -1751,7 +1766,10 @@ router.post('/login/email-otp', async (req, res) => {
     req.session.user = user;
     req.session.role = user.role;
     req.session.cookie.maxAge = STANDARD_SESSION_MAX_AGE_MS;
-    return res.json({ user, message: 'OTP login successful' });
+
+    return resolveStudentLandingPath(pool, user.id)
+      .then((redirectUrl) => res.json({ user, message: 'OTP login successful', redirectUrl }))
+      .catch(() => res.json({ user, message: 'OTP login successful', redirectUrl: '/academic-onboarding' }));
   });
 });
 
@@ -2024,7 +2042,11 @@ router.get('/me', async (req, res) => {
      WHERE id = $1`,
     [req.session.userId]
   );
-  return res.json({ user: rows[0] || null });
+  const user = rows[0] || null;
+  const redirectUrl = user && String(user.role || '').toLowerCase() === 'student'
+    ? await resolveStudentLandingPath(pool, user.id)
+    : '/dashboard';
+  return res.json({ user, redirectUrl });
 });
 
 module.exports = router;

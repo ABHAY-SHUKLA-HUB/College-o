@@ -180,9 +180,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    source.addEventListener('notification_changed', () => {
-      load().catch(() => {});
-    });
+    ['notification_created', 'notification_updated', 'notification_changed', 'student_updated', 'membership_updated', 'certificate_updated', 'support_updated', 'live_session_updated']
+      .forEach((eventName) => source.addEventListener(eventName, () => load().catch(() => {})));
 
     window.addEventListener('beforeunload', () => {
       try {
@@ -217,9 +216,8 @@ document.addEventListener('DOMContentLoaded', () => {
         || 'https://college-o.onrender.com';
       const s = window.io(socketUrl, { path: '/socket.io' });
       s.on('connect', () => {});
-      s.on('notification_changed', () => load().catch(() => {}));
-      s.on('live_session_started', () => load().catch(() => {}));
-      s.on('live_session_joined', () => load().catch(() => {}));
+      ['notification_created', 'notification_updated', 'notification_changed', 'student_updated', 'membership_updated', 'certificate_updated', 'support_updated', 'live_session_updated']
+        .forEach((eventName) => s.on(eventName, () => load().catch(() => {})));
     }
   } catch (e) {
     // ignore

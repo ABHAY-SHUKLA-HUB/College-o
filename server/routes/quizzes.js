@@ -1,6 +1,6 @@
 const express = require('express');
 const { pool } = require('../db/pool');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, resolveMembershipState } = require('../middleware/auth');
 const { toNumber } = require('../utils/validation');
 
 const router = express.Router();
@@ -10,6 +10,7 @@ router.get('/', async (req, res) => {
   const subject = req.query.subject;
   const branchId = req.query.branchId;
   const semesterId = req.query.semesterId;
+  const membership = viewerId ? await resolveMembershipState(viewerId) : null;
   const params = [viewerId];
   let where = 'WHERE q.status = \'published\'';
   
@@ -53,6 +54,10 @@ router.get('/', async (req, res) => {
   if (userSemesterId) {
     params.push(userSemesterId);
     where += ` AND (q.semester_id = $${params.length} OR q.semester_id IS NULL)`;
+  }
+
+  if (!membership?.isAdmin && !membership?.premiumActive) {
+    where += ` AND COALESCE(q.access_type, 'free') <> 'premium'`;
   }
   
   if (subject) {

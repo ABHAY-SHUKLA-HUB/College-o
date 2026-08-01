@@ -258,6 +258,20 @@ router.get('/stream', requireAuth, async (req, res) => {
 
     if (!targetsCollege && !targetsUser) return;
 
+    if (![
+      'notification_created',
+      'notification_updated',
+      'campus_post_moderated',
+      'campus_post_engagement',
+      'campus_post_comment',
+      'campus_official_post_published',
+      'student_updated',
+      'membership_updated',
+      'certificate_updated',
+      'support_updated',
+      'live_session_updated'
+    ].includes(evt.type)) return;
+
     res.write(`event: ${evt.type}\\n`);
     res.write(`data: ${JSON.stringify(evt.payload || {})}\\n\\n`);
   });

@@ -1158,6 +1158,20 @@
       loadAndShowGrowth(),
       loadAndShowDownloadIntelligence()
     ]);
+
+    window.addEventListener('collegeos:realtime', (event) => {
+      if (event?.detail?.type !== 'content_changed') return;
+      Promise.all([
+        loadDashboard(),
+        loadMySubmissions(),
+        loadLibrary(),
+        loadLeaderboard(),
+        loadSeasonMode(),
+        loadAndShowGrowth(),
+        loadAndShowDownloadIntelligence()
+      ]).catch(() => {});
+    });
+
     syncQuestionPaperFields();
   }
 

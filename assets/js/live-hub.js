@@ -1744,14 +1744,8 @@
           }
         };
 
-        source.addEventListener('live_session_changed', onLiveEvent);
-        source.addEventListener('live_session_created', onLiveEvent);
-        source.addEventListener('live_session_started', onLiveEvent);
-        source.addEventListener('live_session_ended', onLiveEvent);
-        source.addEventListener('live_session_joined', onLiveEvent);
-        source.addEventListener('live_session_left', onLiveEvent);
-        source.addEventListener('live_session_cancelled', onLiveEvent);
-        source.addEventListener('live_session_rescheduled', onLiveEvent);
+        ['live_session_updated', 'live_session_changed', 'live_session_created', 'live_session_started', 'live_session_ended', 'live_session_joined', 'live_session_left', 'live_session_cancelled', 'live_session_rescheduled']
+          .forEach((eventName) => source.addEventListener(eventName, onLiveEvent));
         source.addEventListener('session.started', onLiveEvent);
         source.addEventListener('session.updated', onLiveEvent);
         source.addEventListener('session.ended', onLiveEvent);

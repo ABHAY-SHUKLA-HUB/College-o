@@ -1,8 +1,13 @@
 const express = require('express');
 const { pool } = require('../db/pool');
 const { requireAdmin } = require('../middleware/auth');
+const { publishContentChanged } = require('../services/realtimeBus');
 
 const router = express.Router();
+
+function noteSourceTypeExpression(noteAlias = 'n', creatorAlias = 'creator') {
+  return `COALESCE(${noteAlias}.source_type, CASE WHEN ${creatorAlias}.role IN ('admin', 'super_admin') THEN 'admin_upload' ELSE 'student_personal' END)`;
+}
 
 // ============================================
 // ADMIN ACADEMIC CONTENT MANAGEMENT
@@ -15,6 +20,11 @@ const router = express.Router();
 router.get('/academics/content-overview', requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
+      WITH scoped_notes AS (
+        SELECT n.*, ${noteSourceTypeExpression('n', 'creator')} AS resolved_source_type
+        FROM notes n
+        LEFT JOIN users creator ON creator.id = n.created_by
+      )
       SELECT
         ac.name as category,
         ab.name as branch,
@@ -24,7 +34,7 @@ router.get('/academics/content-overview', requireAdmin, async (req, res) => {
         COUNT(CASE WHEN pp.id IS NOT NULL THEN 1 END) as papers_count
       FROM academic_categories ac
       LEFT JOIN academic_branches ab ON ab.category_id = ac.id
-      LEFT JOIN notes n ON n.branch_id = ab.id OR (n.is_common = TRUE AND n.branch_id IS NULL)
+      LEFT JOIN scoped_notes n ON (n.branch_id = ab.id OR (n.is_common = TRUE AND n.branch_id IS NULL)) AND n.resolved_source_type = 'admin_upload'
       LEFT JOIN quizzes q ON q.branch_id = ab.id OR (q.is_common = TRUE AND q.branch_id IS NULL)
       LEFT JOIN materials m ON m.branch_id = ab.id OR (m.is_common = TRUE AND m.branch_id IS NULL)
       LEFT JOIN previous_papers pp ON pp.branch_id = ab.id OR (pp.is_common = TRUE AND pp.branch_id IS NULL)
@@ -71,8 +81,8 @@ router.post('/academics/notes', requireAdmin, async (req, res) => {
         subject, chapter, content, format_type, difficulty,
         category_id, branch_id, semester_id, subject_id,
         academic_subject, access_type, is_common, status,
-        created_by, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, CURRENT_TIMESTAMP)
+        created_by, created_at, source_type, approval_status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, CURRENT_TIMESTAMP, $15, $16)
       RETURNING id, subject, chapter, category_id, branch_id, semester_id, status, created_at`,
       [
         subject,
@@ -88,13 +98,21 @@ router.post('/academics/notes', requireAdmin, async (req, res) => {
         accessType || 'free',
         isCommon === true,
         status || 'published',
-        req.session.userId
+        req.session.userId,
+        'admin_upload',
+        'published'
       ]
     );
 
     res.status(201).json({
       message: 'Note uploaded successfully',
       note: result.rows[0]
+    });
+    publishContentChanged('notes', 'created', result.rows[0]?.id || null, {
+      categoryId: categoryId || null,
+      branchId: branchId || null,
+      semesterId: semesterId || null,
+      userId: req.session.userId
     });
   } catch (error) {
     console.error('Notes upload error:', error);
@@ -110,7 +128,9 @@ router.get('/academics/notes', requireAdmin, async (req, res) => {
   try {
     const { categoryId, branchId, semesterId, status } = req.query;
     const params = [];
-    const clauses = [];
+    const clauses = ["resolved_source_type = 'admin_upload'"];
+
+    const sourceTypeExpression = noteSourceTypeExpression('n', 'creator');
 
     if (categoryId) {
       params.push(Number(categoryId));
@@ -133,12 +153,17 @@ router.get('/academics/notes', requireAdmin, async (req, res) => {
     const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
 
     const result = await pool.query(
-      `SELECT
+      `WITH scoped_notes AS (
+         SELECT n.*, ${sourceTypeExpression} AS resolved_source_type
+         FROM notes n
+         LEFT JOIN users creator ON creator.id = n.created_by
+       )
+       SELECT
         n.id, n.subject, n.chapter, n.difficulty, n.format_type, n.access_type, n.status,
         n.is_common, n.created_at, n.pdf_url, n.college_name,
         ac.name as category_name, ab.name as branch_name, asr.label as semester_label,
         u.full_name as created_by_name
-       FROM notes n
+       FROM scoped_notes n
        LEFT JOIN academic_categories ac ON ac.id = n.category_id
        LEFT JOIN academic_branches ab ON ab.id = n.branch_id
        LEFT JOIN academic_semesters asr ON asr.id = n.semester_id
@@ -203,6 +228,12 @@ router.put('/academics/notes/:id', requireAdmin, async (req, res) => {
       message: 'Note updated successfully',
       note: result.rows[0]
     });
+    publishContentChanged('notes', 'updated', noteId, {
+      categoryId: categoryId || null,
+      branchId: branchId || null,
+      semesterId: semesterId || null,
+      userId: req.session.userId
+    });
   } catch (error) {
     console.error('Note update error:', error);
     res.status(500).json({ error: 'Failed to update note' });
@@ -222,6 +253,7 @@ router.delete('/academics/notes/:id', requireAdmin, async (req, res) => {
     }
 
     res.json({ message: 'Note deleted successfully', id: noteId });
+    publishContentChanged('notes', 'deleted', noteId, { userId: req.session.userId });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete note' });
   }
@@ -277,9 +309,67 @@ router.post('/academics/quizzes', requireAdmin, async (req, res) => {
       message: 'Quiz created successfully',
       quiz: result.rows[0]
     });
+    publishContentChanged('quizzes', 'created', result.rows[0]?.id || null, {
+      categoryId: categoryId || null,
+      branchId: branchId || null,
+      semesterId: semesterId || null,
+      userId: req.session.userId
+    });
   } catch (error) {
     console.error('Quiz creation error:', error);
     res.status(500).json({ error: 'Failed to create quiz' });
+  }
+});
+
+/**
+ * PUT /admin/academics/quizzes/:id
+ * Update academic quiz
+ */
+router.put('/academics/quizzes/:id', requireAdmin, async (req, res) => {
+  try {
+    const quizId = Number(req.params.id);
+    if (!Number.isInteger(quizId) || quizId <= 0) {
+      return res.status(400).json({ error: 'Invalid quiz id' });
+    }
+
+    const {
+      subject,
+      chapter,
+      difficulty,
+      questionCount,
+      categoryId,
+      branchId,
+      semesterId,
+      accessType,
+      isCommon,
+      status
+    } = req.body;
+
+    const result = await pool.query(
+      `UPDATE quizzes SET
+        subject = COALESCE($1, subject),
+        chapter = COALESCE($2, chapter),
+        difficulty = COALESCE($3, difficulty),
+        question_count = COALESCE($4, question_count),
+        category_id = COALESCE($5, category_id),
+        branch_id = COALESCE($6, branch_id),
+        semester_id = COALESCE($7, semester_id),
+        access_type = COALESCE($8, access_type),
+        is_common = COALESCE($9, is_common),
+        status = COALESCE($10, status)
+       WHERE id = $11
+       RETURNING id, subject, chapter, category_id, branch_id, semester_id, status, created_at, question_count, difficulty, access_type, is_common`,
+      [subject, chapter, difficulty, questionCount ? Number(questionCount) : null, categoryId || null, branchId || null, semesterId || null, accessType, typeof isCommon === 'undefined' ? null : Boolean(isCommon), status, quizId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Quiz not found' });
+    }
+
+    res.json({ message: 'Quiz updated successfully', quiz: result.rows[0] });
+  } catch (error) {
+    console.error('Quiz update error:', error);
+    res.status(500).json({ error: 'Failed to update quiz' });
   }
 });
 
@@ -353,6 +443,7 @@ router.delete('/academics/quizzes/:id', requireAdmin, async (req, res) => {
     }
 
     res.json({ message: 'Quiz deleted successfully', id: quizId });
+    publishContentChanged('quizzes', 'deleted', quizId, { userId: req.session.userId });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete quiz' });
   }

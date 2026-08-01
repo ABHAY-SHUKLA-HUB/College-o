@@ -769,6 +769,7 @@
   <script>
     let currentEditingSection = null;
     let currentEditingAnnouncement = null;
+    let announcementCache = [];
 
     // Initialize
     document.addEventListener('DOMContentLoaded', async () => {
@@ -802,6 +803,16 @@
       setTimeout(() => alert.remove(), 5000);
     }
 
+    document.getElementById('sectionsList')?.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-section-payload]');
+      if (!button) return;
+      try {
+        editSectionVisibility(JSON.parse(decodeURIComponent(button.dataset.sectionPayload)));
+      } catch {
+        showAlert('Failed to open section editor', 'error');
+      }
+    });
+
     // ===== SECTIONS =====
     async function loadSections() {
       const branch = document.getElementById('branchFilter').value;
@@ -821,7 +832,7 @@
               </span>
             </div>
             <div class="mgmt-item-actions">
-              <button class="mgmt-btn mgmt-btn-sm mgmt-btn-secondary" onclick="editSectionVisibility(${s.id}, '${s.section_name}')">
+              <button class="mgmt-btn mgmt-btn-sm mgmt-btn-secondary" type="button" data-section-payload="${encodeURIComponent(JSON.stringify({ id: s.id, section_key: s.section_key, section_name: s.section_name, icon: s.icon, description: s.description, category: s.category }))}">
                 <i class="fa-solid fa-edit"></i> Edit
               </button>
             </div>
@@ -834,14 +845,36 @@
       }
     }
 
-    function editSectionVisibility(sectionId, sectionName) {
-      currentEditingSection = sectionId;
-      const branch = document.getElementById('branchFilter').value;
-      const tier = document.getElementById('tierFilter').value;
-      
-      const html = `
+    function renderSectionModal(section = null) {
+      if (!section) {
+        document.getElementById('sectionModalBody').innerHTML = `
+          <div class="mgmt-form-group">
+            <label>Section Key *</label>
+            <input type="text" id="sectionKey" placeholder="custom-section" />
+          </div>
+          <div class="mgmt-form-group">
+            <label>Section Name *</label>
+            <input type="text" id="sectionName" placeholder="Custom Section" />
+          </div>
+          <div class="mgmt-form-group">
+            <label>Icon *</label>
+            <input type="text" id="sectionIcon" placeholder="rocket" />
+          </div>
+          <div class="mgmt-form-group">
+            <label>Description</label>
+            <textarea id="sectionDescription" placeholder="Describe what this section does"></textarea>
+          </div>
+          <div class="mgmt-form-group">
+            <label>Category</label>
+            <input type="text" id="sectionCategory" placeholder="main" />
+          </div>
+        `;
+        return;
+      }
+
+      document.getElementById('sectionModalBody').innerHTML = `
         <div class="mgmt-form-group">
-          <label>Section: ${sectionName}</label>
+          <label>Section: ${section.section_name}</label>
           <p style="color: var(--dash-mgmt-muted);">Configure visibility for this section</p>
         </div>
         <div class="mgmt-switch">
@@ -857,8 +890,11 @@
           <input type="text" id="sectionTitleOverride" placeholder="Leave blank to use default" />
         </div>
       `;
-      
-      document.getElementById('sectionModalBody').innerHTML = html;
+    }
+
+    function editSectionVisibility(section) {
+      currentEditingSection = section;
+      renderSectionModal(section);
       document.getElementById('sectionModal').classList.add('active');
     }
 
@@ -867,29 +903,65 @@
     }
 
     function openSectionModal() {
-      editSectionVisibility(null, 'New Section');
+      currentEditingSection = null;
+      renderSectionModal(null);
+      document.getElementById('sectionModal').classList.add('active');
     }
 
     async function saveSectionVisibility() {
-      const isVisible = document.getElementById('sectionVisible').classList.contains('on');
-      const position = document.getElementById('sectionPosition').value;
-      const titleOverride = document.getElementById('sectionTitleOverride').value;
-      const branch = document.getElementById('branchFilter').value;
-      const tier = document.getElementById('tierFilter').value;
-      
       try {
-        const response = await fetch(`/api/admin/dashboard/sections/${currentEditingSection}/visibility`, {
+        if (!currentEditingSection) {
+          const sectionKey = document.getElementById('sectionKey').value.trim();
+          const sectionName = document.getElementById('sectionName').value.trim();
+          const icon = document.getElementById('sectionIcon').value.trim();
+          const description = document.getElementById('sectionDescription').value.trim();
+          const category = document.getElementById('sectionCategory').value.trim();
+
+          if (!sectionKey || !sectionName || !icon) {
+            showAlert('Section key, name, and icon are required', 'error');
+            return;
+          }
+
+          const response = await fetch('/api/admin/dashboard/sections', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              section_key: sectionKey,
+              section_name: sectionName,
+              icon,
+              description: description || null,
+              category: category || 'main'
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error((await response.json()).error || 'Failed to create section');
+          }
+
+          showAlert('Section created', 'success');
+          closeSectionModal();
+          loadSections();
+          return;
+        }
+
+        const isVisible = document.getElementById('sectionVisible').classList.contains('on');
+        const position = document.getElementById('sectionPosition').value;
+        const titleOverride = document.getElementById('sectionTitleOverride').value;
+        const branch = document.getElementById('branchFilter').value;
+        const tier = document.getElementById('tierFilter').value;
+
+        const response = await fetch(`/api/admin/dashboard/sections/${currentEditingSection.id}/visibility`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             branch_id: branch || null,
             membership_tier: tier || null,
             is_visible: isVisible,
-            position_order: parseInt(position),
+            position_order: parseInt(position, 10) || 0,
             title_override: titleOverride || null
           })
         });
-        
+
         if (response.ok) {
           showAlert('Section visibility updated', 'success');
           closeSectionModal();
@@ -905,8 +977,9 @@
       try {
         const response = await fetch('/api/admin/dashboard/announcements');
         const announcements = await response.json();
+        announcementCache = Array.isArray(announcements) ? announcements : [];
         
-        const html = announcements.map(a => `
+        const html = announcementCache.map(a => `
           <div class="mgmt-item">
             <div class="mgmt-item-info">
               <h3>${a.title}</h3>
@@ -934,6 +1007,21 @@
     function openAnnouncementModal() {
       currentEditingAnnouncement = null;
       document.getElementById('announcementForm').reset();
+      document.getElementById('announcementModal').querySelector('h2').textContent = 'Announcement';
+      document.getElementById('announcementModal').classList.add('active');
+    }
+
+    function openAnnouncementModalWithData(announcement) {
+      currentEditingAnnouncement = announcement;
+      document.getElementById('announcementForm').reset();
+      document.getElementById('announcementTitle').value = announcement.title || '';
+      document.getElementById('announcementMessage').value = announcement.message || '';
+      document.getElementById('announcementType').value = announcement.banner_type || 'info';
+      document.getElementById('announcementActionLabel').value = announcement.action_label || '';
+      document.getElementById('announcementActionUrl').value = announcement.action_url || '';
+      document.getElementById('announcementStartDate').value = announcement.start_date ? String(announcement.start_date).slice(0, 16) : '';
+      document.getElementById('announcementEndDate').value = announcement.end_date ? String(announcement.end_date).slice(0, 16) : '';
+      document.getElementById('announcementModal').querySelector('h2').textContent = 'Edit Announcement';
       document.getElementById('announcementModal').classList.add('active');
     }
 
@@ -951,24 +1039,32 @@
       const endDate = document.getElementById('announcementEndDate').value;
       
       try {
-        const response = await fetch('/api/admin/dashboard/announcements', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title,
-            message,
-            banner_type: type,
-            action_label: actionLabel,
-            action_url: actionUrl,
-            start_date: startDate || null,
-            end_date: endDate || null,
-            target_branches: [],
-            target_tiers: []
-          })
-        });
-        
+        const payload = {
+          title,
+          message,
+          banner_type: type,
+          is_active: typeof currentEditingAnnouncement?.is_active === 'undefined' ? true : Boolean(currentEditingAnnouncement.is_active),
+          position: Number(currentEditingAnnouncement?.position || 0),
+          icon: currentEditingAnnouncement?.icon || null,
+          action_label: actionLabel,
+          action_url: actionUrl,
+          start_date: startDate || null,
+          end_date: endDate || null,
+          target_branches: currentEditingAnnouncement?.target_branches || [],
+          target_tiers: currentEditingAnnouncement?.target_tiers || []
+        };
+
+        const response = await fetch(
+          currentEditingAnnouncement ? `/api/admin/dashboard/announcements/${currentEditingAnnouncement.id}` : '/api/admin/dashboard/announcements',
+          {
+            method: currentEditingAnnouncement ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          }
+        );
+
         if (response.ok) {
-          showAlert('Announcement created', 'success');
+          showAlert(currentEditingAnnouncement ? 'Announcement updated' : 'Announcement created', 'success');
           closeAnnouncementModal();
           loadAnnouncements();
         }
@@ -980,7 +1076,10 @@
     async function deleteAnnouncement(id) {
       if (!confirm('Delete this announcement?')) return;
       try {
-        await fetch(`/api/admin/dashboard/announcements/${id}`, { method: 'DELETE' });
+        const response = await fetch(`/api/admin/dashboard/announcements/${id}`, { method: 'DELETE' });
+        if (!response.ok) {
+          throw new Error((await response.json()).error || 'Failed to delete announcement');
+        }
         showAlert('Announcement deleted', 'success');
         loadAnnouncements();
       } catch (error) {
@@ -1227,8 +1326,12 @@
     }
 
     function editAnnouncement(id) {
-      // Placeholder for edit functionality
-      openAnnouncementModal();
+      const announcement = announcementCache.find((item) => Number(item.id) === Number(id));
+      if (!announcement) {
+        showAlert('Announcement not found', 'error');
+        return;
+      }
+      openAnnouncementModalWithData(announcement);
     }
   </script>
 </body>

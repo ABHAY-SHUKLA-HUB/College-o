@@ -1376,6 +1376,7 @@ window.CollegeOSApi = {
     const suffix = qs.toString() ? `?${qs.toString()}` : '';
     return apiFetch(`/api/admin/academics/quizzes${suffix}`);
   },
+  adminUpdateAcademicQuiz: (id, data) => apiFetch(`/api/admin/academics/quizzes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   adminDeleteAcademicQuiz: (id) => apiFetch(`/api/admin/academics/quizzes/${id}`, { method: 'DELETE' }),
   adminGetAcademicsDashboard: () => apiFetch('/api/admin/academics/dashboard'),
 

@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
+const { buildAcademicScopeClauses } = require('../middleware/contentFilter');
 const { resolveMembershipState } = require('../middleware/auth');
 
 const router = express.Router();
@@ -8,7 +9,7 @@ const router = express.Router();
 router.get('/previous-papers', requireAuth, async (req, res) => {
   const user = await pool.query('SELECT college_name FROM users WHERE id = $1', [req.session.userId]);
   const profile = await pool.query(
-    `SELECT college_id, course_id, year_id FROM user_profiles WHERE user_id = $1`,
+    `SELECT category_id, branch_id, semester_id, college_id, course_id, year_id FROM user_profiles WHERE user_id = $1`,
     [req.session.userId]
   );
   const userCollege = user.rows[0]?.college_name;
@@ -18,28 +19,17 @@ router.get('/previous-papers', requireAuth, async (req, res) => {
   }
 
   const requestedCollege = req.query.college || userCollege;
-  const params = [];
-  const clauses = [];
+  const scope = buildAcademicScopeClauses(profile.rows[0], '');
+  const params = [...scope.params];
+  const clauses = [`COALESCE(status, 'published') = 'published'`, ...scope.clauses];
   if (requestedCollege) {
     params.push(requestedCollege);
     clauses.push(`(college_name = $${params.length} OR college_name IS NULL)`);
   }
-  if (profile.rows[0]?.college_id) {
-    params.push(profile.rows[0].college_id);
-    clauses.push(`(college_id = $${params.length} OR college_id IS NULL)`);
-  }
-  if (profile.rows[0]?.course_id) {
-    params.push(profile.rows[0].course_id);
-    clauses.push(`(course_id = $${params.length} OR course_id IS NULL)`);
-  }
-  if (profile.rows[0]?.year_id) {
-    params.push(profile.rows[0].year_id);
-    clauses.push(`(year_id = $${params.length} OR year_id IS NULL)`);
-  }
 
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
   const { rows } = await pool.query(
-    `SELECT id, subject, exam_name, year, paper_url, summary_note_url, college_name
+    `SELECT id, subject, exam_name, year, paper_url, summary_note_url, college_name, category_id, branch_id, semester_id, college_id, course_id, year_id, status, is_common
      FROM previous_papers ${where}
      ORDER BY year DESC`,
     params

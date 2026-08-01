@@ -889,4 +889,9 @@ document.addEventListener('DOMContentLoaded', () => {
   bindQuizSubmit();
   hydrateQuizResult();
   loadMockTests();
+
+  window.addEventListener('collegeos:realtime', (event) => {
+    if (event?.detail?.type !== 'content_changed') return;
+    loadQuizLibrary();
+  });
 });

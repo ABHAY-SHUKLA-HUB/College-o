@@ -14,7 +14,7 @@ const {
   ValidationError
 } = require('../middleware/errorHandler');
 const dashboardRoutes = require('./dashboard');
-const { publishRealtimeEvent, subscribeRealtime } = require('../services/realtimeBus');
+const { publishRealtimeEvent, publishContentChanged, subscribeRealtime } = require('../services/realtimeBus');
 
 const router = express.Router();
 
@@ -249,6 +249,7 @@ function publishLiveSessionEvent(action, row, extra = {}) {
   // Legacy event names kept for backward compatibility.
   publishRealtimeEvent('live_session_changed', payload);
   publishRealtimeEvent(`live_session_${normalizedAction}`, payload);
+  publishContentChanged('live_sessions', normalizedAction, row?.id || row?.session_id || null, payload);
 
   // Startup-grade explicit lifecycle names.
   const modernActionMap = {
@@ -1360,7 +1361,7 @@ router.get('/stream', requireAuth, asyncHandler(async (req, res) => {
   const unsubscribe = subscribeRealtime((evt) => {
     if (!evt?.type) return;
     const eventType = String(evt.type);
-    if (!eventType.startsWith('live_session_') && !eventType.startsWith('session.')) return;
+    if (!eventType.startsWith('live_session_') && !eventType.startsWith('session.') && eventType !== 'live_session_updated') return;
     res.write(`event: ${evt.type}\n`);
     res.write(`data: ${JSON.stringify(evt.payload || {})}\n\n`);
   });

@@ -149,6 +149,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('paperSearch')?.addEventListener('input', loadPapers);
   document.getElementById('papersCollegeFilter')?.addEventListener('change', loadPapers);
 
+  window.addEventListener('collegeos:realtime', (event) => {
+    if (event?.detail?.type !== 'content_changed') return;
+    loadPaperColleges();
+    loadPapers();
+    loadDailyChallenge();
+    loadBadges();
+  });
+
   loadDailyChallenge();
   loadBadges();
   bindSupportForm();

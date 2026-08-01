@@ -1126,7 +1126,27 @@ function bindRealtimeNotificationBadge() {
       });
     };
 
-    source.addEventListener('notification_changed', refresh);
+    const forwardRealtimeEvent = (eventName, event) => {
+      let detail = {};
+      try {
+        detail = event?.data ? JSON.parse(event.data) : {};
+      } catch {
+        detail = {};
+      }
+      window.dispatchEvent(new CustomEvent('collegeos:realtime', {
+        detail: {
+          type: eventName,
+          payload: detail
+        }
+      }));
+    };
+
+    ['notification_created', 'notification_updated', 'notification_changed', 'student_updated', 'membership_updated', 'certificate_updated', 'support_updated', 'live_session_updated']
+      .forEach((eventName) => source.addEventListener(eventName, (event) => {
+        refresh();
+        forwardRealtimeEvent(eventName, event);
+      }));
+    source.addEventListener('content_changed', (event) => forwardRealtimeEvent('content_changed', event));
     source.addEventListener('campus_post_moderated', refresh);
     source.addEventListener('campus_official_post_published', refresh);
 

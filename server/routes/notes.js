@@ -5,6 +5,10 @@ const { resolveMembershipState } = require('../middleware/auth');
 
 const router = express.Router();
 
+function noteSourceTypeExpression(noteAlias = 'n', creatorAlias = 'creator') {
+  return `COALESCE(${noteAlias}.source_type, CASE WHEN ${creatorAlias}.role IN ('admin', 'super_admin') THEN 'admin_upload' ELSE 'student_personal' END)`;
+}
+
 async function checkPremiumAccess(userId) {
   const membership = await resolveMembershipState(userId);
   return Boolean(membership?.isAdmin || membership?.premiumActive);
@@ -34,6 +38,7 @@ router.get('/', requireAuth, async (req, res) => {
   const userCollegeId = userProfile.rows[0]?.college_id;
   const userCourseId = userProfile.rows[0]?.course_id;
   const userYearId = userProfile.rows[0]?.year_id;
+  const sourceTypeExpression = noteSourceTypeExpression('n', 'creator');
 
   const params = [];
   const clauses = [];
@@ -90,11 +95,17 @@ router.get('/', requireAuth, async (req, res) => {
 
   // Only show published content
   clauses.push(`status = 'published'`);
+  clauses.push(`${sourceTypeExpression} = 'admin_upload'`);
 
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
   const { rows } = await pool.query(
-    `SELECT id, subject, chapter, content, user_notes, bookmarks, difficulty, format_type, created_by, college_name, pdf_url, branch_id, semester_id, is_common, created_at
-     FROM notes ${where}
+    `WITH scoped_notes AS (
+       SELECT n.*, ${sourceTypeExpression} AS resolved_source_type
+       FROM notes n
+       LEFT JOIN users creator ON creator.id = n.created_by
+     )
+     SELECT id, subject, chapter, content, user_notes, bookmarks, difficulty, format_type, created_by, college_name, pdf_url, branch_id, semester_id, is_common, created_at
+     FROM scoped_notes n ${where}
      ORDER BY created_at DESC
      LIMIT 200`,
     params
@@ -108,7 +119,18 @@ router.get('/mine', requireAuth, async (req, res) => {
     return res.status(403).json({ error: 'Upgrade to Premium (Rs.49/month) to access notes.', code: 'UPGRADE_REQUIRED' });
   }
 
-  const { rows } = await pool.query('SELECT id, subject, chapter, user_notes, bookmarks, difficulty, format_type, created_at FROM notes WHERE created_by = $1 ORDER BY created_at DESC', [req.session.userId]);
+  const { rows } = await pool.query(
+    `WITH scoped_notes AS (
+       SELECT n.*, ${noteSourceTypeExpression('n', 'creator')} AS resolved_source_type
+       FROM notes n
+       LEFT JOIN users creator ON creator.id = n.created_by
+     )
+     SELECT id, subject, chapter, content, user_notes, bookmarks, difficulty, format_type, created_at
+     FROM scoped_notes
+     WHERE created_by = $1 AND resolved_source_type = 'student_personal'
+     ORDER BY created_at DESC`,
+    [req.session.userId]
+  );
   res.json({ notes: rows });
 });
 
@@ -121,8 +143,8 @@ router.post('/', requireAuth, async (req, res) => {
   if (!subject || !chapter || !content) return res.status(400).json({ error: 'subject, chapter, content required' });
 
   const { rows } = await pool.query(
-    `INSERT INTO notes (subject, chapter, content, user_notes, bookmarks, difficulty, format_type, created_by)
-     VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8)
+    `INSERT INTO notes (subject, chapter, content, user_notes, bookmarks, difficulty, format_type, created_by, source_type, approval_status, status)
+     VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, 'student_personal', 'draft', 'private')
      RETURNING id, subject, chapter, content, user_notes, bookmarks, difficulty, format_type, created_by, created_at`,
     [subject, chapter, content, userNotes || null, JSON.stringify(bookmarks || []), difficulty || null, formatType || null, req.session.userId]
   );
@@ -136,7 +158,14 @@ router.get('/:id', requireAuth, async (req, res) => {
 
   const noteId = Number(req.params.id);
   const { rows } = await pool.query(
-    'SELECT id, subject, chapter, content, user_notes, bookmarks, difficulty, format_type, created_at FROM notes WHERE id = $1 AND created_by = $2',
+    `WITH scoped_notes AS (
+       SELECT n.*, ${noteSourceTypeExpression('n', 'creator')} AS resolved_source_type
+       FROM notes n
+       LEFT JOIN users creator ON creator.id = n.created_by
+     )
+     SELECT id, subject, chapter, content, user_notes, bookmarks, difficulty, format_type, created_at
+     FROM scoped_notes
+     WHERE id = $1 AND created_by = $2 AND resolved_source_type = 'student_personal'`,
     [noteId, req.session.userId]
   );
   if (!rows[0]) return res.status(404).json({ error: 'Note not found' });
@@ -160,7 +189,8 @@ router.put('/:id', requireAuth, async (req, res) => {
          bookmarks = COALESCE($5::jsonb, bookmarks),
          difficulty = COALESCE($6, difficulty),
          format_type = COALESCE($7, format_type)
-     WHERE id = $8 AND created_by = $9 
+     WHERE id = $8 AND created_by = $9
+       AND COALESCE(source_type, 'student_personal') = 'student_personal'
      RETURNING id, subject, chapter, content, user_notes, bookmarks, difficulty, format_type, created_at`,
     [subject, chapter, content, userNotes, bookmarks ? JSON.stringify(bookmarks) : null, difficulty, formatType, noteId, req.session.userId]
   );
@@ -176,7 +206,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
 
   const noteId = Number(req.params.id);
   const { rows } = await pool.query(
-    'DELETE FROM notes WHERE id = $1 AND created_by = $2 RETURNING id',
+    "DELETE FROM notes WHERE id = $1 AND created_by = $2 AND COALESCE(source_type, 'student_personal') = 'student_personal' RETURNING id",
     [noteId, req.session.userId]
   );
   
@@ -192,7 +222,7 @@ router.put('/:id/bookmark', requireAuth, async (req, res) => {
   const noteId = Number(req.params.id);
   const bookmarks = req.body.bookmarks || [];
   const { rows } = await pool.query(
-    'UPDATE notes SET bookmarks = $1::jsonb WHERE id = $2 AND created_by = $3 RETURNING id, bookmarks',
+    "UPDATE notes SET bookmarks = $1::jsonb WHERE id = $2 AND created_by = $3 AND COALESCE(source_type, 'student_personal') = 'student_personal' RETURNING id, bookmarks",
     [JSON.stringify(bookmarks), noteId, req.session.userId]
   );
   if (!rows[0]) return res.status(404).json({ error: 'Note not found' });

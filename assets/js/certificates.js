@@ -433,4 +433,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   bindToolbar();
   loadCertificates();
+
+  window.addEventListener('collegeos:realtime', (event) => {
+    const type = event?.detail?.type;
+    if (type !== 'certificate_updated' && type !== 'content_changed') return;
+    loadCertificates();
+  });
 });

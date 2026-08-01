@@ -4,6 +4,7 @@ const { pool } = require('../db/pool');
 const { requireAdmin } = require('../middleware/auth');
 const { ensureUniversityCatalogSchema } = require('../utils/universities');
 const { readStudentExperienceConfig, normalizeLiveHubConfig } = require('./dashboard');
+const { publishRealtimeEvent, publishContentChanged } = require('../services/realtimeBus');
 
 const router = express.Router();
 
@@ -840,7 +841,10 @@ router.get('/students', requirePermission('students.view'), async (req, res) => 
   const search = String(req.query.search || '').trim();
   const membership = String(req.query.membership || '').trim().toLowerCase();
   const status = String(req.query.status || '').trim().toLowerCase();
+  const collegeId = toInt(req.query.collegeId);
+  const courseId = toInt(req.query.courseId);
   const branchId = toInt(req.query.branchId);
+  const semesterId = toInt(req.query.semesterId);
   const includeDeleted = toBoolean(req.query.includeDeleted);
 
   const params = [];
@@ -869,26 +873,57 @@ router.get('/students', requirePermission('students.view'), async (req, res) => 
     clauses.push(`up.branch_id = $${params.length}`);
   }
 
+  if (semesterId) {
+    params.push(semesterId);
+    clauses.push(`up.semester_id = $${params.length}`);
+  }
+
+  if (collegeId) {
+    params.push(collegeId);
+    clauses.push(`up.college_id = $${params.length}`);
+  }
+
+  if (courseId) {
+    params.push(courseId);
+    clauses.push(`up.course_id = $${params.length}`);
+  }
+
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
 
   const { rows } = await pool.query(
     `SELECT
-      u.id, u.uid, u.full_name, u.email, u.college_name, u.subscription_tier, u.payment_status,
-      u.subscription_expiry, u.is_suspended, u.is_blocked, u.deleted_at,
-      up.category_id, up.branch_id, up.semester_id,
+      u.id, u.uid, u.full_name, u.email, u.role, u.subscription_tier, u.payment_status,
+      u.subscription_started_at, u.subscription_expiry, u.last_login_at, u.created_at AS signup_date,
+      COALESCE(u.last_login_user_agent, (
+        SELECT ase.user_agent
+        FROM auth_security_events ase
+        WHERE ase.user_id = u.id AND ase.user_agent IS NOT NULL
+        ORDER BY ase.created_at DESC
+        LIMIT 1
+      )) AS device,
+      u.is_suspended, u.is_blocked, u.deleted_at,
+      up.category_id, up.branch_id, up.semester_id, up.college_id, up.course_id, up.year_id,
+      up.onboarding_completed, up.onboarding_step,
       ac.name AS category_name,
       ab.name AS branch_name,
       asr.label AS semester_label,
+      col.name AS college_name,
+      cou.name AS course_name,
+      yr.label AS year_label,
       COUNT(qa.id)::int AS quizzes_attempted,
+      COALESCE(SUM(qa.xp_earned), 0)::int AS xp,
       COALESCE(ROUND(AVG(qa.score_percent), 2), 0) AS avg_score
      FROM users u
      LEFT JOIN user_profiles up ON up.user_id = u.id
      LEFT JOIN academic_categories ac ON ac.id = up.category_id
      LEFT JOIN academic_branches ab ON ab.id = up.branch_id
      LEFT JOIN academic_semesters asr ON asr.id = up.semester_id
+     LEFT JOIN academic_colleges col ON col.id = up.college_id
+     LEFT JOIN academic_courses cou ON cou.id = up.course_id
+     LEFT JOIN academic_years yr ON yr.id = up.year_id
      LEFT JOIN quiz_attempts qa ON qa.user_id = u.id
      ${where}
-     GROUP BY u.id, up.id, ac.name, ab.name, asr.label
+     GROUP BY u.id, up.id, ac.name, ab.name, asr.label, col.name, cou.name, yr.label
      ORDER BY u.created_at DESC
      LIMIT 500`,
     params
@@ -903,18 +938,30 @@ router.get('/students/:id', requirePermission('students.view'), async (req, res)
 
   const [student, profile, payments, referrals, feedback] = await Promise.all([
     pool.query(
-      `SELECT id, uid, full_name, email, college_name, role, subscription_tier, payment_status,
-              subscription_started_at, subscription_expiry, is_suspended, is_blocked, deleted_at, created_at
-       FROM users
+      `SELECT id, uid, full_name, email, role, subscription_tier, payment_status,
+              subscription_started_at, subscription_expiry, last_login_at, created_at AS signup_date,
+              COALESCE(last_login_user_agent, (
+                SELECT ase.user_agent
+                FROM auth_security_events ase
+                WHERE ase.user_id = u.id AND ase.user_agent IS NOT NULL
+                ORDER BY ase.created_at DESC
+                LIMIT 1
+              )) AS device,
+              is_suspended, is_blocked, deleted_at
+       FROM users u
        WHERE id = $1`,
       [studentId]
     ),
     pool.query(
-      `SELECT up.*, ac.name AS category_name, ab.name AS branch_name, asr.label AS semester_label
+      `SELECT up.*, ac.name AS category_name, ab.name AS branch_name, asr.label AS semester_label,
+              col.name AS college_name, cou.name AS course_name, yr.label AS year_label
        FROM user_profiles up
        LEFT JOIN academic_categories ac ON ac.id = up.category_id
        LEFT JOIN academic_branches ab ON ab.id = up.branch_id
        LEFT JOIN academic_semesters asr ON asr.id = up.semester_id
+       LEFT JOIN academic_colleges col ON col.id = up.college_id
+       LEFT JOIN academic_courses cou ON cou.id = up.course_id
+       LEFT JOIN academic_years yr ON yr.id = up.year_id
        WHERE up.user_id = $1`,
       [studentId]
     ),
@@ -966,6 +1013,9 @@ router.put('/students/:id', requirePermission('students.manage'), async (req, re
     email,
     collegeName,
     uid,
+    collegeId,
+    courseId,
+    yearId,
     categoryId,
     branchId,
     semesterId,
@@ -985,21 +1035,36 @@ router.put('/students/:id', requirePermission('students.manage'), async (req, re
   );
 
   await pool.query(
-    `INSERT INTO user_profiles (user_id, category_id, branch_id, semester_id, target_exam, course_branch, semester, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+    `INSERT INTO user_profiles (user_id, category_id, branch_id, semester_id, college_id, course_id, year_id, target_exam, course_branch, semester, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
      ON CONFLICT (user_id)
      DO UPDATE SET
        category_id = COALESCE(EXCLUDED.category_id, user_profiles.category_id),
        branch_id = COALESCE(EXCLUDED.branch_id, user_profiles.branch_id),
        semester_id = COALESCE(EXCLUDED.semester_id, user_profiles.semester_id),
+       college_id = COALESCE(EXCLUDED.college_id, user_profiles.college_id),
+       course_id = COALESCE(EXCLUDED.course_id, user_profiles.course_id),
+       year_id = COALESCE(EXCLUDED.year_id, user_profiles.year_id),
        target_exam = COALESCE(EXCLUDED.target_exam, user_profiles.target_exam),
        course_branch = COALESCE(EXCLUDED.course_branch, user_profiles.course_branch),
        semester = COALESCE(EXCLUDED.semester, user_profiles.semester),
        updated_at = CURRENT_TIMESTAMP`,
-    [studentId, toInt(categoryId), toInt(branchId), toInt(semesterId), targetExam || null, courseBranch || null, semester || null]
+    [
+      studentId,
+      toInt(categoryId),
+      toInt(branchId),
+      toInt(semesterId),
+      toInt(collegeId),
+      toInt(courseId),
+      toInt(yearId),
+      targetExam || null,
+      courseBranch || null,
+      semester || null
+    ]
   );
 
   await writeAuditLog(req, 'student.update', 'student', studentId, req.body);
+  publishContentChanged('students', 'updated', studentId, { userId: studentId });
   res.json({ message: 'Student profile updated successfully' });
 });
 
@@ -1016,6 +1081,7 @@ router.post('/students/:id/reset-password', requirePermission('students.manage')
   await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2 AND role = \'student\'', [hash, studentId]);
 
   await writeAuditLog(req, 'student.reset_password', 'student', studentId);
+  publishContentChanged('student', 'updated', studentId, { userId: studentId, kind: 'password_reset' });
   res.json({ message: 'Student password reset successfully' });
 });
 
@@ -1039,6 +1105,7 @@ router.post('/students/:id/status', requirePermission('students.manage'), async 
   );
 
   await writeAuditLog(req, 'student.status_change', 'student', studentId, { status });
+  publishContentChanged('students', 'updated', studentId, { userId: studentId, status });
   res.json({ message: `Student status updated to ${status}` });
 });
 
@@ -1061,6 +1128,7 @@ router.put('/students/:id/membership', requirePermission('memberships.manage'), 
   );
 
   await writeAuditLog(req, 'student.membership_change', 'student', studentId, { tier, paymentStatus, expiryDate });
+  publishContentChanged('membership', 'updated', studentId, { userId: studentId, tier, paymentStatus, expiryDate });
   res.json({ message: 'Student membership updated successfully' });
 });
 
@@ -1076,6 +1144,7 @@ router.delete('/students/:id', requirePermission('students.delete'), async (req,
   );
 
   await writeAuditLog(req, 'student.soft_delete', 'student', studentId);
+  publishContentChanged('students', 'updated', studentId, { userId: studentId, deleted: true });
   res.json({ message: 'Student deleted (soft delete) successfully' });
 });
 
@@ -1089,6 +1158,7 @@ router.post('/students/:id/restore', requirePermission('students.restore'), asyn
   );
 
   await writeAuditLog(req, 'student.restore', 'student', studentId);
+  publishContentChanged('students', 'updated', studentId, { userId: studentId, restored: true });
   res.json({ message: 'Student restored successfully' });
 });
 
@@ -1118,6 +1188,7 @@ router.post('/students/bulk-action', requirePermission('students.manage'), async
   }
 
   await writeAuditLog(req, 'student.bulk_action', 'student', 'bulk', { action, studentIds });
+  publishContentChanged('students', 'updated', 'bulk', { userIds: studentIds, action });
   res.json({ message: `Bulk action '${action}' completed`, count: studentIds.length });
 });
 
@@ -1156,6 +1227,7 @@ router.post('/payments/bulk-status', requirePermission('payments.manage'), async
   }
 
   await writeAuditLog(req, 'payment.bulk_status', 'membership_payment_requests', 'bulk', { paymentIds, status });
+  publishContentChanged('membership', 'updated', 'bulk', { paymentIds, status });
   res.json({ message: 'Bulk payment status update completed', count: paymentIds.length });
 });
 
@@ -1170,6 +1242,7 @@ router.post('/payments/deactivate-expired', requirePermission('memberships.manag
   );
 
   await writeAuditLog(req, 'membership.deactivate_expired', 'users', 'bulk', { affected: result.rowCount });
+  publishContentChanged('membership', 'updated', 'bulk', { affected: result.rowCount, status: 'expired' });
   res.json({ message: 'Expired premium memberships deactivated', affected: result.rowCount });
 });
 
@@ -1952,6 +2025,7 @@ router.post('/content/:type/bulk', requirePermission('content.manage'), async (r
   }
 
   await writeAuditLog(req, 'content.bulk_action', config.table, 'bulk', { action, ids });
+  publishContentChanged(req.params.type, action, 'bulk', { ids });
   res.json({ message: `Bulk action '${action}' applied on ${req.params.type}`, count: ids.length });
 });
 
@@ -2076,6 +2150,7 @@ router.post('/mock-tests', requirePermission('mock_tests.manage'), async (req, r
   );
 
   await writeAuditLog(req, 'mock_test.create', 'mock_test', result.rows[0].id, req.body);
+  publishContentChanged('mock_tests', 'created', result.rows[0].id);
   res.status(201).json({ mockTest: result.rows[0] });
 });
 
@@ -2173,6 +2248,7 @@ router.put('/mock-tests/:id', requirePermission('mock_tests.manage'), async (req
   );
 
   await writeAuditLog(req, 'mock_test.update', 'mock_test', id, req.body);
+  publishContentChanged('mock_tests', 'updated', id);
   res.json({ message: 'Mock test updated successfully' });
 });
 
@@ -2182,6 +2258,7 @@ router.delete('/mock-tests/:id', requirePermission('mock_tests.manage'), async (
 
   await pool.query('UPDATE mock_tests SET deleted_at = NOW() WHERE id = $1', [id]);
   await writeAuditLog(req, 'mock_test.soft_delete', 'mock_test', id);
+  publishContentChanged('mock_tests', 'deleted', id);
   res.json({ message: 'Mock test deleted (soft delete)' });
 });
 
@@ -2191,6 +2268,7 @@ router.post('/mock-tests/:id/restore', requirePermission('mock_tests.manage'), a
 
   await pool.query('UPDATE mock_tests SET deleted_at = NULL WHERE id = $1', [id]);
   await writeAuditLog(req, 'mock_test.restore', 'mock_test', id);
+  publishContentChanged('mock_tests', 'restored', id);
   res.json({ message: 'Mock test restored successfully' });
 });
 
@@ -2292,6 +2370,7 @@ router.post('/mock-tests/:id/questions/manual', requirePermission('mock_tests.ma
   );
 
   await writeAuditLog(req, 'mock_test.question.create', 'mock_test', id, { questionId: result.rows[0].id });
+  publishContentChanged('mock_tests', 'question_created', id, { questionId: result.rows[0].id });
   res.status(201).json({ question: result.rows[0] });
 });
 
@@ -2358,6 +2437,7 @@ router.post('/mock-tests/:id/questions/bulk', requirePermission('mock_tests.mana
 
     await client.query('COMMIT');
     await writeAuditLog(req, 'mock_test.question.bulk_upload', 'mock_test', id, { inserted });
+    publishContentChanged('mock_tests', 'questions_bulk_created', id, { inserted });
     res.status(201).json({ inserted });
   } catch (error) {
     await client.query('ROLLBACK');
@@ -2383,6 +2463,7 @@ router.delete('/mock-tests/:id/questions/:questionId', requirePermission('mock_t
   );
 
   await writeAuditLog(req, 'mock_test.question.delete', 'mock_test', id, { questionId });
+  publishContentChanged('mock_tests', 'question_deleted', id, { questionId });
   res.json({ message: 'Question deleted successfully' });
 });
 
@@ -2505,6 +2586,7 @@ router.post('/roadmaps', requirePermission('roadmaps.manage'), async (req, res) 
   );
 
   await writeAuditLog(req, 'roadmap.create', 'roadmap', result.rows[0].id, req.body);
+  publishContentChanged('roadmaps', 'created', result.rows[0].id);
   res.status(201).json({ roadmap: result.rows[0] });
 });
 
@@ -2530,6 +2612,7 @@ router.put('/roadmaps/:id', requirePermission('roadmaps.manage'), async (req, re
   );
 
   await writeAuditLog(req, 'roadmap.update', 'roadmap', roadmapId, req.body);
+  publishContentChanged('roadmaps', 'updated', roadmapId);
   res.json({ message: 'Roadmap updated successfully' });
 });
 
@@ -2552,6 +2635,7 @@ router.post('/roadmaps/:id/milestones', requirePermission('roadmaps.manage'), as
   }
 
   await writeAuditLog(req, 'roadmap.milestones_replace', 'roadmap', roadmapId, { milestoneCount: milestones.length });
+  publishContentChanged('roadmaps', 'milestones_updated', roadmapId, { milestoneCount: milestones.length });
   res.json({ message: 'Roadmap milestones updated', count: milestones.length });
 });
 
@@ -2560,6 +2644,7 @@ router.post('/roadmaps/:id/publish', requirePermission('roadmaps.manage'), async
   if (roadmapId < 1) return res.status(400).json({ error: 'Invalid roadmap id' });
   await pool.query('UPDATE roadmaps SET is_published = TRUE WHERE id = $1', [roadmapId]);
   await writeAuditLog(req, 'roadmap.publish', 'roadmap', roadmapId);
+  publishContentChanged('roadmaps', 'published', roadmapId);
   res.json({ message: 'Roadmap published' });
 });
 
@@ -2568,6 +2653,7 @@ router.post('/roadmaps/:id/hide', requirePermission('roadmaps.manage'), async (r
   if (roadmapId < 1) return res.status(400).json({ error: 'Invalid roadmap id' });
   await pool.query('UPDATE roadmaps SET is_published = FALSE WHERE id = $1', [roadmapId]);
   await writeAuditLog(req, 'roadmap.hide', 'roadmap', roadmapId);
+  publishContentChanged('roadmaps', 'hidden', roadmapId);
   res.json({ message: 'Roadmap hidden' });
 });
 
@@ -2590,6 +2676,7 @@ router.post('/certificates/bulk-assign', requirePermission('certificates.manage'
   }
 
   await writeAuditLog(req, 'certificate.bulk_assign', 'certificate', 'bulk', { userIds, type });
+  publishContentChanged('certificates', 'bulk_assigned', 'bulk', { userIds, type });
   res.json({ message: 'Certificates assigned in bulk', count: userIds.length });
 });
 
@@ -2599,6 +2686,7 @@ router.post('/certificates/:id/revoke', requirePermission('certificates.manage')
 
   await pool.query("UPDATE certificates SET status = 'revoked' WHERE id = $1", [certificateId]);
   await writeAuditLog(req, 'certificate.revoke', 'certificate', certificateId);
+  publishContentChanged('certificates', 'revoked', certificateId);
   res.json({ message: 'Certificate revoked successfully' });
 });
 
@@ -2677,6 +2765,15 @@ router.post('/notifications/send', requirePermission('notifications.manage'), as
     membershipReminder
   });
 
+  publishContentChanged('notifications', 'broadcast_created', 'bulk', {
+    recipientCount: recipients.rowCount,
+    categoryId,
+    branchId,
+    semesterId,
+    onlyPremium,
+    membershipReminder
+  });
+
   res.json({ message: 'Notifications sent successfully', recipientCount: recipients.rowCount });
 });
 
@@ -2707,6 +2804,7 @@ router.post('/announcements', requirePermission('notifications.manage'), async (
   );
 
   await writeAuditLog(req, 'announcement.create', 'announcement', result.rows[0].id);
+  publishContentChanged('announcements', 'created', result.rows[0].id);
   res.status(201).json({ announcement: result.rows[0] });
 });
 
@@ -2729,6 +2827,7 @@ router.put('/announcements/:id', requirePermission('notifications.manage'), asyn
   );
 
   await writeAuditLog(req, 'announcement.update', 'announcement', id);
+  publishContentChanged('announcements', 'updated', id);
   res.json({ message: 'Announcement updated successfully' });
 });
 
@@ -2738,6 +2837,7 @@ router.delete('/announcements/:id', requirePermission('notifications.manage'), a
 
   await pool.query('UPDATE announcements SET deleted_at = NOW() WHERE id = $1', [id]);
   await writeAuditLog(req, 'announcement.soft_delete', 'announcement', id);
+  publishContentChanged('announcements', 'deleted', id);
   res.json({ message: 'Announcement deleted (soft delete)' });
 });
 

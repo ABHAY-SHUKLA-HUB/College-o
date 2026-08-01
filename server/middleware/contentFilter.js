@@ -37,6 +37,22 @@ async function getUserAcademicFilters(userId) {
   }
 }
 
+function buildAcademicScopeClauses(profile, alias = '') {
+  const prefix = alias ? `${alias}.` : '';
+  const clauses = [];
+  const params = [];
+  const fields = ['category_id', 'branch_id', 'semester_id', 'college_id', 'course_id', 'year_id'];
+
+  for (const field of fields) {
+    const value = profile?.[field];
+    if (value === null || value === undefined || value === '') continue;
+    params.push(value);
+    clauses.push(`(${prefix}${field} IS NULL OR ${prefix}${field} = $${params.length})`);
+  }
+
+  return { clauses, params };
+}
+
 /**
  * Filter: Ensure note belongs to user's academic profile
  */
@@ -234,6 +250,7 @@ function filterContentByAcademicProfile(userRole) {
 
 module.exports = {
   getUserAcademicFilters,
+  buildAcademicScopeClauses,
   validateNoteAccess,
   validateQuizAccess,
   validateMockTestAccess,

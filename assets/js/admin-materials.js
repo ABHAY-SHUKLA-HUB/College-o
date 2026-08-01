@@ -169,4 +169,9 @@ async function ensureAdminSession() {
       await loadAcademicOptions();
       await loadMaterials();
     })();
+
+    window.addEventListener('collegeos:realtime', (event) => {
+      if (event?.detail?.type !== 'content_changed') return;
+      loadMaterials();
+    });
   

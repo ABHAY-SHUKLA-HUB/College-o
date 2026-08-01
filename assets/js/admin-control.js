@@ -486,7 +486,7 @@ function bindLiveSessionRealtime() {
       liveSessionRealtimeSource = new EventSource(streamUrl, { withCredentials: true });
       const refresh = () => loadLiveSessionControl().catch(() => null);
 
-      ['live_session_changed', 'live_session_created', 'live_session_started', 'live_session_ended', 'live_session_joined', 'live_session_left', 'live_session_cancelled', 'live_session_rescheduled']
+      ['live_session_updated', 'live_session_changed', 'live_session_created', 'live_session_started', 'live_session_ended', 'live_session_joined', 'live_session_left', 'live_session_cancelled', 'live_session_rescheduled']
         .forEach((eventName) => liveSessionRealtimeSource.addEventListener(eventName, refresh));
 
       liveSessionRealtimeSource.onopen = () => {
@@ -936,9 +936,15 @@ async function loadStudents(includeDeleted = false) {
 
   const rows = payload.students || [];
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="co-admin-table-empty">No students found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="co-admin-table-empty">No students found.</td></tr>';
     return;
   }
+
+  const formatDate = (value) => {
+    if (!value) return '-';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString();
+  };
 
   tbody.innerHTML = rows.map((student) => `
     <tr>
@@ -946,10 +952,20 @@ async function loadStudents(includeDeleted = false) {
       <td>
         <strong>${student.full_name}</strong>
         <div class="muted">${student.email}</div>
+        <div class="muted">UID: ${student.uid || '-'}</div>
       </td>
-      <td class="mono">${student.uid || '-'}</td>
-      <td>${student.branch_name || '-'}</td>
+      <td>
+        <div>${student.college_name || '-'}</div>
+        <div class="muted">${student.course_name || student.category_name || '-'}</div>
+        <div class="muted">${student.branch_name || '-'} · ${student.semester_label || '-'}</div>
+      </td>
       <td>${asStatusBadge(student.subscription_tier)}</td>
+      <td class="mono">${Number(student.xp || 0).toLocaleString('en-IN')}</td>
+      <td>
+        <div class="muted">Signup: ${formatDate(student.signup_date)}</div>
+        <div class="muted">Last login: ${formatDate(student.last_login_at)}</div>
+      </td>
+      <td>${escapeHtml(student.device || '-')}</td>
       <td>${student.deleted_at ? asStatusBadge('deleted') : (student.is_blocked ? asStatusBadge('blocked') : (student.is_suspended ? asStatusBadge('suspended') : asStatusBadge('active')))}</td>
       <td>
         <div class="control-actions">

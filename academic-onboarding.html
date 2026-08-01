@@ -154,12 +154,12 @@
   <div class="stepper">
     <div class="stepper-step">
       <div class="stepper-circle active" id="sc1">1</div>
-      <span class="stepper-label active" id="sl1">Category</span>
+      <span class="stepper-label active" id="sl1">College</span>
     </div>
     <div class="stepper-line" id="sline1"></div>
     <div class="stepper-step">
       <div class="stepper-circle" id="sc2">2</div>
-      <span class="stepper-label" id="sl2">Branch</span>
+      <span class="stepper-label" id="sl2">Course</span>
     </div>
     <div class="stepper-line" id="sline2"></div>
     <div class="stepper-step">
@@ -205,13 +205,14 @@
 </div>
 <script>
   var step = 1;
-  var state = { categoryId:null, categoryName:'', branchId:null, branchName:'', semesterId:null, semesterLabel:'' };
+  var state = { categoryId:null, categoryName:'', branchId:null, branchName:'', semesterId:null, semesterLabel:'', yearId:null };
   var catGrid     = document.getElementById('catGrid');
   var branchList  = document.getElementById('branchList');
   var semGrid     = document.getElementById('semGrid');
   var branchSearch= document.getElementById('branchSearch');
   var btnBack     = document.getElementById('btnBack');
   var btnNext     = document.getElementById('btnNext');
+  var yearByValue = {};
 
   function escHtml(s){ return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
 
@@ -298,17 +299,25 @@
   async function loadSemesters(){
     semGrid.innerHTML='<div class="skeleton"></div>'.repeat(4);
     try{
-      var data=await fetch('/api/academics/semesters').then(function(r){return r.json();});
+      var payloads=await Promise.all([
+        fetch('/api/academics/semesters').then(function(r){return r.json();}),
+        fetch('/api/academics/years').then(function(r){return r.json();})
+      ]);
+      var data=payloads[0];
+      var years=payloads[1] && payloads[1].years ? payloads[1].years : [];
+      yearByValue={};
+      years.forEach(function(y){ yearByValue[String(y.year_value)] = y.id; });
       semGrid.innerHTML=data.semesters.map(function(s){
         var num=s.label.match(/\d+/); num=num?num[0]:s.label.charAt(0).toUpperCase();
         var tag=/year/i.test(s.label)?'Year':/semester/i.test(s.label)?'Sem':'';
-        return'<div class="sem-pill'+(state.semesterId==s.id?' selected':'')+'" data-id="'+s.id+'" data-label="'+escHtml(s.label)+'"><div class="sem-num">'+num+'</div><div class="sem-tag">'+tag+'</div></div>';
+        return'<div class="sem-pill'+(state.semesterId==s.id?' selected':'')+'" data-id="'+s.id+'" data-label="'+escHtml(s.label)+'" data-year="'+(s.year_number || '')+'"><div class="sem-num">'+num+'</div><div class="sem-tag">'+tag+'</div></div>';
       }).join('');
       semGrid.querySelectorAll('.sem-pill').forEach(function(el){
         el.addEventListener('click',function(){
           semGrid.querySelectorAll('.sem-pill').forEach(function(p){p.classList.remove('selected');});
           el.classList.add('selected');
           state.semesterId=el.dataset.id; state.semesterLabel=el.dataset.label;
+          state.yearId=yearByValue[String(el.dataset.year || '')] || null;
           hideErr('semError');
         });
       });
@@ -362,7 +371,7 @@
         method:'POST',
         headers:{'Content-Type':'application/json'},
         credentials:'include',
-        body:JSON.stringify({categoryId:parseInt(state.categoryId),branchId:parseInt(state.branchId),semesterId:parseInt(state.semesterId),weakSubjects:[]})
+        body:JSON.stringify({categoryId:parseInt(state.categoryId),branchId:parseInt(state.branchId),semesterId:parseInt(state.semesterId),collegeId:parseInt(state.categoryId),courseId:parseInt(state.branchId),yearId:state.yearId ? parseInt(state.yearId) : null,weakSubjects:[]})
       });
       if(!res.ok){ var e=await res.json(); throw new Error(e.error||'Setup failed'); }
       showSuccess();

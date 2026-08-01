@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../db/pool');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { publishContentChanged } = require('../services/realtimeBus');
 
 const router = express.Router();
 let academicsSchemaReady = false;
@@ -359,6 +360,11 @@ router.post('/admin/colleges', requireAdmin, async (req, res) => {
       ]
     );
     res.status(201).json({ data: rows[0], college: rows[0] });
+    publishContentChanged('academic_catalog', 'created', rows[0]?.id || null, {
+      entity: 'college',
+      userId: req.session.userId,
+      college: rows[0]
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to create college' });
   }
@@ -384,6 +390,11 @@ router.put('/admin/colleges/:id', requireAdmin, async (req, res) => {
     );
     if (!rows[0]) return res.status(404).json({ error: 'College not found' });
     res.json({ data: rows[0], college: rows[0] });
+    publishContentChanged('academic_catalog', 'updated', id, {
+      entity: 'college',
+      userId: req.session.userId,
+      college: rows[0]
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update college' });
   }
@@ -430,6 +441,11 @@ router.post('/admin/courses', requireAdmin, async (req, res) => {
       ]
     );
     res.status(201).json({ data: rows[0], course: rows[0] });
+    publishContentChanged('academic_catalog', 'created', rows[0]?.id || null, {
+      entity: 'course',
+      userId: req.session.userId,
+      course: rows[0]
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to create course' });
   }
@@ -456,6 +472,11 @@ router.put('/admin/courses/:id', requireAdmin, async (req, res) => {
     );
     if (!rows[0]) return res.status(404).json({ error: 'Course not found' });
     res.json({ data: rows[0], course: rows[0] });
+    publishContentChanged('academic_catalog', 'updated', id, {
+      entity: 'course',
+      userId: req.session.userId,
+      course: rows[0]
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update course' });
   }
@@ -484,6 +505,11 @@ router.post('/admin/years', requireAdmin, async (req, res) => {
       [yearValue, req.body.label || null, req.body.description || null, Number(req.body.displayOrder ?? req.body.display_order ?? 0), typeof req.body.isActive === 'undefined' ? true : Boolean(req.body.isActive), req.session.userId]
     );
     res.status(201).json({ data: rows[0], year: rows[0] });
+    publishContentChanged('academic_catalog', 'created', rows[0]?.id || null, {
+      entity: 'year',
+      userId: req.session.userId,
+      year: rows[0]
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to create year' });
   }
@@ -503,6 +529,11 @@ router.put('/admin/years/:id', requireAdmin, async (req, res) => {
     );
     if (!rows[0]) return res.status(404).json({ error: 'Year not found' });
     res.json({ data: rows[0], year: rows[0] });
+    publishContentChanged('academic_catalog', 'updated', id, {
+      entity: 'year',
+      userId: req.session.userId,
+      year: rows[0]
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update year' });
   }
@@ -537,6 +568,11 @@ router.post('/admin/branches', requireAdmin, async (req, res) => {
       [Number(courseId), name, code || null, label || null, description || null, display_order || 0, is_active !== false, req.user?.id || null]
     );
     res.status(201).json({ data: rows[0] });
+    publishContentChanged('academic_catalog', 'created', rows[0]?.id || null, {
+      entity: 'branch',
+      userId: req.session.userId,
+      branch: rows[0]
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to create branch' });
   }
@@ -559,6 +595,11 @@ router.put('/admin/branches/:id', requireAdmin, async (req, res) => {
     );
     if (!rows[0]) return res.status(404).json({ error: 'Branch not found' });
     res.json({ data: rows[0] });
+    publishContentChanged('academic_catalog', 'updated', id, {
+      entity: 'branch',
+      userId: req.session.userId,
+      branch: rows[0]
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update branch' });
   }
@@ -573,6 +614,10 @@ router.delete('/admin/branches/:id', requireAdmin, async (req, res) => {
     );
     if (!rows[0]) return res.status(404).json({ error: 'Branch not found' });
     res.json({ message: 'Branch deleted' });
+    publishContentChanged('academic_catalog', 'deleted', id, {
+      entity: 'branch',
+      userId: req.session.userId
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete branch' });
   }
@@ -608,6 +653,11 @@ router.post('/admin/semesters', requireAdmin, async (req, res) => {
       [Number(semesterNumber), yearNumber === undefined || yearNumber === null || yearNumber === '' ? null : Number(yearNumber), label || null, description || null, display_order || 0, is_active !== false, req.user?.id || null]
     );
     res.status(201).json({ data: rows[0], semester: rows[0] });
+    publishContentChanged('academic_catalog', 'created', rows[0]?.id || null, {
+      entity: 'semester',
+      userId: req.session.userId,
+      semester: rows[0]
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to create semester' });
   }
@@ -631,6 +681,11 @@ router.put('/admin/semesters/:id', requireAdmin, async (req, res) => {
     );
     if (!rows[0]) return res.status(404).json({ error: 'Semester not found' });
     res.json({ data: rows[0], semester: rows[0] });
+    publishContentChanged('academic_catalog', 'updated', id, {
+      entity: 'semester',
+      userId: req.session.userId,
+      semester: rows[0]
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update semester' });
   }
@@ -645,6 +700,10 @@ router.delete('/admin/semesters/:id', requireAdmin, async (req, res) => {
     );
     if (!rows[0]) return res.status(404).json({ error: 'Semester not found' });
     res.json({ message: 'Semester deleted' });
+    publishContentChanged('academic_catalog', 'deleted', id, {
+      entity: 'semester',
+      userId: req.session.userId
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete semester' });
   }
@@ -815,6 +874,21 @@ router.post('/onboarding/complete', requireAuth, async (req, res) => {
       });
     }
 
+    const resolvedCollegeId = collegeId ? Number(collegeId) : Number(categoryId) || null;
+    const resolvedCourseId = courseId ? Number(courseId) : Number(branchId) || null;
+    const semesterMeta = await pool.query(
+      `SELECT id, year_number, label
+       FROM academic_semesters
+       WHERE id = $1
+       LIMIT 1`,
+      [semesterId]
+    );
+    const resolvedYearId = yearId
+      ? Number(yearId)
+      : semesterMeta.rows[0]?.year_number
+        ? (await pool.query('SELECT id FROM academic_years WHERE year_value = $1 LIMIT 1', [semesterMeta.rows[0].year_number])).rows[0]?.id || null
+        : null;
+
     // Validate that branch belongs to category
     const branchCheck = await pool.query(
       `SELECT id FROM academic_branches
@@ -861,16 +935,16 @@ router.post('/onboarding/complete', requireAuth, async (req, res) => {
         semesterId,
         Number(batchYear) || null,
         courseName || null,
-        collegeId ? Number(collegeId) : null,
-        courseId ? Number(courseId) : null,
-        yearId ? Number(yearId) : null,
+        resolvedCollegeId,
+        resolvedCourseId,
+        resolvedYearId,
         targetExam || null,
         JSON.stringify(weakSubjects || []),
         careerInterest || null,
         preferredStudyMode || null,
         JSON.stringify(Array.isArray(learningGoals) ? learningGoals : []),
         onboardingPayload && typeof onboardingPayload === 'object' ? JSON.stringify(onboardingPayload) : JSON.stringify({}),
-        JSON.stringify({ categoryId, branchId, semesterId, batchYear: Number(batchYear) || null, courseName: courseName || null, collegeId: collegeId ? Number(collegeId) : null, courseId: courseId ? Number(courseId) : null, yearId: yearId ? Number(yearId) : null })
+        JSON.stringify({ categoryId, branchId, semesterId, batchYear: Number(batchYear) || null, courseName: courseName || null, collegeId: resolvedCollegeId, courseId: resolvedCourseId, yearId: resolvedYearId })
       ]
     );
 
@@ -1104,6 +1178,11 @@ router.put('/profile', requireAuth, async (req, res) => {
     res.json({
       message: 'Academic profile updated successfully',
       profile: updateResult.rows[0]
+    });
+    publishContentChanged('students', 'updated', userId, {
+      userId,
+      academicProfile: updateResult.rows[0],
+      onboardingCompleted: nextOnboardingCompleted
     });
   } catch (error) {
     console.error('Profile update error:', error);

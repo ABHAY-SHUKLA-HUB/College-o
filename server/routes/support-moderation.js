@@ -3,6 +3,7 @@ const { pool } = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const logger = require('../services/logger');
 const { ensureSupportSchema } = require('../utils/supportSchema');
+const { publishContentChanged } = require('../services/realtimeBus');
 
 const router = express.Router();
 
@@ -198,6 +199,8 @@ router.put('/moderation/:reportId/action', requireAuth, async (req, res) => {
       SET status = 'reviewed', reviewed_by = $1, review_action = $2, review_notes = $3, updated_at = NOW()
       WHERE id = $4
     `, [userId, review_action, review_notes, req.params.reportId]);
+
+    publishContentChanged('support_moderation', 'reviewed', req.params.reportId, { reviewAction: review_action });
     
     logger.info(`Moderation action taken on report ${req.params.reportId}: ${review_action}`);
     
@@ -264,6 +267,8 @@ router.put('/admin/rewards/:userId/adjust', requireAuth, async (req, res) => {
        VALUES ($1, $2, 'support_reward_adjusted')`,
       [req.params.userId, `Support reward adjusted by admin: ${pointsDelta > 0 ? '+' : ''}${pointsDelta} points. Reason: ${reason}`]
     );
+
+    publishContentChanged('support_rewards', 'adjusted', req.params.userId, { pointsDelta, reason });
 
     return res.json({ success: true, points_delta: pointsDelta });
   } catch (error) {

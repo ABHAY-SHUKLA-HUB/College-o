@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../db/pool');
 const { requireAuth, requireAdmin, resolveMembershipState } = require('../middleware/auth');
+const { buildAcademicScopeClauses } = require('../middleware/contentFilter');
 const {
   ensureAiOpsSchema,
   getStudentAiRuntimeConfig
@@ -581,21 +582,9 @@ function scoreRoadmap(row, profile) {
 async function loadRoadmapsForUser(userId) {
   const membership = await resolveMembershipState(userId);
   const profile = await getUserAcademicProfile(userId);
-  const params = [];
-  const clauses = ['r.deleted_at IS NULL', "r.status = 'published'", 'r.is_published = TRUE'];
-
-  if (profile?.category_id) {
-    params.push(profile.category_id);
-    clauses.push(`(r.category_id IS NULL OR r.category_id = $${params.length})`);
-  }
-  if (profile?.branch_id) {
-    params.push(profile.branch_id);
-    clauses.push(`(r.branch_id IS NULL OR r.branch_id = $${params.length})`);
-  }
-  if (profile?.semester_id) {
-    params.push(profile.semester_id);
-    clauses.push(`(r.semester_id IS NULL OR r.semester_id = $${params.length})`);
-  }
+  const scope = buildAcademicScopeClauses(profile, 'r');
+  const params = [...scope.params];
+  const clauses = ['r.deleted_at IS NULL', "r.status = 'published'", 'r.is_published = TRUE', ...scope.clauses];
 
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
   const { rows } = await pool.query(
@@ -627,21 +616,9 @@ async function loadRoadmapsForUser(userId) {
 async function loadAiToolsForUser(userId) {
   const membership = await resolveMembershipState(userId);
   const profile = await getUserAcademicProfile(userId);
-  const params = [];
-  const clauses = ['deleted_at IS NULL', 'is_visible = TRUE', 'is_enabled = TRUE', "status = 'published'"];
-
-  if (profile?.category_id) {
-    params.push(profile.category_id);
-    clauses.push(`(category_id IS NULL OR category_id = $${params.length})`);
-  }
-  if (profile?.branch_id) {
-    params.push(profile.branch_id);
-    clauses.push(`(branch_id IS NULL OR branch_id = $${params.length})`);
-  }
-  if (profile?.semester_id) {
-    params.push(profile.semester_id);
-    clauses.push(`(semester_id IS NULL OR semester_id = $${params.length})`);
-  }
+  const scope = buildAcademicScopeClauses(profile, '');
+  const params = [...scope.params];
+  const clauses = ['deleted_at IS NULL', 'is_visible = TRUE', 'is_enabled = TRUE', "status = 'published'", ...scope.clauses];
 
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
   const { rows } = await pool.query(

@@ -47,6 +47,7 @@
     socket.on('presence.updated', (data) => emitLocal('presence.updated', data));
     socket.on('participant.raised_hand', (data) => emitLocal('participant.raised_hand', data));
     socket.on('participant.reaction', (data) => emitLocal('participant.reaction', data));
+    socket.on('live_session_updated', (data) => emitLocal('live_session_updated', data));
 
     const instance = {
       on(event, cb) {

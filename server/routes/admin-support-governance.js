@@ -3,6 +3,7 @@ const { pool } = require('../db/pool');
 const { requireAdmin } = require('../middleware/auth');
 const logger = require('../services/logger');
 const { ensureSupportSchema } = require('../utils/supportSchema');
+const { publishContentChanged } = require('../services/realtimeBus');
 const {
   getSupportGovernanceConfig,
   setSupportGovernanceConfig,
@@ -301,6 +302,8 @@ router.post('/threads/:requestId/action', async (req, res) => {
       notes
     });
 
+    publishContentChanged('support_requests', action, requestId, { reason, notes });
+
     const { rows: requestOwner } = await pool.query('SELECT user_id FROM support_requests WHERE id = $1 LIMIT 1', [requestId]);
     if (requestOwner.length && ['hide', 'remove', 'lock_thread', 'mark_abuse', 'mark_spam', 'restore', 'unhide', 'unlock_thread', 'reopen'].includes(action)) {
       const message = `Admin moderation update on your support request: ${action.replace('_', ' ')}`;
@@ -350,6 +353,8 @@ router.post('/answers/:answerId/action', async (req, res) => {
     await pool.query(updateQuery[0], updateQuery[1]);
 
     await writeGovernanceAudit(req, `answer_${action}`, 'support_answer', answerId, { reason, notes });
+
+    publishContentChanged('support_answers', action, answerId, { reason, notes });
 
     await pool.query(
       `INSERT INTO notifications (user_id, message, kind)
@@ -416,6 +421,8 @@ router.post('/rewards/adjust', async (req, res) => {
       reason,
       eventType
     });
+
+    publishContentChanged('support_rewards', 'updated', helperUserId, { pointsDelta, reason, eventType });
 
     return res.json({ success: true, helperUserId, pointsDelta });
   } catch (error) {

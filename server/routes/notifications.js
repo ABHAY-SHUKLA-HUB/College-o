@@ -24,7 +24,21 @@ router.get('/stream', requireAuth, async (req, res) => {
   const unsubscribe = subscribeRealtime((evt) => {
     const payload = evt?.payload || {};
     if (payload.userId && Number(payload.userId) !== Number(req.session.userId)) return;
-    if (!['notification_changed', 'campus_post_moderated', 'campus_post_engagement', 'campus_post_comment', 'campus_official_post_published'].includes(evt.type)) return;
+    if (![
+      'content_changed',
+      'student_updated',
+      'notification_created',
+      'notification_updated',
+      'notification_changed',
+      'certificate_updated',
+      'membership_updated',
+      'support_updated',
+      'live_session_updated',
+      'campus_post_moderated',
+      'campus_post_engagement',
+      'campus_post_comment',
+      'campus_official_post_published'
+    ].includes(evt.type)) return;
 
     res.write(`event: ${evt.type}\\n`);
     res.write(`data: ${JSON.stringify(payload)}\\n\\n`);
@@ -98,37 +112,6 @@ router.delete('/mine/:id', requireAuth, async (req, res) => {
 
   publishRealtimeEvent('notification_changed', { userId: req.session.userId });
   res.json({ message: 'Notification deleted successfully' });
-});
-
-router.get('/stream', (req, res) => {
-  // SSE stream endpoint for real-time notifications
-  // Check authentication
-  if (!req.session?.userId) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  // Set SSE headers
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-
-  // Send initial connection confirmation
-  res.write('data: {"status": "connected"}\n\n');
-
-  // Set up heartbeat to keep connection alive
-  const heartbeatInterval = setInterval(() => {
-    res.write(':heartbeat\n\n');
-  }, 30000);
-
-  // Handle client disconnect
-  req.on('close', () => {
-    clearInterval(heartbeatInterval);
-    res.end();
-  });
-
-  // Prevent timeout
-  req.socket.setTimeout(0);
 });
 
 module.exports = router;

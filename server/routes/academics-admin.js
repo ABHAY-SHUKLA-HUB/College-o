@@ -116,6 +116,9 @@ router.post('/academics/notes', requireAdmin, async (req, res) => {
     });
   } catch (error) {
     console.error('Notes upload error:', error);
+    if (error?.code === 'INVALID_UPLOAD_FILE' || error?.statusCode === 400) {
+      return res.status(400).json({ error: error.message || 'Invalid file upload' });
+    }
     res.status(500).json({ error: 'Failed to upload note' });
   }
 });

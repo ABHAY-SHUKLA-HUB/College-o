@@ -154,25 +154,26 @@ router.post('/users/admin', requireAdmin, async (req, res) => {
 });
 
 router.get('/dashboard', requireAdmin, async (_req, res) => {
-  const [students, premium, subs, feedback, colleges, pendingApprovals, expiredUsers, monthlyRevenue, dailyActiveUsers, liveSessionTotals] = await Promise.all([
-    pool.query("SELECT COUNT(*)::int AS total FROM users WHERE role = 'student'"),
-    pool.query("SELECT COUNT(*)::int AS total FROM users WHERE role = 'student' AND subscription_tier = 'premium'"),
+  res.setHeader('Cache-Control', 'private, max-age=10, stale-while-revalidate=30');
+
+  const [userCounts, subs, feedback, payments, liveSessionTotals] = await Promise.all([
+    pool.query(
+      `SELECT
+        COUNT(*)::int AS total_students,
+        COUNT(*) FILTER (WHERE subscription_tier = 'premium')::int AS premium_students,
+        COUNT(DISTINCT college_name)::int AS colleges_covered,
+        COUNT(*) FILTER (WHERE payment_status = 'expired')::int AS expired_users,
+        COUNT(*) FILTER (WHERE deleted_at IS NULL AND last_login_at >= CURRENT_DATE)::int AS daily_active_users
+       FROM users
+       WHERE role = 'student'`
+    ),
     pool.query("SELECT COALESCE(SUM(amount_inr), 0)::numeric(10,2) AS revenue FROM subscriptions WHERE status = 'active'"),
     pool.query('SELECT COUNT(*)::int AS total FROM feedback'),
-    pool.query("SELECT COUNT(DISTINCT college_name)::int AS total FROM users WHERE role = 'student'"),
-    pool.query("SELECT COUNT(*)::int AS total FROM membership_payment_requests WHERE status = 'pending'"),
-    pool.query("SELECT COUNT(*)::int AS total FROM users WHERE role = 'student' AND payment_status = 'expired'"),
     pool.query(
-      `SELECT COALESCE(SUM(amount_inr), 0)::numeric(10,2) AS revenue
-       FROM membership_payment_requests
-       WHERE status = 'approved' AND approved_at >= DATE_TRUNC('month', NOW())`
-    ),
-    pool.query(
-      `SELECT COUNT(*)::int AS total
-       FROM users
-       WHERE role = 'student'
-         AND deleted_at IS NULL
-         AND last_login_at >= CURRENT_DATE`
+      `SELECT
+        COUNT(*) FILTER (WHERE status = 'pending')::int AS pending_approvals,
+        COALESCE(SUM(amount_inr) FILTER (WHERE status = 'approved' AND approved_at >= DATE_TRUNC('month', NOW())), 0)::numeric(10,2) AS monthly_revenue
+       FROM membership_payment_requests`
     ),
     pool.query(
       `SELECT
@@ -187,15 +188,15 @@ router.get('/dashboard', requireAdmin, async (_req, res) => {
   ]);
 
   res.json({
-    totalStudents: students.rows[0].total,
-    premiumStudents: premium.rows[0].total,
+    totalStudents: userCounts.rows[0].total_students,
+    premiumStudents: userCounts.rows[0].premium_students,
     revenueInr: Number(subs.rows[0].revenue),
     totalFeedback: feedback.rows[0].total,
-    collegesCovered: colleges.rows[0].total,
-    pendingApprovals: pendingApprovals.rows[0].total,
-    expiredUsers: expiredUsers.rows[0].total,
-    monthlyRevenueInr: Number(monthlyRevenue.rows[0].revenue),
-    dailyActiveUsers: dailyActiveUsers.rows[0].total,
+    collegesCovered: userCounts.rows[0].colleges_covered,
+    pendingApprovals: payments.rows[0].pending_approvals,
+    expiredUsers: userCounts.rows[0].expired_users,
+    monthlyRevenueInr: Number(payments.rows[0].monthly_revenue),
+    dailyActiveUsers: userCounts.rows[0].daily_active_users,
     liveSessions: liveSessionTotals.rows[0]
   });
 });
@@ -590,6 +591,9 @@ router.post('/content/notes', requireAdmin, upload.single('file'), async (req, r
       });
       fileUrl = stored.url;
     } catch (error) {
+      if (error?.code === 'INVALID_UPLOAD_FILE' || error?.statusCode === 400) {
+        return res.status(400).json({ error: error.message || 'Invalid file upload' });
+      }
       return res.status(502).json({ error: 'Failed to upload note file' });
     }
   }
@@ -663,6 +667,9 @@ router.post('/content/papers', requireAdmin, upload.single('file'), async (req, 
       });
       fileUrl = stored.url;
     } catch (error) {
+      if (error?.code === 'INVALID_UPLOAD_FILE' || error?.statusCode === 400) {
+        return res.status(400).json({ error: error.message || 'Invalid file upload' });
+      }
       return res.status(502).json({ error: 'Failed to upload paper file' });
     }
   }
@@ -853,6 +860,9 @@ router.post('/materials', requireAdmin, upload.single('file'), async (req, res) 
       });
       fileUrl = stored.url;
     } catch (error) {
+      if (error?.code === 'INVALID_UPLOAD_FILE' || error?.statusCode === 400) {
+        return res.status(400).json({ error: error.message || 'Invalid file upload' });
+      }
       return res.status(502).json({ error: 'Failed to upload material file' });
     }
   }

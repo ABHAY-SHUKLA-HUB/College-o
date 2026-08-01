@@ -6,6 +6,23 @@ const { ensureSupportSchema } = require('../utils/supportSchema');
 
 let bootstrapPromise = null;
 
+async function pingDatabaseWithRetry(attempts = 3, delayMs = 250) {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await pool.query('SELECT 1');
+      return;
+    } catch (error) {
+      lastError = error;
+      if (attempt === attempts) break;
+      await new Promise((resolve) => setTimeout(resolve, delayMs * attempt));
+    }
+  }
+
+  throw lastError;
+}
+
 async function ensureBootstrapImports() {
   const modules = [
     () => require('../routes/auth').ensureAuthSchema?.(),
@@ -35,7 +52,7 @@ async function ensureBootstrapImports() {
 async function ensureDatabaseBootstrap() {
   if (bootstrapPromise) return bootstrapPromise;
   bootstrapPromise = (async () => {
-    await pool.query('SELECT 1');
+    await pingDatabaseWithRetry();
     await ensureBootstrapImports();
   })();
   return bootstrapPromise;

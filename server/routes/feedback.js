@@ -43,6 +43,9 @@ router.post('/upload-screenshot', requireAuth, upload.single('screenshot'), asyn
     });
     return res.status(201).json({ screenshotUrl: stored.url });
   } catch (error) {
+    if (error?.code === 'INVALID_UPLOAD_FILE' || error?.statusCode === 400) {
+      return res.status(400).json({ error: error.message || 'Invalid file upload' });
+    }
     return res.status(502).json({ error: 'Failed to upload screenshot' });
   }
 });

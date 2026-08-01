@@ -16,6 +16,23 @@ function normalizeSslMode(rawUrl) {
   }
 }
 
+function getConnectionHost(rawUrl) {
+  try {
+    return new URL(rawUrl).hostname.toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+function isSupabaseHost(rawUrl) {
+  const host = getConnectionHost(rawUrl);
+  return host.includes('supabase.co') || host.includes('pooler.supabase.com');
+}
+
+function isNeonHost(rawUrl) {
+  return getConnectionHost(rawUrl).includes('neon.tech');
+}
+
 function shouldRejectUnauthorized() {
   const explicit = String(process.env.PG_SSL_REJECT_UNAUTHORIZED || process.env.DB_SSL_REJECT_UNAUTHORIZED || '').toLowerCase();
   if (explicit === 'false' || explicit === '0' || explicit === 'off') return false;
@@ -50,11 +67,23 @@ function normalizeConnectionString(rawConnectionString) {
   try {
     const parsed = new URL(value);
     const sslMode = String(parsed.searchParams.get('sslmode') || '').toLowerCase();
+    const supabaseHost = isSupabaseHost(value);
+    const neonHost = isNeonHost(value);
+
+    if (!parsed.searchParams.has('application_name')) {
+      parsed.searchParams.set('application_name', 'college-os-backend');
+    }
 
     if (sslMode === 'prefer' || sslMode === 'require' || sslMode === 'verify-ca') {
-      parsed.searchParams.set('uselibpqcompat', 'true');
+      if (neonHost) {
+        parsed.searchParams.set('uselibpqcompat', 'true');
+      }
       parsed.searchParams.set('sslmode', 'require');
       return parsed.toString();
+    }
+
+    if (supabaseHost && !sslMode) {
+      parsed.searchParams.set('sslmode', 'require');
     }
 
     return parsed.toString();
@@ -63,9 +92,14 @@ function normalizeConnectionString(rawConnectionString) {
   }
 }
 
-const connectionString = normalizeConnectionString(process.env.DATABASE_URL || '');
+const connectionString = normalizeConnectionString(
+  process.env.SUPABASE_POOLER_URL ||
+  process.env.SUPABASE_DATABASE_URL ||
+  process.env.DATABASE_URL ||
+  ''
+);
 if (!connectionString) {
-  throw new Error('DATABASE_URL is required. Configure a real PostgreSQL connection string in .env.');
+  throw new Error('DATABASE_URL (or SUPABASE_DATABASE_URL / SUPABASE_POOLER_URL) is required. Configure a real PostgreSQL connection string in .env.');
 }
 
 const pool = new Pool({
@@ -74,7 +108,11 @@ const pool = new Pool({
   max: Number(process.env.PG_POOL_MAX || 20),
   idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT_MS || 30000),
   connectionTimeoutMillis: Number(process.env.PG_CONNECT_TIMEOUT_MS || 10000),
-  query_timeout: Number(process.env.PG_QUERY_TIMEOUT_MS || (isProduction ? 15000 : 0)) || undefined
+  query_timeout: Number(process.env.PG_QUERY_TIMEOUT_MS || (isProduction ? 15000 : 0)) || undefined,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: Number(process.env.PG_KEEPALIVE_INITIAL_DELAY_MS || 10000),
+  allowExitOnIdle: false,
+  maxUses: Number(process.env.PG_MAX_USES || 500)
 });
 
 module.exports = { pool };

@@ -393,6 +393,26 @@ ON support_requests(user_id, category_id, branch_id, semester_id);
 CREATE INDEX IF NOT EXISTS idx_support_requests_status 
 ON support_requests(status, category_id, branch_id, semester_id);
 
+CREATE INDEX IF NOT EXISTS idx_support_requests_active_status 
+ON support_requests(status)
+WHERE is_removed = FALSE AND is_hidden = FALSE;
+
+CREATE INDEX IF NOT EXISTS idx_support_requests_active_urgency 
+ON support_requests(urgency_level)
+WHERE is_removed = FALSE AND is_hidden = FALSE;
+
+CREATE INDEX IF NOT EXISTS idx_support_requests_subject_active 
+ON support_requests(subject)
+WHERE is_removed = FALSE;
+
+CREATE INDEX IF NOT EXISTS idx_support_requests_request_category_active 
+ON support_requests(request_category)
+WHERE is_removed = FALSE;
+
+CREATE INDEX IF NOT EXISTS idx_support_requests_meet_link 
+ON support_requests(meet_link)
+WHERE meet_link IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS idx_support_answers_isolation 
 ON support_answers(request_id, category_id, branch_id, semester_id);
 

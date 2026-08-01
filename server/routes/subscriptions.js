@@ -5,6 +5,8 @@ const { resolveMembershipState } = require('../middleware/auth');
 const { createUploadMiddleware, saveUploadedFile } = require('../services/uploadService');
 
 const router = express.Router();
+const MEMBERSHIP_CONFIG_CACHE_TTL_MS = 30 * 1000;
+const membershipConfigCache = { payload: null, loadedAt: 0 };
 
 const DEFAULT_MEMBERSHIP_CENTER_CONFIG = {
   hero: {
@@ -106,10 +108,18 @@ async function ensureMembershipConfigSchema() {
 
 async function getMembershipCenterConfig() {
   await ensureMembershipConfigSchema();
+
+  if (membershipConfigCache.payload && Date.now() - membershipConfigCache.loadedAt < MEMBERSHIP_CONFIG_CACHE_TTL_MS) {
+    return membershipConfigCache.payload;
+  }
+
   const { rows } = await pool.query(
     "SELECT value_json FROM platform_settings WHERE key = 'membership_center_config' LIMIT 1"
   );
-  return deepMerge(DEFAULT_MEMBERSHIP_CENTER_CONFIG, rows[0]?.value_json || {});
+  const config = deepMerge(DEFAULT_MEMBERSHIP_CENTER_CONFIG, rows[0]?.value_json || {});
+  membershipConfigCache.payload = config;
+  membershipConfigCache.loadedAt = Date.now();
+  return config;
 }
 
 const upload = createUploadMiddleware({
@@ -279,6 +289,9 @@ router.post('/payment-request', requireAuth, upload.single('paymentScreenshot'),
       });
       screenshotUrl = stored.url;
     } catch (error) {
+      if (error?.code === 'INVALID_UPLOAD_FILE' || error?.statusCode === 400) {
+        return res.status(400).json({ error: error.message || 'Invalid file upload' });
+      }
       return res.status(502).json({ error: 'Failed to upload payment screenshot' });
     }
   }

@@ -441,12 +441,19 @@ router.post(
       }
 
       if (previewImage) {
-        const previewStored = await saveUploadedFile({
-          file: previewImage,
-          folder: 'academic-contributions/previews',
-          prefix: 'preview'
-        });
-        previewImageUrl = previewStored?.url || null;
+        try {
+          const previewStored = await saveUploadedFile({
+            file: previewImage,
+            folder: 'academic-contributions/previews',
+            prefix: 'preview'
+          });
+          previewImageUrl = previewStored?.url || null;
+        } catch (error) {
+          if (error?.code === 'INVALID_UPLOAD_FILE' || error?.statusCode === 400) {
+            return res.status(400).json({ error: error.message || 'Invalid file upload' });
+          }
+          throw error;
+        }
       }
 
       const stored = await saveUploadedFile({
@@ -1422,12 +1429,19 @@ router.post(
       let fileHash = current.file_sha256;
 
       if (resourceFile) {
-        const stored = await saveUploadedFile({
-          file: resourceFile,
-          folder: 'academic-contributions/files',
-          prefix: 'resource'
-        });
-        fileUrl = stored?.url || current.file_url;
+        try {
+          const stored = await saveUploadedFile({
+            file: resourceFile,
+            folder: 'academic-contributions/files',
+            prefix: 'resource'
+          });
+          fileUrl = stored?.url || current.file_url;
+        } catch (error) {
+          if (error?.code === 'INVALID_UPLOAD_FILE' || error?.statusCode === 400) {
+            return res.status(400).json({ error: error.message || 'Invalid file upload' });
+          }
+          throw error;
+        }
         fileName = resourceFile.originalname || current.file_name;
         fileMime = resourceFile.mimetype || current.file_mime;
         fileSizeBytes = resourceFile.size || current.file_size_bytes;
@@ -1436,12 +1450,19 @@ router.post(
 
       let previewImageUrl = current.preview_image_url;
       if (previewImage) {
-        const previewStored = await saveUploadedFile({
-          file: previewImage,
-          folder: 'academic-contributions/previews',
-          prefix: 'preview'
-        });
-        previewImageUrl = previewStored?.url || current.preview_image_url;
+        try {
+          const previewStored = await saveUploadedFile({
+            file: previewImage,
+            folder: 'academic-contributions/previews',
+            prefix: 'preview'
+          });
+          previewImageUrl = previewStored?.url || current.preview_image_url;
+        } catch (error) {
+          if (error?.code === 'INVALID_UPLOAD_FILE' || error?.statusCode === 400) {
+            return res.status(400).json({ error: error.message || 'Invalid file upload' });
+          }
+          throw error;
+        }
       }
 
       const duplicate = await detectDuplicateSignals({

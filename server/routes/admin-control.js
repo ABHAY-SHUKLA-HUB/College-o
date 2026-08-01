@@ -4,6 +4,7 @@ const { pool } = require('../db/pool');
 const { requireAdmin } = require('../middleware/auth');
 const { ensureUniversityCatalogSchema } = require('../utils/universities');
 const { readStudentExperienceConfig, normalizeLiveHubConfig } = require('./dashboard');
+const { invalidateUniversityCatalogCache } = require('./meta');
 const { publishRealtimeEvent, publishContentChanged } = require('../services/realtimeBus');
 
 const router = express.Router();
@@ -1388,6 +1389,7 @@ router.post('/universities', requirePermission('settings.manage'), async (req, r
   );
 
   await writeAuditLog(req, 'university.create', 'university', result.rows[0].id, req.body);
+  if (typeof invalidateUniversityCatalogCache === 'function') invalidateUniversityCatalogCache();
   res.status(201).json({ university: result.rows[0] });
 });
 
@@ -1432,6 +1434,7 @@ router.put('/universities/:id', requirePermission('settings.manage'), async (req
   );
 
   await writeAuditLog(req, 'university.update', 'university', id, req.body);
+  if (typeof invalidateUniversityCatalogCache === 'function') invalidateUniversityCatalogCache();
   res.json({ university: result.rows[0] });
 });
 
@@ -1456,6 +1459,7 @@ router.post('/universities/reorder', requirePermission('settings.manage'), async
   }
 
   await writeAuditLog(req, 'university.reorder', 'university', 'bulk', { orderedIds });
+  if (typeof invalidateUniversityCatalogCache === 'function') invalidateUniversityCatalogCache();
   res.json({ message: 'University priority order updated', orderedIds });
 });
 
@@ -1485,6 +1489,7 @@ router.delete('/universities/:id', requirePermission('settings.manage'), async (
     await client.query('COMMIT');
 
     await writeAuditLog(req, 'university.delete', 'university', id, { name: info.rows[0].name });
+    if (typeof invalidateUniversityCatalogCache === 'function') invalidateUniversityCatalogCache();
     return res.json({ message: 'University deleted', id });
   } catch (error) {
     await client.query('ROLLBACK');

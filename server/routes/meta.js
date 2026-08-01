@@ -4,9 +4,43 @@ const { ensureUniversityCatalogSchema } = require('../utils/universities');
 
 const router = express.Router();
 
+const COLLEGE_CACHE_TTL_MS = 5 * 60 * 1000;
+const UNIVERSITY_CACHE_TTL_MS = 60 * 1000;
+const collegesCache = { payload: null, loadedAt: 0 };
+const universitiesCache = new Map();
+
+function setPublicCacheHeaders(res, maxAgeSeconds = 300) {
+  res.setHeader('Cache-Control', `public, max-age=${maxAgeSeconds}, stale-while-revalidate=${Math.max(maxAgeSeconds * 3, 60)}`);
+}
+
+function getCachedRows(cache, ttlMs) {
+  if (!cache.payload || Date.now() - cache.loadedAt >= ttlMs) return null;
+  return cache.payload;
+}
+
+function setCachedRows(cache, rows) {
+  cache.payload = rows;
+  cache.loadedAt = Date.now();
+}
+
+function getUniversityCacheKey(query, limit) {
+  return `${String(query || '').trim().toLowerCase()}|${Number(limit || 0)}`;
+}
+
+function invalidateUniversityCatalogCache() {
+  universitiesCache.clear();
+}
+
 router.get('/colleges', async (_req, res) => {
+  setPublicCacheHeaders(res, 300);
+  const cached = getCachedRows(collegesCache, COLLEGE_CACHE_TTL_MS);
+  if (cached) {
+    return res.json({ colleges: cached });
+  }
+
   const { rows } = await pool.query('SELECT id, name, city, state FROM colleges ORDER BY name');
-  res.json({ colleges: rows });
+  setCachedRows(collegesCache, rows);
+  return res.json({ colleges: rows });
 });
 
 router.get('/universities', async (req, res) => {
@@ -14,6 +48,12 @@ router.get('/universities', async (req, res) => {
 
   const query = String(req.query.q || '').trim();
   const limit = Math.min(Math.max(Number(req.query.limit || 30), 5), 100);
+  const cacheKey = getUniversityCacheKey(query, limit);
+  const cached = universitiesCache.get(cacheKey);
+  if (cached && Date.now() - cached.loadedAt < UNIVERSITY_CACHE_TTL_MS) {
+    setPublicCacheHeaders(res, 60);
+    return res.json({ universities: cached.rows, query });
+  }
 
   const params = [];
   let where = 'WHERE is_enabled = TRUE';
@@ -32,7 +72,10 @@ router.get('/universities', async (req, res) => {
     params
   );
 
-  res.json({ universities: rows, query });
+  universitiesCache.set(cacheKey, { rows, loadedAt: Date.now() });
+  setPublicCacheHeaders(res, 60);
+  return res.json({ universities: rows, query });
 });
 
 module.exports = router;
+module.exports.invalidateUniversityCatalogCache = invalidateUniversityCatalogCache;

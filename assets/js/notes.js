@@ -23,14 +23,58 @@ document.addEventListener('DOMContentLoaded', () => {
   let quill = null;
   let hasPremiumAccess = true;
 
-  if (editor && window.Quill) {
-    quill = new Quill('#personalNotesEditor', {
-      theme: 'snow',
-      modules: {
-        toolbar: [['bold', 'italic', 'underline'], [{ list: 'ordered' }, { list: 'bullet' }], ['link']]
+  const loadedScripts = new Map();
+
+  function loadScriptOnce(src) {
+    if (loadedScripts.has(src)) return loadedScripts.get(src);
+
+    const promise = new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[src="${src}"]`);
+      if (existing) {
+        if (existing.dataset.loaded === 'true') {
+          resolve(existing);
+          return;
+        }
+        existing.addEventListener('load', () => resolve(existing), { once: true });
+        existing.addEventListener('error', () => reject(new Error(`Failed to load ${src}`)), { once: true });
+        return;
       }
+
+      const script = document.createElement('script');
+      script.src = src;
+      script.defer = true;
+      script.onload = () => {
+        script.dataset.loaded = 'true';
+        resolve(script);
+      };
+      script.onerror = () => reject(new Error(`Failed to load ${src}`));
+      document.head.appendChild(script);
     });
+
+    loadedScripts.set(src, promise);
+    return promise;
   }
+
+  async function ensureQuillLoaded() {
+    if (window.Quill) return true;
+    await loadScriptOnce('assets/vendor/quill/quill.min.js');
+    return Boolean(window.Quill);
+  }
+
+  (async () => {
+    if (!editor) return;
+    try {
+      if (!(await ensureQuillLoaded())) return;
+      quill = new Quill('#personalNotesEditor', {
+        theme: 'snow',
+        modules: {
+          toolbar: [['bold', 'italic', 'underline'], [{ list: 'ordered' }, { list: 'bullet' }], ['link']]
+        }
+      });
+    } catch {
+      quill = null;
+    }
+  })();
 
   function setStatus(text) {
     if (notesStatus) notesStatus.textContent = text;

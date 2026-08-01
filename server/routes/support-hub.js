@@ -13,6 +13,7 @@ const {
   guardSupportFeature,
   isUserSupportSuspended
 } = require('../utils/supportGovernance');
+const { assertValidUploadBuffer } = require('../services/uploadService');
 
 const router = express.Router();
 
@@ -77,6 +78,22 @@ function safeJsonArray(input) {
   return input.filter((value) => typeof value === 'string').slice(0, 4);
 }
 
+function isMostlyText(buffer) {
+  if (!buffer || !Buffer.isBuffer(buffer) || buffer.length === 0) return false;
+  if (buffer.includes(0x00)) return false;
+
+  let printable = 0;
+  const sampleLength = Math.min(buffer.length, 4096);
+  for (let index = 0; index < sampleLength; index += 1) {
+    const byte = buffer[index];
+    if (byte === 0x09 || byte === 0x0a || byte === 0x0d || (byte >= 0x20 && byte <= 0x7e)) {
+      printable += 1;
+    }
+  }
+
+  return printable / sampleLength >= 0.85;
+}
+
 async function guardAcademicContext(req, res) {
   const userId = Number(req.session.userId || 0);
   const context = await getUserAcademicContext(userId);
@@ -116,6 +133,29 @@ router.post('/upload', upload.array('files', 4), async (req, res) => {
     if (!context) return;
 
     const files = Array.isArray(req.files) ? req.files : [];
+    for (const file of files) {
+      const buffer = await fs.promises.readFile(file.path);
+      const declaredMime = String(file.mimetype || '').toLowerCase();
+      const ext = path.extname(String(file.originalname || '')).toLowerCase();
+
+      if (declaredMime === 'text/plain' || ext === '.txt') {
+        if (!isMostlyText(buffer)) {
+          await fs.promises.unlink(file.path).catch(() => {});
+          return res.status(400).json({ error: 'Plain text attachments must contain text content' });
+        }
+        continue;
+      }
+
+      try {
+        assertValidUploadBuffer({ buffer, mimetype: declaredMime, originalname: file.originalname });
+      } catch (error) {
+        await fs.promises.unlink(file.path).catch(() => {});
+        if (error?.code === 'INVALID_UPLOAD_FILE' || error?.statusCode === 400) {
+          return res.status(400).json({ error: error.message || 'Invalid file upload' });
+        }
+        throw error;
+      }
+    }
     const urls = files.map((file) => `/uploads/support/${file.filename}`);
     return res.json({ success: true, files: urls });
   } catch (error) {

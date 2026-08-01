@@ -11,6 +11,12 @@ const DEFAULT_SUPPORT_GOVERNANCE = {
   allowSolvedFlow: true
 };
 
+const SUPPORT_GOVERNANCE_CACHE_TTL_MS = 30 * 1000;
+const supportGovernanceCache = {
+  payload: null,
+  loadedAt: 0
+};
+
 function toBool(value, fallback = true) {
   if (typeof value === 'boolean') return value;
   if (value === null || value === undefined) return fallback;
@@ -34,6 +40,10 @@ function normalizeGovernanceConfig(raw = {}) {
 }
 
 async function getSupportGovernanceConfig() {
+  if (supportGovernanceCache.payload && Date.now() - supportGovernanceCache.loadedAt < SUPPORT_GOVERNANCE_CACHE_TTL_MS) {
+    return supportGovernanceCache.payload;
+  }
+
   const { rows } = await pool.query(
     `SELECT value_json
      FROM platform_settings
@@ -41,10 +51,13 @@ async function getSupportGovernanceConfig() {
      LIMIT 1`
   );
 
-  if (!rows.length) {
-    return { ...DEFAULT_SUPPORT_GOVERNANCE };
-  }
-  return normalizeGovernanceConfig(rows[0].value_json || {});
+  const config = rows.length
+    ? normalizeGovernanceConfig(rows[0].value_json || {})
+    : { ...DEFAULT_SUPPORT_GOVERNANCE };
+
+  supportGovernanceCache.payload = config;
+  supportGovernanceCache.loadedAt = Date.now();
+  return config;
 }
 
 async function setSupportGovernanceConfig(nextConfig, updatedBy = null) {
@@ -56,6 +69,8 @@ async function setSupportGovernanceConfig(nextConfig, updatedBy = null) {
      DO UPDATE SET value_json = EXCLUDED.value_json, updated_by = EXCLUDED.updated_by, updated_at = NOW()`,
     [JSON.stringify(normalized), updatedBy]
   );
+  supportGovernanceCache.payload = normalized;
+  supportGovernanceCache.loadedAt = Date.now();
   return normalized;
 }
 

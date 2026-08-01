@@ -11,6 +11,24 @@ const {
 } = require('../utils/supportGovernance');
 
 const router = express.Router();
+const GOVERNANCE_ANALYTICS_CACHE_TTL_MS = 15 * 1000;
+const governanceAnalyticsCache = new Map();
+
+function getCacheKey(name, req = null) {
+  return `${name}:${req ? JSON.stringify({ query: req.query || {} }) : ''}`;
+}
+
+function getCachedPayload(key) {
+  const cached = governanceAnalyticsCache.get(key);
+  if (!cached || Date.now() - cached.loadedAt >= GOVERNANCE_ANALYTICS_CACHE_TTL_MS) {
+    return null;
+  }
+  return cached.payload;
+}
+
+function setCachedPayload(key, payload) {
+  governanceAnalyticsCache.set(key, { payload, loadedAt: Date.now() });
+}
 
 router.use(requireAdmin);
 router.use(async (_req, _res, next) => {
@@ -103,6 +121,13 @@ router.put('/feature-config', async (req, res) => {
 
 router.get('/dashboard', async (_req, res) => {
   try {
+    const cacheKey = getCacheKey('dashboard');
+    const cached = getCachedPayload(cacheKey);
+    if (cached) {
+      res.setHeader('Cache-Control', 'private, max-age=10, stale-while-revalidate=30');
+      return res.json(cached);
+    }
+
     const [counts, helperActivity, highRisk, rewards] = await Promise.all([
       pool.query(
         `SELECT
@@ -679,7 +704,7 @@ router.get('/isolation/anomalies', async (_req, res) => {
       )
     ]);
 
-    return res.json({
+    const payload = {
       success: true,
       requestAnomalies: requestAnomalies.rows,
       answerAnomalies: answerAnomalies.rows,
@@ -687,7 +712,10 @@ router.get('/isolation/anomalies', async (_req, res) => {
         requestAnomalies: requestAnomalies.rowCount,
         answerAnomalies: answerAnomalies.rowCount
       }
-    });
+    };
+    setCachedPayload(getCacheKey('isolation-anomalies'), payload);
+    res.setHeader('Cache-Control', 'private, max-age=10, stale-while-revalidate=30');
+    return res.json(payload);
   } catch (error) {
     logger.error('Failed to fetch isolation anomalies', { error: error.message });
     return res.status(500).json({ error: 'Failed to fetch isolation anomalies' });
@@ -696,6 +724,13 @@ router.get('/isolation/anomalies', async (_req, res) => {
 
 router.get('/safety/link-risk', async (_req, res) => {
   try {
+    const cacheKey = getCacheKey('safety-link-risk');
+    const cached = getCachedPayload(cacheKey);
+    if (cached) {
+      res.setHeader('Cache-Control', 'private, max-age=10, stale-while-revalidate=30');
+      return res.json(cached);
+    }
+
     const [meetUsage, repeatedMeetLinks, attachmentRisk] = await Promise.all([
       pool.query(
         `SELECT
@@ -721,12 +756,15 @@ router.get('/safety/link-risk', async (_req, res) => {
       )
     ]);
 
-    return res.json({
+    const payload = {
       success: true,
       meetUsage: meetUsage.rows[0],
       repeatedMeetLinks: repeatedMeetLinks.rows,
       attachmentRisk: attachmentRisk.rows[0]
-    });
+    };
+    setCachedPayload(cacheKey, payload);
+    res.setHeader('Cache-Control', 'private, max-age=10, stale-while-revalidate=30');
+    return res.json(payload);
   } catch (error) {
     logger.error('Failed to fetch support safety metrics', { error: error.message });
     return res.status(500).json({ error: 'Failed to fetch safety metrics' });
@@ -735,6 +773,13 @@ router.get('/safety/link-risk', async (_req, res) => {
 
 router.get('/analytics/overview', async (_req, res) => {
   try {
+    const cacheKey = getCacheKey('analytics-overview');
+    const cached = getCachedPayload(cacheKey);
+    if (cached) {
+      res.setHeader('Cache-Control', 'private, max-age=10, stale-while-revalidate=30');
+      return res.json(cached);
+    }
+
     const [subjectDemand, topicDemand, resolution, branchDemand, helperTrend, abuseTrend] = await Promise.all([
       pool.query(
         `SELECT COALESCE(subject, 'General') AS subject, COUNT(*)::int AS request_count
@@ -801,7 +846,7 @@ router.get('/analytics/overview', async (_req, res) => {
       )
     ]);
 
-    return res.json({
+    const payload = {
       success: true,
       subjectDemand: subjectDemand.rows,
       topicDemand: topicDemand.rows,
@@ -809,7 +854,10 @@ router.get('/analytics/overview', async (_req, res) => {
       branchDemand: branchDemand.rows,
       helperTrend: helperTrend.rows,
       abuseTrend: abuseTrend.rows
-    });
+    };
+    setCachedPayload(cacheKey, payload);
+    res.setHeader('Cache-Control', 'private, max-age=10, stale-while-revalidate=30');
+    return res.json(payload);
   } catch (error) {
     logger.error('Failed to fetch support analytics', { error: error.message });
     return res.status(500).json({ error: 'Failed to fetch analytics' });

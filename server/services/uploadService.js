@@ -43,6 +43,110 @@ function sanitizeBaseName(name) {
     .replace(/^-+|-+$/g, '') || 'file';
 }
 
+function getDeclaredMime(file) {
+  return String(file?.mimetype || '').toLowerCase();
+}
+
+function detectBufferSignature(buffer) {
+  if (!buffer || !Buffer.isBuffer(buffer) || buffer.length < 4) {
+    return null;
+  }
+
+  if (buffer.length >= 5 && buffer.subarray(0, 5).toString('ascii') === '%PDF-') {
+    return 'application/pdf';
+  }
+
+  if (
+    buffer.length >= 8 &&
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
+  ) {
+    return 'image/png';
+  }
+
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return 'image/jpeg';
+  }
+
+  if (
+    buffer.length >= 12 &&
+    buffer.subarray(0, 4).toString('ascii') === 'RIFF' &&
+    buffer.subarray(8, 12).toString('ascii') === 'WEBP'
+  ) {
+    return 'image/webp';
+  }
+
+  if (buffer.length >= 12 && buffer.subarray(4, 8).toString('ascii') === 'ftyp') {
+    const brand = buffer.subarray(8, 12).toString('ascii').toLowerCase();
+    if (brand.includes('qt')) {
+      return 'video/quicktime';
+    }
+    return 'video/mp4';
+  }
+
+  if (buffer[0] === 0x1a && buffer[1] === 0x45 && buffer[2] === 0xdf && buffer[3] === 0xa3) {
+    return 'video/webm';
+  }
+
+  return null;
+}
+
+function buildUploadValidationError(message = 'Unsupported file content') {
+  const error = new Error(message);
+  error.statusCode = 400;
+  error.code = 'INVALID_UPLOAD_FILE';
+  error.exposeInProduction = true;
+  return error;
+}
+
+function assertValidUploadBuffer(file) {
+  if (!file || !Buffer.isBuffer(file.buffer)) {
+    throw buildUploadValidationError('Missing upload buffer');
+  }
+
+  const declaredMime = getDeclaredMime(file);
+  const originalExt = path.extname(String(file?.originalname || '')).toLowerCase();
+  const detectedMime = detectBufferSignature(file.buffer);
+
+  if (!detectedMime) {
+    if (declaredMime === 'text/plain' || originalExt === '.txt') {
+      if (file.buffer.includes(0x00)) {
+        throw buildUploadValidationError('Plain text uploads may not contain binary data');
+      }
+      return { detectedMime: 'text/plain' };
+    }
+
+    throw buildUploadValidationError('Unsupported file content');
+  }
+
+  const expectedByExt = {
+    '.pdf': 'application/pdf',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.webp': 'image/webp',
+    '.mp4': 'video/mp4',
+    '.mov': 'video/quicktime',
+    '.webm': 'video/webm'
+  }[originalExt] || null;
+
+  if (declaredMime && declaredMime !== detectedMime && declaredMime !== expectedByExt) {
+    throw buildUploadValidationError('File content does not match the declared file type');
+  }
+
+  if (expectedByExt && expectedByExt !== detectedMime) {
+    throw buildUploadValidationError('File extension does not match the file content');
+  }
+
+  return { detectedMime };
+}
+
 function createSafeFileName(file, prefix = 'upload') {
   const ext = getFileExtension(file);
   const cleanPrefix = sanitizeBaseName(prefix);
@@ -79,6 +183,8 @@ function createUploadMiddleware({
 async function saveUploadedFile({ file, folder = '', prefix = 'upload' }) {
   if (!file) return null;
 
+  const validation = assertValidUploadBuffer(file);
+
   const fileName = createSafeFileName(file, prefix);
   const provider = getStorageProvider();
 
@@ -87,7 +193,7 @@ async function saveUploadedFile({ file, folder = '', prefix = 'upload' }) {
       buffer: file.buffer,
       fileName,
       folder,
-      contentType: file.mimetype || 'application/octet-stream'
+      contentType: validation.detectedMime || file.mimetype || 'application/octet-stream'
     });
   }
 
@@ -102,5 +208,7 @@ module.exports = {
   createUploadMiddleware,
   saveUploadedFile,
   getStorageProvider,
-  createSafeFileName
+  createSafeFileName,
+  assertValidUploadBuffer,
+  detectBufferSignature
 };

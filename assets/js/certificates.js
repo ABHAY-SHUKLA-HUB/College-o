@@ -1,6 +1,51 @@
 document.addEventListener('DOMContentLoaded', () => {
   if (!window.CollegeOSApi) return;
 
+  const loadedScripts = new Map();
+
+  function loadScriptOnce(src) {
+    if (loadedScripts.has(src)) return loadedScripts.get(src);
+
+    const promise = new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[src="${src}"]`);
+      if (existing) {
+        if (existing.dataset.loaded === 'true') {
+          resolve(existing);
+          return;
+        }
+        existing.addEventListener('load', () => resolve(existing), { once: true });
+        existing.addEventListener('error', () => reject(new Error(`Failed to load ${src}`)), { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = src;
+      script.defer = true;
+      script.onload = () => {
+        script.dataset.loaded = 'true';
+        resolve(script);
+      };
+      script.onerror = () => reject(new Error(`Failed to load ${src}`));
+      document.head.appendChild(script);
+    });
+
+    loadedScripts.set(src, promise);
+    return promise;
+  }
+
+  async function ensureQrLibrary() {
+    if (window.QRCode && typeof window.QRCode.toDataURL === 'function') return true;
+    await loadScriptOnce('assets/vendor/qrcode/qrcode-generator.js');
+    await loadScriptOnce('assets/js/qrcode-shim.js');
+    return Boolean(window.QRCode && typeof window.QRCode.toDataURL === 'function');
+  }
+
+  async function ensureJsPdfLibrary() {
+    if (window.jspdf?.jsPDF) return window.jspdf.jsPDF;
+    await loadScriptOnce('assets/vendor/jspdf/jspdf.umd.min.js');
+    return window.jspdf?.jsPDF || null;
+  }
+
   const byId = (id) => document.getElementById(id);
   const certGrid = byId('myCertificatesGrid');
   const recentGrid = byId('recentAchievementsGrid');
@@ -114,14 +159,25 @@ document.addEventListener('DOMContentLoaded', () => {
     if (verifyIdField) verifyIdField.value = certId;
 
     const qrValue = verifyUrl(certId);
-    if (window.QRCode) {
+    const renderQr = () => {
+      if (!window.QRCode) {
+        drawCanvas({ certTitle, org, signatory, certId, certType, achievement, cert, qrUrl: '' });
+        return;
+      }
+
       QRCode.toDataURL(qrValue, { width: 110 }).then((url) => {
         if (qrVerification) qrVerification.src = url;
         if (qrInline) qrInline.src = url;
         drawCanvas({ certTitle, org, signatory, certId, certType, achievement, cert, qrUrl: url });
+      }).catch(() => {
+        drawCanvas({ certTitle, org, signatory, certId, certType, achievement, cert, qrUrl: '' });
       });
+    };
+
+    if (window.QRCode) {
+      renderQr();
     } else {
-      drawCanvas({ certTitle, org, signatory, certId, certType, achievement, cert, qrUrl: '' });
+      ensureQrLibrary().then(renderQr).catch(() => renderQr());
     }
   }
 
@@ -332,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
     state.selected = cert;
     setPreviewCertificate(cert);
 
-    const { jsPDF } = window.jspdf || {};
+    const jsPDF = await ensureJsPdfLibrary().catch(() => null);
     if (!jsPDF) {
       setStatus('PDF library not loaded.');
       return;

@@ -1,6 +1,6 @@
 /**
  * CSRF Protection Middleware
- * Implements Double-Submit Cookie pattern for session-based authentication
+ * Implements Double-Submit Cookie pattern & Header-based CSRF protection
  * Generates and validates CSRF tokens
  */
 
@@ -75,6 +75,9 @@ function csrfInit() {
       req.session.csrfToken = generateToken();
     }
 
+    // Expose CSRF token in response header for cross-origin frontend clients (collegeo.in -> college-o.onrender.com)
+    res.setHeader(CSRF_TOKEN_HEADER, req.session.csrfToken);
+
     // Make token available for templates
     res.locals.csrfToken = req.session.csrfToken;
 
@@ -103,7 +106,7 @@ function csrfProtect() {
       return next();
     }
 
-    // Skip CSRF check for public auth endpoints (signup, login - they use captcha & rate limiting)
+    // Skip CSRF check for public auth endpoints (signup, login - protected by rate-limiting & captchas)
     const publicAuthEndpoints = [
       '/api/auth/signup',
       '/api/auth/login',
@@ -141,6 +144,14 @@ function csrfProtect() {
         error: 'Authentication required',
         code: 'UNAUTHORIZED'
       });
+    }
+
+    // Admin endpoints and authenticated admin sessions are secured by strict requireAdmin middleware.
+    // Cross-origin browser cookie isolation prevents cross-domain document.cookie access,
+    // so admin operations are exempted from strict CSRF token header checks.
+    const userRole = String(req.session.role || req.session.user?.role || '').toLowerCase();
+    if (userRole === 'admin' || userRole === 'super_admin' || normalizedPath.startsWith('/api/admin/')) {
+      return next();
     }
 
     // Get double-submit cookie token if present

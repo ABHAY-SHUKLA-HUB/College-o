@@ -612,6 +612,10 @@ async function request(path, options = {}) {
   const interceptedRequest = runRequestInterceptors({ path, options: requestOptions });
   const fetchPromise = (async () => {
     const response = await rawFetch(resolveApiUrl(interceptedRequest.path), interceptedRequest.options);
+    const headerCsrf = response.headers?.get?.('x-csrf-token');
+    if (headerCsrf) {
+      csrfTokenCache = headerCsrf;
+    }
     let payload = await parseResponsePayload(response);
 
     if (shouldAttachCsrf(method) && isCsrfErrorResponse(response, payload)) {

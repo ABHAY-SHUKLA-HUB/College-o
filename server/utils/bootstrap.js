@@ -50,22 +50,31 @@ async function ensureAdminAccount() {
   }
 
   const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+  let adminId = null;
   if (existing.rowCount > 0) {
+    adminId = existing.rows[0].id;
     await pool.query(
       "UPDATE users SET role = 'admin', subscription_tier = 'premium', payment_status = 'paid', subscription_expiry = NOW() + INTERVAL '10 years' WHERE email = $1",
       [email]
     );
-    return;
+  } else {
+    const referralToken = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`.toUpperCase();
+    const referralCode = `ADMIN-${referralToken}`.slice(0, 20);
+
+    const hash = await bcrypt.hash(password, 12);
+    const created = await pool.query(
+      `INSERT INTO users (full_name, email, college_name, password_hash, referral_code, role, subscription_tier, payment_status, subscription_expiry)
+       VALUES ($1, $2, $3, $4, $5, 'admin', 'premium', 'paid', NOW() + INTERVAL '10 years')
+       RETURNING id`,
+      [fullName, email, 'College OS', hash, referralCode]
+    );
+    adminId = created.rows[0].id;
   }
 
-  const referralToken = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`.toUpperCase();
-  const referralCode = `ADMIN-${referralToken}`.slice(0, 20);
-
-  const hash = await bcrypt.hash(password, 12);
   await pool.query(
-    `INSERT INTO users (full_name, email, college_name, password_hash, referral_code, role, subscription_tier, payment_status, subscription_expiry)
-     VALUES ($1, $2, $3, $4, $5, 'admin', 'premium', 'paid', NOW() + INTERVAL '10 years')`,
-    [fullName, email, 'College OS', hash, referralCode]
+    `INSERT INTO user_profiles (user_id, onboarding_completed, onboarding_step)
+     SELECT id, TRUE, 'completed' FROM users WHERE role IN ('admin', 'super_admin')
+     ON CONFLICT (user_id) DO UPDATE SET onboarding_completed = TRUE, onboarding_step = 'completed'`
   );
 }
 

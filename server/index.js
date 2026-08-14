@@ -136,7 +136,18 @@ const PUBLIC_READ_PATHS = new Set([
 const ONBOARDING_PUBLIC_API_PATHS = [
   '/api/auth/config',
   '/api/auth/me',
+  '/api/auth/login',
+  '/api/auth/login/email-otp',
+  '/api/auth/logout',
+  '/api/auth/signup',
+  '/api/auth/google',
+  '/api/auth/password/forgot',
+  '/api/auth/password/reset',
   '/api/auth/captcha/challenge',
+  '/api/auth/verification/request',
+  '/api/auth/verification/verify',
+  '/api/admin/login',
+  '/api/health',
   '/api/academics/categories',
   '/api/academics/colleges',
   '/api/academics/courses',
@@ -557,10 +568,12 @@ app.use(async (req, res, next) => {
   if (!req.path.startsWith('/api')) return next();
   if (!req.session?.userId) return next();
 
+  if (req.path.startsWith('/api/auth/') || req.path === '/api/admin/login' || req.path.startsWith('/api/health') || isOnboardingPublicApiPath(req.path)) {
+    return next();
+  }
+
   const role = String(req.session.role || '').toLowerCase();
   if (role === 'admin' || role === 'super_admin') return next();
-
-  if (isOnboardingPublicApiPath(req.path)) return next();
 
   try {
     const complete = await isStudentOnboardingComplete(req.session.userId);

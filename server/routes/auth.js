@@ -573,6 +573,12 @@ async function resolveGoogleLandingPath(client, userId) {
 }
 
 async function resolveStudentLandingPath(db, userId) {
+  const userRes = await db.query('SELECT role FROM users WHERE id = $1 LIMIT 1', [userId]);
+  const role = String(userRes.rows[0]?.role || '').toLowerCase();
+  if (role === 'admin' || role === 'super_admin') {
+    return '/admin-dashboard';
+  }
+
   const profileResult = await db.query(
     `SELECT onboarding_completed, category_id, branch_id, semester_id, college_id, course_id, year_id
      FROM user_profiles

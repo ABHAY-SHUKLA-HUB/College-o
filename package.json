@@ -8,7 +8,12 @@
     "dev:all": "powershell -ExecutionPolicy Bypass -File ./start-all.ps1",
     "start": "node server/index.js",
     "qa:smoke": "node tools/qa-smoke.js",
-    "db:init": "node server/db/init.js"
+    "db:init": "node server/db/init.js",
+    "db:backup": "node tools/db-backup.js",
+    "db:restore": "node tools/db-restore.js",
+    "db:schema-verify": "node tools/db-schema-verify.js",
+    "db:data-verify": "node tools/db-data-verify.js",
+    "db:rollback": "node tools/db-rollback.js"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.823.0",

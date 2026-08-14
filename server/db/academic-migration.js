@@ -18,6 +18,13 @@ async function initializeAcademicStructure() {
   if (migrationExecuted) return;
 
   try {
+    // Quick check if academic structure is already bootstrapped
+    const existing = await pool.query("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'academic_categories'").catch(() => ({ rowCount: 0 }));
+    if (existing.rowCount > 0) {
+      migrationExecuted = true;
+      return { ok: true, skipped: true };
+    }
+
     const migrationCandidates = [
       path.join(__dirname, '../../ACADEMIC_MIGRATION.sql'),
       path.join(__dirname, '../../ACADEMIC_STRUCTURE_MIGRATION.sql')
@@ -31,27 +38,30 @@ async function initializeAcademicStructure() {
 
     const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
     
-    // Split SQL by semicolons and filter empty statements
-    const statements = migrationSQL
-      .split(';')
-      .map(stmt => stmt.trim())
-      .filter(stmt => stmt.length > 0);
+    try {
+      await pool.query(migrationSQL);
+    } catch (err) {
+      // Fallback statement by statement if single batch fails
+      const statements = migrationSQL
+        .split(';')
+        .map(stmt => stmt.trim())
+        .filter(stmt => stmt.length > 0);
 
-    for (const statement of statements) {
-      try {
-        await pool.query(statement);
-      } catch (error) {
-        // Ignore "already exists" errors and other non-critical issues
-        if (!error.message.includes('already exists') && 
-            !error.message.includes('already have a same-named object') &&
-            !error.message.includes('duplicate key')) {
-          console.error('Migration error:', error.message);
+      for (const statement of statements) {
+        try {
+          await pool.query(statement);
+        } catch (error) {
+          if (!error.message.includes('already exists') && 
+              !error.message.includes('already have a same-named object') &&
+              !error.message.includes('duplicate key')) {
+            console.error('Migration error:', error.message);
+          }
         }
       }
     }
 
     migrationExecuted = true;
-    return { ok: true, migrationPath, statementsApplied: statements.length };
+    return { ok: true, migrationPath };
   } catch (error) {
     console.error('❌ Failed to initialize academic structure schema:', error);
     throw error;

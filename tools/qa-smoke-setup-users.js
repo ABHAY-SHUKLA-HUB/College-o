@@ -54,15 +54,19 @@ async function upsertUser(u) {
   }
 
   await pool.query(
-    `INSERT INTO user_profiles (user_id, category_id, branch_id, semester_id, is_helper, helper_badge, support_points_earned)
-     VALUES ($1, $2, $3, $4, $5, $6, 0)
+    `INSERT INTO user_profiles (user_id, category_id, branch_id, semester_id, college_id, course_id, year_id, is_helper, helper_badge, support_points_earned, onboarding_completed)
+     VALUES ($1, $2, $3, $4, 1, 1, 1, $5, $6, 0, TRUE)
      ON CONFLICT (user_id)
      DO UPDATE SET
        category_id = EXCLUDED.category_id,
        branch_id = EXCLUDED.branch_id,
        semester_id = EXCLUDED.semester_id,
+       college_id = 1,
+       course_id = 1,
+       year_id = 1,
        is_helper = EXCLUDED.is_helper,
-       helper_badge = EXCLUDED.helper_badge`,
+       helper_badge = EXCLUDED.helper_badge,
+       onboarding_completed = TRUE`,
     [
       userId,
       u.cat,

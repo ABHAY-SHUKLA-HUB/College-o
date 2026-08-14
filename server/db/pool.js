@@ -74,15 +74,16 @@ function normalizeConnectionString(rawConnectionString) {
       parsed.searchParams.set('application_name', 'college-os-backend');
     }
 
-    if (sslMode === 'prefer' || sslMode === 'require' || sslMode === 'verify-ca') {
+    if (!shouldRejectUnauthorized()) {
+      // In non-production/self-signed cert setups, disable strict sslmode in connection string
+      parsed.searchParams.delete('sslmode');
+      parsed.searchParams.delete('channel_binding');
+    } else if (sslMode === 'prefer' || sslMode === 'require' || sslMode === 'verify-ca') {
       if (neonHost) {
         parsed.searchParams.set('uselibpqcompat', 'true');
       }
       parsed.searchParams.set('sslmode', 'require');
-      return parsed.toString();
-    }
-
-    if (supabaseHost && !sslMode) {
+    } else if (supabaseHost && !sslMode) {
       parsed.searchParams.set('sslmode', 'require');
     }
 
@@ -93,9 +94,10 @@ function normalizeConnectionString(rawConnectionString) {
 }
 
 const connectionString = normalizeConnectionString(
+  process.env.CURRENT_DATABASE_URL ||
+  process.env.DATABASE_URL ||
   process.env.SUPABASE_POOLER_URL ||
   process.env.SUPABASE_DATABASE_URL ||
-  process.env.DATABASE_URL ||
   ''
 );
 if (!connectionString) {

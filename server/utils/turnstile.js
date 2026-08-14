@@ -56,7 +56,7 @@ async function verifyTurnstileToken(token, ip) {
   const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
 
   if (!normalizedToken) {
-    if (!isProduction && (!enabled || !secretKey)) {
+    if (!isProduction && (!enabled || !secretKey || isDevBypassAllowed())) {
       console.warn('[turnstile] dev bypass enabled - missing token accepted');
       return { ok: true, bypassed: true, message: 'Bypassed in development.' };
     }
@@ -66,6 +66,10 @@ async function verifyTurnstileToken(token, ip) {
       code: 'TURNSTILE_MISSING_TOKEN',
       message: 'Security verification failed. Please try again.'
     };
+  }
+
+  if (!isProduction && ['dev-bypass', 'dummy-token', 'test-token', '1x00000000000000000000AA'].includes(normalizedToken)) {
+    return { ok: true, bypassed: true, message: 'Test token accepted in development.' };
   }
 
   if (!enabled || !secretKey) {

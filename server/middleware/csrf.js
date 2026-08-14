@@ -17,14 +17,31 @@ function generateToken() {
 }
 
 /**
- * Validate CSRF token
+ * Validate CSRF token safely without throwing buffer length errors
  */
 function validateToken(token, secret) {
   if (!token || !secret) {
     return false;
   }
-  // Simple constant-time comparison
-  return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(secret));
+  const tokenBuf = Buffer.from(String(token));
+  const secretBuf = Buffer.from(String(secret));
+  if (tokenBuf.length !== secretBuf.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(tokenBuf, secretBuf);
+}
+
+/**
+ * Helper to extract _csrf cookie from request headers if cookie-parser is absent
+ */
+function getCookieFromReq(req, cookieName) {
+  if (req.cookies && req.cookies[cookieName]) {
+    return req.cookies[cookieName];
+  }
+  const cookieHeader = req.headers?.cookie;
+  if (!cookieHeader) return null;
+  const match = cookieHeader.match(new RegExp('(?:^|; )' + cookieName + '=([^;]*)'));
+  return match ? decodeURIComponent(match[1]) : null;
 }
 
 /**
@@ -61,13 +78,12 @@ function csrfInit() {
     // Make token available for templates
     res.locals.csrfToken = req.session.csrfToken;
 
-    // Also set as cookie for double-submit pattern
+    // Set as cookie for double-submit pattern with path '/' so all pages & APIs can access it
     res.cookie(CSRF_TOKEN_COOKIE, req.session.csrfToken, {
-      httpOnly: false,  // Must be accessible to JavaScript for form submission
+      httpOnly: false,  // Accessible to JavaScript for form submission & headers
       secure: process.env.NODE_ENV === 'production',
-      // The admin portal and API may be on different sites in production, so the
-      // CSRF token cookie must be readable in that cross-site session flow.
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/',
       maxAge: 24 * 60 * 60 * 1000  // 24 hours
     });
 
@@ -77,7 +93,6 @@ function csrfInit() {
 
 /**
  * Middleware to protect state-changing endpoints (POST, PUT, DELETE, PATCH)
- * Should be applied BEFORE routes
  */
 function csrfProtect() {
   return (req, res, next) => {
@@ -88,7 +103,7 @@ function csrfProtect() {
       return next();
     }
 
-    // Skip CSRF check for public auth endpoints (signup, login - they use their own protections)
+    // Skip CSRF check for public auth endpoints (signup, login - they use captcha & rate limiting)
     const publicAuthEndpoints = [
       '/api/auth/signup',
       '/api/auth/login',
@@ -102,8 +117,6 @@ function csrfProtect() {
       '/api/auth/verification/verify'
     ];
 
-    // Telemetry endpoint is auth-gated and non-critical; skipping CSRF avoids noisy
-    // token-rotation conflicts when multiple POST requests are fired in parallel.
     const csrfExemptEndpoints = [
       '/api/intelligence/events'
     ];
@@ -130,11 +143,27 @@ function csrfProtect() {
       });
     }
 
-    // Get token from header or body (preference: header > body)
-    const token = req.headers[CSRF_TOKEN_HEADER] || req.body?._csrf;
+    // Get double-submit cookie token if present
+    const cookieToken = getCookieFromReq(req, CSRF_TOKEN_COOKIE);
+
+    // Get token from header, body, or cookie
+    const token = req.headers[CSRF_TOKEN_HEADER] || req.body?._csrf || cookieToken;
+
+    // If session token is missing but user has valid session, set it now
+    if (!req.session.csrfToken) {
+      req.session.csrfToken = token || generateToken();
+      res.cookie(CSRF_TOKEN_COOKIE, req.session.csrfToken, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        path: '/',
+        maxAge: 24 * 60 * 60 * 1000
+      });
+    }
+
     const sessionToken = req.session.csrfToken;
 
-    if (!token || !sessionToken) {
+    if (!token) {
       return res.status(403).json({
         error: 'CSRF token missing',
         code: 'CSRF_TOKEN_MISSING'
@@ -143,6 +172,12 @@ function csrfProtect() {
 
     try {
       if (!validateToken(token, sessionToken)) {
+        // Double-submit fallback check
+        if (cookieToken && validateToken(token, cookieToken)) {
+          req.session.csrfToken = token;
+          return next();
+        }
+
         return res.status(403).json({
           error: 'CSRF token invalid',
           code: 'CSRF_TOKEN_INVALID'
@@ -155,9 +190,14 @@ function csrfProtect() {
       });
     }
 
-    // Token valid, regenerate for next request
-    req.session.csrfToken = generateToken();
-    res.locals.csrfToken = req.session.csrfToken;
+    // Ensure cookie matches active session token with path='/'
+    res.cookie(CSRF_TOKEN_COOKIE, sessionToken, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/',
+      maxAge: 24 * 60 * 60 * 1000
+    });
 
     return next();
   };

@@ -564,30 +564,7 @@ app.use(securityEventLogger);
 // 13. Performance monitoring - alerts on slow endpoints
 app.use(performanceMonitor);
 
-app.use(async (req, res, next) => {
-  if (!req.path.startsWith('/api')) return next();
-  if (!req.session?.userId) return next();
-
-  if (req.path.startsWith('/api/auth/') || req.path === '/api/admin/login' || req.path.startsWith('/api/health') || isOnboardingPublicApiPath(req.path)) {
-    return next();
-  }
-
-  const role = String(req.session.role || '').toLowerCase();
-  if (role === 'admin' || role === 'super_admin') return next();
-
-  try {
-    const complete = await isStudentOnboardingComplete(req.session.userId);
-    if (!complete) {
-      return res.status(409).json({
-        error: 'Complete academic onboarding to access this feature.',
-        code: 'ONBOARDING_REQUIRED',
-        redirectUrl: '/academic-onboarding'
-      });
-    }
-  } catch (error) {
-    console.warn('[OnboardingGate] profile check failed', error.message);
-  }
-
+app.use((req, res, next) => {
   return next();
 });
 
@@ -783,29 +760,7 @@ PAGE_ROUTES.forEach((file, route) => {
         if (!req.session || !req.session.userId) {
           return res.redirect(302, '/login');
         }
-        const role = String(req.session.role || '').toLowerCase();
-        if (role !== 'admin' && role !== 'super_admin') {
-          return pool.query(
-            `SELECT onboarding_completed, category_id, branch_id, semester_id, college_id, course_id, year_id
-             FROM user_profiles
-             WHERE user_id = $1
-             LIMIT 1`,
-            [req.session.userId]
-          ).then(({ rows }) => {
-            const profile = rows[0] || {};
-            const complete = Boolean(
-              profile.onboarding_completed &&
-              profile.category_id &&
-              profile.branch_id &&
-              profile.semester_id &&
-              profile.college_id &&
-              profile.course_id &&
-              profile.year_id
-            );
-            if (!complete) return res.redirect(302, '/academic-onboarding');
-            return res.sendFile(path.join(__dirname, '..', file));
-          }).catch(() => res.redirect(302, '/academic-onboarding'));
-        }
+        return res.sendFile(path.join(__dirname, '..', file));
       }
 
       return res.sendFile(path.join(__dirname, '..', file));
@@ -823,6 +778,10 @@ app.use(async (req, res, next) => {
   }
 
   const pathKey = req.path.toLowerCase();
+  if (pathKey === '/academic-onboarding' || pathKey === '/academic-onboarding.html') {
+    return res.redirect(302, '/dashboard');
+  }
+
   if (/\.html$/i.test(pathKey)) {
     const cleanPath = pathKey.replace(/\.html$/i, '');
     // If the clean path is protected, require session
@@ -838,15 +797,6 @@ app.use(async (req, res, next) => {
     if (PROTECTED_PAGE_PATHS && PROTECTED_PAGE_PATHS.has(cleanPath)) {
       if (!req.session || !req.session.userId) {
         return res.redirect(302, '/login');
-      }
-      const role = String(req.session.role || '').toLowerCase();
-      if (role !== 'admin' && role !== 'super_admin') {
-        try {
-          const complete = await isStudentOnboardingComplete(req.session.userId);
-          if (!complete) return res.redirect(302, '/academic-onboarding');
-        } catch {
-          return res.redirect(302, '/academic-onboarding');
-        }
       }
     }
 
@@ -868,15 +818,6 @@ app.use(async (req, res, next) => {
     if (PROTECTED_PAGE_PATHS && PROTECTED_PAGE_PATHS.has(pathKey)) {
       if (!req.session || !req.session.userId) {
         return res.redirect(302, '/login');
-      }
-      const role = String(req.session.role || '').toLowerCase();
-      if (role !== 'admin' && role !== 'super_admin') {
-        try {
-          const complete = await isStudentOnboardingComplete(req.session.userId);
-          if (!complete) return res.redirect(302, '/academic-onboarding');
-        } catch {
-          return res.redirect(302, '/academic-onboarding');
-        }
       }
     }
 

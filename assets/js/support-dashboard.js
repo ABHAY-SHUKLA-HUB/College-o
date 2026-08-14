@@ -12,7 +12,7 @@
       if (!response.ok) {
         if (response.status === 403) {
           alert('Please complete your academic profile first');
-          window.location.href = 'academic-onboarding.html';
+          window.location.href = 'settings.html';
         }
         throw new Error('Failed to load dashboard');
       }

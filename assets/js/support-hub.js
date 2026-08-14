@@ -36,7 +36,7 @@
           const message = String(payload.error || 'Access denied').trim();
           if (/profile incomplete/i.test(message) || /academic profile/i.test(message)) {
             alert('Please complete your academic profile first');
-            window.location.href = 'academic-onboarding.html';
+            window.location.href = 'settings.html';
             return;
           }
           const container = document.getElementById('requests-container');

@@ -903,34 +903,7 @@ async function applyAuthGuard() {
 }
 
 async function enforceAcademicOnboarding() {
-  const file = pageName();
-  if (publicPage()) return;
-  if (file === 'academic-onboarding.html') return;
-  if (!window.collegeOsCurrentUser || !window.CollegeOSApi) return;
-  if (window.collegeOsCurrentUser.role === 'admin') return;
-
-  try {
-    const profileData = await window.CollegeOSApi.getStudentAcademicProfile();
-    const profile = profileData?.profile;
-    const profileComplete = Boolean(
-      profile &&
-      profile.collegeId &&
-      profile.courseId &&
-      profile.branchId &&
-      profile.yearId &&
-      profile.semesterId
-    );
-
-    if (!profileComplete) {
-      console.log('[dashboard] Onboarding required');
-      window.location.replace('/academic-onboarding');
-      return;
-    }
-
-    console.log('[dashboard] Onboarding completed');
-  } catch (error) {
-    console.warn('[dashboard] Onboarding check failed', error);
-  }
+  return;
 }
 
 function bindLogout() {

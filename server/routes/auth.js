@@ -579,26 +579,7 @@ async function resolveStudentLandingPath(db, userId) {
     return '/admin-dashboard';
   }
 
-  const profileResult = await db.query(
-    `SELECT onboarding_completed, category_id, branch_id, semester_id, college_id, course_id, year_id
-     FROM user_profiles
-     WHERE user_id = $1
-     LIMIT 1`,
-    [userId]
-  );
-
-  const profile = profileResult.rows[0] || {};
-  const profileComplete = Boolean(
-    profile.onboarding_completed &&
-    profile.category_id &&
-    profile.branch_id &&
-    profile.semester_id &&
-    profile.college_id &&
-    profile.course_id &&
-    profile.year_id
-  );
-
-  return profileComplete ? '/dashboard' : '/academic-onboarding';
+  return '/dashboard';
 }
 
 function maskEmailForLog(email) {
@@ -1265,7 +1246,7 @@ router.post('/signup', async (req, res) => {
           user: user.rows[0],
           role: user.rows[0].role,
           token: null,
-          redirectUrl: '/academic-onboarding'
+          redirectUrl: '/dashboard'
         });
       });
     });

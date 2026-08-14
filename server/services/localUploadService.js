@@ -30,11 +30,24 @@ async function saveBufferToLocal({ buffer, fileName, folder = '' }) {
     ? `/uploads/${cleanFolder}/${fileName}`
     : `/uploads/${fileName}`;
 
+  const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
+  const configuredBaseUrl = String(
+    process.env.PUBLIC_UPLOAD_URL ||
+    process.env.API_UPLOAD_URL ||
+    process.env.VITE_UPLOAD_URL ||
+    process.env.API_URL ||
+    (isProduction ? 'https://college-o.onrender.com' : '')
+  ).trim().replace(/\/+$/, '');
+
+  const finalUrl = configuredBaseUrl && !relativeUrl.startsWith('http')
+    ? `${configuredBaseUrl}${relativeUrl}`
+    : relativeUrl;
+
   return {
     provider: 'local',
     path: filePath,
     key: cleanFolder ? `${cleanFolder}/${fileName}` : fileName,
-    url: relativeUrl
+    url: finalUrl
   };
 }
 

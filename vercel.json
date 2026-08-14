@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/uploads/:path*",
+      "destination": "https://college-o.onrender.com/uploads/:path*"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://college-o.onrender.com/api/:path*"
+    },
+    {
       "source": "/college-feed",
       "destination": "/college-feed.html"
     },

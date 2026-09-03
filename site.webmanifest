@@ -1,0 +1,16 @@
+{
+  "name": "College OS",
+  "short_name": "College OS",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#eef3f8",
+  "theme_color": "#0f766e",
+  "icons": [
+    {
+      "src": "/assets/images/college-os-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

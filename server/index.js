@@ -351,6 +351,8 @@ app.use(helmet({
         'https://challenges.cloudflare.com',
         ...(!isProduction ? localDevOrigins : [])
       ],
+      frameAncestors: ["'self'"],
+      manifestSrc: ["'self'"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       ...(isProduction ? { upgradeInsecureRequests: [] } : {})
@@ -365,7 +367,16 @@ app.use(helmet({
   frameguard: false,
   noSniff: true,
   xssFilter: true,
-  referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  permissionsPolicy: {
+    features: {
+      camera: ["'self'", 'https://meet.jit.si'],
+      microphone: ["'self'", 'https://meet.jit.si'],
+      geolocation: [],
+      payment: [],
+      usb: []
+    }
+  }
 }));
 
 app.disable('x-powered-by');
@@ -464,6 +475,9 @@ app.get('/help-center', (_req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
   res.sendFile(path.join(__dirname, '..', 'help-center.html'));
 });
+app.get('/terms', (_req, res) => res.sendFile(path.join(__dirname, '..', 'terms.html')));
+app.get('/privacy', (_req, res) => res.sendFile(path.join(__dirname, '..', 'privacy.html')));
+app.get('/contact', (_req, res) => res.sendFile(path.join(__dirname, '..', 'contact-us.html')));
 app.get('/my-tickets', (_req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
   res.sendFile(path.join(__dirname, '..', 'my-tickets.html'));
@@ -683,7 +697,12 @@ app.get('/api/notifications/stream', (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    const origin = String(req.headers.origin || '').trim();
+    if (origin && allowedOrigins.has(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Vary', 'Origin');
+    }
 
     // Send initial connection message
     res.write('data: {"type":"connected","message":"Notification stream connected"}\n\n');
@@ -910,7 +929,7 @@ app.get('*', (req, res) => {
   }
 
   // Serve index.html for all non-API paths (SPA client-side routing)
-  return res.sendFile(path.join(__dirname, '..', 'index.html'));
+  return res.status(404).sendFile(path.join(__dirname, '..', '404.html'));
 });
 
 // 14. 404 Not Found handler - catches unhandled routes

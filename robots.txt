@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+Disallow: /login
+Disallow: /signup
+Disallow: /reset-password
+Disallow: /dashboard
+Disallow: /study
+Disallow: /notes
+Disallow: /mock-tests
+Disallow: /mock-test
+Disallow: /profile
+Disallow: /settings
+Disallow: /roadmap
+Disallow: /ai-tools
+Disallow: /live-hub
+Disallow: /admin
+Disallow: /admin-
+Disallow: /api/
+
+Sitemap: https://collegeo.in/sitemap.xml

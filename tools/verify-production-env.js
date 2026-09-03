@@ -21,6 +21,13 @@ const databaseUrl = String(
   || ''
 ).trim();
 const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
+const selectedDatabaseUrl = String(
+  process.env.SUPABASE_POOLER_URL
+  || process.env.SUPABASE_DATABASE_URL
+  || process.env.CURRENT_DATABASE_URL
+  || process.env.DATABASE_URL
+  || ''
+).trim();
 const hostnames = String(process.env.TURNSTILE_ALLOWED_HOSTNAMES || '')
   .split(',')
   .map((hostname) => hostname.trim().toLowerCase())
@@ -43,6 +50,20 @@ if (missing.length || missingHostnames.length) {
 if (!/^https:\/\//i.test(String(process.env.SUPABASE_URL || '').trim())) {
   console.error('SUPABASE_URL must be an HTTPS Supabase project URL.');
   process.exit(1);
+}
+
+let selectedDatabaseHost = '';
+try {
+  selectedDatabaseHost = new URL(selectedDatabaseUrl).hostname;
+} catch {
+  selectedDatabaseHost = '';
+}
+if (/supabase\.(co|com)$/i.test(selectedDatabaseHost) || /pooler\.supabase\.com$/i.test(selectedDatabaseHost)) {
+  const ca = String(process.env.SUPABASE_DB_SSL_CA || process.env.PG_SSL_CA || '').trim();
+  if (!ca) {
+    console.error('SUPABASE_DB_SSL_CA (or PG_SSL_CA) is required for strict Supabase PostgreSQL TLS verification.');
+    process.exit(1);
+  }
 }
 
 if (!/^postgres(?:ql)?:\/\//i.test(databaseUrl)) {

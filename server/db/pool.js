@@ -40,24 +40,56 @@ function shouldRejectUnauthorized() {
   return isProduction;
 }
 
-function resolveSslConfig(connectionString) {
-  const sslMode = normalizeSslMode(connectionString);
-  const explicit = String(process.env.PG_SSL || process.env.DB_SSL || '').toLowerCase();
+function getDatabaseCa() {
+  const raw = String(process.env.SUPABASE_DB_SSL_CA || process.env.PG_SSL_CA || '')
+    .replace(/\\n/g, '\n')
+    .trim();
 
-  if (explicit === 'false' || explicit === '0' || explicit === 'off') return false;
-  if (explicit === 'true' || explicit === '1' || explicit === 'on') {
-    return { rejectUnauthorized: shouldRejectUnauthorized() };
+  if (!raw || raw.includes('-----BEGIN CERTIFICATE-----')) return raw;
+
+  const base64Body = raw.replace(/\s+/g, '');
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(base64Body)) return raw;
+
+  return `-----BEGIN CERTIFICATE-----\n${base64Body.match(/.{1,64}/g).join('\n')}\n-----END CERTIFICATE-----`;
+}
+
+function validateDatabaseCa(ca) {
+  if (!ca) return;
+  if (!ca.includes('-----BEGIN CERTIFICATE-----') || !ca.includes('-----END CERTIFICATE-----')) {
+    throw new Error('SUPABASE_DB_SSL_CA (or PG_SSL_CA) must contain a valid PEM certificate.');
   }
-
-  if (sslMode === 'disable' || sslMode === 'allow') {
-    return false;
+  const body = ca
+    .replace('-----BEGIN CERTIFICATE-----', '')
+    .replace('-----END CERTIFICATE-----', '')
+    .replace(/\s+/g, '');
+  if (body.length < 100 || !/^[A-Za-z0-9+/]+={0,2}$/.test(body)) {
+    throw new Error('SUPABASE_DB_SSL_CA (or PG_SSL_CA) must contain a valid PEM certificate.');
   }
+}
 
-  if (sslMode === 'require' || sslMode === 'prefer' || sslMode === 'verify-ca' || sslMode === 'verify-full') {
-    return { rejectUnauthorized: shouldRejectUnauthorized() };
-  }
+function getSelectedConnection() {
+  const candidates = [
+    ['SUPABASE_POOLER_URL', process.env.SUPABASE_POOLER_URL],
+    ['SUPABASE_DATABASE_URL', process.env.SUPABASE_DATABASE_URL],
+    ['CURRENT_DATABASE_URL', process.env.CURRENT_DATABASE_URL],
+    ['DATABASE_URL', process.env.DATABASE_URL]
+  ];
+  return candidates.find(([, value]) => String(value || '').trim()) || ['', ''];
+}
 
-  return false;
+function resolveSslConfig() {
+  const explicit = String(process.env.PG_SSL || process.env.DB_SSL || '').trim().toLowerCase();
+  const disabled = ['false', '0', 'off', 'disable'].includes(explicit);
+  const enabled = ['true', '1', 'on', 'require', 'prefer', 'verify-ca', 'verify-full'].includes(explicit);
+
+  if (disabled && !isProduction) return false;
+  if (!isProduction && !enabled && !getDatabaseCa()) return false;
+
+  const ssl = { rejectUnauthorized: true };
+  const ca = getDatabaseCa();
+  validateDatabaseCa(ca);
+  if (ca) ssl.ca = ca;
+  return ssl;
 }
 
 function normalizeConnectionString(rawConnectionString) {
@@ -74,17 +106,12 @@ function normalizeConnectionString(rawConnectionString) {
       parsed.searchParams.set('application_name', 'college-os-backend');
     }
 
-    if (!shouldRejectUnauthorized()) {
-      // In non-production/self-signed cert setups, disable strict sslmode in connection string
-      parsed.searchParams.delete('sslmode');
-      parsed.searchParams.delete('channel_binding');
-    } else if (sslMode === 'prefer' || sslMode === 'require' || sslMode === 'verify-ca') {
-      if (neonHost) {
-        parsed.searchParams.set('uselibpqcompat', 'true');
-      }
-      parsed.searchParams.set('sslmode', 'require');
-    } else if (supabaseHost && !sslMode) {
-      parsed.searchParams.set('sslmode', 'require');
+    // Keep TLS policy in the explicit Pool `ssl` option. URL sslmode values
+    // are removed to prevent pg-connection-string from overriding it.
+    parsed.searchParams.delete('sslmode');
+    parsed.searchParams.delete('channel_binding');
+    if (!supabaseHost && neonHost && sslMode === 'require') {
+      parsed.searchParams.set('uselibpqcompat', 'true');
     }
 
     return parsed.toString();
@@ -93,20 +120,34 @@ function normalizeConnectionString(rawConnectionString) {
   }
 }
 
-const connectionString = normalizeConnectionString(
-  process.env.SUPABASE_POOLER_URL ||
-  process.env.SUPABASE_DATABASE_URL ||
-  process.env.CURRENT_DATABASE_URL ||
-  process.env.DATABASE_URL ||
-  ''
-);
+const [connectionSource, rawConnectionString] = getSelectedConnection();
+const connectionString = normalizeConnectionString(rawConnectionString);
 if (!connectionString) {
   throw new Error('DATABASE_URL (or SUPABASE_DATABASE_URL / SUPABASE_POOLER_URL) is required. Configure a real PostgreSQL connection string in .env.');
 }
 
+const rawParsedConnection = (() => {
+  try { return new URL(rawConnectionString); } catch { return null; }
+})();
+if (isProduction && isSupabaseHost(rawConnectionString) && !getDatabaseCa()) {
+  throw new Error('SUPABASE_DB_SSL_CA (or PG_SSL_CA) is required for strict Supabase PostgreSQL TLS verification.');
+}
+validateDatabaseCa(getDatabaseCa());
+console.info('[DB] connection source:', connectionSource || 'none');
+console.info('[DB] URL sslmode:', String(rawParsedConnection?.searchParams.get('sslmode') || 'none').toLowerCase());
+console.info('[DB] custom Supabase CA configured:', Boolean(getDatabaseCa()));
+console.info('[DB] TLS verification:', resolveSslConfig()?.rejectUnauthorized === true ? 'enabled' : 'disabled');
+console.info('[DB] TLS configuration:', {
+  sslmode: String(rawParsedConnection?.searchParams.get('sslmode') || 'not-set').toLowerCase(),
+  uselibpqcompat: String(rawParsedConnection?.searchParams.get('uselibpqcompat') || 'not-set').toLowerCase(),
+  pgSsl: String(process.env.PG_SSL || process.env.DB_SSL || 'not-set').toLowerCase(),
+  caConfigured: Boolean(getDatabaseCa()),
+  rejectUnauthorized: resolveSslConfig()?.rejectUnauthorized ?? false
+});
+
 const pool = new Pool({
   connectionString,
-  ssl: resolveSslConfig(connectionString),
+  ssl: resolveSslConfig(),
   max: Number(process.env.PG_POOL_MAX || 20),
   idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT_MS || 30000),
   connectionTimeoutMillis: Number(process.env.PG_CONNECT_TIMEOUT_MS || 10000),

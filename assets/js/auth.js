@@ -28,6 +28,14 @@ function normalizeAuthErrorMessage(message, fallback = 'Something went wrong. Pl
   return text || fallback;
 }
 
+function getAuthApiErrorMessage(error, fallback = 'Something went wrong. Please try again.') {
+  const code = String(error?.code || '').toUpperCase();
+  if (code === 'TURNSTILE_CONFIG_MISSING' || code === 'TURNSTILE_UNAVAILABLE') {
+    return 'Security check is temporarily unavailable. Use Reset Security Check and try again. If it continues, contact support.';
+  }
+  return normalizeAuthErrorMessage(error?.message || error, fallback);
+}
+
 function setLoading(button, loadingText, isLoading) {
   if (!button) return;
   if (!button.dataset.originalText) button.dataset.originalText = button.innerHTML;
@@ -702,7 +710,7 @@ function syncTurnstileUiState(scope, { loading = false, message = '', error = fa
   }
 
   getTurnstileSubmitButtons(scope).forEach((button) => {
-    button.disabled = Boolean(loading || !state.ready);
+    button.disabled = Boolean(loading || (!state.ready && !state.loadFailed));
   });
 }
 
@@ -816,6 +824,9 @@ async function refreshTurnstile(scope, { force = false } = {}) {
     state.bypass = false;
     state.loadFailed = true;
     clearTurnstileToken(scope, 'Security check is not configured for this environment.');
+    const error = new Error('Security check is not configured for this environment.');
+    error.code = 'TURNSTILE_CONFIG_MISSING';
+    state.lastError = error;
     return { turnstileToken: '', captchaToken: '', website: String(byId(`${scope}Website`)?.value || '') };
   }
 
@@ -826,13 +837,18 @@ async function refreshTurnstile(scope, { force = false } = {}) {
   } catch (error) {
     state.loadFailed = true;
     clearTurnstileToken(scope, 'Security check failed to load. Please try again.');
+    error.code = 'TURNSTILE_UNAVAILABLE';
+    state.lastError = error;
     throw error;
   }
 
   if (!window.turnstile) {
     state.loadFailed = true;
     clearTurnstileToken(scope, 'Security check unavailable. Please try again.');
-    throw new Error('Turnstile is unavailable');
+    const error = new Error('Turnstile is unavailable');
+    error.code = 'TURNSTILE_UNAVAILABLE';
+    state.lastError = error;
+    throw error;
   }
 
   if (state.widgetId !== null && force) {
@@ -917,7 +933,9 @@ async function ensureTurnstilePayload(scope) {
   }
 
   if (turnstileState[scope]?.loadFailed) {
-    throw new Error('Security check failed. Please reset it and try again.');
+    const error = turnstileState[scope].lastError || new Error('Security check is temporarily unavailable. Use Reset Security Check and try again.');
+    error.code = error.code || 'TURNSTILE_UNAVAILABLE';
+    throw error;
   }
 
   const token = await refreshTurnstile(scope, { force: false });
@@ -2179,7 +2197,7 @@ async function requestSignupVerificationCode({ isResend = false } = {}) {
     void refreshTurnstile('signup', { force: true });
     return true;
   } catch (error) {
-    let message = normalizeAuthErrorMessage(error.message, 'Failed to send verification code.');
+    let message = getAuthApiErrorMessage(error, 'Failed to send verification code.');
     if (/taking longer than expected/i.test(message)) {
       message = 'Sending OTP is taking longer than expected. Please try again.';
     }
@@ -2310,7 +2328,7 @@ function bindEmailLogin() {
       setAuthMessages('login', '', 'Login successful. Preparing your dashboard...');
       await completePostLoginFlow();
     } catch (error) {
-      const message = error?.message || 'Login failed';
+      const message = getAuthApiErrorMessage(error, 'Login failed');
       if (/security/i.test(message)) {
         setAuthMessages('login', 'Security check could not load. Reset it and try again.');
       } else if (/too many failed attempts/i.test(message)) {
@@ -2388,7 +2406,7 @@ function bindMobileOtp() {
       startOtpResendTimer(30, 'otpResendTimer', 'resendOtpBtn');
       void refreshTurnstile('login', { force: true });
     } catch (error) {
-      const msg = error?.message || 'Failed to send OTP';
+      const msg = getAuthApiErrorMessage(error, 'Failed to send OTP');
       if (/security/i.test(msg)) {
         setAuthMessages('login', 'Security check could not load. Reset it and try again.');
       } else if (error?.status === 429) {
@@ -2431,7 +2449,7 @@ function bindMobileOtp() {
       setAuthMessages('login', '', 'OTP verified. Welcome back.');
       await completePostLoginFlow();
     } catch (error) {
-      const msg = error?.message || 'OTP verification failed';
+      const msg = getAuthApiErrorMessage(error, 'OTP verification failed');
       if (/security/i.test(msg)) {
         setAuthMessages('login', 'Security check could not load. Reset it and try again.');
       } else {
@@ -2464,7 +2482,7 @@ function bindMobileOtp() {
         startOtpResendTimer(30, 'otpResendTimer', 'resendOtpBtn');
         void refreshTurnstile('login', { force: true });
       } catch (error) {
-        const msg = error?.message || 'Unable to resend OTP';
+        const msg = getAuthApiErrorMessage(error, 'Unable to resend OTP');
         if (/security/i.test(msg)) {
           setAuthMessages('login', 'Security check could not load. Reset it and try again.');
         } else {
@@ -2630,7 +2648,7 @@ function bindSignupVerificationUi() {
           code: error?.code,
           status: error?.status
         });
-        setSignupOtpStatus(normalizeAuthErrorMessage(error.message, 'Verification failed. Please try again.'), '');
+        setSignupOtpStatus(getAuthApiErrorMessage(error, 'Verification failed. Please try again.'), '');
       } finally {
         signupVerificationState.verifyInProgress = false;
         setLoading(verifyBtn, 'Verify and Complete Signup', false);

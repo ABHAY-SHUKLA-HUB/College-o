@@ -48,9 +48,6 @@ const FRONTEND_URL = String(process.env.FRONTEND_URL || process.env.FRONTEND_PUB
 const GOOGLE_OAUTH_CLIENT_ID = GOOGLE_CLIENT_ID;
 const GOOGLE_OAUTH_SCOPES = 'openid email profile';
 
-const otpStore = new Map();
-const verifiedStore = new Map();
-
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -181,8 +178,8 @@ function hasHoneypotHit(req) {
   return Boolean(String(req.body?.website || '').trim());
 }
 
-function rejectSecurityFailure(res, message = 'Security verification failed. Please try again.', status = 400) {
-  return res.status(status).json({ error: message });
+function rejectSecurityFailure(res, message = 'Security verification failed. Please try again.', status = 400, code = 'SECURITY_CHECK_FAILED') {
+  return res.status(status).json({ error: message, code });
 }
 
 async function requirePublicSecurityCheck(req, res) {
@@ -200,10 +197,10 @@ async function requirePublicSecurityCheck(req, res) {
   if (!verification.ok) {
     const message = verification.message || 'Security verification failed. Please try again.';
     if (/expired/i.test(message)) {
-      rejectSecurityFailure(res, 'Security check expired. Please verify again.');
+      rejectSecurityFailure(res, 'Security check expired. Please verify again.', 400, verification.code || 'TURNSTILE_EXPIRED');
       return false;
     }
-    rejectSecurityFailure(res, message);
+    rejectSecurityFailure(res, message, 503, verification.code || 'SECURITY_CHECK_FAILED');
     return false;
   }
 
@@ -309,22 +306,27 @@ function verifyCaptchaPayload(req, captcha) {
   return correct;
 }
 
-function getOtpStoreKey({ purpose, channel, target }) {
-  return `${String(purpose || 'signup').toLowerCase()}_${String(channel || 'email').toLowerCase()}_${String(target || '').trim().toLowerCase()}`;
+function hashOtpCode(target, code) {
+  return crypto.createHmac('sha256', CAPTCHA_SECRET).update(`${String(target || '').toLowerCase()}:${String(code || '')}`).digest('hex');
 }
 
-function clearExpiredOtps() {
-  const now = Date.now();
-  for (const [key, value] of otpStore.entries()) {
-    if (!value || Number(value.expiresAt || 0) <= now) {
-      otpStore.delete(key);
-    }
-  }
-  for (const [key, value] of verifiedStore.entries()) {
-    if (!value || Number(value.expiresAt || 0) <= now) {
-      verifiedStore.delete(key);
-    }
-  }
+async function getOtpChallenge({ purpose, channel, target, forUpdate = false, client = pool }) {
+  const lock = forUpdate ? ' FOR UPDATE' : '';
+  const result = await client.query(
+    `SELECT * FROM auth_otp_challenges WHERE purpose = $1 AND channel = $2 AND target = $3${lock}`,
+    [purpose, channel, target]
+  );
+  return result.rows[0] || null;
+}
+
+async function invalidateOtpChallenge({ purpose, channel, target }, client = pool) {
+  await client.query(
+    `UPDATE auth_otp_challenges
+     SET invalidated_at = CURRENT_TIMESTAMP
+     WHERE purpose = $1 AND channel = $2 AND target = $3
+       AND invalidated_at IS NULL`,
+    [purpose, channel, target]
+  );
 }
 
 async function sendOtpEmail({ otp, originalTarget, channel, purpose, targetEmail }) {
@@ -814,36 +816,56 @@ function toInt(value, fallback = null) {
   return parsed;
 }
 
-function getVerifiedStoreKey({ purpose, channel, target }) {
-  return getOtpStoreKey({ purpose, channel, target });
-}
-
-function createVerificationToken({ purpose, channel, target }) {
+async function createVerificationToken({ purpose, channel, target }) {
   const raw = crypto.randomBytes(24).toString('hex');
-  const key = getVerifiedStoreKey({ purpose, channel, target });
-  verifiedStore.set(key, {
-    tokenHash: hashSha256(raw),
-    expiresAt: Date.now() + OTP_TTL_MS
-  });
+  const consumedSignupOtp = await pool.query(
+    `UPDATE auth_otp_challenges
+     SET verified_token_hash = $4, verified_expires_at = $5
+     WHERE purpose = $1 AND channel = $2 AND target = $3 AND invalidated_at IS NULL`,
+    [purpose, channel, target, hashSha256(raw), new Date(Date.now() + OTP_TTL_MS)]
+  );
   return raw;
 }
 
-function consumeVerificationToken({ purpose, channel, target, token }) {
-  const key = getVerifiedStoreKey({ purpose, channel, target });
-  const saved = verifiedStore.get(key);
-  if (!saved || Date.now() > Number(saved.expiresAt || 0)) {
-    verifiedStore.delete(key);
-    return false;
-  }
-  const valid = saved.tokenHash === hashSha256(token || '');
-  if (valid) verifiedStore.delete(key);
-  return valid;
+async function consumeVerificationToken({ purpose, channel, target, token }) {
+  const result = await pool.query(
+    `UPDATE auth_otp_challenges
+     SET verified_token_hash = NULL, verified_expires_at = NULL
+     WHERE purpose = $1 AND channel = $2 AND target = $3
+       AND invalidated_at IS NULL
+       AND verified_expires_at > CURRENT_TIMESTAMP
+       AND verified_token_hash = $4
+     RETURNING id`,
+    [purpose, channel, target, hashSha256(token || '')]
+  );
+  return result.rowCount === 1;
 }
 
 async function ensureAuthSchema() {
   if (authSchemaEnsured) return;
 
   await ensureUniversityCatalogSchema(pool);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS auth_otp_challenges (
+      id BIGSERIAL PRIMARY KEY,
+      purpose VARCHAR(40) NOT NULL,
+      channel VARCHAR(20) NOT NULL,
+      target VARCHAR(320) NOT NULL,
+      otp_hash VARCHAR(64) NOT NULL,
+      expires_at TIMESTAMP NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      request_count INTEGER NOT NULL DEFAULT 1,
+      request_window_started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      next_allowed_at TIMESTAMP NOT NULL,
+      verified_token_hash VARCHAR(64),
+      verified_expires_at TIMESTAMP,
+      invalidated_at TIMESTAMP,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (purpose, channel, target)
+    )
+  `);
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_auth_otp_challenges_expiry ON auth_otp_challenges(expires_at)');
 
   await pool.query(`
     ALTER TABLE users
@@ -952,7 +974,9 @@ router.get('/config', async (_req, res) => {
     };
     authConfig.turnstile = {
       enabled: String(process.env.TURNSTILE_ENABLED || 'true').toLowerCase() !== 'false',
-      siteKey: String(process.env.TURNSTILE_SITE_KEY || experienceConfig?.auth?.turnstile?.siteKey || '').trim()
+      siteKey: String(process.env.TURNSTILE_SITE_KEY || experienceConfig?.auth?.turnstile?.siteKey || '').trim(),
+      configured: Boolean(String(process.env.TURNSTILE_SITE_KEY || '').trim() && String(process.env.TURNSTILE_SECRET_KEY || '').trim()),
+      allowedHostnames: String(process.env.TURNSTILE_ALLOWED_HOSTNAMES || '').split(',').map((hostname) => hostname.trim()).filter(Boolean)
     };
 
     if (process.env.DEBUG_AUTH === 'true') {
@@ -1164,12 +1188,12 @@ router.post('/signup', async (req, res) => {
   }
 
   const verificationTarget = normalizedEmail;
-  if (!verificationTarget || !consumeVerificationToken({
+  if (!verificationTarget || !(await consumeVerificationToken({
     purpose: 'signup',
     channel: selectedVerificationMethod,
     target: verificationTarget,
     token: verificationToken
-  })) {
+  }))) {
     return res.status(400).json({ error: 'Please verify OTP before signup.' });
   }
 
@@ -1504,49 +1528,44 @@ router.post('/verification/request', async (req, res) => {
     return sendRateLimitedResponse(res, ipQuota.retryAfter, 'Too many attempts. Please try again later.');
   }
 
-  clearExpiredOtps();
-  // reuse earlier `now` from dedupe region
-  const key = getOtpStoreKey({ purpose, channel, target });
-  const existing = otpStore.get(key);
-
-  // Per-target rate limit (3 requests per 15min to SAME email/phone)
-  if (existing?.requestWindowStartedAt && now - existing.requestWindowStartedAt <= OTP_REQUEST_WINDOW_MS) {
-    if (Number(existing.requestCount || 0) >= OTP_MAX_REQUESTS_PER_WINDOW) {
-      return sendRateLimitedResponse(res, OTP_RESEND_MS / 1000, 'Too many attempts. Please try again later.');
-    }
+  const existing = await getOtpChallenge({ purpose, channel, target });
+  const existingWindowStart = existing?.request_window_started_at ? new Date(existing.request_window_started_at).getTime() : 0;
+  const requestCount = existingWindowStart && now - existingWindowStart <= OTP_REQUEST_WINDOW_MS
+    ? Number(existing.request_count || 0)
+    : 0;
+  if (requestCount >= OTP_MAX_REQUESTS_PER_WINDOW) {
+    return sendRateLimitedResponse(res, OTP_RESEND_MS / 1000, 'Too many attempts. Please try again later.');
   }
 
-  // Per-target rate limit (60-second cooldown between OTP sends)
-  if (existing?.nextAllowedAt && now < existing.nextAllowedAt) {
-    const retryAfter = Math.ceil((existing.nextAllowedAt - now) / 1000);
-    console.warn('[OTP_RATE_LIMIT] resend cooldown', { ip: getRequesterIp(req), target, purpose, retryAfter, requestCount: existing.requestCount });
-    return sendRateLimitedResponse(res, retryAfter, 'Too many attempts. Please try again later.');
+  const nextAllowedAt = existing?.next_allowed_at ? new Date(existing.next_allowed_at).getTime() : 0;
+  if (nextAllowedAt && now < nextAllowedAt) {
+    return sendRateLimitedResponse(res, Math.ceil((nextAllowedAt - now) / 1000), 'Too many attempts. Please try again later.');
   }
 
-  const code = String(randomInt(100000, 999999));
-  otpStore.set(key, {
-    code,
-    target,
-    channel,
-    purpose,
-    attempts: 0,
-    requestCount:
-      existing && existing.requestWindowStartedAt && now - existing.requestWindowStartedAt <= OTP_REQUEST_WINDOW_MS
-        ? Number(existing.requestCount || 0) + 1
-        : 1,
-    requestWindowStartedAt:
-      existing && existing.requestWindowStartedAt && now - existing.requestWindowStartedAt <= OTP_REQUEST_WINDOW_MS
-        ? existing.requestWindowStartedAt
-        : now,
-    expiresAt: now + OTP_TTL_MS,
-    nextAllowedAt: now + OTP_RESEND_MS
-  });
+  const code = String(randomInt(100000, 1000000));
+  const requestWindowStartedAt = requestCount > 0 ? new Date(existingWindowStart) : new Date(now);
+  await pool.query(
+    `INSERT INTO auth_otp_challenges
+      (purpose, channel, target, otp_hash, expires_at, attempts, request_count, request_window_started_at, next_allowed_at, invalidated_at)
+     VALUES ($1, $2, $3, $4, $5, 0, $6, $7, $8, NULL)
+     ON CONFLICT (purpose, channel, target) DO UPDATE SET
+       otp_hash = EXCLUDED.otp_hash,
+       expires_at = EXCLUDED.expires_at,
+       attempts = 0,
+       request_count = EXCLUDED.request_count,
+       request_window_started_at = EXCLUDED.request_window_started_at,
+       next_allowed_at = EXCLUDED.next_allowed_at,
+       invalidated_at = NULL,
+       verified_token_hash = NULL,
+       verified_expires_at = NULL`,
+    [purpose, channel, target, hashOtpCode(target, code), new Date(now + OTP_TTL_MS), requestCount + 1, requestWindowStartedAt, new Date(now + OTP_RESEND_MS)]
+  );
 
   try {
     if (purpose === 'login' && channel === 'email') {
       const existsResult = await pool.query('SELECT id FROM users WHERE email = $1 LIMIT 1', [target]);
       if (existsResult.rowCount === 0) {
-        otpStore.delete(key);
+        await invalidateOtpChallenge({ purpose, channel, target });
         return res.json({
           message: 'If the account exists, OTP has been sent.',
           expiresInSeconds: 300,
@@ -1561,7 +1580,7 @@ router.post('/verification/request', async (req, res) => {
       throw new Error('Failed to send OTP email. Please try again.');
     }
   } catch (error) {
-    otpStore.delete(key);
+    await invalidateOtpChallenge({ purpose, channel, target }).catch(() => {});
     console.error('[OTP_EMAIL] request failed', {
       name: error?.name,
       code: error?.code,
@@ -1593,40 +1612,36 @@ router.post('/verification/verify', async (req, res) => {
 
   if (!/^\d{6}$/.test(code)) return res.status(400).json({ error: 'OTP must be 6 digits' });
 
-  clearExpiredOtps();
-  const key = getOtpStoreKey({ purpose, channel, target });
-  const record = otpStore.get(key);
+  const record = await getOtpChallenge({ purpose, channel, target, forUpdate: true });
 
   if (!record) return res.status(400).json({ error: 'Verification code not requested' });
-  if (Date.now() > Number(record.expiresAt || 0)) {
-    otpStore.delete(key);
+  if (Date.now() > new Date(record.expires_at).getTime() || record.invalidated_at) {
+    await invalidateOtpChallenge({ purpose, channel, target });
     return res.status(400).json({ error: 'Verification code expired' });
   }
-  
-  let codeMatch = false;
-  try {
-    // Timing-safe comparison to prevent timing attacks
-    codeMatch = timingSafeEqual(
-      Buffer.from(record.code || ''),
-      Buffer.from(code || '')
-    );
-  } catch {
-    // Buffer lengths don't match
-    codeMatch = false;
-  }
-  
+
+  const expectedHash = Buffer.from(record.otp_hash || '', 'hex');
+  const actualHash = Buffer.from(hashOtpCode(target, code), 'hex');
+  const codeMatch = expectedHash.length === actualHash.length && timingSafeEqual(expectedHash, actualHash);
   if (!codeMatch) {
-    record.attempts = Number(record.attempts || 0) + 1;
-    if (record.attempts >= OTP_MAX_VERIFY_ATTEMPTS) {
-      otpStore.delete(key);
+    const attempts = Number(record.attempts || 0) + 1;
+    if (attempts >= OTP_MAX_VERIFY_ATTEMPTS) {
+      await invalidateOtpChallenge({ purpose, channel, target });
       return sendRateLimitedResponse(res, OTP_RESEND_MS / 1000, 'Too many incorrect attempts. Request a new OTP.');
     }
-    otpStore.set(key, record);
+    await pool.query('UPDATE auth_otp_challenges SET attempts = $4 WHERE purpose = $1 AND channel = $2 AND target = $3', [purpose, channel, target, attempts]);
     return res.status(400).json({ error: 'Invalid verification code' });
   }
 
-  otpStore.delete(key);
-  const verificationToken = createVerificationToken({ purpose, channel, target });
+  const consumedSignupOtp = await pool.query(
+    `UPDATE auth_otp_challenges
+     SET otp_hash = '', expires_at = CURRENT_TIMESTAMP, attempts = $5
+     WHERE purpose = $1 AND channel = $2 AND target = $3
+       AND otp_hash = $4 AND expires_at > CURRENT_TIMESTAMP AND invalidated_at IS NULL`,
+    [purpose, channel, target, hashOtpCode(target, code), Number(record.attempts || 0)]
+  );
+  if (consumedSignupOtp.rowCount !== 1) return res.status(400).json({ error: 'Verification code expired or already used' });
+  const verificationToken = await createVerificationToken({ purpose, channel, target });
   return res.json({ message: 'Verification successful', verified: true, verificationToken });
 });
 
@@ -1652,13 +1667,16 @@ router.post('/qa/otp-assist', async (req, res) => {
     return res.status(400).json({ error: 'channel, target and valid purpose are required' });
   }
 
-  clearExpiredOtps();
-  const key = getOtpStoreKey({ purpose, channel, target });
-  const record = otpStore.get(key);
+  const record = await getOtpChallenge({ purpose, channel, target });
   if (!record) return res.status(404).json({ error: 'No active OTP request for this target' });
 
-  otpStore.delete(key);
-  const verificationToken = createVerificationToken({ purpose, channel, target });
+  await pool.query(
+    `UPDATE auth_otp_challenges
+     SET otp_hash = '', expires_at = CURRENT_TIMESTAMP
+     WHERE purpose = $1 AND channel = $2 AND target = $3`,
+    [purpose, channel, target]
+  );
+  const verificationToken = await createVerificationToken({ purpose, channel, target });
 
   return res.json({
     verified: true,
@@ -1681,40 +1699,36 @@ router.post('/login/email-otp', async (req, res) => {
   if (!isEmail(email)) return res.status(400).json({ error: 'Valid email is required' });
   if (!/^\d{6}$/.test(code)) return res.status(400).json({ error: 'OTP must be 6 digits' });
 
-  // Verify OTP
-  clearExpiredOtps();
-  const key = getOtpStoreKey({ purpose: 'login', channel: 'email', target: email });
-  const record = otpStore.get(key);
+  const record = await getOtpChallenge({ purpose: 'login', channel: 'email', target: email, forUpdate: true });
 
   if (!record) return res.status(400).json({ error: 'Invalid email or OTP' });
-  if (Date.now() > Number(record.expiresAt || 0)) {
-    otpStore.delete(key);
-    return res.status(400).json({ error: 'Invalid email or OTP' });
-  }
-  
-  let codeMatch = false;
-  try {
-    // Timing-safe comparison to prevent timing attacks
-    codeMatch = timingSafeEqual(
-      Buffer.from(record.code || ''),
-      Buffer.from(code || '')
-    );
-  } catch {
-    // Buffer lengths don't match
-    codeMatch = false;
-  }
-  
-  if (!codeMatch) {
-    record.attempts = Number(record.attempts || 0) + 1;
-    if (record.attempts >= OTP_MAX_VERIFY_ATTEMPTS) {
-      otpStore.delete(key);
-      return sendRateLimitedResponse(res, OTP_RESEND_MS / 1000, 'Too many incorrect attempts. Request a new OTP.');
-    }
-    otpStore.set(key, record);
+  if (Date.now() > new Date(record.expires_at).getTime() || record.invalidated_at) {
+    await invalidateOtpChallenge({ purpose: 'login', channel: 'email', target: email });
     return res.status(400).json({ error: 'Invalid email or OTP' });
   }
 
-  otpStore.delete(key);
+  const expectedHash = Buffer.from(record.otp_hash || '', 'hex');
+  const actualHash = Buffer.from(hashOtpCode(email, code), 'hex');
+  const codeMatch = expectedHash.length === actualHash.length && timingSafeEqual(expectedHash, actualHash);
+  if (!codeMatch) {
+    const attempts = Number(record.attempts || 0) + 1;
+    if (attempts >= OTP_MAX_VERIFY_ATTEMPTS) {
+      await invalidateOtpChallenge({ purpose: 'login', channel: 'email', target: email });
+      return sendRateLimitedResponse(res, OTP_RESEND_MS / 1000, 'Too many incorrect attempts. Request a new OTP.');
+    }
+    await pool.query('UPDATE auth_otp_challenges SET attempts = $4 WHERE purpose = $1 AND channel = $2 AND target = $3', ['login', 'email', email, attempts]);
+    return res.status(400).json({ error: 'Invalid email or OTP' });
+  }
+
+  const consumedLoginOtp = await pool.query(
+    `UPDATE auth_otp_challenges
+     SET otp_hash = '', expires_at = CURRENT_TIMESTAMP
+     WHERE purpose = 'login' AND channel = 'email' AND target = $1
+       AND otp_hash = $2 AND expires_at > CURRENT_TIMESTAMP AND invalidated_at IS NULL
+     RETURNING id`,
+    [email, hashOtpCode(email, code)]
+  );
+  if (consumedLoginOtp.rowCount !== 1) return res.status(400).json({ error: 'Invalid email or OTP' });
 
   // Look up user
   const { rows } = await pool.query('SELECT id, full_name, email, role, subscription_tier, payment_status, subscription_expiry, college_name, university_id, university_name, custom_university, referral_code FROM users WHERE email = $1', [email]);
@@ -1740,6 +1754,9 @@ router.post('/login/email-otp', async (req, res) => {
     `UPDATE users
      SET failed_login_attempts = 0,
          locked_until = NULL,
+         is_email_verified = TRUE,
+         email_verified = TRUE,
+         email_verified_at = COALESCE(email_verified_at, CURRENT_TIMESTAMP),
          last_login_at = CURRENT_TIMESTAMP
      WHERE id = $1`,
     [user.id]

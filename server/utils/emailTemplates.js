@@ -66,10 +66,10 @@ function renderLayout({ eyebrow = 'College OS', title, subtitle = '', bodyHtml =
 }
 
 function buildOtpEmail({ otp, purpose = 'signup', channel = 'email', target = '', expiresMinutes = 5 }) {
-  const purposeText = purpose === 'login' ? 'sign in' : purpose === 'password_reset' ? 'reset your password' : 'verify your account';
+  const purposeText = purpose === 'login' ? 'sign in' : purpose === 'password_reset' ? 'reset your password' : 'verify your Collegeo email';
   return {
-    subject: `College OS Verification Code - ${String(otp || '').slice(0, 6)}`,
-    text: `Your College OS OTP is ${otp}. It expires in ${expiresMinutes} minutes. Requested for ${purposeText} via ${channel} (${target}).`,
+    subject: 'Verify your Collegeo email',
+    text: `Your Collegeo verification code is ${otp}. It expires in ${expiresMinutes} minutes. If you did not request this verification code, you can safely ignore this email.`,
     html: renderLayout({
       eyebrow: 'Account Verification',
       title: 'Your secure verification code',
@@ -80,7 +80,7 @@ function buildOtpEmail({ otp, purpose = 'signup', channel = 'email', target = ''
         <p style="margin:14px 0 0;">This OTP expires in <strong>${escapeHtml(expiresMinutes)}</strong> minutes.</p>
         <p style="margin:8px 0 0; color:#5f748a; font-size:13px;">Request context: ${escapeHtml(channel)} / ${escapeHtml(target)}.</p>
       `,
-      footerNote: 'Never share this OTP with anyone, including support representatives.'
+      footerNote: 'If you did not request this verification code, you can safely ignore this email. Never share this OTP with anyone.'
     })
   };
 }

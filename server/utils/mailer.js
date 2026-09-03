@@ -9,7 +9,7 @@ let resendClient = null;
 let activeProvider = null;
 
 function getMailFrom() {
-  return String(process.env.EMAIL_FROM || process.env.OTP_RESEND_FROM_EMAIL || DEFAULT_EMAIL_FROM).trim() || DEFAULT_EMAIL_FROM;
+  return String(process.env.EMAIL_FROM || DEFAULT_EMAIL_FROM).trim() || DEFAULT_EMAIL_FROM;
 }
 
 function getOtpTestEmail() {
@@ -21,11 +21,13 @@ function getEmailProvider() {
 }
 
 function getResendApiKey() {
-  return String(process.env.OTP_RESEND_API_KEY || '').trim();
+  return String(process.env.RESEND_API_KEY || '').trim();
 }
 
 function getResendFromEmail() {
-  return String(process.env.EMAIL_FROM || process.env.OTP_RESEND_FROM_EMAIL || DEFAULT_EMAIL_FROM).trim() || DEFAULT_EMAIL_FROM;
+  const configured = String(process.env.RESEND_FROM_EMAIL || '').trim();
+  if (!configured) return DEFAULT_EMAIL_FROM;
+  return configured.includes('<') ? configured : `Collegeo <${configured}>`;
 }
 
 function getSmtpUser() {
@@ -70,7 +72,7 @@ function logProviderSelection(provider, source) {
 function logResendStartupStatus() {
   console.log('[Mailer] Active provider: resend');
   console.log('[Mailer] Resend API key present:', Boolean(getResendApiKey()));
-  console.log('[Mailer] EMAIL_FROM configured:', Boolean(String(process.env.EMAIL_FROM || '').trim()));
+  console.log('[Mailer] RESEND_FROM_EMAIL configured:', Boolean(String(process.env.RESEND_FROM_EMAIL || '').trim()));
   console.log('[Mailer] Resend from email:', getResendFromEmail() || DEFAULT_EMAIL_FROM);
 }
 
@@ -169,7 +171,7 @@ async function sendViaResend({ to, subject, text, html }) {
     if (isLikelyResendSenderRejection(error)) {
       console.error('[Mailer][Resend] sender rejected or domain not verified', {
         from: resendFrom,
-        hint: 'Set EMAIL_FROM to a Resend-verified sender like College OS <noreply@collegeo.in> and verify collegeo.in in Resend.',
+        hint: 'Set RESEND_FROM_EMAIL to a Resend-verified sender like Collegeo <noreply@collegeo.in> and verify collegeo.in in Resend.',
         message: error?.message,
         code: error?.code
       });

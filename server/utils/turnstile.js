@@ -88,7 +88,7 @@ async function verifyTurnstileToken(token, ip) {
     return {
       ok: false,
       code: 'TURNSTILE_CONFIG_MISSING',
-      message: 'Security verification failed. Please try again.'
+      message: 'Security check is temporarily unavailable. Please retry shortly or contact support.'
     };
   }
 
@@ -134,7 +134,7 @@ async function verifyTurnstileToken(token, ip) {
     return {
       ok: false,
       code: 'TURNSTILE_UNAVAILABLE',
-      message: 'Security verification failed. Please try again.'
+      message: 'Security check is temporarily unavailable. Please retry shortly or contact support.'
     };
   }
 }

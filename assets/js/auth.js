@@ -1710,16 +1710,8 @@ function renderGoogleAuthButtons() {
       <span class="google-auth-spinner" aria-hidden="true"><i class="fa-solid fa-spinner fa-spin"></i></span>
     `;
 
-    // If clientId not configured, show disabled button with clear message
     if (!googleEnabled || !clientId) {
-      button.disabled = true;
-      button.title = 'Google login is not configured for this environment.';
-      button.querySelector('.google-auth-label').textContent = 'Continue with Google (not configured)';
-      const note = document.createElement('p');
-      note.className = 'provider-note';
-      note.textContent = 'Google login not configured. Contact administrator to enable Google sign-in.';
-      slot.appendChild(button);
-      slot.appendChild(note);
+      slot.classList.add('hidden');
       return;
     }
 
@@ -3159,16 +3151,11 @@ document.addEventListener('DOMContentLoaded', () => {
   bindOnboarding();
   hydrateAuthErrorFromQuery();
 
-  // Start Turnstile generation immediately so the login form does not wait on slower bootstrap work.
-  void refreshTurnstile('login');
-  void refreshTurnstile('signup');
   authConfigPromise.then(() => {
-    if (getTurnstileSiteKey()) {
-      void refreshTurnstile('login', { force: true });
-      void refreshTurnstile('signup', { force: true });
-    }
+    void refreshTurnstile('login', { force: true });
+    void refreshTurnstile('signup', { force: true });
   }).catch(() => {
-    // Ignore config load failures here; initial render may already indicate a disabled or failed captcha.
+    // The config loader applies safe defaults and the refresh shows a recoverable error.
   });
 
   if (window.CollegeOSApi?.startHealthPing) {
@@ -3199,13 +3186,7 @@ function ensureGoogleAuthButtonFallback() {
       btn.innerHTML = `<span class="google-auth-icon" aria-hidden="true"><i class="fa-brands fa-google"></i></span><span class="google-auth-label">Continue with Google</span>`;
       const clientId = getGoogleClientId();
       if (!clientId) {
-        btn.disabled = true;
-        btn.title = 'Google login is not configured for this environment.';
-        const note = document.createElement('p');
-        note.className = 'provider-note';
-        note.textContent = 'Google login not configured. Contact administrator to enable Google sign-in.';
-        slot.appendChild(btn);
-        slot.appendChild(note);
+        slot.classList.add('hidden');
         return;
       }
       const backendBase = (window.CollegeOSApiConfig && window.CollegeOSApiConfig.apiUrl) ? window.CollegeOSApiConfig.apiUrl : '';

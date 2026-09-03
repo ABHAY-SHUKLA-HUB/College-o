@@ -14,6 +14,12 @@ async function ensureCoreSchema() {
   await pool.query(schemaSql);
 }
 
+async function ensureAcademicSchema() {
+  const migrationPath = path.join(__dirname, '..', '..', 'ACADEMIC_MIGRATION.sql');
+  const migrationSql = fs.readFileSync(migrationPath, 'utf8');
+  await pool.query(migrationSql);
+}
+
 async function pingDatabaseWithRetry(attempts = 3, delayMs = 250) {
   let lastError = null;
 
@@ -68,6 +74,11 @@ async function ensureDatabaseBootstrap() {
       await ensureCoreSchema();
     } catch (error) {
       throw new Error(`Critical database core schema initialization failed: ${error.message}`);
+    }
+    try {
+      await ensureAcademicSchema();
+    } catch (error) {
+      throw new Error(`Critical academic schema initialization failed: ${error.message}`);
     }
     await ensureBootstrapImports();
     const storageMigration = fs.readFileSync(

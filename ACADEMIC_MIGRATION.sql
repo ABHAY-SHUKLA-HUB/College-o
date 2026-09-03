@@ -393,31 +393,9 @@ ON support_requests(user_id, category_id, branch_id, semester_id);
 CREATE INDEX IF NOT EXISTS idx_support_requests_status 
 ON support_requests(status, category_id, branch_id, semester_id);
 
-CREATE INDEX IF NOT EXISTS idx_support_requests_active_status 
-ON support_requests(status)
-WHERE is_removed = FALSE AND is_hidden = FALSE;
-
-CREATE INDEX IF NOT EXISTS idx_support_requests_active_urgency 
-ON support_requests(urgency_level)
-WHERE is_removed = FALSE AND is_hidden = FALSE;
-
-CREATE INDEX IF NOT EXISTS idx_support_requests_subject_active 
-ON support_requests(subject)
-WHERE is_removed = FALSE;
-
-CREATE INDEX IF NOT EXISTS idx_support_requests_request_category_active 
-ON support_requests(request_category)
-WHERE is_removed = FALSE;
-
 CREATE INDEX IF NOT EXISTS idx_support_requests_meet_link 
 ON support_requests(meet_link)
 WHERE meet_link IS NOT NULL;
-
-CREATE INDEX IF NOT EXISTS idx_support_answers_isolation 
-ON support_answers(request_id, category_id, branch_id, semester_id);
-
-CREATE INDEX IF NOT EXISTS idx_support_answers_answerer 
-ON support_answers(answerer_id, category_id, branch_id, semester_id);
 
 CREATE INDEX IF NOT EXISTS idx_support_answer_votes 
 ON support_answer_votes(answer_id, voter_id);
@@ -427,9 +405,6 @@ ON helper_reputation(helper_id, total_points_earned);
 
 CREATE INDEX IF NOT EXISTS idx_support_request_tags 
 ON support_request_tags(tag, request_id);
-
-CREATE INDEX IF NOT EXISTS idx_support_quality_metrics 
-ON support_quality_metrics(user_id, metric_type);
 
 -- ============================================
 -- 9. EXTEND USER_PROFILES WITH SUPPORT FIELDS
@@ -590,8 +565,6 @@ ALTER TABLE materials ADD COLUMN IF NOT EXISTS is_common BOOLEAN DEFAULT FALSE;
 CREATE INDEX IF NOT EXISTS idx_user_profiles_academic_scope ON user_profiles (college_id, course_id, category_id, branch_id, semester_id, year_id);
 CREATE INDEX IF NOT EXISTS idx_academic_courses_college_active_order ON academic_courses (college_id, is_active, display_order);
 CREATE INDEX IF NOT EXISTS idx_academic_years_active_order ON academic_years (is_active, display_order);
-CREATE INDEX IF NOT EXISTS idx_academic_branches_category_active_order ON academic_branches (category_id, is_active, display_order);
-CREATE INDEX IF NOT EXISTS idx_academic_semesters_active_order ON academic_semesters (is_active, display_order);
 CREATE INDEX IF NOT EXISTS idx_notes_academic_visibility ON notes (college_id, course_id, category_id, branch_id, semester_id);
 CREATE INDEX IF NOT EXISTS idx_quizzes_academic_visibility ON quizzes (college_id, course_id, category_id, branch_id, semester_id);
 CREATE INDEX IF NOT EXISTS idx_mock_tests_academic_visibility ON mock_tests (college_id, course_id, category_id, branch_id, semester_id);

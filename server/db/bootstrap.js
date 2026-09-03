@@ -8,6 +8,12 @@ const path = require('path');
 
 let bootstrapPromise = null;
 
+async function ensureCoreSchema() {
+  const schemaPath = path.join(__dirname, '..', '..', 'database-schema.sql');
+  const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+  await pool.query(schemaSql);
+}
+
 async function pingDatabaseWithRetry(attempts = 3, delayMs = 250) {
   let lastError = null;
 
@@ -58,6 +64,11 @@ async function ensureDatabaseBootstrap() {
   if (bootstrapPromise) return bootstrapPromise;
   bootstrapPromise = (async () => {
     await pingDatabaseWithRetry();
+    try {
+      await ensureCoreSchema();
+    } catch (error) {
+      throw new Error(`Critical database core schema initialization failed: ${error.message}`);
+    }
     await ensureBootstrapImports();
     const storageMigration = fs.readFileSync(
       path.join(__dirname, 'migrations', '002-supabase-storage.sql'),

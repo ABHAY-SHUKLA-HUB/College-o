@@ -730,12 +730,5 @@ CREATE INDEX IF NOT EXISTS idx_roadmaps_user_updated ON roadmaps (user_id, updat
 CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notifications_user_unread_created ON notifications (user_id, is_read, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_membership_payments_status_submitted ON membership_payment_requests (status, submitted_at DESC);
-CREATE INDEX IF NOT EXISTS idx_academic_categories_active_order ON academic_categories (is_active, display_order);
-CREATE INDEX IF NOT EXISTS idx_academic_branches_category_active_order ON academic_branches (category_id, is_active, display_order);
-CREATE INDEX IF NOT EXISTS idx_academic_semesters_active_order ON academic_semesters (is_active, display_order);
-CREATE INDEX IF NOT EXISTS idx_announcements_status_branch_created ON announcements (status, branch_id, created_at DESC);
-
 CREATE INDEX IF NOT EXISTS idx_live_sessions_status_start ON live_sessions (status, scheduled_start);
 CREATE INDEX IF NOT EXISTS idx_live_sessions_mentor_id ON live_sessions (mentor_id, scheduled_start);
-CREATE INDEX IF NOT EXISTS idx_live_sessions_assigned_host_user_id ON live_sessions (assigned_host_user_id, scheduled_start);
-CREATE INDEX IF NOT EXISTS idx_live_sessions_assigned_host_email ON live_sessions (assigned_host_email, scheduled_start);

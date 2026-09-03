@@ -738,7 +738,7 @@ router.post('/official-posts', requireAdmin, mediaUpload.single('media'), async 
       file: req.file,
       folder: `campus-feed/${collegeId}`,
       prefix: `admin-${postType}`
-    })) || null;
+    }))?.url || null;
     mediaType = req.file?.mimetype || null;
   }
 

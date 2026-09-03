@@ -51,7 +51,7 @@ ALTER TABLE academic_contributions ADD COLUMN IF NOT EXISTS merged_to_material_i
 -- Track quality and visibility for student library merging
 CREATE TABLE IF NOT EXISTS content_source_config (
   id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-  source_type VARCHAR(40) NOT NULL UNIQUE,
+  source_type VARCHAR(40) NOT NULL,
   content_type VARCHAR(40),
   is_mergeable_in_student_view BOOLEAN DEFAULT TRUE,
   requires_approval_for_visibility BOOLEAN DEFAULT FALSE,
@@ -61,6 +61,9 @@ CREATE TABLE IF NOT EXISTS content_source_config (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS content_source_config_type_idx
+ON content_source_config (content_type, source_type);
 
 -- Pre-populate source configs
 INSERT INTO content_source_config 
@@ -72,7 +75,7 @@ VALUES
   ('student_contribution', 'papers', TRUE, TRUE, 'pending'),
   ('admin_upload', 'materials', TRUE, FALSE, 'published'),
   ('student_contribution', 'materials', TRUE, TRUE, 'pending')
-ON CONFLICT (source_type) DO NOTHING;
+ON CONFLICT (content_type, source_type) DO NOTHING;
 
 
 -- ============================================

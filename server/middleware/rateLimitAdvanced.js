@@ -178,7 +178,7 @@ function rateLimitAPI(maxAttempts = 100, windowSeconds = 60) {
 async function checkBruteForceStatus(email) {
   try {
     const { rows } = await pool.query(
-      `SELECT failed_login_attempts, account_locked_until
+      `SELECT failed_login_attempts, locked_until
        FROM users
        WHERE lower(email) = lower($1)
        LIMIT 1`,
@@ -189,7 +189,7 @@ async function checkBruteForceStatus(email) {
     if (!user) return { locked: false };
 
     const now = new Date();
-    const lockedUntil = user.account_locked_until ? new Date(user.account_locked_until) : null;
+    const lockedUntil = user.locked_until ? new Date(user.locked_until) : null;
 
     if (lockedUntil && lockedUntil > now) {
       return {
@@ -217,9 +217,9 @@ async function recordFailedLogin(email) {
     await pool.query(
       `UPDATE users
        SET failed_login_attempts = COALESCE(failed_login_attempts, 0) + 1,
-           account_locked_until = CASE
+          locked_until = CASE
              WHEN COALESCE(failed_login_attempts, 0) + 1 >= 5 THEN $2
-             ELSE account_locked_until
+            ELSE locked_until
            END,
            updated_at = NOW()
        WHERE lower(email) = lower($1)`,
@@ -238,7 +238,7 @@ async function clearFailedLogins(userId) {
     await pool.query(
       `UPDATE users
        SET failed_login_attempts = 0,
-           account_locked_until = NULL,
+          locked_until = NULL,
            updated_at = NOW()
        WHERE id = $1`,
       [userId]

@@ -53,6 +53,7 @@ const adminSupportGovernanceRoutes = require('./routes/admin-support-governance'
 const academicsContentMgmtRoutes = require('./routes/academics-content-management');
 const studentLibraryUnifiedRoutes = require('./routes/student-library-unified');
 const { initMailerTransporter } = require('./utils/mailer');
+const { createSignedSupabaseUrl, validateSupabaseStorageConfiguration } = require('./services/supabaseStorage');
 // Socket / realtime integration
 const { initSocket } = require('./services/socketManager');
 
@@ -524,6 +525,42 @@ app.get('/api/auth/captcha/challenge', (req, res) => {
 // 7. Session middleware
 app.use(session(sessionOptions));
 
+app.get('/api/files/:id', async (req, res) => {
+  const fileId = Number(req.params.id);
+  if (!Number.isSafeInteger(fileId) || fileId <= 0) {
+    return res.status(400).json({ error: 'Invalid file id' });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT id, bucket, storage_path, visibility, user_id
+       FROM uploaded_files
+       WHERE id = $1 AND deleted_at IS NULL
+       LIMIT 1`,
+      [fileId]
+    );
+    const file = result.rows[0];
+    if (!file) return res.status(404).json({ error: 'File not found' });
+
+    const isOwner = Number(req.session?.userId || 0) === Number(file.user_id || 0);
+    const role = String(req.session?.role || '').toLowerCase();
+    const isAdmin = role === 'admin' || role === 'super_admin';
+    if (file.visibility !== 'public' && !isOwner && !isAdmin) {
+      return res.status(403).json({ error: 'File access denied' });
+    }
+
+    const signedUrl = await createSignedSupabaseUrl({
+      bucket: file.bucket,
+      path: file.storage_path,
+      expiresIn: 15 * 60
+    });
+    return res.redirect(302, signedUrl);
+  } catch (error) {
+    console.error('[File Delivery] failed', { message: error?.message || String(error) });
+    return res.status(502).json({ error: 'File delivery unavailable' });
+  }
+});
+
 // 8. CSRF protection initialization - must be after session
 app.use(csrfInit());
 
@@ -907,6 +944,10 @@ async function startServer() {
       turnstileSiteKeyConfigured: Boolean(String(process.env.TURNSTILE_SITE_KEY || '').trim()),
       turnstileSecretKeyConfigured: Boolean(String(process.env.TURNSTILE_SECRET_KEY || '').trim())
     });
+
+    if (isProduction) {
+      validateSupabaseStorageConfiguration();
+    }
 
     await initMailerTransporter();
   } catch (error) {

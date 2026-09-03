@@ -1,6 +1,5 @@
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../db/pool');
@@ -13,23 +12,12 @@ const {
   guardSupportFeature,
   isUserSupportSuspended
 } = require('../utils/supportGovernance');
-const { assertValidUploadBuffer } = require('../services/uploadService');
+const { assertValidUploadBuffer, saveUploadedFile } = require('../services/uploadService');
 
 const router = express.Router();
 
-const supportUploadDir = path.join(__dirname, '..', '..', 'uploads', 'support');
-if (!fs.existsSync(supportUploadDir)) {
-  fs.mkdirSync(supportUploadDir, { recursive: true });
-}
-
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, supportUploadDir),
-    filename: (_req, file, cb) => {
-      const ext = path.extname(file.originalname || '').toLowerCase();
-      cb(null, `${Date.now()}-${Math.random().toString(36).slice(2, 9)}${ext}`);
-    }
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024, files: 4 },
   fileFilter: (_req, file, cb) => {
     const allowed = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf', 'text/plain'];
@@ -134,13 +122,12 @@ router.post('/upload', upload.array('files', 4), async (req, res) => {
 
     const files = Array.isArray(req.files) ? req.files : [];
     for (const file of files) {
-      const buffer = await fs.promises.readFile(file.path);
+      const buffer = file.buffer;
       const declaredMime = String(file.mimetype || '').toLowerCase();
       const ext = path.extname(String(file.originalname || '')).toLowerCase();
 
       if (declaredMime === 'text/plain' || ext === '.txt') {
         if (!isMostlyText(buffer)) {
-          await fs.promises.unlink(file.path).catch(() => {});
           return res.status(400).json({ error: 'Plain text attachments must contain text content' });
         }
         continue;
@@ -149,14 +136,22 @@ router.post('/upload', upload.array('files', 4), async (req, res) => {
       try {
         assertValidUploadBuffer({ buffer, mimetype: declaredMime, originalname: file.originalname });
       } catch (error) {
-        await fs.promises.unlink(file.path).catch(() => {});
         if (error?.code === 'INVALID_UPLOAD_FILE' || error?.statusCode === 400) {
           return res.status(400).json({ error: error.message || 'Invalid file upload' });
         }
         throw error;
       }
     }
-    const urls = files.map((file) => `/uploads/support/${file.filename}`);
+    const storedFiles = await Promise.all(files.map((file) => saveUploadedFile({
+      file,
+      folder: `users/${req.session.userId}/support`,
+      prefix: 'attachment',
+      visibility: 'private',
+      userId: req.session.userId,
+      uploadedBy: req.session.userId,
+      entityType: 'support_attachment'
+    })));
+    const urls = storedFiles.map((stored) => stored.url).filter(Boolean);
     return res.json({ success: true, files: urls });
   } catch (error) {
     logger.error('Failed to upload support files', { error: error.message });
@@ -202,12 +197,17 @@ router.post('/create-request', async (req, res) => {
       return res.status(400).json({ error: 'Meet links are disabled or invalid.' });
     }
 
+    const configuredStorageUrl = String(process.env.SUPABASE_URL || '').trim().replace(/\/+$/, '');
+    const isStoredSupportUrl = (item) => {
+      if (item.startsWith('/uploads/support/')) return true;
+      return Boolean(configuredStorageUrl && item.startsWith(`${configuredStorageUrl}/storage/v1/object/sign/`));
+    };
     const safeAttachmentUrls = cfg.allowAttachments
-      ? safeJsonArray(attachment_urls).filter((item) => item.startsWith('/uploads/support/'))
+      ? safeJsonArray(attachment_urls).filter(isStoredSupportUrl)
       : [];
 
     const safeImageUrls = cfg.allowAttachments
-      ? safeJsonArray(image_urls).filter((item) => item.startsWith('/uploads/support/'))
+      ? safeJsonArray(image_urls).filter(isStoredSupportUrl)
       : [];
 
     const safeTags = Array.isArray(tags)

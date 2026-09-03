@@ -25,7 +25,7 @@ CREATE INDEX IF NOT EXISTS idx_rate_limit_reset ON rate_limit_buckets(reset_at);
 
 -- Add columns to users table for brute force protection
 ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS account_locked_until TIMESTAMP;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP;
 
 -- Session revocation tokens (for logout enforcement)
 CREATE TABLE IF NOT EXISTS session_revocation (

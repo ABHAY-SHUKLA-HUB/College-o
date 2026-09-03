@@ -33,6 +33,13 @@ async function run() {
     console.log('Content quality abstraction initialized successfully.');
   }
 
+  const storageMigrationPath = path.join(__dirname, 'migrations', '002-supabase-storage.sql');
+  if (fs.existsSync(storageMigrationPath)) {
+    const storageSql = fs.readFileSync(storageMigrationPath, 'utf8');
+    await pool.query(storageSql);
+    console.log('Supabase Storage metadata schema initialized successfully.');
+  }
+
   await pool.end();
 }
 

@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const multer = require('multer');
 const { saveBufferToLocal } = require('./localUploadService');
 const { uploadBufferToAzure } = require('./blobService');
+const { uploadBufferToSupabase } = require('./supabaseStorage');
 
 const MIME_EXTENSIONS = {
   'image/png': '.png',
@@ -17,6 +18,8 @@ function getStorageProvider() {
   const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
   const allowLocalInProduction = String(process.env.ALLOW_LOCAL_UPLOADS_IN_PRODUCTION || '').toLowerCase() === 'true';
 
+  if (isProduction) return 'supabase';
+  if (provider === 'supabase') return 'supabase';
   if (provider === 'azure') return 'azure';
   if (provider === 'local') {
     if (isProduction && !allowLocalInProduction) {
@@ -180,13 +183,42 @@ function createUploadMiddleware({
   });
 }
 
-async function saveUploadedFile({ file, folder = '', prefix = 'upload' }) {
+async function saveUploadedFile({
+  file,
+  folder = '',
+  prefix = 'upload',
+  visibility,
+  signedUrlTtlSeconds,
+  userId = null,
+  uploadedBy = null,
+  ownerType = 'user',
+  entityType = null,
+  entityId = null
+}) {
   if (!file) return null;
 
   const validation = assertValidUploadBuffer(file);
 
   const fileName = createSafeFileName(file, prefix);
   const provider = getStorageProvider();
+
+  if (provider === 'supabase') {
+    return uploadBufferToSupabase({
+      buffer: file.buffer,
+      fileName,
+      folder,
+      contentType: validation.detectedMime || file.mimetype || 'application/octet-stream',
+      visibility,
+      signedUrlTtlSeconds,
+      userId,
+      uploadedBy,
+      ownerType,
+      entityType,
+      entityId,
+      originalName: file.originalname,
+      fileExtension: getFileExtension(file)
+    });
+  }
 
   if (provider === 'azure') {
     return uploadBufferToAzure({

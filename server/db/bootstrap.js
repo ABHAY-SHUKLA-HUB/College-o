@@ -3,6 +3,8 @@ const { query } = require('./query');
 const { ensurePerformanceIndexes } = require('../utils/bootstrap');
 const { ensureUniversityCatalogSchema } = require('../utils/universities');
 const { ensureSupportSchema } = require('../utils/supportSchema');
+const fs = require('fs');
+const path = require('path');
 
 let bootstrapPromise = null;
 
@@ -25,26 +27,29 @@ async function pingDatabaseWithRetry(attempts = 3, delayMs = 250) {
 
 async function ensureBootstrapImports() {
   const modules = [
-    () => require('../routes/auth').ensureAuthSchema?.(),
-    () => require('../routes/profile').ensureProfileColumns?.(),
-    () => require('../routes/dashboard').readStudentExperienceConfig?.(),
-    () => require('../routes/mockTests').ensureMockTestSchema?.(),
-    () => require('../routes/subscriptions').ensureMembershipConfigSchema?.(),
-    () => require('../routes/forum').ensureForumSchema?.(),
-    () => require('../routes/feedback').ensureFeedbackSchema?.(),
-    () => require('../routes/academics').ensureAcademicsSchema?.(),
-    () => require('../routes/admin').ensureCertificateSchema?.(),
-    () => require('../routes/admin-control').ensureAdminControlSchema?.(),
-    () => ensureUniversityCatalogSchema(pool),
-    () => ensureSupportSchema(),
-    () => ensurePerformanceIndexes()
+    { critical: true, run: () => require('../routes/auth').ensureAuthSchema?.() },
+    { critical: true, run: () => require('../routes/profile').ensureProfileColumns?.() },
+    { critical: true, run: () => require('../routes/dashboard').readStudentExperienceConfig?.() },
+    { critical: true, run: () => require('../routes/mockTests').ensureMockTestSchema?.() },
+    { critical: true, run: () => require('../routes/subscriptions').ensureMembershipConfigSchema?.() },
+    { critical: false, run: () => require('../routes/forum').ensureForumSchema?.() },
+    { critical: false, run: () => require('../routes/feedback').ensureFeedbackSchema?.() },
+    { critical: true, run: () => require('../routes/academics').ensureAcademicsSchema?.() },
+    { critical: true, run: () => require('../routes/admin').ensureCertificateSchema?.() },
+    { critical: true, run: () => require('../routes/admin-control').ensureAdminControlSchema?.() },
+    { critical: true, run: () => ensureUniversityCatalogSchema(pool) },
+    { critical: false, run: () => ensureSupportSchema() },
+    { critical: true, run: () => ensurePerformanceIndexes() }
   ];
 
-  for (const run of modules) {
+  for (const module of modules) {
     try {
-      await run();
+      await module.run();
     } catch (error) {
-      console.warn('[Bootstrap] Skipped init step:', error.message);
+      if (module.critical) {
+        throw new Error(`Critical database bootstrap failed: ${error.message}`);
+      }
+      console.warn('[Bootstrap] Optional init step skipped:', error.message);
     }
   }
 }
@@ -54,6 +59,11 @@ async function ensureDatabaseBootstrap() {
   bootstrapPromise = (async () => {
     await pingDatabaseWithRetry();
     await ensureBootstrapImports();
+    const storageMigration = fs.readFileSync(
+      path.join(__dirname, 'migrations', '002-supabase-storage.sql'),
+      'utf8'
+    );
+    await pool.query(storageMigration);
   })();
   return bootstrapPromise;
 }

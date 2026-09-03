@@ -2,6 +2,9 @@ require('dotenv').config();
 
 const required = [
   'SESSION_SECRET',
+  'SUPABASE_URL',
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'SUPABASE_STORAGE_BUCKET',
   'RESEND_API_KEY',
   'RESEND_FROM_EMAIL',
   'TURNSTILE_SITE_KEY',
@@ -34,6 +37,11 @@ if (missing.length || missingHostnames.length) {
   if (!databaseUrl) console.error('Missing production database variable: DATABASE_URL, CURRENT_DATABASE_URL, SUPABASE_POOLER_URL, or SUPABASE_DATABASE_URL');
   if (missing.length) console.error(`Missing production variables: ${missing.join(', ')}`);
   if (missingHostnames.length) console.error(`Missing Turnstile hostnames: ${missingHostnames.join(', ')}`);
+  process.exit(1);
+}
+
+if (!/^https:\/\//i.test(String(process.env.SUPABASE_URL || '').trim())) {
+  console.error('SUPABASE_URL must be an HTTPS Supabase project URL.');
   process.exit(1);
 }
 

@@ -129,10 +129,10 @@ router.post('/answer/:requestId', async (req, res) => {
     }
 
     const safeAttachmentUrls = cfg.allowAttachments && Array.isArray(attachment_urls)
-      ? attachment_urls.filter((item) => typeof item === 'string' && item.startsWith('/uploads/support/')).slice(0, 4)
+      ? attachment_urls.filter((item) => typeof item === 'string' && (item.startsWith('/api/files/') || item.startsWith('/uploads/support/'))).slice(0, 4)
       : [];
     const safeImageUrls = cfg.allowAttachments && Array.isArray(image_urls)
-      ? image_urls.filter((item) => typeof item === 'string' && item.startsWith('/uploads/support/')).slice(0, 4)
+      ? image_urls.filter((item) => typeof item === 'string' && (item.startsWith('/api/files/') || item.startsWith('/uploads/support/'))).slice(0, 4)
       : [];
 
     const requestId = Number(req.params.requestId || 0);

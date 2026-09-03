@@ -7,6 +7,7 @@ const { pool } = require('../db/pool');
 const { requireAdmin } = require('../middleware/auth');
 const { isEmail, normalizeEmail } = require('../utils/validation');
 const { createUploadMiddleware, saveUploadedFile } = require('../services/uploadService');
+const { deleteUploadedFileById } = require('../services/supabaseStorage');
 const { getOtpTestEmail, sendSystemEmail } = require('../utils/mailer');
 const { publishRealtimeEvent, publishContentChanged } = require('../services/realtimeBus');
 
@@ -780,8 +781,11 @@ router.get('/papers', requireAdmin, async (_req, res) => {
 
 router.delete('/papers/:id', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
+  const existing = await pool.query('SELECT paper_url FROM previous_papers WHERE id = $1', [id]);
   const { rowCount } = await pool.query('DELETE FROM previous_papers WHERE id = $1', [id]);
   if (rowCount === 0) return res.status(404).json({ error: 'Paper not found' });
+  const fileMatch = String(existing.rows[0]?.paper_url || '').match(/\/api\/files\/(\d+)/);
+  if (fileMatch) await deleteUploadedFileById(fileMatch[1]);
   publishRealtimeEvent('content_changed', { contentType: 'papers', action: 'deleted', contentId: id });
   res.json({ message: 'Paper deleted successfully' });
 });
@@ -899,8 +903,11 @@ router.post('/materials', requireAdmin, upload.single('file'), async (req, res) 
 
 router.delete('/materials/:id', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
+  const existing = await pool.query('SELECT file_url FROM materials WHERE id = $1', [id]);
   const { rowCount } = await pool.query('DELETE FROM materials WHERE id = $1', [id]);
   if (rowCount === 0) return res.status(404).json({ error: 'Material not found' });
+  const fileMatch = String(existing.rows[0]?.file_url || '').match(/\/api\/files\/(\d+)/);
+  if (fileMatch) await deleteUploadedFileById(fileMatch[1]);
   publishRealtimeEvent('content_changed', { contentType: 'materials', action: 'deleted', contentId: id });
   res.json({ message: 'Material deleted successfully' });
 });

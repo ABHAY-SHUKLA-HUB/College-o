@@ -285,7 +285,10 @@ router.post('/payment-request', requireAuth, upload.single('paymentScreenshot'),
       const stored = await saveUploadedFile({
         file: req.file,
         folder: 'users/payments',
-        prefix: 'payment-proof'
+        prefix: 'payment-proof',
+        userId: req.session.userId,
+        uploadedBy: req.session.userId,
+        entityType: 'payment_screenshot'
       });
       screenshotUrl = stored.url;
     } catch (error) {

@@ -94,10 +94,10 @@ function normalizeConnectionString(rawConnectionString) {
 }
 
 const connectionString = normalizeConnectionString(
-  process.env.CURRENT_DATABASE_URL ||
-  process.env.DATABASE_URL ||
   process.env.SUPABASE_POOLER_URL ||
   process.env.SUPABASE_DATABASE_URL ||
+  process.env.CURRENT_DATABASE_URL ||
+  process.env.DATABASE_URL ||
   ''
 );
 if (!connectionString) {

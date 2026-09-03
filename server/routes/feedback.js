@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { createUploadMiddleware, saveUploadedFile } = require('../services/uploadService');
+const { deleteUploadedFileById } = require('../services/supabaseStorage');
 
 const router = express.Router();
 
@@ -39,7 +40,10 @@ router.post('/upload-screenshot', requireAuth, upload.single('screenshot'), asyn
     const stored = await saveUploadedFile({
       file: req.file,
       folder: 'users/feedback',
-      prefix: 'feedback'
+      prefix: 'feedback',
+      userId: req.session.userId,
+      uploadedBy: req.session.userId,
+      entityType: 'feedback_screenshot'
     });
     return res.status(201).json({ screenshotUrl: stored.url });
   } catch (error) {
@@ -120,7 +124,7 @@ router.put('/:id', requireAuth, async (req, res) => {
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid feedback id' });
 
   const current = await pool.query(
-    `SELECT id, status, admin_reply
+    `SELECT id, status, admin_reply, screenshot_url
      FROM feedback
      WHERE id = $1 AND user_id = $2`,
     [id, req.session.userId]
@@ -164,6 +168,8 @@ router.delete('/:id', requireAuth, async (req, res) => {
   if (!isEditable(row)) return res.status(403).json({ error: 'Feedback cannot be deleted after review starts' });
 
   await pool.query('DELETE FROM feedback WHERE id = $1 AND user_id = $2', [id, req.session.userId]);
+  const fileMatch = String(row.screenshot_url || '').match(/\/api\/files\/(\d+)/);
+  if (fileMatch) await deleteUploadedFileById(fileMatch[1]);
   res.json({ message: 'Feedback deleted successfully' });
 });
 

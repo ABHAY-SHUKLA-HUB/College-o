@@ -1,7 +1,7 @@
 const { Resend } = require('resend');
 
 const DEFAULT_EMAIL_PROVIDER = 'resend';
-const DEFAULT_EMAIL_FROM = 'College OS <noreply@collegeo.in>';
+const DEFAULT_EMAIL_FROM = 'College OS <otp@collegeo.in>';
 
 let nodemailer = null;
 let transporter = null;
@@ -166,12 +166,21 @@ async function sendViaResend({ to, subject, text, html }) {
       html: html || undefined
     });
 
-    return { sent: true, provider: 'resend', id: result?.data?.id || null };
+    if (result?.error || !result?.data?.id) {
+      const providerError = result?.error || new Error('Resend did not return an email id');
+      return {
+        sent: false,
+        reason: 'provider blocked',
+        error: providerError
+      };
+    }
+
+    return { sent: true, provider: 'resend', id: result.data.id };
   } catch (error) {
     if (isLikelyResendSenderRejection(error)) {
       console.error('[Mailer][Resend] sender rejected or domain not verified', {
         from: resendFrom,
-        hint: 'Set RESEND_FROM_EMAIL to a Resend-verified sender like Collegeo <noreply@collegeo.in> and verify collegeo.in in Resend.',
+        hint: 'Set RESEND_FROM_EMAIL to the Resend-verified sender College OS <otp@collegeo.in> and verify collegeo.in in Resend.',
         message: error?.message,
         code: error?.code
       });

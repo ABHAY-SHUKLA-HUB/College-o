@@ -570,7 +570,7 @@ router.post('/posts', requireAuth, mediaUpload.single('media'), async (req, res)
       file: req.file,
       folder: `campus-feed/${context.collegeId}`,
       prefix: `campus-${postType}`
-    })) || null;
+    }))?.url || null;
     mediaType = req.file?.mimetype || null;
   }
 

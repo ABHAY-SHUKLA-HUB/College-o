@@ -260,6 +260,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS notes_update_badge ON notes;
 CREATE TRIGGER notes_update_badge BEFORE UPDATE ON notes FOR EACH ROW
 EXECUTE FUNCTION update_verification_badge_notes();
 
@@ -282,6 +283,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS papers_update_badge ON previous_papers;
 CREATE TRIGGER papers_update_badge BEFORE UPDATE ON previous_papers FOR EACH ROW
 EXECUTE FUNCTION update_verification_badge_papers();
 

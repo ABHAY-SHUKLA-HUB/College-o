@@ -5,6 +5,64 @@ document.addEventListener('DOMContentLoaded', async () => {
     return String(value || '').replace(/[&<>"]|'/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   }
 
+  function hydrateImmediateUserShell(userObj = null, academicObj = null) {
+    try {
+      let cachedUser = userObj || window.collegeOsCurrentUser;
+      if (!cachedUser) {
+        const rawCache = window.sessionStorage.getItem('collegeos_api_cache_v2:/api/auth/me');
+        if (rawCache) {
+          const parsed = JSON.parse(rawCache);
+          cachedUser = parsed.payload?.user || parsed.user;
+        }
+      }
+      if (cachedUser) {
+        const fullName = cachedUser.full_name || cachedUser.fullName || cachedUser.name || 'Student';
+        const firstName = String(fullName).split(' ')[0];
+        const greeting = document.getElementById('dashboardGreeting');
+        const heroNameLine = document.getElementById('heroNameLine');
+        if (greeting && firstName && firstName !== 'Student') {
+          greeting.innerHTML = `<i class="fa-solid fa-hand-wave"></i> Welcome back, ${htmlEscape(firstName)}`;
+        }
+        if (heroNameLine && firstName && firstName !== 'Student') {
+          heroNameLine.textContent = `Student: ${firstName}`;
+        }
+      }
+
+      let cachedAcademic = academicObj;
+      if (!cachedAcademic) {
+        const rawAcadCache = window.sessionStorage.getItem('collegeos_api_cache_v2:/api/academics/profile');
+        if (rawAcadCache) {
+          const parsedAcad = JSON.parse(rawAcadCache);
+          cachedAcademic = parsedAcad.payload?.profile || parsedAcad.profile;
+        }
+      }
+      if (cachedAcademic) {
+        const categoryName = cachedAcademic.category?.name || cachedAcademic.categoryName || '';
+        const branchName = cachedAcademic.branch?.name || cachedAcademic.branchName || '';
+        const semesterLabel = cachedAcademic.semester?.label || cachedAcademic.semesterLabel || '';
+
+        const heroAcademicBadge = document.getElementById('heroAcademicBadge');
+        const heroSemesterBadge = document.getElementById('heroSemesterBadge');
+        const heroBranchLine = document.getElementById('heroBranchLine');
+
+        if (heroAcademicBadge && (branchName || categoryName)) {
+          heroAcademicBadge.textContent = branchName || categoryName;
+        }
+        if (heroSemesterBadge && semesterLabel) {
+          heroSemesterBadge.textContent = `Semester: ${semesterLabel}`;
+        }
+        if (heroBranchLine && branchName) {
+          heroBranchLine.textContent = `Branch: ${branchName}`;
+        }
+      }
+    } catch {
+      // Best-effort immediate user shell hydration
+    }
+  }
+
+  window.CollegeOSHydrateUserShell = hydrateImmediateUserShell;
+  hydrateImmediateUserShell();
+
   function ensureOnboardingModalStyles() {
     if (document.getElementById('collegeos-onboarding-modal-styles')) return;
     const style = document.createElement('style');
@@ -499,20 +557,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     const recommendedRoadmaps = (availableRoadmaps.length ? availableRoadmaps : roadmaps).slice(0, 3);
     const topRoadmap = recommendedRoadmaps[0] || null;
 
-    let nextMilestone = 'Start roadmap foundation stage';
-    if (topRoadmap && window.CollegeOSApi.getCareerRoadmap) {
-      try {
-        const detail = await window.CollegeOSApi.getCareerRoadmap(topRoadmap.id);
-        const stages = detail?.roadmap?.stages || [];
-        if (stages.length) nextMilestone = stages[0].stageTitle || stages[0].stage_title || nextMilestone;
-      } catch {
-        // Keep fallback milestone text.
-      }
-    }
-
     const aiNextAction = intelligence?.nextAction?.primary;
-    if (aiNextAction?.title) {
-      nextMilestone = aiNextAction.title;
+    let nextMilestone = aiNextAction?.title || topRoadmap?.title || 'Start roadmap foundation stage';
+
+    if (!aiNextAction?.title && topRoadmap && window.CollegeOSApi.getCareerRoadmap) {
+      window.CollegeOSApi.getCareerRoadmap(topRoadmap.id).then((detail) => {
+        const stages = detail?.roadmap?.stages || [];
+        const stageTitle = stages[0]?.stageTitle || stages[0]?.stage_title;
+        if (stageTitle) {
+          const heroMilestoneBadge = document.getElementById('heroMilestoneBadge');
+          const heroNextActionLine = document.getElementById('heroNextActionLine');
+          const heroNextChip = document.getElementById('heroNextChip');
+          if (heroMilestoneBadge) heroMilestoneBadge.textContent = `Next milestone: ${stageTitle}`;
+          if (heroNextActionLine) heroNextActionLine.textContent = `Next action: ${stageTitle}`;
+          if (heroNextChip) heroNextChip.innerHTML = `<i class="fa-solid fa-bullseye"></i> ${htmlEscape(stageTitle)}`;
+        }
+      }).catch(() => null);
     }
 
     const greeting = document.getElementById('dashboardGreeting');

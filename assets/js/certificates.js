@@ -269,12 +269,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderCertificates(list) {
     if (!certGrid) return;
-    if (!list.length) {
+    const seenIds = new Set();
+    const uniqueList = (list || []).filter((cert) => {
+      if (!cert || !cert.id) return true;
+      if (seenIds.has(cert.id)) return false;
+      seenIds.add(cert.id);
+      return true;
+    });
+
+    if (!uniqueList.length) {
       certGrid.innerHTML = '<div class="empty-state-modern">No certificates earned yet. Complete courses or achieve milestones to earn your first certificate.</div>';
       return;
     }
 
-    certGrid.innerHTML = list
+    certGrid.innerHTML = uniqueList
       .map((cert) => `
         <article class="cert-card">
           <div class="thumb">

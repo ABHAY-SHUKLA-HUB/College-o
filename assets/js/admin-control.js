@@ -1688,6 +1688,105 @@ async function loadSettings() {
   cById('settingFeatureToggles').value = JSON.stringify(settings.feature_toggles || {}, null, 2);
 }
 
+async function loadCodingSettings() {
+  try {
+    const res = await fetch('/api/admin/coding-challenges/settings', { credentials: 'include' });
+    if (!res.ok) throw new Error('Failed to load coding settings');
+    const payload = await res.json();
+    const settings = payload?.settings || {};
+    if (cById('settingCodingModuleEnabled')) cById('settingCodingModuleEnabled').value = settings.module_enabled ? 'true' : 'false';
+    if (cById('settingCodingLeaderboardEnabled')) cById('settingCodingLeaderboardEnabled').value = settings.leaderboard_enabled !== false ? 'true' : 'false';
+    if (cById('settingCodingCertificatesEnabled')) cById('settingCodingCertificatesEnabled').value = settings.certificates_enabled !== false ? 'true' : 'false';
+    if (cById('settingCodingStrictModeDefault')) cById('settingCodingStrictModeDefault').value = settings.strict_mode_default ? 'true' : 'false';
+    if (cById('codingSettingsStatus')) {
+      cById('codingSettingsStatus').textContent = `Status: ${settings.module_enabled ? 'ENABLED' : 'DISABLED'} (Updated: ${settings.updated_at ? new Date(settings.updated_at).toLocaleString() : 'N/A'})`;
+    }
+  } catch (error) {
+    if (cById('codingSettingsStatus')) cById('codingSettingsStatus').textContent = `Error loading settings: ${error.message}`;
+  }
+}
+
+async function saveCodingSettings() {
+  try {
+    const body = {
+      module_enabled: cById('settingCodingModuleEnabled').value === 'true',
+      leaderboard_enabled: cById('settingCodingLeaderboardEnabled').value === 'true',
+      certificates_enabled: cById('settingCodingCertificatesEnabled').value === 'true',
+      strict_mode_default: cById('settingCodingStrictModeDefault').value === 'true'
+    };
+
+    const res = await fetch('/api/admin/coding-challenges/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(body)
+    });
+    const payload = await res.json();
+    if (!res.ok) throw new Error(payload.error || 'Failed to save settings');
+    
+    const settings = payload.settings || {};
+    if (cById('codingSettingsStatus')) {
+      cById('codingSettingsStatus').textContent = `Settings saved successfully! Status: ${settings.module_enabled ? 'ENABLED' : 'DISABLED'}`;
+    }
+    window.alert(`Coding Challenges settings updated: Module is now ${settings.module_enabled ? 'ENABLED' : 'DISABLED'}`);
+  } catch (error) {
+    window.alert(error.message);
+  }
+}
+
+async function loadCodingDashboardPanel() {
+  try {
+    const res = await fetch('/api/admin/coding-challenges/stats', { credentials: 'include' });
+    if (!res.ok) throw new Error('Failed to load coding stats');
+    const data = await res.json();
+    const stats = data.stats || {};
+
+    if (cById('panelCodingTotal')) cById('panelCodingTotal').textContent = stats.total_contests || 0;
+    if (cById('panelCodingLive')) cById('panelCodingLive').textContent = stats.live_contests || 0;
+    if (cById('panelCodingScheduled')) cById('panelCodingScheduled').textContent = stats.scheduled_contests || 0;
+    if (cById('panelCodingDrafts')) cById('panelCodingDrafts').textContent = stats.draft_contests || 0;
+    if (cById('panelCodingParticipants')) cById('panelCodingParticipants').textContent = stats.total_participants || 0;
+    if (cById('panelCodingSubmissions')) cById('panelCodingSubmissions').textContent = stats.total_submissions || 0;
+
+    const contestsRes = await fetch('/api/admin/coding-challenges/contests', { credentials: 'include' });
+    if (contestsRes.ok) {
+      const cData = await contestsRes.json();
+      const contests = cData.contests || [];
+      const summaryNode = cById('panelCodingContestsSummary');
+      if (summaryNode) {
+        if (contests.length === 0) {
+          summaryNode.innerHTML = '<p style="color:#64748b; margin:0;">No contests created yet. Click "Open Full Coding Portal" to create one.</p>';
+        } else {
+          summaryNode.innerHTML = `
+            <table class="data-table" style="font-size:13px; width:100%;">
+              <thead>
+                <tr>
+                  <th>Contest Title</th>
+                  <th>Status</th>
+                  <th>Schedule</th>
+                  <th>Problems</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${contests.slice(0, 5).map(c => `
+                  <tr>
+                    <td><strong>${escapeHtml(c.title)}</strong></td>
+                    <td><span class="badge-status ${c.computed_status}">${c.computed_status}</span></td>
+                    <td>${new Date(c.start_time).toLocaleString()}</td>
+                    <td>${c.problem_count || 0}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          `;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error loading coding dashboard panel:', err);
+  }
+}
+
 async function loadContributionVisibilitySettings() {
   const payload = await window.CollegeOSApi.adminGetContributionConfig();
   const cfg = payload?.config || {};
@@ -2216,6 +2315,9 @@ function bindEvents() {
   cById('loadSettingsBtn').addEventListener('click', () => loadSettings().catch((e) => window.alert(e.message)));
   cById('saveContributionVisibilityBtn')?.addEventListener('click', () => saveContributionVisibilitySettings().catch((e) => window.alert(e.message)));
   cById('loadContributionVisibilityBtn')?.addEventListener('click', () => loadContributionVisibilitySettings().catch((e) => window.alert(e.message)));
+  cById('saveCodingSettingsBtn')?.addEventListener('click', () => saveCodingSettings().catch((e) => window.alert(e.message)));
+  cById('loadCodingSettingsBtn')?.addEventListener('click', () => loadCodingSettings().catch((e) => window.alert(e.message)));
+  cById('refreshCodingStatsBtn')?.addEventListener('click', () => loadCodingDashboardPanel().catch((e) => window.alert(e.message)));
   cById('saveMembershipConfigBtn')?.addEventListener('click', () => saveMembershipConfig().catch((e) => window.alert(e.message)));
   cById('loadMembershipConfigBtn')?.addEventListener('click', () => loadMembershipConfig().catch((e) => window.alert(e.message)));
   cById('saveExperienceConfigBtn')?.addEventListener('click', () => saveExperienceConfig().catch((e) => window.alert(e.message)));
@@ -2268,6 +2370,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     ['roles', () => loadRoles()],
     ['settings', () => loadSettings()],
     ['contribution visibility', () => loadContributionVisibilitySettings()],
+    ['coding settings', () => loadCodingSettings()],
+    ['coding dashboard panel', () => loadCodingDashboardPanel()],
     ['membership config', () => loadMembershipConfig()],
     ['experience settings', () => loadExperienceConfig()],
     ['live session control', () => loadLiveSessionControl()],

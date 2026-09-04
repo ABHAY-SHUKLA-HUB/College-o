@@ -9,7 +9,9 @@ const AUTH_TRANSITION_PATHS = new Set([
   '/api/auth/google',
   '/api/auth/logout',
   '/api/auth/logout-all',
-  '/api/auth/verification/verify'
+  '/api/auth/verification/verify',
+  '/api/admin/login',
+  '/api/admin/logout'
 ]);
 
 const PROD_BACKEND_ORIGIN = 'https://college-o.onrender.com';
@@ -97,7 +99,11 @@ const SESSION_CACHEABLE_PATHS = [
   /^\/api\/notifications\/mine$/,
   /^\/api\/notes\/mine$/,
   /^\/api\/settings\/icons$/,
-  /^\/api\/settings\/sessions$/
+  /^\/api\/settings\/sessions$/,
+  /^\/api\/coding-challenges\/settings$/,
+  /^\/api\/coding-challenges\/contests$/,
+  /^\/api\/coding-challenges\/my-certificates$/,
+  /^\/api\/certificates\/mine$/
 ];
 
 const requestInterceptors = [];
@@ -355,6 +361,29 @@ function clearSessionCache() {
   }
 }
 
+function invalidateCachePattern(patternOrPrefix) {
+  requestCache.clear();
+  const storage = getSessionStorage();
+  if (!storage) return;
+
+  try {
+    const keys = [];
+    const isReg = patternOrPrefix instanceof RegExp;
+    for (let i = 0; i < storage.length; i += 1) {
+      const key = storage.key(i);
+      if (key && key.startsWith(SESSION_CACHE_PREFIX)) {
+        const rawPath = key.slice(SESSION_CACHE_PREFIX.length);
+        if (!patternOrPrefix || (isReg ? patternOrPrefix.test(rawPath) : rawPath.includes(patternOrPrefix))) {
+          keys.push(key);
+        }
+      }
+    }
+    keys.forEach((k) => storage.removeItem(k));
+  } catch {
+    // Ignore invalidation errors
+  }
+}
+
 function isAuthTransitionRequest(path, method) {
   if (!AUTH_TRANSITION_METHODS.has(method)) {
     return false;
@@ -372,8 +401,8 @@ function isApiRequestUrl(path) {
     if (path.startsWith('/api/')) return true;
     if (path.startsWith('http://') || path.startsWith('https://')) {
       try {
-        const url = new URL(path);
-        return url.origin === apiOrigin && url.pathname.startsWith('/api/');
+        const url = new URL(path, typeof window !== 'undefined' ? window.location.href : undefined);
+        return url.pathname.startsWith('/api/');
       } catch {
         return false;
       }
@@ -381,11 +410,16 @@ function isApiRequestUrl(path) {
   }
 
   if (typeof URL !== 'undefined' && path instanceof URL) {
-    return path.origin === apiOrigin && path.pathname.startsWith('/api/');
+    return path.pathname.startsWith('/api/');
   }
 
   if (typeof Request !== 'undefined' && path instanceof Request) {
-    return path.url.startsWith(apiOrigin + '/api/');
+    try {
+      const url = new URL(path.url);
+      return url.pathname.startsWith('/api/');
+    } catch {
+      return false;
+    }
   }
 
   return false;
@@ -602,15 +636,15 @@ async function request(path, options = {}) {
     requestOptions.headers.Accept = 'application/json';
   }
 
-  if (shouldAttachCsrf(method)) {
-    const token = await ensureCsrfToken(false);
-    if (token) {
-      requestOptions.headers[CSRF_HEADER_NAME] = token;
-    }
-  }
-
-  const interceptedRequest = runRequestInterceptors({ path, options: requestOptions });
   const fetchPromise = (async () => {
+    if (shouldAttachCsrf(method)) {
+      const token = await ensureCsrfToken(false);
+      if (token) {
+        requestOptions.headers[CSRF_HEADER_NAME] = token;
+      }
+    }
+
+    const interceptedRequest = runRequestInterceptors({ path, options: requestOptions });
     const response = await rawFetch(resolveApiUrl(interceptedRequest.path), interceptedRequest.options);
     const headerCsrf = response.headers?.get?.('x-csrf-token');
     if (headerCsrf) {
@@ -644,7 +678,7 @@ async function request(path, options = {}) {
           error.status = interceptedRetryResponse.response.status;
           error.code = interceptedRetryResponse.payload?.code;
           error.payload = interceptedRetryResponse.payload;
-            if (interceptedRetryResponse.response.status === 429) {
+          if (interceptedRetryResponse.response.status === 429) {
             error.retryAfter = getRetryAfterSeconds(interceptedRetryResponse.response, interceptedRetryResponse.payload);
             if (error.retryAfter) {
               rateLimitCache.set(rateLimitKey, {
@@ -652,7 +686,7 @@ async function request(path, options = {}) {
                 message
               });
             }
-            }
+          }
           throw error;
         }
 
@@ -811,6 +845,8 @@ window.CollegeOSApiClient = {
   warmupRequests,
   warmupRequestsOnce,
   clearSessionCache,
+  invalidateCachePattern,
+  invalidateCache: invalidateCachePattern,
   setCsrfToken: (token) => {
     csrfTokenCache = token || null;
   },

@@ -136,10 +136,8 @@
 
       try {
         status.textContent = 'Creating quiz...';
-        const response = await fetch('/api/admin/academics/quizzes', {
+        const data = await window.CollegeOSApiClient.request('/api/admin/academics/quizzes', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
           body: JSON.stringify({
             subject: quiz.subject,
             chapter: quiz.chapter,
@@ -154,20 +152,15 @@
           })
         });
 
-        const data = await response.json();
-        if (response.ok) {
-          status.textContent = 'Quiz created successfully!';
-          status.style.color = '#157f37';
-          e.target.reset();
-          document.getElementById('questionsContainer').innerHTML = '';
-          questionCount = 0;
-          document.getElementById('quizBranchId').innerHTML = '<option value="">Select branch or course</option>';
-          document.getElementById('quizBranchId').disabled = true;
-          loadQuizzes();
-          addQuestion();
-        } else {
-          throw new Error(data.error);
-        }
+        status.textContent = 'Quiz created successfully!';
+        status.style.color = '#157f37';
+        e.target.reset();
+        document.getElementById('questionsContainer').innerHTML = '';
+        questionCount = 0;
+        document.getElementById('quizBranchId').innerHTML = '<option value="">Select branch or course</option>';
+        document.getElementById('quizBranchId').disabled = true;
+        loadQuizzes();
+        addQuestion();
       } catch (error) {
         status.textContent = 'Error: ' + error.message;
         status.style.color = '#c6342d';
@@ -189,12 +182,7 @@
         if (status) params.set('status', status);
 
         const suffix = params.toString() ? `?${params.toString()}` : '';
-        const response = await fetch(`/api/admin/academics/quizzes${suffix}`, { credentials: 'include' });
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to load quizzes');
-        }
+        const data = await window.CollegeOSApiClient.request(`/api/admin/academics/quizzes${suffix}`);
 
         if (data.quizzes && data.quizzes.length > 0) {
           tbody.innerHTML = data.quizzes.map(quiz => `
@@ -219,7 +207,7 @@
     async function deleteQuiz(id) {
       if (!confirm('Delete this quiz?')) return;
       try {
-        await fetch(`/api/admin/academics/quizzes/${id}`, { method: 'DELETE', credentials: 'include' });
+        await window.CollegeOSApiClient.request(`/api/admin/academics/quizzes/${id}`, { method: 'DELETE' });
         loadQuizzes();
       } catch (error) {
         alert('Error: ' + error.message);

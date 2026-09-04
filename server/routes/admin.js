@@ -127,7 +127,19 @@ router.post('/login', async (req, res) => {
     req.session.role = user.role;
     req.session.cookie.maxAge = 1000 * 60 * 60 * 12;
 
-    return res.json({ user: { id: user.id, full_name: user.full_name, email: user.email, role: user.role } });
+    const { generateToken, CSRF_TOKEN_COOKIE, CSRF_TOKEN_HEADER } = require('../middleware/csrf');
+    const freshCsrfToken = generateToken();
+    req.session.csrfToken = freshCsrfToken;
+    res.setHeader(CSRF_TOKEN_HEADER, freshCsrfToken);
+    res.cookie(CSRF_TOKEN_COOKIE, freshCsrfToken, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/',
+      maxAge: 24 * 60 * 60 * 1000
+    });
+
+    return res.json({ user: { id: user.id, full_name: user.full_name, email: user.email, role: user.role }, csrfToken: freshCsrfToken });
   });
 
   return;

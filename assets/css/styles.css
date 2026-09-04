@@ -8440,3 +8440,412 @@ body.admin-portal .co-admin-main {
     min-width: 0 !important;
   }
 }
+
+/* ==========================================================================
+   COLLEGE OS — STUDENT CODING ARENA & SIDEBAR POLISH
+   ========================================================================== */
+
+/* 1. Coding Arena Page Container */
+.coding-arena-page {
+  max-width: 1350px;
+  margin: 0 auto;
+  padding: 8px 12px 36px;
+}
+
+.coding-arena-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.coding-header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.coding-arena-title {
+  margin: 0 0 6px;
+  font-size: clamp(1.6rem, 2.5vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-color, #0f172a);
+}
+
+.coding-arena-subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-muted, #64748b);
+  line-height: 1.45;
+}
+
+/* 2. Top Coding Navigation Pills */
+.coding-nav-pills {
+  display: flex;
+  gap: 4px;
+  background: var(--surface-2, #f1f5f9);
+  padding: 5px;
+  border-radius: 14px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  flex-shrink: 0;
+}
+
+.coding-nav-pills::-webkit-scrollbar {
+  display: none;
+}
+
+.coding-nav-pills .nav-pill {
+  border: none;
+  background: transparent;
+  padding: 8px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 180ms ease;
+}
+
+.coding-nav-pills .nav-pill i {
+  font-size: 14px;
+  transition: color 180ms ease;
+}
+
+.coding-nav-pills .nav-pill:hover {
+  color: var(--text-color, #0f172a);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.coding-nav-pills .nav-pill.active {
+  background: var(--primary, #4338ca);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(67, 56, 202, 0.25);
+}
+
+.coding-nav-pills .nav-pill.active i {
+  color: #ffffff;
+}
+
+/* 3. Hero Section */
+.coding-hero {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 85% 15%, rgba(99, 102, 241, 0.25), transparent 40%),
+    radial-gradient(circle at 10% 90%, rgba(15, 123, 108, 0.2), transparent 40%),
+    linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #312e81 100%);
+  color: #ffffff;
+  padding: 32px 36px;
+  border-radius: 20px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+  margin-bottom: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.coding-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  backdrop-filter: blur(4px);
+}
+
+.coding-hero h1 {
+  margin: 0 0 10px;
+  font-size: clamp(1.7rem, 3vw, 2.4rem);
+  line-height: 1.15;
+  font-weight: 700;
+}
+
+.coding-hero p {
+  margin: 0;
+  max-width: 68ch;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+
+/* 4. Toolbar & Filter Pills */
+.coding-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.filter-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-pill {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  padding: 7px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 180ms ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.filter-pill:hover {
+  border-color: var(--primary, #4338ca);
+  color: var(--primary, #4338ca);
+}
+
+.filter-pill.active {
+  background: var(--primary, #4338ca);
+  color: #ffffff;
+  border-color: var(--primary, #4338ca);
+  box-shadow: 0 4px 12px rgba(67, 56, 202, 0.22);
+}
+
+.filter-pill .live-dot {
+  color: #22c55e;
+  font-size: 8px;
+  animation: liveDotPulse 1.8s infinite;
+}
+
+.filter-pill.active .live-dot {
+  color: #4ade80;
+}
+
+@keyframes liveDotPulse {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.3); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* 5. Contests Grid & Cards */
+.contests-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 22px;
+}
+
+.contest-card {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 18px;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+  position: relative;
+}
+
+.contest-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.09);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.contest-card.live-card-priority {
+  border: 1.5px solid rgba(34, 197, 94, 0.4);
+  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.1);
+}
+
+.contest-card.live-card-priority:hover {
+  box-shadow: 0 16px 36px rgba(34, 197, 94, 0.16);
+  border-color: #22c55e;
+}
+
+.contest-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.contest-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.contest-badge.status-live {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.contest-badge.status-scheduled {
+  background: #e0e7ff;
+  color: #3730a3;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.contest-badge.status-completed {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.strict-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.contest-card-title {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text-color, #0f172a);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.contest-card-desc {
+  color: var(--text-muted, #64748b);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 0 0 18px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.contest-meta-list {
+  font-size: 0.84rem;
+  color: var(--text-muted, #64748b);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 22px;
+  padding: 12px 14px;
+  background: var(--surface-2, #f8fafc);
+  border-radius: 12px;
+  border: 1px solid var(--border-color, #f1f5f9);
+}
+
+.contest-meta-list .meta-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.contest-meta-list .meta-item i {
+  width: 16px;
+  text-align: center;
+  color: var(--primary, #4338ca);
+  font-size: 0.9rem;
+}
+
+.contest-card-footer {
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+/* Skeleton Loading Cards */
+.skeleton-card {
+  pointer-events: none;
+}
+
+.skeleton-line {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Empty State Card */
+.arena-empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+}
+
+.empty-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--surface-2, #f1f5f9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  color: var(--text-muted, #94a3b8);
+  margin-bottom: 16px;
+}
+
+.arena-empty-card h3 {
+  margin: 0 0 6px;
+  font-size: 1.25rem;
+}
+
+.arena-empty-card p {
+  margin: 0;
+  color: var(--text-muted, #64748b);
+  max-width: 48ch;
+}
+
+/* 6. Responsive Breakpoints for Coding Arena */
+@media (max-width: 980px) {
+  .coding-arena-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .coding-nav-pills {
+    width: 100%;
+  }
+
+  .contests-grid {
+    grid-template-columns: 1fr;
+  }
+}

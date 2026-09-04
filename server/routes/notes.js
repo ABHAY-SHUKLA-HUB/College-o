@@ -95,7 +95,7 @@ router.get('/', requireAuth, async (req, res) => {
 
   // Only show published content
   clauses.push(`status = 'published'`);
-  clauses.push(`${sourceTypeExpression} = 'admin_upload'`);
+  clauses.push(`resolved_source_type = 'admin_upload'`);
 
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
   const { rows } = await pool.query(

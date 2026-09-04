@@ -1469,9 +1469,21 @@ router.post('/login', async (req, res) => {
     req.session.role = user.role;
     req.session.cookie.maxAge = rememberMe ? REMEMBER_ME_MAX_AGE_MS : STANDARD_SESSION_MAX_AGE_MS;
 
+    const { generateToken, CSRF_TOKEN_COOKIE, CSRF_TOKEN_HEADER } = require('../middleware/csrf');
+    const freshCsrfToken = generateToken();
+    req.session.csrfToken = freshCsrfToken;
+    res.setHeader(CSRF_TOKEN_HEADER, freshCsrfToken);
+    res.cookie(CSRF_TOKEN_COOKIE, freshCsrfToken, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/',
+      maxAge: 24 * 60 * 60 * 1000
+    });
+
     return resolveStudentLandingPath(pool, user.id)
-      .then((redirectUrl) => res.json({ user, redirectUrl }))
-      .catch(() => res.json({ user, redirectUrl: '/academic-onboarding' }));
+      .then((redirectUrl) => res.json({ user, redirectUrl, csrfToken: freshCsrfToken }))
+      .catch(() => res.json({ user, redirectUrl: '/academic-onboarding', csrfToken: freshCsrfToken }));
   });
 });
 

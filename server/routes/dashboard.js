@@ -453,14 +453,8 @@ router.get('/personalized', requireAuth, async (req, res) => {
   const userId = req.session.userId;
   setPrivateCacheHeaders(res, 10);
 
-  let intelligence = null;
-  try {
-    intelligence = await buildLearnerBrainPayload(userId, { horizonDays: 7 });
-  } catch {
-    intelligence = null;
-  }
-
-  const [profileResult, statsResult, membership] = await Promise.all([
+  const [intelligenceResult, profileResult, statsResult, membership] = await Promise.all([
+    buildLearnerBrainPayload(userId, { horizonDays: 7 }).catch(() => null),
     pool.query(
       `SELECT up.category_id, up.branch_id, up.semester_id, up.career_interest, up.learning_goals,
               u.full_name, u.subscription_tier,
@@ -486,6 +480,8 @@ router.get('/personalized', requireAuth, async (req, res) => {
     ),
     resolveMembershipState(userId)
   ]);
+
+  const intelligence = intelligenceResult;
 
   const profile = profileResult.rows[0] || {};
   const stats = statsResult.rows[0] || {};

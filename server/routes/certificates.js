@@ -52,14 +52,31 @@ router.post('/', requireAdmin, async (req, res) => {
 });
 
 router.get('/verify/:code', async (req, res) => {
+  const token = req.params.code;
+  try {
+    const { getPublicVerification } = require('../services/certificateService');
+    const publicVerification = await getPublicVerification(token);
+    if (publicVerification) {
+      return res.json({
+        valid: publicVerification.verified,
+        status: publicVerification.status,
+        revoked: publicVerification.status === 'REVOKED',
+        certificate: publicVerification
+      });
+    }
+  } catch (err) {
+    console.warn('[Certificates API] Coding cert verify check skipped:', err.message);
+  }
+
+  // Fallback to legacy certificates table
   const { rows } = await pool.query(
     `SELECT c.id, c.type, c.issued_date, c.verification_code, u.full_name, u.college_name
      FROM certificates c
      JOIN users u ON u.id = c.user_id
      WHERE c.verification_code = $1`,
-    [req.params.code]
+    [token]
   );
-  if (!rows[0]) return res.status(404).json({ valid: false });
+  if (!rows[0]) return res.status(404).json({ valid: false, error: 'Certificate not found' });
 
   let revoked = false;
   try {
@@ -68,7 +85,7 @@ router.get('/verify/:code', async (req, res) => {
        FROM admin_certificate_issuances
        WHERE verification_code = $1
        LIMIT 1`,
-      [req.params.code]
+      [token]
     );
     revoked = revokeCheck.rows[0]?.status === 'Revoked';
   } catch {
@@ -83,3 +100,4 @@ router.get('/verify/:code', async (req, res) => {
 });
 
 module.exports = router;
+

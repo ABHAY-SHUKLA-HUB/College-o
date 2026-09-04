@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <title>Coding Challenges Governance - College OS Admin</title>
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .co-admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      color: #fff;
+      padding: 16px 24px;
+      border-radius: 16px;
+      margin-bottom: 20px;
+    }
+    .co-admin-header h1 { margin: 0; font-size: 1.5rem; }
+    .co-admin-nav-links { display: flex; gap: 12px; }
+    .co-admin-nav-link { color: #94a3b8; text-decoration: none; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+    .co-admin-nav-link:hover, .co-admin-nav-link.active { color: #38bdf8; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--surface-card, #ffffff);
+      border: 1px solid var(--border-color, #e2e8f0);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+    .stat-card .num { font-size: 1.8rem; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+    .stat-card .lbl { font-size: 13px; color: #64748b; font-weight: 500; }
+
+    .action-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .filter-tabs { display: flex; gap: 8px; }
+    .filter-btn {
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .filter-btn.active { background: #4338ca; color: #fff; border-color: #4338ca; }
+
+    .data-table-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+    .data-table { width: 100%; border-collapse: collapse; text-align: left; }
+    .data-table th, .data-table td { padding: 14px 18px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+    .data-table th { background: #f8fafc; font-weight: 600; color: #475569; }
+
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+    .badge-status.live { background: #dcfce7; color: #15803d; }
+    .badge-status.scheduled { background: #e0f2fe; color: #0369a1; }
+    .badge-status.draft { background: #f1f5f9; color: #475569; }
+    .badge-status.completed { background: #f3e8ff; color: #6b21a8; }
+    .badge-status.cancelled { background: #fee2e2; color: #b91c1c; }
+
+    .btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
+    .btn-sm { padding: 4px 10px; font-size: 12px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; cursor: pointer; }
+    .btn-sm.primary { background: #4338ca; color: #fff; border-color: #4338ca; }
+    .btn-sm.danger { background: #ef4444; color: #fff; border-color: #ef4444; }
+    .btn-sm.success { background: #10b981; color: #fff; border-color: #10b981; }
+
+    /* Modal Overlay */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 16px;
+    }
+    .modal-content {
+      background: #fff;
+      border-radius: 20px;
+      max-width: 720px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+    .modal-header h3 { margin: 0; font-size: 1.25rem; }
+    .modal-close { background: none; border: none; font-size: 18px; cursor: pointer; color: #64748b; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-group label { font-size: 13px; font-weight: 600; color: #334155; }
+    .form-group input, .form-group select, .form-group textarea {
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .form-checkboxes { display: flex; gap: 14px; flex-wrap: wrap; }
+    .form-checkboxes label { font-weight: 400; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  </style>
+</head>
+<body class="dashboard-page">
+  <div style="padding: 20px; max-width: 1280px; margin: 0 auto;">
+    <header class="co-admin-header">
+      <div>
+        <h1><i class="fa-solid fa-code"></i> Coding Challenges Governance</h1>
+        <p style="margin: 4px 0 0; color: #94a3b8; font-size: 13px;">Manage Weekly Contests, Problem Statements, Test Cases & Leaderboard Results</p>
+      </div>
+      <nav class="co-admin-nav-links">
+        <a class="co-admin-nav-link" href="admin-dashboard.html"><i class="fa-solid fa-chart-line"></i> Main Admin</a>
+        <a class="co-admin-nav-link" href="admin-control.html"><i class="fa-solid fa-sliders"></i> Control Center</a>
+        <a class="co-admin-nav-link active" href="admin-coding-challenges.html"><i class="fa-solid fa-code"></i> Coding Governance</a>
+      </nav>
+    </header>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="num" id="statTotalContests">0</div>
+        <div class="lbl">Total Contests</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="statLiveContests" style="color:#15803d;">0</div>
+        <div class="lbl">Currently Live</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="statScheduledContests" style="color:#0369a1;">0</div>
+        <div class="lbl">Scheduled / Upcoming</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="statDraftContests" style="color:#475569;">0</div>
+        <div class="lbl">Draft Contests</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="statParticipants" style="color:#4338ca;">0</div>
+        <div class="lbl">Coding Participants</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="statSubmissions" style="color:#6b21a8;">0</div>
+        <div class="lbl">Total Submissions</div>
+      </div>
+    </div>
+
+    <div class="action-bar">
+      <div class="filter-tabs">
+        <button class="filter-btn active" data-status="all">All Contests</button>
+        <button class="filter-btn" data-status="live">Live</button>
+        <button class="filter-btn" data-status="scheduled">Scheduled</button>
+        <button class="filter-btn" data-status="draft">Drafts</button>
+        <button class="filter-btn" data-status="completed">Completed</button>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn secondary" id="btnManageTemplates"><i class="fa-solid fa-certificate"></i> Certificate Templates</button>
+        <button class="btn primary" id="btnCreateContest"><i class="fa-solid fa-plus"></i> Create New Contest</button>
+      </div>
+    </div>
+
+    <div class="data-table-card">
+      <table class="data-table" id="contestsTable">
+        <thead>
+          <tr>
+            <th>Contest Title</th>
+            <th>Status</th>
+            <th>Schedule / Timing</th>
+            <th>Problems</th>
+            <th>Participants</th>
+            <th>Submissions</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="contestsTbody">
+          <tr><td colspan="7" style="text-align:center; padding: 24px; color:#64748b;">Loading contests data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Contest Modal -->
+  <div class="modal-overlay" id="contestModal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="contestModalTitle">Create Coding Contest</h3>
+        <button class="modal-close" id="btnCloseContestModal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="contestForm">
+        <input type="hidden" id="contestId" />
+        <div class="form-grid">
+          <div class="form-group full">
+            <label for="contestTitle">Contest Title *</label>
+            <input id="contestTitle" required placeholder="e.g. Weekly CodeRush #14" />
+          </div>
+          <div class="form-group full">
+            <label for="contestDescription">Short Description</label>
+            <input id="contestDescription" placeholder="Brief summary of topics or difficulty level" />
+          </div>
+          <div class="form-group full">
+            <label for="contestInstructions">Rules & Instructions</label>
+            <textarea id="contestInstructions" rows="3" placeholder="Contest guidelines, scoring rules, anti-cheat policy"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="contestStatus">Initial Status</label>
+            <select id="contestStatus">
+              <option value="draft">Draft (Hidden from students)</option>
+              <option value="scheduled">Scheduled / Published</option>
+              <option value="live">Live Now</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="contestDuration">Duration (Minutes)</label>
+            <input type="number" id="contestDuration" value="60" min="15" />
+          </div>
+          <div class="form-group">
+            <label for="contestStartTime">Start Date & Time *</label>
+            <input type="datetime-local" id="contestStartTime" required />
+          </div>
+          <div class="form-group">
+            <label for="contestEndTime">End Date & Time *</label>
+            <input type="datetime-local" id="contestEndTime" required />
+          </div>
+          <div class="form-group full">
+            <label for="contestCertificateTemplate">Certificate Template</label>
+            <select id="contestCertificateTemplate">
+              <option value="">Default Certificate Template</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label>Allowed Programming Languages</label>
+            <div class="form-checkboxes">
+              <label><input type="checkbox" name="languages" value="python" checked /> Python 3.10</label>
+              <label><input type="checkbox" name="languages" value="javascript" checked /> JavaScript (Node.js)</label>
+              <label><input type="checkbox" name="languages" value="cpp" checked /> C++ (GCC 11.2)</label>
+              <label><input type="checkbox" name="languages" value="c" checked /> C (GCC 11.2)</label>
+              <label><input type="checkbox" name="languages" value="java" checked /> Java (OpenJDK 17)</label>
+            </div>
+          </div>
+          <div class="form-group full">
+            <label>Security & Governance Controls</label>
+            <div class="form-checkboxes">
+              <label><input type="checkbox" id="contestLeaderboardVisible" checked /> Show Live Leaderboard</label>
+              <label><input type="checkbox" id="contestStrictModeEnabled" /> Strict Anti-Cheat Proctoring</label>
+              <label><input type="checkbox" id="contestCertificateEnabled" checked /> Enable Merit Certificates</label>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top: 20px; display:flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" class="btn secondary" id="btnCancelContestModal">Cancel</button>
+          <button type="submit" class="btn primary" id="btnSubmitContest">Save Contest</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Certificate Template Manager Modal -->
+  <div class="modal-overlay" id="templateModal" style="display:none;">
+    <div class="modal-content" style="max-width: 960px;">
+      <div class="modal-header">
+        <h3>Certificate Template Manager</h3>
+        <button class="modal-close" id="btnCloseTemplateModal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 260px 1fr; gap: 20px;">
+        <!-- Left Pane: Template List -->
+        <div style="border-right: 1px solid #e2e8f0; padding-right: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h4 style="margin: 0; font-size: 14px;">Templates</h4>
+            <button class="btn primary btn-sm" id="btnNewTemplate"><i class="fa-solid fa-plus"></i> New</button>
+          </div>
+          <div id="templatesList" style="display: flex; flex-direction: column; gap: 8px; max-height: 480px; overflow-y: auto;">
+            <div style="padding: 12px; color: #64748b; font-size: 13px; text-align: center;">Loading templates...</div>
+          </div>
+        </div>
+
+        <!-- Right Pane: Template Editor & Live Preview -->
+        <div>
+          <form id="templateEditorForm">
+            <input type="hidden" id="tplId" />
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <h4 id="tplEditorTitle" style="margin: 0;">Edit Template Configuration</h4>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn secondary btn-sm" id="btnDuplicateTpl"><i class="fa-solid fa-copy"></i> Duplicate</button>
+                <button type="button" class="btn secondary btn-sm" id="btnPreviewTplPdf"><i class="fa-solid fa-file-pdf"></i> Sample PDF</button>
+                <button type="submit" class="btn primary btn-sm" id="btnSaveTpl">Save Active</button>
+                <button type="button" class="btn success btn-sm" id="btnSaveNewVer">New Version</button>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="tplName">Template Name *</label>
+                <input id="tplName" required placeholder="e.g. Gold Winner Certificate" />
+              </div>
+              <div class="form-group">
+                <label for="tplTheme">Rank Accent Styling</label>
+                <select id="tplTheme">
+                  <option value="gold">Gold (Rank 1 Accent)</option>
+                  <option value="silver">Silver (Rank 2 Accent)</option>
+                  <option value="bronze">Bronze (Rank 3 Accent)</option>
+                  <option value="classic_blue">Classic Blue</option>
+                </select>
+              </div>
+              <div class="form-group full">
+                <label for="tplTitle">Certificate Title</label>
+                <input id="tplTitle" value="CERTIFICATE OF ACHIEVEMENT" />
+              </div>
+              <div class="form-group full">
+                <label for="tplSubtitle">Subtitle Header</label>
+                <input id="tplSubtitle" value="This is proudly presented to" />
+              </div>
+              <div class="form-group full">
+                <label for="tplBody">Main Body Text (Use {{placeholders}})</label>
+                <textarea id="tplBody" rows="2">for securing {{position}} Position in {{contest_name}} held on {{contest_date}}.</textarea>
+              </div>
+              <div class="form-group">
+                <label for="tplPartnerLabel">Partner Label</label>
+                <input id="tplPartnerLabel" value="Powered by" />
+              </div>
+              <div class="form-group">
+                <label for="tplPartnerName">Partner / Sponsor Name</label>
+                <input id="tplPartnerName" placeholder="e.g. Unstop / AWS Builder Group" />
+              </div>
+              <div class="form-group">
+                <label for="tplOrgName">Organization Name</label>
+                <input id="tplOrgName" value="College OS" />
+              </div>
+              <div class="form-group">
+                <label for="tplFooter">Footer Text</label>
+                <input id="tplFooter" value="College OS Verified Academic Credential" />
+              </div>
+            </div>
+
+            <!-- Live Preview Box -->
+            <div style="margin-top: 16px; border: 1px solid #cbd5e1; border-radius: 12px; padding: 16px; background: #0f172a; color: #fff;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 12px; color: #94a3b8; font-weight: 600;"><i class="fa-solid fa-eye"></i> LIVE PREVIEW</span>
+                <select id="previewRankSelect" style="font-size: 12px; padding: 2px 6px; background: #1e293b; color: #fff; border: 1px solid #334155; border-radius: 4px;">
+                  <option value="1">Rank 1 Preview (Gold)</option>
+                  <option value="2">Rank 2 Preview (Silver)</option>
+                  <option value="3">Rank 3 Preview (Bronze)</option>
+                </select>
+              </div>
+              <div id="livePreviewContainer" style="background: #fff; color: #0f172a; padding: 20px; border-radius: 8px; text-align: center; border: 3px solid #d4af37;">
+                <h2 id="prevTitle" style="font-size: 20px; margin: 0; color: #0f172a;">CERTIFICATE OF ACHIEVEMENT</h2>
+                <p id="prevSubtitle" style="font-size: 12px; color: #64748b; margin: 4px 0 12px;">This is proudly presented to</p>
+                <h3 id="prevStudentName" style="font-size: 22px; color: #1e293b; margin: 0;">Alex Morgan</h3>
+                <div style="height: 2px; width: 80px; background: #d4af37; margin: 8px auto;"></div>
+                <p id="prevBody" style="font-size: 12px; color: #334155; margin: 10px 0;">for securing 1st Position in Weekly CodeRush #14 held on 9/4/2026.</p>
+                <p id="prevPartner" style="font-size: 11px; font-weight: bold; color: #64748b; margin-top: 10px;"></p>
+                <div style="margin-top: 12px; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8;">
+                  <span>Certificate ID: CO-CODE-SAMPLE-0001</span>
+                  <span id="prevFooter">College OS Verified Academic Credential</span>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Problem Manager Modal -->
+  <div class="modal-overlay" id="problemManagerModal" style="display:none;">
+    <div class="modal-content" style="max-width: 860px;">
+      <div class="modal-header">
+        <h3 id="problemManagerTitle">Manage Contest Problems</h3>
+        <button class="modal-close" id="btnCloseProblemManagerModal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+        <p style="margin:0; font-size:13px; color:#64748b;" id="problemManagerSubtitle">Contest: Loading...</p>
+        <button class="btn primary btn-sm" id="btnAddNewProblem"><i class="fa-solid fa-plus"></i> Add Problem</button>
+      </div>
+
+      <!-- Problem List Table -->
+      <div id="problemListSection" class="data-table-card" style="margin-bottom: 20px;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Order</th>
+              <th>Problem Title</th>
+              <th>Difficulty</th>
+              <th>Score</th>
+              <th>Test Cases</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="problemsTbody">
+            <tr><td colspan="6" style="text-align:center; padding: 16px;">Loading problems...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Problem Editor Form (hidden by default until Add/Edit is clicked) -->
+      <div id="problemEditorSection" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:18px;">
+        <h4 id="problemEditorTitle" style="margin-top:0; margin-bottom:14px;">Add New Problem</h4>
+        <form id="problemForm">
+          <input type="hidden" id="problemId" />
+          <input type="hidden" id="problemContestId" />
+          <div class="form-grid">
+            <div class="form-group full">
+              <label for="problemTitle">Problem Title *</label>
+              <input id="problemTitle" required placeholder="e.g. Two Sum Array Indexing" />
+            </div>
+            <div class="form-group">
+              <label for="problemDifficulty">Difficulty *</label>
+              <select id="problemDifficulty">
+                <option value="easy">Easy</option>
+                <option value="medium" selected>Medium</option>
+                <option value="hard">Hard</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="problemScore">Max Score Points *</label>
+              <input type="number" id="problemScore" value="100" min="1" required />
+            </div>
+            <div class="form-group full">
+              <label for="problemStatement">Problem Statement *</label>
+              <textarea id="problemStatement" rows="4" required placeholder="Describe problem details, mathematical formulation, and instructions..."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="problemInputFormat">Input Format</label>
+              <textarea id="problemInputFormat" rows="2" placeholder="e.g. First line contains N. Second line contains N integers."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="problemOutputFormat">Output Format</label>
+              <textarea id="problemOutputFormat" rows="2" placeholder="e.g. Print single integer answer."></textarea>
+            </div>
+            <div class="form-group full">
+              <label for="problemConstraints">Constraints</label>
+              <textarea id="problemConstraints" rows="2" placeholder="e.g. 1 <= N <= 10^5&#10;1 <= A[i] <= 10^9"></textarea>
+            </div>
+            <div class="form-group full">
+              <label for="problemExamples">Public Examples (JSON Array)</label>
+              <textarea id="problemExamples" rows="3" placeholder='[{"input": "2 3\n", "output": "5\n", "explanation": "2+3=5"}]'></textarea>
+            </div>
+            <div class="form-group full">
+              <label for="problemStarterCode">Starter Code Templates (JSON by language key)</label>
+              <textarea id="problemStarterCode" rows="3" placeholder='{"python": "import sys\n# write your solution here\n", "cpp": "#include <iostream>\nusing namespace std;\nint main(){\n  return 0;\n}"}'></textarea>
+            </div>
+          </div>
+          <div style="margin-top: 16px; display:flex; justify-content: flex-end; gap: 8px;">
+            <button type="button" class="btn secondary btn-sm" id="btnCancelProblemEdit">Cancel</button>
+            <button type="submit" class="btn primary btn-sm" id="btnSaveProblem">Save Problem</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test Case Manager Modal -->
+  <div class="modal-overlay" id="testCaseModal" style="display:none;">
+    <div class="modal-content" style="max-width: 820px;">
+      <div class="modal-header">
+        <h3 id="testCaseModalTitle">Test Case Manager</h3>
+        <button class="modal-close" id="btnCloseTestCaseModal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      
+      <div style="margin-bottom: 14px;">
+        <p style="margin:0; font-size:13px; color:#475569;" id="testCaseProblemSubtitle">Problem: Loading...</p>
+        <p style="margin:4px 0 0; font-size:12px; color:#ef4444; font-weight:600;"><i class="fa-solid fa-shield-halved"></i> Hidden test cases are strictly isolated on server and never sent to client bundles.</p>
+      </div>
+
+      <!-- Test Cases List -->
+      <div class="data-table-card" style="margin-bottom: 16px; max-height: 220px; overflow-y: auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Input Snippet</th>
+              <th>Expected Output</th>
+              <th>Weight</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="testCasesTbody">
+            <tr><td colspan="5" style="text-align:center; padding: 12px;">Loading test cases...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Single Test Case Form & Bulk Import Tabs -->
+      <div style="display: flex; gap: 10px; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+        <button type="button" class="filter-btn active" id="tabSingleTestCase">Single Test Case</button>
+        <button type="button" class="filter-btn" id="tabBulkImportTestCase">Bulk JSON Import</button>
+      </div>
+
+      <!-- Single Form -->
+      <form id="testCaseForm" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px;">
+        <input type="hidden" id="tcId" />
+        <input type="hidden" id="tcProblemId" />
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="tcInput">STDIN Input Data *</label>
+            <textarea id="tcInput" rows="3" required placeholder="Raw input string..."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="tcOutput">Expected STDOUT Output *</label>
+            <textarea id="tcOutput" rows="3" required placeholder="Expected output string..."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="tcWeight">Weight / Score Points</label>
+            <input type="number" id="tcWeight" value="10" min="1" />
+          </div>
+          <div class="form-group" style="justify-content: center;">
+            <label>Test Case Flags</label>
+            <div class="form-checkboxes">
+              <label><input type="checkbox" id="tcIsSample" /> Sample / Public Case</label>
+              <label><input type="checkbox" id="tcIsHidden" checked /> Hidden Evaluation Case</label>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top: 12px; display:flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn secondary btn-sm" id="btnResetTcForm">Reset Form</button>
+          <button type="submit" class="btn primary btn-sm" id="btnSaveTc">Save Test Case</button>
+        </div>
+      </form>
+
+      <!-- Bulk Form -->
+      <div id="bulkTestCaseSection" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px;">
+        <label style="font-size:13px; font-weight:600; color:#334155; display:block; margin-bottom:6px;">Paste Test Cases JSON Array</label>
+        <textarea id="bulkTcJson" rows="5" placeholder='[&#10;  {"input_data": "5 10\n", "expected_output": "15\n", "is_sample": true, "is_hidden": false, "weight": 10},&#10;  {"input_data": "100 200\n", "expected_output": "300\n", "is_sample": false, "is_hidden": true, "weight": 20}&#10;]' style="width:100%; font-family:monospace; font-size:13px; padding:8px; border:1px solid #cbd5e1; border-radius:6px;"></textarea>
+        <div style="margin-top: 10px; display:flex; justify-content: flex-end;">
+          <button type="button" class="btn primary btn-sm" id="btnSubmitBulkTc">Import Test Cases</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contest Results Modal -->
+  <div class="modal-overlay" id="contestResultsModal" style="display:none;">
+    <div class="modal-content" style="max-width: 860px;">
+      <div class="modal-header">
+        <h3 id="contestResultsTitle">Contest Results & Leaderboard</h3>
+        <button class="modal-close" id="btnCloseResultsModal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div style="display:flex; gap:16px; margin-bottom:16px;">
+        <div class="stat-card" style="flex:1;">
+          <div class="num" id="resParticipants">0</div>
+          <div class="lbl">Total Participants</div>
+        </div>
+        <div class="stat-card" style="flex:1;">
+          <div class="num" id="resSubmissions" style="color:#6b21a8;">0</div>
+          <div class="lbl">Submissions</div>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: flex-end;" id="contestFinalizeBar">
+          <button class="btn primary" id="btnFinalizeContest"><i class="fa-solid fa-trophy"></i> Finalize Contest & Issue Certificates</button>
+        </div>
+      </div>
+
+      <div class="data-table-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Participant</th>
+              <th>Score</th>
+              <th>Solved</th>
+              <th>Penalty</th>
+              <th>Certificate</th>
+              <th>Integrity Status</th>
+            </tr>
+          </thead>
+          <tbody id="resultsTbody">
+            <tr><td colspan="7" style="text-align:center; padding:16px;">Loading results...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/admin-coding-challenges.js"></script>
+</body>
+</html>

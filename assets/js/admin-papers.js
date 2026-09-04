@@ -62,23 +62,17 @@ async function ensureAdminSession() {
 
       try {
         status.textContent = 'Uploading...';
-        const response = await fetch('/api/admin/content/papers', {
+        const data = await window.CollegeOSApiClient.request('/api/admin/content/papers', {
           method: 'POST',
-          credentials: 'include',
           body: formData
         });
 
-        const data = await response.json();
-        if (response.ok) {
-          status.textContent = 'Paper uploaded successfully!';
-          status.style.color = '#157f37';
-          e.target.reset();
-          document.getElementById('paperBranchId').innerHTML = '<option value="">Select branch or course</option>';
-          document.getElementById('paperBranchId').disabled = true;
-          loadPapers();
-        } else {
-          throw new Error(data.error);
-        }
+        status.textContent = 'Paper uploaded successfully!';
+        status.style.color = '#157f37';
+        e.target.reset();
+        document.getElementById('paperBranchId').innerHTML = '<option value="">Select branch or course</option>';
+        document.getElementById('paperBranchId').disabled = true;
+        loadPapers();
       } catch (error) {
         status.textContent = 'Error: ' + error.message;
         status.style.color = '#c6342d';

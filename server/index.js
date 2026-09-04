@@ -11,6 +11,8 @@ const pgSessionFactory = require('connect-pg-simple');
 const { pool } = require('./db/pool');
 const { ensureDatabaseBootstrap } = require('./db/bootstrap');
 const { initializeAcademicStructure } = require('./db/academic-migration');
+const { initializeCodingChallengesSchema } = require('./db/coding-challenges-migration');
+const { getCodingModuleSettings } = require('./services/codingChallengesService');
 
 const authRoutes = require('./routes/auth');
 const metaRoutes = require('./routes/meta');
@@ -182,6 +184,7 @@ const CLEAN_PAGE_ROUTES = new Map([
   ['/leaderboard', 'leaderboards.html'],
   ['/campus-feed', 'college-feed.html'],
   ['/contribute', 'academic-contribution-hub.html']
+  ,['/coding-challenges', 'coding-challenges.html']
   ,['/reset-password', 'reset-password.html']
   ,['/admin-login', 'admin-login.html']
   ,['/admin-dashboard', 'admin-dashboard.html']
@@ -198,6 +201,7 @@ const CLEAN_PAGE_ROUTES = new Map([
   ,['/admin-campus-feed', 'admin-campus-feed.html']
   ,['/admin-ai-tools', 'admin-ai-tools.html']
   ,['/admin-support-governance', 'admin-support-governance.html']
+  ,['/certificate-verify', 'certificate-verify.html']
 ]);
 
 function getRateLimitKey(req) {
@@ -629,7 +633,8 @@ const adminPages = [
   '/admin-materials.html', '/admin-notes.html', '/admin-certificates.html',
   '/admin-mock-tests.html', '/admin-quizzes.html', '/admin-papers.html',
   '/admin-roadmaps.html', '/admin-campus-feed.html', '/admin-ai-tools.html',
-  '/admin-support-governance.html'
+  '/admin-support-governance.html',
+  '/admin-coding-challenges.html', '/admin-coding-challenges'
 ];
 
 adminPages.forEach((p) => {
@@ -671,6 +676,8 @@ app.use('/api/content', contentRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/live-sessions', liveSessionRoutes);
+app.use('/api/coding-challenges', require('./routes/coding-challenges'));
+app.use('/api/admin/coding-challenges', require('./routes/coding-challenges-admin'));
 app.use('/api/admin/ai-ops', adminAiOpsRoutes);
 app.use('/api/admin-ai-ops', adminAiOpsRoutes);
 app.use('/api/admin', adminRoutes);
@@ -728,6 +735,10 @@ app.get('/api/notifications/stream', (req, res) => {
   }
 });
 
+app.get('/certificate/verify/:token', (req, res) => {
+  res.sendFile(path.join(__dirname, '../certificate-verify.html'));
+});
+
 // Map direct page routes to HTML files
 const PAGE_ROUTES = new Map([
   ['/referrals', 'referrals.html'],
@@ -765,7 +776,8 @@ const PROTECTED_PAGE_PATHS = new Set([
   '/daily-challenges', '/daily-challenges.html',
   '/top-helpers', '/top-helpers.html',
   '/my-tickets', '/my-tickets.html',
-  '/membership'
+  '/membership',
+  '/coding-challenges', '/coding-challenges.html'
 ]);
 
 // Routes that have been removed or consolidated; users should be redirected
@@ -808,6 +820,31 @@ app.get(['/live-hub', '/live-hub.html'], async (req, res) => {
     }
   } catch (err) {
     return res.status(500).send('Server error');
+  }
+});
+
+// Strictly protect the coding-challenges page: require authenticated session and module_enabled
+app.get(['/coding-challenges', '/coding-challenges.html'], async (req, res) => {
+  try {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    if (!req.session || !req.session.userId) {
+      return res.redirect(302, '/login');
+    }
+
+    const role = req.session.role || '';
+    const isAdmin = role === 'admin' || role === 'super_admin';
+
+    if (!isAdmin) {
+      const codingSettings = await getCodingModuleSettings();
+      if (!codingSettings.module_enabled) {
+        return res.redirect(302, '/dashboard');
+      }
+    }
+
+    return res.sendFile(path.join(__dirname, '..', 'coding-challenges.html'));
+  } catch (err) {
+    if (res.headersSent) return;
+    return res.redirect(302, '/dashboard');
   }
 });
 
@@ -1022,6 +1059,9 @@ async function startServer() {
     statementsApplied: academicMigration?.statementsApplied ?? 0
   });
 
+  const codingMigration = await initializeCodingChallengesSchema();
+  console.info('[Startup] Coding challenges migration complete', codingMigration);
+
   if (typeof liveSessionRoutes.runLiveSessionMaintenance === 'function') {
     liveSessionRoutes.runLiveSessionMaintenance().catch((error) => {
       console.warn('[Live Session Maintenance] initial run failed:', error.message);
@@ -1048,9 +1088,13 @@ async function startServer() {
 
   server.keepAliveTimeout = 65 * 1000;
   server.headersTimeout = 70 * 1000;
+  return server;
 }
 
-startServer().catch((error) => {
+const startPromise = startServer().catch((error) => {
   console.error('Server startup failed:', error.message);
   process.exit(1);
 });
+
+module.exports = app;
+module.exports.startPromise = startPromise;

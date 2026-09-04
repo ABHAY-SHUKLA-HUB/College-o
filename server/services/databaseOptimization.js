@@ -103,6 +103,26 @@ async function initializeProductionIndexes() {
       sql: `CREATE INDEX IF NOT EXISTS idx_quality_history_user_date
             ON contributor_quality_history(user_id, period_date DESC)`,
       table: 'contributor_quality_history'
+    },
+
+    // ==================== CODING CHALLENGES ====================
+    {
+      name: 'idx_coding_submissions_contest_user',
+      sql: `CREATE INDEX IF NOT EXISTS idx_coding_submissions_contest_user
+            ON coding_submissions(contest_id, student_id)`,
+      table: 'coding_submissions'
+    },
+    {
+      name: 'idx_coding_submissions_contest_status',
+      sql: `CREATE INDEX IF NOT EXISTS idx_coding_submissions_contest_status
+            ON coding_submissions(contest_id, status)`,
+      table: 'coding_submissions'
+    },
+    {
+      name: 'idx_coding_leaderboard_contest_rank',
+      sql: `CREATE INDEX IF NOT EXISTS idx_coding_leaderboard_contest_rank
+            ON coding_leaderboard(contest_id, rank)`,
+      table: 'coding_leaderboard'
     }
   ];
 

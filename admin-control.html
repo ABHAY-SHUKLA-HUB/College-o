@@ -405,6 +405,7 @@
           <button class="control-tab" data-panel="panel-referrals"><i class="fa-solid fa-user-group"></i> Referrals & Rewards</button>
           <button class="control-tab" data-panel="panel-roles"><i class="fa-solid fa-user-shield"></i> Roles & Permissions</button>
           <button class="control-tab" data-panel="panel-settings"><i class="fa-solid fa-sliders"></i> Platform Settings</button>
+          <button class="control-tab" data-panel="panel-coding"><i class="fa-solid fa-code"></i> Coding Challenges</button>
           <button class="control-tab" data-panel="panel-experience"><i class="fa-solid fa-wand-magic-sparkles"></i> Experience Settings</button>
           <button class="control-tab" data-panel="panel-live-sessions"><i class="fa-solid fa-tower-broadcast"></i> Live Session Control</button>
           <button class="control-tab" data-panel="panel-audit"><i class="fa-solid fa-scroll"></i> Audit Logs</button>
@@ -798,6 +799,78 @@
                 <a class="btn secondary" href="admin-academics.html#governance">Open Academics Governance</a>
               </div>
               <p id="contributionVisibilityStatus" class="muted"></p>
+            </div>
+
+            <div class="experience-block" style="margin-top:16px;">
+              <h4>Coding Challenges Module Governance</h4>
+              <p class="control-subtitle" style="margin-bottom:8px;">Global feature toggle for the Student Coding Challenges module. Admin management access remains available even when disabled for students.</p>
+              <div class="control-filters">
+                <select id="settingCodingModuleEnabled">
+                  <option value="false">Coding Challenges Status: Disabled</option>
+                  <option value="true">Coding Challenges Status: Enabled</option>
+                </select>
+                <select id="settingCodingLeaderboardEnabled">
+                  <option value="true">Leaderboard: Enabled</option>
+                  <option value="false">Leaderboard: Disabled</option>
+                </select>
+                <select id="settingCodingCertificatesEnabled">
+                  <option value="true">Certificates: Enabled</option>
+                  <option value="false">Certificates: Disabled</option>
+                </select>
+                <select id="settingCodingStrictModeDefault">
+                  <option value="false">Strict Anti-Cheat Mode: Off</option>
+                  <option value="true">Strict Anti-Cheat Mode: On</option>
+                </select>
+              </div>
+              <div class="control-actions">
+                <button class="btn primary" id="saveCodingSettingsBtn">Save Coding Settings</button>
+                <button class="btn secondary" id="loadCodingSettingsBtn">Load Coding Settings</button>
+              </div>
+              <p id="codingSettingsStatus" class="muted" style="margin-top:8px;"></p>
+            </div>
+          </article>
+
+          <article id="panel-coding" class="control-panel">
+            <h3 class="control-title">Coding Challenges Command Center</h3>
+            <p class="control-subtitle">Manage weekly algorithmic contests, problem statements, test cases, and student leaderboard metrics.</p>
+            <div class="control-actions" style="margin-bottom: 16px;">
+              <a class="btn primary" href="admin-coding-challenges.html"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open Full Coding Portal</a>
+              <button class="btn secondary" id="refreshCodingStatsBtn"><i class="fa-solid fa-rotate"></i> Refresh Metrics</button>
+            </div>
+
+            <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+              <div class="kpi-card">
+                <div class="kpi-value" id="panelCodingTotal">0</div>
+                <div class="kpi-label">Total Contests</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-value" id="panelCodingLive" style="color:#10b981;">0</div>
+                <div class="kpi-label">Currently Live</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-value" id="panelCodingScheduled" style="color:#0284c7;">0</div>
+                <div class="kpi-label">Scheduled</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-value" id="panelCodingDrafts" style="color:#64748b;">0</div>
+                <div class="kpi-label">Drafts</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-value" id="panelCodingParticipants" style="color:#6366f1;">0</div>
+                <div class="kpi-label">Participants</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-value" id="panelCodingSubmissions" style="color:#8b5cf6;">0</div>
+                <div class="kpi-label">Submissions</div>
+              </div>
+            </div>
+
+            <div class="experience-block" style="margin-top: 16px;">
+              <h4>Recent Contest Management</h4>
+              <p class="control-subtitle" style="margin-bottom:12px;">Access full contest editor, add problems, configure hidden test cases, or inspect student submissions.</p>
+              <div id="panelCodingContestsSummary" style="font-size: 14px; color: #475569;">
+                <p>Loading contests summary...</p>
+              </div>
             </div>
           </article>
 

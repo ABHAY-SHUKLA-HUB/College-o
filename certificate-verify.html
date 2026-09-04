@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Certificate Verification | College OS</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0F172A;
+      --card-bg: #1E293B;
+      --text: #F8FAFC;
+      --muted: #94A3B8;
+      --accent: #38BDF8;
+      --success: #10B981;
+      --danger: #EF4444;
+      --warning: #F59E0B;
+      --border: #334155;
+      --gold: #D4AF37;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .verify-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .verify-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 6px;
+      background: linear-gradient(90deg, #38BDF8, #D4AF37, #10B981);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 20px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+    .badge-verified { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid var(--success); }
+    .badge-revoked { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid var(--danger); }
+    .badge-pending { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid var(--warning); }
+
+    .cert-title { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+    .student-name { font-size: 28px; font-weight: 800; color: var(--accent); margin: 16px 0 8px; }
+    .contest-name { font-size: 18px; color: var(--muted); margin-bottom: 24px; }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      text-align: left;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      margin-top: 24px;
+    }
+    .detail-item { font-size: 13px; }
+    .detail-label { color: var(--muted); margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .detail-value { font-weight: 600; color: var(--text); }
+
+    .branding-box {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .footer-note { font-size: 12px; color: var(--muted); margin-top: 24px; }
+    .loading { font-size: 16px; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+  <div class="verify-card" id="verifyCard">
+    <div class="loading"><i class="fas fa-spinner fa-spin"></i> Verifying certificate authenticity...</div>
+  </div>
+
+  <script>
+    async function fetchVerification() {
+      const card = document.getElementById('verifyCard');
+      const pathParts = window.location.pathname.split('/');
+      let token = pathParts[pathParts.length - 1];
+      if (!token || token === 'verify') {
+        const urlParams = new URLSearchParams(window.location.search);
+        token = urlParams.get('token') || urlParams.get('code');
+      }
+
+      if (!token) {
+        card.innerHTML = `<div class="badge badge-revoked"><i class="fas fa-times-circle"></i> INVALID</div><p>No verification token provided.</p>`;
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/certificates/verify/${encodeURIComponent(token)}`);
+        const data = await res.json();
+
+        if (!data || !data.valid && !data.certificate) {
+          card.innerHTML = `
+            <div class="badge badge-revoked"><i class="fas fa-times-circle"></i> NOT FOUND</div>
+            <h2 class="cert-title">Certificate Invalid</h2>
+            <p style="color:var(--muted); margin-top:12px;">No official College OS certificate matching token <code>${token}</code> was found.</p>
+          `;
+          return;
+        }
+
+        const cert = data.certificate || {};
+        const isVerified = data.status === 'VERIFIED' || data.valid;
+        const isRevoked = data.status === 'REVOKED' || data.revoked;
+
+        const badgeClass = isVerified ? 'badge-verified' : isRevoked ? 'badge-revoked' : 'badge-pending';
+        const badgeIcon = isVerified ? 'fa-check-circle' : isRevoked ? 'fa-ban' : 'fa-clock';
+        const badgeText = isVerified ? 'OFFICIALLY VERIFIED' : isRevoked ? 'REVOKED CERTIFICATE' : 'PENDING APPROVAL';
+
+        card.innerHTML = `
+          <div class="badge ${badgeClass}">
+            <i class="fas ${badgeIcon}"></i> ${badgeText}
+          </div>
+          <h2 class="cert-title">Coding Challenge Certificate</h2>
+          <div class="student-name">${cert.student_name || 'Student'}</div>
+          <div class="contest-name">Secured ${cert.position || 'Winner Position'} in ${cert.contest_name || 'Coding Challenge'}</div>
+
+          <div class="details-grid">
+            <div class="detail-item">
+              <div class="detail-label">Certificate ID</div>
+              <div class="detail-value">${cert.certificate_number || cert.verification_code || token}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Issue Date</div>
+              <div class="detail-value">${cert.issue_date || cert.issued_date || 'N/A'}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Issuing Organization</div>
+              <div class="detail-value">${cert.organization_name || 'College OS'}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Verification Status</div>
+              <div class="detail-value" style="color: ${isVerified ? 'var(--success)' : 'var(--danger)'};">${badgeText}</div>
+            </div>
+          </div>
+
+          ${cert.partner_name ? `
+            <div class="branding-box">
+              <div><strong>${cert.partner_label || 'Powered by'}:</strong> ${cert.partner_name}</div>
+            </div>
+          ` : ''}
+
+          ${isRevoked && cert.revoked_reason ? `
+            <div style="margin-top:16px; padding:12px; background:rgba(239,68,68,0.1); border-radius:8px; color:var(--danger); font-size:13px;">
+              <strong>Revocation Reason:</strong> ${cert.revoked_reason}
+            </div>
+          ` : ''}
+
+          <div class="footer-note">
+            <i class="fas fa-shield-alt"></i> Verified via College OS Secure Immutable Credential Registry
+          </div>
+        `;
+      } catch (err) {
+        card.innerHTML = `<div class="badge badge-revoked"><i class="fas fa-exclamation-triangle"></i> ERROR</div><p>Failed to query verification server.</p>`;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', fetchVerification);
+  </script>
+</body>
+</html>

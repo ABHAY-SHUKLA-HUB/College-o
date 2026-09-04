@@ -27,6 +27,7 @@ const navGroups = [
       { href: 'notes-library.html', label: 'Notes', icon: 'fa-file-lines', key: 'notes' },
       { href: 'academic-contribution-hub.html', label: 'Contribute', icon: 'fa-upload', key: 'contribute' },
       { href: 'study-roadmap.html', label: 'Roadmap', icon: 'fa-map', key: 'roadmap' },
+      { href: 'coding-challenges.html', label: 'Coding Challenges', icon: 'fa-code', key: 'codingChallenges' },
       { label: 'Live Hub', icon: 'fa-satellite-dish', key: 'liveHub', action: 'liveHub' },
       { href: 'ai-tools.html', label: 'AI Tools', icon: 'fa-sparkles', key: 'aiTools' }
     ]
@@ -73,7 +74,8 @@ const iconColors = {
   supportDashboard: '#026b8f',
   referrals: '#7b3f00',
   feedback: '#b76a00',
-  liveHub: '#1a73e8'
+  liveHub: '#1a73e8',
+  codingChallenges: '#6366f1'
 };
 
 const tooltipMap = {
@@ -210,7 +212,8 @@ const CLEAN_ROUTE_MAP = {
   'academic-contribution-hub.html': '/contribute',
   'certificates.html': '/certificates',
   'leaderboards.html': '/leaderboard',
-  'college-feed.html': '/campus-feed'
+  'college-feed.html': '/campus-feed',
+  'coding-challenges.html': '/coding-challenges'
 };
 
 function cleanRouteForPage(file) {
@@ -224,7 +227,7 @@ function pageName() {
 
 // Expose protected page names to the client-side for guard checks
 window.PROTECTED_PAGES = [
-  'dashboard', 'dashboard.html', 'study', 'study.html', 'mock-test', 'mock-tests.html', 'mock-tests', 'notes', 'notes-library.html', 'contribute', 'academic-contribution-hub.html', 'roadmap', 'study-roadmap.html', 'live-hub', 'live-hub.html', 'ai-tools', 'ai-tools.html', 'college-feed', 'college-feed.html', 'forum', 'forum.html', 'support-hub', 'support-hub.html', 'profile', 'profile.html', 'membership', 'pricing.html', 'settings', 'settings.html'
+  'dashboard', 'dashboard.html', 'study', 'study.html', 'mock-test', 'mock-tests.html', 'mock-tests', 'notes', 'notes-library.html', 'contribute', 'academic-contribution-hub.html', 'roadmap', 'study-roadmap.html', 'live-hub', 'live-hub.html', 'ai-tools', 'ai-tools.html', 'college-feed', 'college-feed.html', 'forum', 'forum.html', 'support-hub', 'support-hub.html', 'profile', 'profile.html', 'membership', 'pricing.html', 'settings', 'settings.html', 'coding-challenges', 'coding-challenges.html'
 ];
 
 function normalizeRoutePath(href) {
@@ -307,6 +310,7 @@ function navHtml() {
     .map((group) => {
       const links = group.items
         .filter((item) => {
+          if (item.key === 'codingChallenges' && window.collegeOsCodingEnabled !== true) return false;
           if (!Array.isArray(item.roles) || !item.roles.length) return true;
           const role = String(window.collegeOsCurrentUser?.role || '').toLowerCase();
           return item.roles.some((allowed) => String(allowed || '').toLowerCase() === role);
@@ -854,6 +858,20 @@ async function applyAuthGuard() {
 
   window.collegeOsCurrentUser = user;
   renderSidebarNav();
+  if (typeof window.CollegeOSHydrateUserShell === 'function') {
+    try { window.CollegeOSHydrateUserShell(user); } catch { /* best-effort */ }
+  }
+
+  // Check coding challenges module status to dynamically update navigation
+  fetch('/api/coding-challenges/settings', { credentials: 'include' })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((data) => {
+      if (data && data.enabled) {
+        window.collegeOsCodingEnabled = true;
+        renderSidebarNav();
+      }
+    })
+    .catch(() => null);
 
   // Ensure protected pages are blocked until auth check completes
   const file = pageName();

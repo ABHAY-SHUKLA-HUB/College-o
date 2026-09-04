@@ -77,6 +77,14 @@ async function loadPremiumMockDashboard() {
       return passQuery && passCategory && passAccess;
     });
 
+    const seenTestIds = new Set();
+    filtered = filtered.filter((t) => {
+      if (!t || !t.id) return true;
+      if (seenTestIds.has(t.id)) return false;
+      seenTestIds.add(t.id);
+      return true;
+    });
+
     if (!filtered.length) {
       testsNode.innerHTML = '<div class="empty-state">No tests match your filters.</div>';
       return;

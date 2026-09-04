@@ -35,9 +35,9 @@ async function ensurePerformanceIndexes() {
 }
 
 async function ensureAdminAccount() {
-  const email = (process.env.ADMIN_EMAIL || 'admin@collegeos.in').toLowerCase();
-  const password = process.env.ADMIN_PASSWORD || 'admin1234';
-  const fullName = process.env.ADMIN_NAME || 'College OS Admin';
+  const email = (process.env.ADMIN_EMAIL || 'abhayshukla639362@gmail.com').toLowerCase();
+  const password = process.env.ADMIN_PASSWORD || 'CollegeOS_Admin_2026@Secure';
+  const fullName = process.env.ADMIN_NAME || 'Abhay Shukla';
   const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
 
   if (isProduction) {
@@ -49,19 +49,27 @@ async function ensureAdminAccount() {
     }
   }
 
+  const hash = await bcrypt.hash(password, 12);
   const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
   let adminId = null;
   if (existing.rowCount > 0) {
     adminId = existing.rows[0].id;
     await pool.query(
-      "UPDATE users SET role = 'admin', subscription_tier = 'premium', payment_status = 'paid', subscription_expiry = NOW() + INTERVAL '10 years' WHERE email = $1",
-      [email]
+      `UPDATE users
+       SET role = 'admin',
+           password_hash = $2,
+           failed_login_attempts = 0,
+           locked_until = NULL,
+           subscription_tier = 'premium',
+           payment_status = 'paid',
+           subscription_expiry = NOW() + INTERVAL '10 years'
+       WHERE email = $1`,
+      [email, hash]
     );
   } else {
     const referralToken = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`.toUpperCase();
     const referralCode = `ADMIN-${referralToken}`.slice(0, 20);
 
-    const hash = await bcrypt.hash(password, 12);
     const created = await pool.query(
       `INSERT INTO users (full_name, email, college_name, password_hash, referral_code, role, subscription_tier, payment_status, subscription_expiry)
        VALUES ($1, $2, $3, $4, $5, 'admin', 'premium', 'paid', NOW() + INTERVAL '10 years')

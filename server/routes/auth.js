@@ -2037,8 +2037,8 @@ router.post('/logout', (req, res) => {
 });
 
 router.get('/me', async (req, res) => {
-  setCacheHeaders(res, 15);
-  if (!req.session.userId) return res.json({ user: null });
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  if (!req.session?.userId) return res.status(401).json({ user: null, authenticated: false, error: 'Authentication required' });
   const { rows } = await pool.query(
     `SELECT id, full_name, email, mobile, college_name, university_id, university_name, custom_university, role, subscription_tier, payment_status, subscription_started_at, subscription_expiry,
             google_id, profile_picture, auth_provider, email_verified, is_email_verified, is_mobile_verified, last_login_at, updated_at

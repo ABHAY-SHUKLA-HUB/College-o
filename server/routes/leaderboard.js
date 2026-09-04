@@ -1,7 +1,9 @@
 const express = require('express');
 const { pool } = require('../db/pool');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
+router.use(requireAuth);
 
 router.get('/', async (req, res) => {
   const scope = String(req.query.scope || 'india').toLowerCase(); // india | city | college

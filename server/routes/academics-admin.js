@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../db/pool');
 const { requireAdmin } = require('../middleware/auth');
 const { publishContentChanged } = require('../services/realtimeBus');
+const { deleteUploadedFileById } = require('../services/supabaseStorage');
 
 const router = express.Router();
 
@@ -249,11 +250,15 @@ router.put('/academics/notes/:id', requireAdmin, async (req, res) => {
 router.delete('/academics/notes/:id', requireAdmin, async (req, res) => {
   try {
     const noteId = Number(req.params.id);
+    const existing = await pool.query('SELECT pdf_url FROM notes WHERE id = $1', [noteId]);
     const result = await pool.query('DELETE FROM notes WHERE id = $1 RETURNING id', [noteId]);
 
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Note not found' });
     }
+
+    const fileMatch = String(existing.rows[0]?.pdf_url || '').match(/\/api\/files\/(\d+)/);
+    if (fileMatch) await deleteUploadedFileById(fileMatch[1]);
 
     res.json({ message: 'Note deleted successfully', id: noteId });
     publishContentChanged('notes', 'deleted', noteId, { userId: req.session.userId });

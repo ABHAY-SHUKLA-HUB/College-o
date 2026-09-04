@@ -6,10 +6,15 @@
 -- 1. ADD SOURCE_TYPE TO CONTENT TABLES
 -- ============================================
 
--- Notes: Track source (admin_upload or student_contribution)
 ALTER TABLE notes ADD COLUMN IF NOT EXISTS source_type VARCHAR(40) DEFAULT 'admin_upload';
 ALTER TABLE notes ADD COLUMN IF NOT EXISTS approval_status VARCHAR(30) DEFAULT 'published';
 ALTER TABLE notes ADD COLUMN IF NOT EXISTS contributor_notes TEXT;
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS is_premium BOOLEAN DEFAULT FALSE;
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'published';
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS branch_id INTEGER;
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS semester_id INTEGER;
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS subject_id INTEGER;
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS category_id INTEGER;
 
 -- Create index for efficient filtering by source
 CREATE INDEX IF NOT EXISTS notes_source_type_idx ON notes(source_type, status);

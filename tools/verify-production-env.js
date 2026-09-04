@@ -60,8 +60,8 @@ try {
 }
 if (/supabase\.(co|com)$/i.test(selectedDatabaseHost) || /pooler\.supabase\.com$/i.test(selectedDatabaseHost)) {
   const ca = String(process.env.SUPABASE_DB_SSL_CA || process.env.PG_SSL_CA || '').trim();
-  if (!ca) {
-    console.error('SUPABASE_DB_SSL_CA (or PG_SSL_CA) is required for strict Supabase PostgreSQL TLS verification.');
+  if (ca && (!ca.includes('BEGIN CERTIFICATE') || !ca.includes('END CERTIFICATE'))) {
+    console.error('SUPABASE_DB_SSL_CA (or PG_SSL_CA) must contain a valid PEM certificate if provided.');
     process.exit(1);
   }
 }

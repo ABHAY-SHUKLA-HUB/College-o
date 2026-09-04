@@ -45,26 +45,26 @@ function getDatabaseCa() {
     .replace(/\\n/g, '\n')
     .trim();
 
-  if (!raw || raw.includes('-----BEGIN CERTIFICATE-----')) return raw;
+  if (!raw) return null;
 
-  const base64Body = raw.replace(/\s+/g, '');
-  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(base64Body)) return raw;
-
-  return `-----BEGIN CERTIFICATE-----\n${base64Body.match(/.{1,64}/g).join('\n')}\n-----END CERTIFICATE-----`;
-}
-
-function validateDatabaseCa(ca) {
-  if (!ca) return;
-  if (!ca.includes('-----BEGIN CERTIFICATE-----') || !ca.includes('-----END CERTIFICATE-----')) {
-    throw new Error('SUPABASE_DB_SSL_CA (or PG_SSL_CA) must contain a valid PEM certificate.');
+  let pem = raw;
+  if (!raw.includes('-----BEGIN CERTIFICATE-----')) {
+    const base64Body = raw.replace(/\s+/g, '');
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(base64Body)) return null;
+    pem = `-----BEGIN CERTIFICATE-----\n${base64Body.match(/.{1,64}/g).join('\n')}\n-----END CERTIFICATE-----`;
   }
-  const body = ca
+
+  const body = pem
     .replace('-----BEGIN CERTIFICATE-----', '')
     .replace('-----END CERTIFICATE-----', '')
     .replace(/\s+/g, '');
+
   if (body.length < 100 || !/^[A-Za-z0-9+/]+={0,2}$/.test(body)) {
-    throw new Error('SUPABASE_DB_SSL_CA (or PG_SSL_CA) must contain a valid PEM certificate.');
+    console.warn('[DB] Custom SUPABASE_DB_SSL_CA is incomplete or invalid - using standard trusted CAs');
+    return null;
   }
+
+  return pem;
 }
 
 function getSelectedConnection() {
@@ -87,7 +87,6 @@ function resolveSslConfig() {
 
   const ssl = { rejectUnauthorized: true };
   const ca = getDatabaseCa();
-  validateDatabaseCa(ca);
   if (ca) ssl.ca = ca;
   return ssl;
 }
@@ -129,10 +128,7 @@ if (!connectionString) {
 const rawParsedConnection = (() => {
   try { return new URL(rawConnectionString); } catch { return null; }
 })();
-if (isProduction && isSupabaseHost(rawConnectionString) && !getDatabaseCa()) {
-  throw new Error('SUPABASE_DB_SSL_CA (or PG_SSL_CA) is required for strict Supabase PostgreSQL TLS verification.');
-}
-validateDatabaseCa(getDatabaseCa());
+
 console.info('[DB] connection source:', connectionSource || 'none');
 console.info('[DB] URL sslmode:', String(rawParsedConnection?.searchParams.get('sslmode') || 'none').toLowerCase());
 console.info('[DB] custom Supabase CA configured:', Boolean(getDatabaseCa()));

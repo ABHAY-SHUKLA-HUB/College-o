@@ -661,23 +661,11 @@ router.get('/:id/start', requireAuth, async (req, res) => {
     }));
 
     if (!questions.length) {
-      questions = Array.from({ length: Math.max(10, Number(test.total_questions || 10)) }, (_x, idx) => ({
-        id: -(idx + 1),
-        text: `Placeholder Question ${idx + 1} for ${test.title}`,
-        type: 'single_mcq',
-        difficulty: test.difficulty || 'medium',
-        section: 'General',
-        subject: test.subject || 'General',
-        topic: test.topic || 'General',
-        marks: Number(test.marks_per_question || 1),
-        negativeMarks: Number(test.negative_marks || 0),
-        options: [
-          { key: 'A', text: 'Option A' },
-          { key: 'B', text: 'Option B' },
-          { key: 'C', text: 'Option C' },
-          { key: 'D', text: 'Option D' }
-        ]
-      }));
+      return res.status(400).json({
+        success: false,
+        error: 'NO_QUESTIONS_CONFIGURED',
+        message: 'This test has no questions configured yet. Please contact your instructor or admin.'
+      });
     }
 
     if (test.shuffle_questions) {

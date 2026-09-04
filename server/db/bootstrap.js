@@ -81,6 +81,11 @@ async function ensureDatabaseBootstrap() {
       throw new Error(`Critical academic schema initialization failed: ${error.message}`);
     }
     await ensureBootstrapImports();
+    const contentSourcePath = path.join(__dirname, '..', '..', 'CONTENT_SOURCE_ARCHITECTURE.sql');
+    if (fs.existsSync(contentSourcePath)) {
+      const contentSourceSql = fs.readFileSync(contentSourcePath, 'utf8');
+      await pool.query(contentSourceSql);
+    }
     const storageMigration = fs.readFileSync(
       path.join(__dirname, 'migrations', '002-supabase-storage.sql'),
       'utf8'

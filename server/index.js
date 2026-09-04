@@ -740,9 +740,32 @@ const PAGE_ROUTES = new Map([
 ]);
 
 // Serve mapped page routes directly
-// Protected pages set (clean paths)
+// Protected pages set (clean paths & HTML files)
 const PROTECTED_PAGE_PATHS = new Set([
-  '/dashboard', '/study', '/mock-test', '/mock-tests', '/notes', '/contribute', '/roadmap', '/live-hub', '/ai-tools', '/campus-feed', '/forum', '/support-hub', '/profile', '/membership', '/settings'
+  '/dashboard', '/dashboard.html',
+  '/study', '/study.html', '/materials-library', '/materials-library.html', '/previous-papers', '/previous-papers.html',
+  '/notes', '/notes.html', '/notes-library', '/notes-library.html', '/notes-library-enhanced', '/notes-library-enhanced.html', '/my-notes', '/my-notes.html', '/note-editor', '/note-editor.html',
+  '/mock-test', '/mock-tests', '/mock-tests.html', '/mock-test-attempt', '/mock-test-attempt.html', '/mock-test-results', '/mock-test-results.html',
+  '/quiz-library', '/quiz-library.html', '/quiz-attempt', '/quiz-attempt.html', '/quiz-results', '/quiz-results.html',
+  '/roadmap', '/study-roadmap', '/study-roadmap.html',
+  '/live-hub', '/live-hub.html',
+  '/ai-tools', '/ai-tools.html',
+  '/contribute', '/academic-contribution-hub', '/academic-contribution-hub.html',
+  '/campus-feed', '/college-feed', '/college-feed.html',
+  '/forum', '/forum.html',
+  '/support-hub', '/support-hub.html', '/support-request-detail', '/support-request-detail.html', '/create-support-request', '/create-support-request.html', '/support', '/support.html',
+  '/profile', '/profile.html', '/academic-profile-setup', '/academic-profile-setup.html',
+  '/settings', '/settings.html',
+  '/notifications', '/notifications.html',
+  '/certificates', '/certificates.html',
+  '/badges', '/badges.html',
+  '/leaderboards', '/leaderboards.html',
+  '/referrals', '/referrals.html',
+  '/feedback', '/feedback.html',
+  '/daily-challenges', '/daily-challenges.html',
+  '/top-helpers', '/top-helpers.html',
+  '/my-tickets', '/my-tickets.html',
+  '/membership'
 ]);
 
 // Routes that have been removed or consolidated; users should be redirected
@@ -952,17 +975,29 @@ process.on('uncaughtException', (err) => {
 });
 
 async function startServer() {
+  const dbSource = process.env.SUPABASE_POOLER_URL
+    ? 'SUPABASE_POOLER_URL'
+    : process.env.SUPABASE_DATABASE_URL
+    ? 'SUPABASE_DATABASE_URL'
+    : process.env.CURRENT_DATABASE_URL
+    ? 'CURRENT_DATABASE_URL'
+    : 'DATABASE_URL';
+
+  const storageProvider = isProduction
+    ? 'supabase'
+    : String(process.env.STORAGE_PROVIDER || 'supabase').toLowerCase();
+
+  const mailerProvider = String(process.env.OTP_EMAIL_PROVIDER || 'resend').toLowerCase();
+
   try {
-    console.info('[Startup] Environment summary', {
-      nodeEnv: process.env.NODE_ENV || 'development',
-      hasDatabaseUrl: Boolean(process.env.DATABASE_URL),
-      frontendUrl: String(process.env.FRONTEND_URL || process.env.FRONTEND_PUBLIC_URL || process.env.APP_BASE_URL || '').trim() || '(not set)',
-      adminEmailConfigured: Boolean(String(process.env.ADMIN_EMAIL || '').trim()),
-      adminPasswordConfigured: Boolean(String(process.env.ADMIN_PASSWORD || '').trim()),
-      turnstileEnabled: String(process.env.TURNSTILE_ENABLED || 'true').toLowerCase() !== 'false',
-      turnstileSiteKeyConfigured: Boolean(String(process.env.TURNSTILE_SITE_KEY || '').trim()),
-      turnstileSecretKeyConfigured: Boolean(String(process.env.TURNSTILE_SECRET_KEY || '').trim())
-    });
+    console.info(`[Storage] provider: ${storageProvider}`);
+    console.info(`[Storage] URL configured: ${Boolean(process.env.SUPABASE_URL)}`);
+    console.info(`[Storage] service key configured: ${Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY)}`);
+    console.info(`[Storage] bucket configured: ${Boolean(process.env.SUPABASE_STORAGE_BUCKET || 'college-os')}`);
+
+    console.info(`[Mailer] provider: ${mailerProvider}`);
+    console.info(`[Mailer] key configured: ${Boolean(process.env.RESEND_API_KEY)}`);
+    console.info(`[Mailer] sender configured: ${Boolean(process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM)}`);
 
     if (isProduction) {
       validateSupabaseStorageConfiguration();
@@ -977,6 +1012,8 @@ async function startServer() {
   }
 
   await ensureDatabaseBootstrap();
+  console.info(`[DB] connection source: ${dbSource}`);
+  console.info('[DB] connected: true');
   console.info('[Startup] DB connected and bootstrap complete');
 
   const academicMigration = await initializeAcademicStructure();

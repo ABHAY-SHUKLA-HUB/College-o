@@ -653,7 +653,7 @@ router.get('/experience-config', requireAuth, async (req, res) => {
   });
 });
 
-router.get('/live-hub/status', async (_req, res) => {
+router.get('/live-hub/status', requireAuth, async (_req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
   const config = normalizeLiveHubConfig(await readStudentExperienceConfig());
   res.json({

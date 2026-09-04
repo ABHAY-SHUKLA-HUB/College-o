@@ -4,6 +4,7 @@ const { requireAuth, resolveMembershipState } = require('../middleware/auth');
 const { toNumber } = require('../utils/validation');
 
 const router = express.Router();
+router.use(requireAuth);
 
 router.get('/', async (req, res) => {
   const viewerId = req.session?.userId || null;

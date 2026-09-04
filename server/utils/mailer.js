@@ -256,6 +256,8 @@ module.exports = {
   isMailerConfigured,
   getMailFrom,
   getOtpTestEmail,
+  getResendApiKey,
+  getResendFromEmail,
   getTransporter,
   initMailerTransporter,
   resolveEmailProvider,

@@ -40,6 +40,12 @@ function getBucket() {
   return getConfig().bucket;
 }
 
+function isSupabaseStorageConfigured() {
+  const url = String(process.env.SUPABASE_URL || '').trim();
+  const serviceRoleKey = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  return Boolean(url && serviceRoleKey && /^https:\/\//i.test(url) && serviceRoleKey.length >= 20);
+}
+
 function validateSupabaseStorageConfiguration() {
   const { url, serviceRoleKey, bucket } = getConfig();
   if (!/^https:\/\//i.test(url)) {
@@ -129,7 +135,7 @@ async function uploadBufferToSupabase({
   }
 
   const metadataId = metadataResult.rows[0]?.id;
-  url = `/api/files/${metadataId}`;
+  const url = `/api/files/${metadataId}`;
 
   return {
     provider: 'supabase',
@@ -188,6 +194,7 @@ module.exports = {
   deleteUploadedFileById,
   deleteFileFromSupabase,
   getBucket,
+  isSupabaseStorageConfigured,
   normalizePath,
   validateSupabaseStorageConfiguration,
   uploadBufferToSupabase

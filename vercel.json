@@ -2,40 +2,12 @@
   "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/index",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/materials-library",
-      "destination": "/materials-library.html"
-    },
-    {
-      "source": "/coding-challenges",
-      "destination": "/coding-challenges.html"
-    },
-    {
       "source": "/.well-known/security.txt",
       "destination": "/public/.well-known/security.txt"
     },
     {
       "source": "/favicon.ico",
       "destination": "https://college-o.onrender.com/favicon.ico"
-    },
-    {
-      "source": "/terms",
-      "destination": "/terms.html"
-    },
-    {
-      "source": "/privacy",
-      "destination": "/privacy.html"
-    },
-    {
-      "source": "/contact",
-      "destination": "/contact-us.html"
     },
     {
       "source": "/uploads/:path*",
@@ -46,20 +18,8 @@
       "destination": "https://college-o.onrender.com/api/:path*"
     },
     {
-      "source": "/college-feed",
-      "destination": "/college-feed.html"
-    },
-    {
-      "source": "/forum",
-      "destination": "/forum.html"
-    },
-    {
-      "source": "/support-hub",
-      "destination": "/support-hub.html"
-    },
-    {
-      "source": "/support-dashboard",
-      "destination": "/support-dashboard.html"
+      "source": "/contact",
+      "destination": "/contact-us.html"
     },
     {
       "source": "/forms",
@@ -70,83 +30,11 @@
       "destination": "/leaderboards.html"
     },
     {
-      "source": "/help-center",
-      "destination": "/help-center.html"
-    },
-    {
-      "source": "/contact-us",
-      "destination": "/contact-us.html"
-    },
-    {
-      "source": "/about-us",
-      "destination": "/about-us.html"
-    },
-    {
       "source": "/membership",
       "destination": "/pricing.html"
     },
     {
-      "source": "/feedback",
-      "destination": "/feedback.html"
-    },
-    {
-      "source": "/referrals",
-      "destination": "/referrals.html"
-    },
-    {
-      "source": "/notifications",
-      "destination": "/notifications.html"
-    },
-    {
-      "source": "/profile",
-      "destination": "/profile.html"
-    },
-    {
-      "source": "/settings",
-      "destination": "/settings.html"
-    },
-    {
-      "source": "/login",
-      "destination": "/login.html"
-    },
-    {
-      "source": "/signup",
-      "destination": "/signup.html"
-    },
-    {
-      "source": "/dashboard",
-      "destination": "/dashboard.html"
-    },
-    {
-      "source": "/academic-onboarding",
-      "destination": "/academic-onboarding.html"
-    },
-    {
-      "source": "/admin-dashboard",
-      "destination": "/admin-dashboard.html"
-    },
-    {
-      "source": "/admin-login",
-      "destination": "/admin-login.html"
-    },
-    {
-      "source": "/admin-ai-tools",
-      "destination": "/admin-ai-tools.html"
-    },
-    {
-      "source": "/admin-control",
-      "destination": "/admin-control.html"
-    },
-    {
-      "source": "/study",
-      "destination": "/study.html"
-    },
-    {
       "source": "/mock-test",
-      "destination": "/mock-tests.html"
-    },
-    {
-      "source": "/mock-tests",
       "destination": "/mock-tests.html"
     },
     {
@@ -158,213 +46,8 @@
       "destination": "/study-roadmap.html"
     },
     {
-      "source": "/ai-tools",
-      "destination": "/ai-tools.html"
-    },
-    {
-      "source": "/live-hub",
-      "destination": "/live-hub.html"
-    },
-    {
-      "source": "/notifications",
-      "destination": "/notifications.html"
-    },
-    {
-      "source": "/profile",
-      "destination": "/profile.html"
-    },
-    {
-      "source": "/settings",
-      "destination": "/settings.html"
-    },
-    {
       "source": "/contribute",
       "destination": "/academic-contribution-hub.html"
-    },
-    {
-      "source": "/reset-password",
-      "destination": "/reset-password.html"
-    },
-    {
-      "source": "/reset-password/:path*",
-      "destination": "/reset-password.html"
-    }
-  ],
-  "redirects": [
-    {
-      "source": "/dashboard.html",
-      "destination": "/dashboard",
-      "permanent": true
-    },
-    {
-      "source": "/admin-dashboard.html",
-      "destination": "/admin-dashboard",
-      "permanent": true
-    },
-    {
-      "source": "/admin-login.html",
-      "destination": "/admin-login",
-      "permanent": true
-    },
-    {
-      "source": "/admin-ai-tools.html",
-      "destination": "/admin-ai-tools",
-      "permanent": true
-    },
-    {
-      "source": "/admin-control.html",
-      "destination": "/admin-control",
-      "permanent": true
-    },
-    {
-      "source": "/home.html",
-      "destination": "/dashboard",
-      "permanent": true
-    },
-    {
-      "source": "/study.html",
-      "destination": "/study",
-      "permanent": true
-    },
-    {
-      "source": "/mock-tests.html",
-      "destination": "/mock-tests",
-      "permanent": true
-    },
-    {
-      "source": "/notes-library.html",
-      "destination": "/notes",
-      "permanent": true
-    },
-    {
-      "source": "/study-roadmap.html",
-      "destination": "/roadmap",
-      "permanent": true
-    },
-    {
-      "source": "/ai-tools.html",
-      "destination": "/ai-tools",
-      "permanent": true
-    },
-    {
-      "source": "/live-hub.html",
-      "destination": "/live-hub",
-      "permanent": true
-    },
-    {
-      "source": "/notifications.html",
-      "destination": "/notifications",
-      "permanent": true
-    },
-    {
-      "source": "/profile.html",
-      "destination": "/profile",
-      "permanent": true
-    },
-    {
-      "source": "/settings.html",
-      "destination": "/settings",
-      "permanent": true
-    },
-    {
-      "source": "/academic-contribution-hub.html",
-      "destination": "/contribute",
-      "permanent": true
-    },
-    {
-      "source": "/support-dashboard.html",
-      "destination": "/support-dashboard",
-      "permanent": true
-    },
-    {
-      "source": "/support-hub.html",
-      "destination": "/support-hub",
-      "permanent": true
-    },
-    {
-      "source": "/leaderboards.html",
-      "destination": "/leaderboard",
-      "permanent": true
-    },
-    {
-      "source": "/pricing.html",
-      "destination": "/membership",
-      "permanent": true
-    },
-    {
-      "source": "/create-support-request.html",
-      "destination": "/forms",
-      "permanent": true
-    },
-    {
-      "source": "/college-feed.html",
-      "destination": "/college-feed",
-      "permanent": true
-    },
-    {
-      "source": "/forum.html",
-      "destination": "/forum",
-      "permanent": true
-    },
-    {
-      "source": "/help-center.html",
-      "destination": "/help-center",
-      "permanent": true
-    },
-    {
-      "source": "/contact-us.html",
-      "destination": "/contact-us",
-      "permanent": true
-    },
-    {
-      "source": "/about-us.html",
-      "destination": "/about-us",
-      "permanent": true
-    },
-    {
-      "source": "/feedback.html",
-      "destination": "/feedback",
-      "permanent": true
-    },
-    {
-      "source": "/referrals.html",
-      "destination": "/referrals",
-      "permanent": true
-    },
-    {
-      "source": "/notifications.html",
-      "destination": "/notifications",
-      "permanent": true
-    },
-    {
-      "source": "/profile.html",
-      "destination": "/profile",
-      "permanent": true
-    },
-    {
-      "source": "/settings.html",
-      "destination": "/settings",
-      "permanent": true
-    },
-    {
-      "source": "/login.html",
-      "destination": "/login",
-      "permanent": true
-    },
-    {
-      "source": "/signup.html",
-      "destination": "/signup",
-      "permanent": true
-    },
-    {
-      "source": "/academic-onboarding.html",
-      "destination": "/academic-onboarding",
-      "permanent": true
-    },
-    {
-      "source": "/reset-password.html",
-      "destination": "/reset-password",
-      "permanent": true
     }
   ],
   "headers": [

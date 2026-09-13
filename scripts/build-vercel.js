@@ -48,6 +48,10 @@ const config = {
   version: 3,
   routes: [
     {
+      src: '^/$',
+      dest: '/index.html'
+    },
+    {
       src: '^/\\.well-known/security\\.txt$',
       dest: '/public/.well-known/security.txt'
     },
@@ -99,13 +103,9 @@ const config = {
       handle: 'filesystem'
     },
     {
-      src: '^/(.*)$',
+      src: '^/([^/.]+)/?$',
       dest: '/$1.html',
       check: true
-    },
-    {
-      src: '^/$',
-      dest: '/index.html'
     }
   ]
 };

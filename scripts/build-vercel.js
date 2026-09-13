@@ -44,6 +44,26 @@ for (const item of fs.readdirSync(rootDir)) {
   copyRecursive(path.join(rootDir, item), path.join(staticDir, item));
 }
 
+const htmlAliases = {
+  'notes.html': 'notes-library.html',
+  'roadmap.html': 'study-roadmap.html',
+  'contribute.html': 'academic-contribution-hub.html',
+  'membership.html': 'pricing.html',
+  'leaderboard.html': 'leaderboards.html',
+  'forms.html': 'create-support-request.html',
+  'contact.html': 'contact-us.html',
+  'mock-test.html': 'mock-tests.html',
+  'campus-feed.html': 'college-feed.html'
+};
+
+for (const [alias, target] of Object.entries(htmlAliases)) {
+  const targetPath = path.join(staticDir, target);
+  const aliasPath = path.join(staticDir, alias);
+  if (fs.existsSync(targetPath)) {
+    fs.copyFileSync(targetPath, aliasPath);
+  }
+}
+
 const config = {
   version: 3,
   routes: [

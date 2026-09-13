@@ -1,6 +1,8 @@
 const express = require('express');
 const { pool } = require('../db/pool');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { requireFeatureEnabled } = require('../middleware/featureToggle');
+const { sanitizeText } = require('../utils/communitySanitizer');
 
 const router = express.Router();
 
@@ -28,6 +30,11 @@ async function ensureForumSchema() {
       ADD COLUMN IF NOT EXISTS category VARCHAR(60) DEFAULT 'Concept Discussions',
       ADD COLUMN IF NOT EXISTS tags JSONB DEFAULT '[]'::jsonb,
       ADD COLUMN IF NOT EXISTS views_count INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS is_hidden BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'active',
+      ADD COLUMN IF NOT EXISTS moderated_by INTEGER REFERENCES users(id),
+      ADD COLUMN IF NOT EXISTS moderated_at TIMESTAMP,
       ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`
   );
 
@@ -47,6 +54,12 @@ async function ensureForumSchema() {
       )`
     );
   }
+
+  await pool.query(
+    `ALTER TABLE forum_replies
+      ADD COLUMN IF NOT EXISTS is_hidden BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS moderated_by INTEGER REFERENCES users(id)`
+  );
 
   const hasVotes = await pool.query("SELECT to_regclass('public.forum_reply_votes') AS tbl");
   if (!hasVotes.rows[0]?.tbl) {
@@ -85,6 +98,9 @@ async function getThreadById(id, viewerId) {
             COALESCE(f.category, 'Concept Discussions') AS category,
             COALESCE(f.tags, '[]'::jsonb) AS tags,
             COALESCE(f.views_count, 0) AS views_count,
+            COALESCE(f.is_locked, FALSE) AS is_locked,
+            COALESCE(f.is_hidden, FALSE) AS is_hidden,
+            COALESCE(f.status, 'active') AS status,
             f.created_at,
             f.updated_at,
             u.id AS author_id,
@@ -94,7 +110,7 @@ async function getThreadById(id, viewerId) {
             CASE WHEN u.id = $2 THEN TRUE ELSE FALSE END AS is_mine
      FROM forum_threads f
      JOIN users u ON u.id = f.user_id
-     LEFT JOIN forum_replies r ON r.thread_id = f.id
+     LEFT JOIN forum_replies r ON r.thread_id = f.id AND COALESCE(r.is_hidden, FALSE) = FALSE
      WHERE f.id = $1
      GROUP BY f.id, u.id`,
     [id, Number(viewerId || 0)]
@@ -102,7 +118,7 @@ async function getThreadById(id, viewerId) {
   return rows[0] || null;
 }
 
-router.get('/threads', requireAuth, async (req, res) => {
+router.get('/threads', requireAuth, requireFeatureEnabled('campus_feed'), async (req, res) => {
   await ensureForumSchema();
 
   const search = String(req.query.search || '').trim();
@@ -110,7 +126,7 @@ router.get('/threads', requireAuth, async (req, res) => {
   const category = String(req.query.category || '').trim();
 
   const values = [req.session.userId];
-  const where = [];
+  const where = ['COALESCE(f.is_hidden, FALSE) = FALSE'];
 
   if (search) {
     values.push(`%${search}%`);
@@ -143,6 +159,9 @@ router.get('/threads', requireAuth, async (req, res) => {
             COALESCE(f.category, 'Concept Discussions') AS category,
             COALESCE(f.tags, '[]'::jsonb) AS tags,
             COALESCE(f.views_count, 0) AS views_count,
+            COALESCE(f.is_locked, FALSE) AS is_locked,
+            COALESCE(f.is_hidden, FALSE) AS is_hidden,
+            COALESCE(f.status, 'active') AS status,
             f.created_at,
             u.id AS author_id,
             u.full_name AS author,
@@ -157,7 +176,7 @@ router.get('/threads', requireAuth, async (req, res) => {
      LEFT JOIN LATERAL (
        SELECT COUNT(*)::int AS reply_count
        FROM forum_replies fr
-       WHERE fr.thread_id = f.id
+       WHERE fr.thread_id = f.id AND COALESCE(fr.is_hidden, FALSE) = FALSE
      ) reply_count ON TRUE
      ${whereClause}
      ${orderClause}
@@ -167,7 +186,7 @@ router.get('/threads', requireAuth, async (req, res) => {
   res.json({ threads: rows });
 });
 
-router.get('/threads/trending', requireAuth, async (_req, res) => {
+router.get('/threads/trending', requireAuth, requireFeatureEnabled('campus_feed'), async (_req, res) => {
   await ensureForumSchema();
   const { rows } = await pool.query(
     `SELECT f.id,
@@ -180,21 +199,25 @@ router.get('/threads/trending', requireAuth, async (_req, res) => {
      LEFT JOIN LATERAL (
        SELECT COUNT(*)::int AS reply_count
        FROM forum_replies fr
-       WHERE fr.thread_id = f.id
+       WHERE fr.thread_id = f.id AND COALESCE(fr.is_hidden, FALSE) = FALSE
      ) reply_count ON TRUE
+     WHERE COALESCE(f.is_hidden, FALSE) = FALSE
      ORDER BY ((COALESCE(reply_count.reply_count, 0) * 3) + COALESCE(f.views_count, 0)) DESC, f.created_at DESC
      LIMIT 6`
   );
   res.json({ threads: rows });
 });
 
-router.get('/threads/:id', requireAuth, async (req, res) => {
+router.get('/threads/:id', requireAuth, requireFeatureEnabled('campus_feed'), async (req, res) => {
   await ensureForumSchema();
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid thread id' });
 
   const thread = await getThreadById(id, req.session.userId);
   if (!thread) return res.status(404).json({ error: 'Thread not found' });
+  if (thread.is_hidden && req.session.role !== 'admin' && req.session.role !== 'super_admin' && thread.author_id !== req.session.userId) {
+    return res.status(404).json({ error: 'Thread not found' });
+  }
 
   const { rows } = await pool.query(
     `SELECT r.id,
@@ -215,7 +238,7 @@ router.get('/threads/:id', requireAuth, async (req, res) => {
        WHERE rv.reply_id = r.id AND rv.vote = 1
      ) v ON TRUE
      LEFT JOIN forum_reply_votes uv ON uv.reply_id = r.id AND uv.user_id = $2
-     WHERE r.thread_id = $1
+     WHERE r.thread_id = $1 AND COALESCE(r.is_hidden, FALSE) = FALSE
      ORDER BY r.created_at ASC`,
     [id, req.session.userId]
   );
@@ -223,7 +246,7 @@ router.get('/threads/:id', requireAuth, async (req, res) => {
   res.json({ thread, replies: rows });
 });
 
-router.post('/threads/:id/view', requireAuth, async (req, res) => {
+router.post('/threads/:id/view', requireAuth, requireFeatureEnabled('campus_feed'), async (req, res) => {
   await ensureForumSchema();
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid thread id' });
@@ -232,7 +255,7 @@ router.post('/threads/:id/view', requireAuth, async (req, res) => {
     `UPDATE forum_threads
      SET views_count = COALESCE(views_count, 0) + 1,
          updated_at = NOW()
-     WHERE id = $1
+     WHERE id = $1 AND COALESCE(is_hidden, FALSE) = FALSE
      RETURNING id, views_count`,
     [id]
   );
@@ -241,27 +264,82 @@ router.post('/threads/:id/view', requireAuth, async (req, res) => {
   res.json({ thread: rows[0] });
 });
 
-router.post('/threads', requireAuth, async (req, res) => {
+router.post('/threads', requireAuth, requireFeatureEnabled('campus_feed'), async (req, res) => {
   await ensureForumSchema();
   const { title, body, category, tags } = req.body;
   if (!title || !body) return res.status(400).json({ error: 'title and body required' });
 
+  const safeTitle = sanitizeText(title, 220);
+  const safeBody = sanitizeText(body, 10000);
   const safeTags = normalizeTags(tags);
+
   const { rows } = await pool.query(
     `INSERT INTO forum_threads (user_id, title, body, category, tags, views_count, updated_at)
      VALUES ($1, $2, $3, $4, $5::jsonb, 0, NOW())
      RETURNING id, title, body, category, tags, created_at`,
-    [req.session.userId, title, body, category || 'Concept Discussions', JSON.stringify(safeTags)]
+    [req.session.userId, safeTitle, safeBody, sanitizeText(category || 'Concept Discussions', 60), JSON.stringify(safeTags)]
   );
   res.status(201).json({ thread: rows[0] });
 });
 
-router.post('/threads/:id/replies', requireAuth, async (req, res) => {
+router.put('/threads/:id', requireAuth, requireFeatureEnabled('campus_feed'), async (req, res) => {
+  await ensureForumSchema();
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid thread id' });
+
+  const check = await pool.query('SELECT user_id, is_locked FROM forum_threads WHERE id = $1', [id]);
+  if (!check.rows[0]) return res.status(404).json({ error: 'Thread not found' });
+  if (check.rows[0].user_id !== req.session.userId && req.session.role !== 'admin' && req.session.role !== 'super_admin') {
+    return res.status(403).json({ error: 'Not authorized to edit this thread' });
+  }
+
+  const { title, body, category, tags } = req.body;
+  const safeTitle = sanitizeText(title || '', 220);
+  const safeBody = sanitizeText(body || '', 10000);
+  const safeTags = normalizeTags(tags);
+
+  const { rows } = await pool.query(
+    `UPDATE forum_threads
+     SET title = COALESCE(NULLIF($1, ''), title),
+         body = COALESCE(NULLIF($2, ''), body),
+         category = COALESCE(NULLIF($3, ''), category),
+         tags = COALESCE($4::jsonb, tags),
+         updated_at = NOW()
+     WHERE id = $5
+     RETURNING id, title, body, category, tags, updated_at`,
+    [safeTitle, safeBody, sanitizeText(category || '', 60), JSON.stringify(safeTags), id]
+  );
+
+  res.json({ thread: rows[0] });
+});
+
+router.delete('/threads/:id', requireAuth, requireFeatureEnabled('campus_feed'), async (req, res) => {
+  await ensureForumSchema();
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid thread id' });
+
+  const check = await pool.query('SELECT user_id FROM forum_threads WHERE id = $1', [id]);
+  if (!check.rows[0]) return res.status(404).json({ error: 'Thread not found' });
+  if (check.rows[0].user_id !== req.session.userId && req.session.role !== 'admin' && req.session.role !== 'super_admin') {
+    return res.status(403).json({ error: 'Not authorized to delete this thread' });
+  }
+
+  await pool.query('UPDATE forum_threads SET is_hidden = TRUE, status = "archived", updated_at = NOW() WHERE id = $1', [id]);
+  res.json({ success: true, message: 'Thread deleted successfully' });
+});
+
+router.post('/threads/:id/replies', requireAuth, requireFeatureEnabled('campus_feed'), async (req, res) => {
   await ensureForumSchema();
   const id = Number(req.params.id);
   const { body, parentReplyId } = req.body;
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid thread id' });
   if (!body || !String(body).trim()) return res.status(400).json({ error: 'Reply body required' });
+
+  const thread = await pool.query('SELECT id, is_locked, is_hidden FROM forum_threads WHERE id = $1', [id]);
+  if (!thread.rows[0] || thread.rows[0].is_hidden) return res.status(404).json({ error: 'Thread not found' });
+  if (thread.rows[0].is_locked) {
+    return res.status(403).json({ error: 'This thread is locked for new replies', code: 'THREAD_LOCKED' });
+  }
 
   if (parentReplyId) {
     const parent = await pool.query(
@@ -271,18 +349,34 @@ router.post('/threads/:id/replies', requireAuth, async (req, res) => {
     if (parent.rowCount === 0) return res.status(400).json({ error: 'Invalid parent reply' });
   }
 
+  const safeBody = sanitizeText(body, 5000);
   const { rows } = await pool.query(
     `INSERT INTO forum_replies (thread_id, user_id, parent_reply_id, body, updated_at)
      VALUES ($1, $2, $3, $4, NOW())
      RETURNING id, thread_id, parent_reply_id, body, is_best_answer, created_at`,
-    [id, req.session.userId, parentReplyId ? Number(parentReplyId) : null, String(body).trim()]
+    [id, req.session.userId, parentReplyId ? Number(parentReplyId) : null, safeBody]
   );
 
   await pool.query('UPDATE forum_threads SET updated_at = NOW() WHERE id = $1', [id]);
   res.status(201).json({ reply: rows[0] });
 });
 
-router.post('/replies/:id/upvote', requireAuth, async (req, res) => {
+router.delete('/replies/:id', requireAuth, requireFeatureEnabled('campus_feed'), async (req, res) => {
+  await ensureForumSchema();
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid reply id' });
+
+  const check = await pool.query('SELECT user_id FROM forum_replies WHERE id = $1', [id]);
+  if (!check.rows[0]) return res.status(404).json({ error: 'Reply not found' });
+  if (check.rows[0].user_id !== req.session.userId && req.session.role !== 'admin' && req.session.role !== 'super_admin') {
+    return res.status(403).json({ error: 'Not authorized to delete this reply' });
+  }
+
+  await pool.query('UPDATE forum_replies SET is_hidden = TRUE WHERE id = $1', [id]);
+  res.json({ success: true, message: 'Reply deleted' });
+});
+
+router.post('/replies/:id/upvote', requireAuth, requireFeatureEnabled('campus_feed'), async (req, res) => {
   await ensureForumSchema();
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid reply id' });
@@ -308,7 +402,7 @@ router.post('/replies/:id/upvote', requireAuth, async (req, res) => {
   res.json({ replyId: id, upvotes: counts.rows[0].upvotes, votedByMe: existing.rowCount === 0 });
 });
 
-router.post('/threads/:threadId/best-answer/:replyId', requireAuth, async (req, res) => {
+router.post('/threads/:threadId/best-answer/:replyId', requireAuth, requireFeatureEnabled('campus_feed'), async (req, res) => {
   await ensureForumSchema();
   const threadId = Number(req.params.threadId);
   const replyId = Number(req.params.replyId);
@@ -329,6 +423,55 @@ router.post('/threads/:threadId/best-answer/:replyId', requireAuth, async (req, 
   await pool.query('UPDATE forum_replies SET is_best_answer = TRUE WHERE id = $1', [replyId]);
 
   res.json({ message: 'Best answer updated successfully', threadId, replyId });
+});
+
+// Admin Forum Moderation Routes
+router.post('/admin/threads/:id/lock', requireAdmin, async (req, res) => {
+  await ensureForumSchema();
+  const id = Number(req.params.id);
+  const { rows } = await pool.query(
+    `UPDATE forum_threads SET is_locked = TRUE, status = 'locked', moderated_by = $1, moderated_at = NOW(), updated_at = NOW()
+     WHERE id = $2 RETURNING *`,
+    [req.session.userId, id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Thread not found' });
+  res.json({ message: 'Thread locked', thread: rows[0] });
+});
+
+router.post('/admin/threads/:id/unlock', requireAdmin, async (req, res) => {
+  await ensureForumSchema();
+  const id = Number(req.params.id);
+  const { rows } = await pool.query(
+    `UPDATE forum_threads SET is_locked = FALSE, status = 'active', moderated_by = $1, moderated_at = NOW(), updated_at = NOW()
+     WHERE id = $2 RETURNING *`,
+    [req.session.userId, id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Thread not found' });
+  res.json({ message: 'Thread unlocked', thread: rows[0] });
+});
+
+router.post('/admin/threads/:id/hide', requireAdmin, async (req, res) => {
+  await ensureForumSchema();
+  const id = Number(req.params.id);
+  const { rows } = await pool.query(
+    `UPDATE forum_threads SET is_hidden = TRUE, status = 'hidden', moderated_by = $1, moderated_at = NOW(), updated_at = NOW()
+     WHERE id = $2 RETURNING *`,
+    [req.session.userId, id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Thread not found' });
+  res.json({ message: 'Thread hidden', thread: rows[0] });
+});
+
+router.post('/admin/threads/:id/restore', requireAdmin, async (req, res) => {
+  await ensureForumSchema();
+  const id = Number(req.params.id);
+  const { rows } = await pool.query(
+    `UPDATE forum_threads SET is_hidden = FALSE, status = 'active', moderated_by = $1, moderated_at = NOW(), updated_at = NOW()
+     WHERE id = $2 RETURNING *`,
+    [req.session.userId, id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Thread not found' });
+  res.json({ message: 'Thread restored', thread: rows[0] });
 });
 
 module.exports = router;

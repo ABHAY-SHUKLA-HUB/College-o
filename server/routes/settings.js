@@ -1,8 +1,38 @@
 const express = require('express');
 const { pool } = require('../db/pool');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { readFeatureMatrix, updateFeatureStatus, STUDENT_FEATURE_REGISTRY } = require('../middleware/featureToggle');
 
 const router = express.Router();
+
+router.get('/feature-toggles', async (_req, res) => {
+  try {
+    const matrix = await readFeatureMatrix();
+    res.json({ success: true, matrix, registry: STUDENT_FEATURE_REGISTRY });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch feature toggles' });
+  }
+});
+
+router.put('/feature-toggles/update', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { featureKey, status, is_visible, is_enabled, maintenance_mode, access_mode, maintenanceMessage, reason } = req.body;
+    if (!featureKey) {
+      return res.status(400).json({ error: 'featureKey is required' });
+    }
+
+    const updated = await updateFeatureStatus(
+      featureKey,
+      { status, is_visible, is_enabled, maintenance_mode, access_mode, maintenanceMessage, reason },
+      req.session.userId,
+      req.session.email || req.session.username || 'admin'
+    );
+
+    res.json({ success: true, updated });
+  } catch (error) {
+    res.status(400).json({ error: error.message || 'Failed to update feature toggle' });
+  }
+});
 
 router.get('/icons', requireAuth, async (req, res) => {
   const { rows } = await pool.query('SELECT icon_size, icon_style, preferences FROM user_icons WHERE user_id = $1 ORDER BY id DESC LIMIT 1', [req.session.userId]);
@@ -39,7 +69,6 @@ router.get('/sessions', requireAuth, async (req, res) => {
 
     res.json({ sessions });
   } catch {
-    // Session table may be unavailable in some local modes.
     res.json({ sessions: [] });
   }
 });

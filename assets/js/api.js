@@ -932,18 +932,7 @@ window.CollegeOSApi = {
   startHealthPing,
   getAuthConfig: () => apiFetch('/api/auth/config'),
   getDashboardBootstrap: () => apiFetch('/api/dashboard/bootstrap'),
-  getCaptchaChallenge: (options = {}) => {
-    const requestOptions = { ...options };
-    let path = '/api/auth/captcha/challenge';
 
-    if (requestOptions.forceRefresh) {
-      const separator = path.includes('?') ? '&' : '?';
-      path = `${path}${separator}_=${Date.now()}`;
-      delete requestOptions.forceRefresh;
-    }
-
-    return apiFetch(path, requestOptions);
-  },
   getMe: () => apiFetch('/api/auth/me'),
   login: (data) => apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify(data) }),
   loginWithEmailOtp: (data) => apiFetch('/api/auth/login/email-otp', { method: 'POST', body: JSON.stringify(data) }),
@@ -1272,6 +1261,18 @@ window.CollegeOSApi = {
     });
     return payload;
   },
+  startQuiz: async (quizId) => {
+    const payload = await apiFetch(`/api/quizzes/${quizId}/start`);
+    safeTrackEvent('quiz_started', { quizId });
+    return payload;
+  },
+  saveQuizProgress: (attemptId, payload) => apiFetch(`/api/quizzes/attempts/${attemptId}/save`, { method: 'PUT', body: JSON.stringify(payload) }),
+  submitQuizAttempt: async (attemptId, payload) => {
+    const response = await apiFetch(`/api/quizzes/attempts/${attemptId}/submit`, { method: 'POST', body: JSON.stringify(payload) });
+    safeTrackEvent('quiz_submitted', { attemptId });
+    return response;
+  },
+  getQuizResult: (attemptId) => apiFetch(`/api/quizzes/results/${attemptId}`),
   getMockTests: () => apiFetch('/api/mock-tests'),
   getMockTestsDashboard: () => apiFetch('/api/mock-tests/dashboard'),
   getMockTestsLeaderboard: () => apiFetch('/api/mock-tests/leaderboard'),
@@ -1280,6 +1281,7 @@ window.CollegeOSApi = {
     safeTrackEvent('mock_test_started', { mockTestId });
     return payload;
   },
+  saveMockTestProgress: (attemptId, payload) => apiFetch(`/api/mock-tests/attempts/${attemptId}/save`, { method: 'PUT', body: JSON.stringify(payload) }),
   submitMockTest: async (mockTestId, payload) => {
     const response = await apiFetch(`/api/mock-tests/${mockTestId}/submit`, { method: 'POST', body: JSON.stringify(payload) });
     safeTrackEvent('mock_test_submitted', {
@@ -1290,6 +1292,34 @@ window.CollegeOSApi = {
     return response;
   },
   getMockTestResult: (attemptId) => apiFetch(`/api/mock-tests/results/${attemptId}`),
+  getAvailableRoadmaps: () => apiFetch('/api/roadmaps'),
+  getRoadmapDetail: (id) => apiFetch(`/api/roadmaps/${id}`),
+  completeRoadmapStep: (roadmapId, stepId) => apiFetch(`/api/roadmaps/${roadmapId}/steps/${stepId}/complete`, { method: 'POST' }),
+  adminGetAssessments: (type = 'mock_test', params = {}) => {
+    const qs = new URLSearchParams({ type, ...params });
+    return apiFetch(`/api/admin/control/assessments?${qs.toString()}`);
+  },
+  adminCreateAssessment: (data) => apiFetch('/api/admin/control/assessments', { method: 'POST', body: JSON.stringify(data) }),
+  adminGetAssessment: (id, type = 'mock_test') => apiFetch(`/api/admin/control/assessments/${id}?type=${encodeURIComponent(type)}`),
+  adminUpdateAssessment: (id, data) => apiFetch(`/api/admin/control/assessments/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminSaveQuestion: (assessmentId, data) => apiFetch(`/api/admin/control/assessments/${assessmentId}/questions`, { method: 'POST', body: JSON.stringify(data) }),
+  adminDeleteQuestion: (assessmentId, questionId, type = 'mock_test') => apiFetch(`/api/admin/control/assessments/${assessmentId}/questions/${questionId}?type=${encodeURIComponent(type)}`, { method: 'DELETE' }),
+  adminPublishAssessment: (id, type = 'mock_test') => apiFetch(`/api/admin/control/assessments/${id}/publish`, { method: 'POST', body: JSON.stringify({ type }) }),
+  adminArchiveAssessment: (id, type = 'mock_test') => apiFetch(`/api/admin/control/assessments/${id}/archive`, { method: 'POST', body: JSON.stringify({ type }) }),
+  adminGetAssessmentResults: (id, type = 'mock_test', params = {}) => {
+    const qs = new URLSearchParams({ type, ...params });
+    return apiFetch(`/api/admin/control/assessments/${id}/results?${qs.toString()}`);
+  },
+  adminGetAcademicStructure: () => apiFetch('/api/admin/control/academic-structure'),
+  adminSaveSubject: (data) => apiFetch('/api/admin/control/academic-structure/subjects', { method: 'POST', body: JSON.stringify(data) }),
+  adminArchiveSubject: (id) => apiFetch(`/api/admin/control/academic-structure/subjects/${id}`, { method: 'DELETE' }),
+  adminGetRoadmaps: () => apiFetch('/api/admin/control/roadmaps'),
+  adminCreateRoadmap: (data) => apiFetch('/api/admin/control/roadmaps', { method: 'POST', body: JSON.stringify(data) }),
+  adminGetRoadmap: (id) => apiFetch(`/api/admin/control/roadmaps/${id}`),
+  adminUpdateRoadmap: (id, data) => apiFetch(`/api/admin/control/roadmaps/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminSaveRoadmapStep: (roadmapId, data) => apiFetch(`/api/admin/control/roadmaps/${roadmapId}/steps`, { method: 'POST', body: JSON.stringify(data) }),
+  adminDeleteRoadmapStep: (roadmapId, stepId) => apiFetch(`/api/admin/control/roadmaps/${roadmapId}/steps/${stepId}`, { method: 'DELETE' }),
+  adminPublishRoadmap: (id) => apiFetch(`/api/admin/control/roadmaps/${id}/publish`, { method: 'POST' }),
   getSubscription: () => apiFetch('/api/subscriptions/me'),
   getMembershipCenterConfig: () => apiFetch('/api/subscriptions/me').then((r) => ({ config: r.membershipConfig || null, subscription: r })),
   getSubscriptionPayments: () => apiFetch('/api/subscriptions/payments'),
@@ -1522,16 +1552,26 @@ window.CollegeOSApi = {
     if (params.search) qs.set('search', params.search);
     if (params.membership) qs.set('membership', params.membership);
     if (params.status) qs.set('status', params.status);
+    if (params.collegeId) qs.set('collegeId', params.collegeId);
+    if (params.courseId) qs.set('courseId', params.courseId);
     if (params.branchId) qs.set('branchId', params.branchId);
+    if (params.semesterId) qs.set('semesterId', params.semesterId);
     if (params.includeDeleted) qs.set('includeDeleted', 'true');
+    if (params.page) qs.set('page', params.page);
+    if (params.limit) qs.set('limit', params.limit);
+    if (params.sortBy) qs.set('sortBy', params.sortBy);
+    if (params.sortDir) qs.set('sortDir', params.sortDir);
     const suffix = qs.toString() ? `?${qs.toString()}` : '';
     return apiFetch(`/api/admin/control/students${suffix}`);
   },
   adminControlStudentDetail: (id) => apiFetch(`/api/admin/control/students/${id}`),
   adminControlUpdateStudent: (id, data) => apiFetch(`/api/admin/control/students/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   adminControlResetStudentPassword: (id, newPassword) => apiFetch(`/api/admin/control/students/${id}/reset-password`, { method: 'POST', body: JSON.stringify({ newPassword }) }),
-  adminControlStudentStatus: (id, status) => apiFetch(`/api/admin/control/students/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) }),
+  adminControlStudentStatus: (id, status, payload = {}) => apiFetch(`/api/admin/control/students/${id}/status`, { method: 'POST', body: JSON.stringify({ status, ...payload }) }),
   adminControlStudentMembership: (id, data) => apiFetch(`/api/admin/control/students/${id}/membership`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminControlGrantMembership: (id, data) => apiFetch(`/api/admin/control/students/${id}/membership/grant`, { method: 'POST', body: JSON.stringify(data) }),
+  adminControlExtendMembership: (id, data) => apiFetch(`/api/admin/control/students/${id}/membership/extend`, { method: 'POST', body: JSON.stringify(data) }),
+  adminControlRevokeMembership: (id, data) => apiFetch(`/api/admin/control/students/${id}/membership/revoke`, { method: 'POST', body: JSON.stringify(data) }),
   adminControlDeleteStudent: (id) => apiFetch(`/api/admin/control/students/${id}`, { method: 'DELETE' }),
   adminControlRestoreStudent: (id) => apiFetch(`/api/admin/control/students/${id}/restore`, { method: 'POST' }),
   adminControlBulkStudents: (payload) => apiFetch('/api/admin/control/students/bulk-action', { method: 'POST', body: JSON.stringify(payload) }),
@@ -1656,5 +1696,77 @@ window.CollegeOSApi = {
   adminSupportAnalyticsOverview: () => apiFetch('/api/admin/support-governance/analytics/overview'),
   adminSupportGovernanceAudit: (limit = 120) => apiFetch(`/api/admin/support-governance/activity/audit?limit=${encodeURIComponent(limit)}`),
   submitSupportTicket: (data) => apiFetch('/api/company/tickets', { method: 'POST', body: JSON.stringify(data) }),
-  adminControlAuditLogs: (limit = 50) => apiFetch(`/api/admin/control/audit-logs?limit=${encodeURIComponent(limit)}`)
+  adminControlAuditLogs: (limit = 50) => apiFetch(`/api/admin/control/audit-logs?limit=${encodeURIComponent(limit)}`),
+  adminControlFeatureVisibilityGet: () => apiFetch('/api/admin/control/feature-visibility'),
+  adminControlFeatureVisibilityPut: (payload) => apiFetch('/api/admin/control/feature-visibility', { method: 'PUT', body: JSON.stringify(payload) }),
+  adminControlMembershipPlans: () => apiFetch('/api/admin/control/memberships/plans'),
+  adminControlCreateMembershipPlan: (payload) => apiFetch('/api/admin/control/memberships/plans', { method: 'POST', body: JSON.stringify(payload) }),
+  adminControlUpdateMembershipPlan: (id, payload) => apiFetch(`/api/admin/control/memberships/plans/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  adminControlSetPlanEntitlements: (id, entitlements) => apiFetch(`/api/admin/control/memberships/plans/${id}/entitlements`, { method: 'POST', body: JSON.stringify({ entitlements }) }),
+  adminControlArchiveMembershipPlan: (id) => apiFetch(`/api/admin/control/memberships/plans/${id}`, { method: 'DELETE' }),
+  adminControlActiveMemberships: (page = 1, limit = 20) => apiFetch(`/api/admin/control/memberships/active?page=${page}&limit=${limit}`),
+  adminControlMembershipHistory: (page = 1, limit = 20) => apiFetch(`/api/admin/control/memberships/history?page=${page}&limit=${limit}`),
+  adminControlPaymentSettingsGet: () => apiFetch('/api/admin/control/payments/settings'),
+  adminControlPaymentSettingsPut: (payload) => apiFetch('/api/admin/control/payments/settings', { method: 'PUT', body: JSON.stringify(payload) }),
+  adminControlPaymentQueue: (page = 1, limit = 20) => apiFetch(`/api/admin/control/payments/queue?page=${page}&limit=${limit}`),
+  adminControlPaymentTransactions: (page = 1, limit = 20, status = '', search = '') => apiFetch(`/api/admin/control/payments/transactions?page=${page}&limit=${limit}&status=${encodeURIComponent(status)}&search=${encodeURIComponent(search)}`),
+  adminControlApprovePayment: (id) => apiFetch(`/api/admin/control/payments/${id}/approve`, { method: 'POST' }),
+  adminControlRejectPayment: (id, reason) => apiFetch(`/api/admin/control/payments/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }),
+  getPublicPaymentSettings: () => apiFetch('/api/subscriptions/payment-settings'),
+
+  // PART 10: CODING CHALLENGES & CERTIFICATES API
+  getCodingSettings: () => apiFetch('/api/coding-challenges/settings'),
+  getCodingContests: () => apiFetch('/api/coding-challenges/contests'),
+  getCodingContest: (id) => apiFetch(`/api/coding-challenges/contests/${id}`),
+  registerCodingContest: (id) => apiFetch(`/api/coding-challenges/contests/${id}/register`, { method: 'POST' }),
+  getCodingProblem: (id) => apiFetch(`/api/coding-challenges/problems/${id}`),
+  runCodingSolution: (problemId, payload) => apiFetch(`/api/coding-challenges/problems/${problemId}/run`, { method: 'POST', body: JSON.stringify(payload) }),
+  submitCodingSolution: (problemId, payload) => apiFetch(`/api/coding-challenges/problems/${problemId}/submit`, { method: 'POST', body: JSON.stringify(payload) }),
+  getCodingSubmissions: () => apiFetch('/api/coding-challenges/my-submissions'),
+  getCodingCertificates: () => apiFetch('/api/coding-challenges/my-certificates'),
+  getCodingLeaderboard: (contestId) => apiFetch(`/api/coding-challenges/contests/${contestId}/leaderboard`),
+  getCodingSeasonLeaderboard: () => apiFetch('/api/coding-challenges/season-leaderboard'),
+
+  adminGetCodingLanguages: () => apiFetch('/api/admin/coding-challenges/languages'),
+  adminGetCodingSettings: () => apiFetch('/api/admin/coding-challenges/settings'),
+  adminUpdateCodingSettings: (data) => apiFetch('/api/admin/coding-challenges/settings', { method: 'PUT', body: JSON.stringify(data) }),
+  adminGetCodingStats: () => apiFetch('/api/admin/coding-challenges/stats'),
+  adminGetCodingContests: () => apiFetch('/api/admin/coding-challenges/contests'),
+  adminCreateCodingContest: (data) => apiFetch('/api/admin/coding-challenges/contests', { method: 'POST', body: JSON.stringify(data) }),
+  adminGetCodingContest: (id) => apiFetch(`/api/admin/coding-challenges/contests/${id}`),
+  adminUpdateCodingContest: (id, data) => apiFetch(`/api/admin/coding-challenges/contests/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminUpdateCodingContestStatus: (id, status) => apiFetch(`/api/admin/coding-challenges/contests/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  adminDeleteCodingContest: (id) => apiFetch(`/api/admin/coding-challenges/contests/${id}`, { method: 'DELETE' }),
+  adminGetCodingProblems: (contestId) => apiFetch(`/api/admin/coding-challenges/contests/${contestId}/problems`),
+  adminCreateCodingProblem: (contestId, data) => apiFetch(`/api/admin/coding-challenges/contests/${contestId}/problems`, { method: 'POST', body: JSON.stringify(data) }),
+  adminUpdateCodingProblem: (id, data) => apiFetch(`/api/admin/coding-challenges/problems/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminDeleteCodingProblem: (id) => apiFetch(`/api/admin/coding-challenges/problems/${id}`, { method: 'DELETE' }),
+  adminGetCodingTestCases: (problemId) => apiFetch(`/api/admin/coding-challenges/problems/${problemId}/test-cases`),
+  adminCreateCodingTestCase: (problemId, data) => apiFetch(`/api/admin/coding-challenges/problems/${problemId}/test-cases`, { method: 'POST', body: JSON.stringify(data) }),
+  adminUpdateCodingTestCase: (id, data) => apiFetch(`/api/admin/coding-challenges/test-cases/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminDeleteCodingTestCase: (id) => apiFetch(`/api/admin/coding-challenges/test-cases/${id}`, { method: 'DELETE' }),
+  adminGetCodingSubmissions: (params = {}) => apiFetch(`/api/admin/coding-challenges/submissions?${new URLSearchParams(params).toString()}`),
+  adminGetCodingSubmission: (id) => apiFetch(`/api/admin/coding-challenges/submissions/${id}`),
+  adminGetCodingCertificates: (status = '') => apiFetch(`/api/admin/coding-challenges/certificates${status ? `?status=${encodeURIComponent(status)}` : ''}`),
+  adminPreviewCodingCertificate: (data) => apiFetch('/api/admin/coding-challenges/certificates/preview', { method: 'POST', body: JSON.stringify(data) }),
+
+  // PART 11: COMMUNITY, CAMPUS FEED, FORUM & FEEDBACK API
+  fetchCampusFeed: (params = {}) => apiFetch(`/api/campus-feed/posts?${new URLSearchParams(params).toString()}`),
+  fetchCampusPost: (id) => apiFetch(`/api/campus-feed/posts/${id}`),
+  createCampusPost: (data) => apiFetch('/api/campus-feed/posts', { method: 'POST', body: JSON.stringify(data) }),
+  addCampusComment: (id, body) => apiFetch(`/api/campus-feed/posts/${id}/comments`, { method: 'POST', body: JSON.stringify({ body }) }),
+  reportCampusPost: (id, reason, details = '') => apiFetch(`/api/campus-feed/posts/${id}/report`, { method: 'POST', body: JSON.stringify({ reason, details }) }),
+  fetchForumThreads: (params = {}) => apiFetch(`/api/forum/threads?${new URLSearchParams(params).toString()}`),
+  fetchForumThread: (id) => apiFetch(`/api/forum/threads/${id}`),
+  createForumThread: (data) => apiFetch('/api/forum/threads', { method: 'POST', body: JSON.stringify(data) }),
+  addForumReply: (id, data) => apiFetch(`/api/forum/threads/${id}/replies`, { method: 'POST', body: JSON.stringify(data) }),
+  lockForumThread: (id) => apiFetch(`/api/forum/admin/threads/${id}/lock`, { method: 'POST' }),
+  unlockForumThread: (id) => apiFetch(`/api/forum/admin/threads/${id}/unlock`, { method: 'POST' }),
+  hideForumThread: (id) => apiFetch(`/api/forum/admin/threads/${id}/hide`, { method: 'POST' }),
+  restoreForumThread: (id) => apiFetch(`/api/forum/admin/threads/${id}/restore`, { method: 'POST' }),
+  submitFeedback: (data) => apiFetch('/api/feedback', { method: 'POST', body: JSON.stringify(data) }),
+  fetchMyFeedback: () => apiFetch('/api/feedback/mine'),
+  fetchAdminFeedback: (params = {}) => apiFetch(`/api/feedback/admin/all?${new URLSearchParams(params).toString()}`),
+  replyAdminFeedback: (id, reply) => apiFetch(`/api/feedback/admin/${id}/reply`, { method: 'POST', body: JSON.stringify({ reply }) }),
+  updateAdminFeedbackStatus: (id, status) => apiFetch(`/api/feedback/admin/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) })
 };

@@ -10,6 +10,7 @@ const { createUploadMiddleware, saveUploadedFile } = require('../services/upload
 const { deleteUploadedFileById } = require('../services/supabaseStorage');
 const { getOtpTestEmail, sendSystemEmail } = require('../utils/mailer');
 const { publishRealtimeEvent, publishContentChanged } = require('../services/realtimeBus');
+const { extractTurnstileToken, verifyTurnstileToken } = require('../utils/turnstile');
 
 const router = express.Router();
 
@@ -40,23 +41,10 @@ function enforceAdminRateLimit(req, res) {
   return null;
 }
 
-function verifyCaptchaPayload(req, captcha) {
-  // CRITICAL: Reject missing capscha (fail-closed, not fail-open)
-  if (!captcha || typeof captcha !== 'object') return false;
-  
-  const answer = Number(captcha.answer);
-  const a = Number(captcha.a);
-  const b = Number(captcha.b);
-  const expiresAt = Number(captcha.expiresAt);
-  const nonce = String(captcha.nonce || '');
-  const signature = String(captcha.signature || '');
-  if (!Number.isInteger(answer) || !Number.isInteger(a) || !Number.isInteger(b) || !expiresAt || !nonce || !signature) {
-    return false;
-  }
-  if (Date.now() > expiresAt) return false;
-  const payload = `${a}:${b}:${expiresAt}:${nonce}`;
-  const expected = crypto.createHmac('sha256', CAPTCHA_SECRET).update(payload).digest('hex');
-  return expected === signature && answer === a + b;
+async function verifyAdminSecurityCheck(req) {
+  const turnstileToken = extractTurnstileToken(req.body);
+  const result = await verifyTurnstileToken(turnstileToken, req.ip);
+  return result.ok;
 }
 
 async function ensureAdminAuthColumns() {
@@ -81,9 +69,10 @@ router.post('/login', async (req, res) => {
 
   await ensureAdminAuthColumns();
 
-  const { email, password, captcha } = req.body;
-  if (!verifyCaptchaPayload(req, captcha)) {
-    return res.status(400).json({ error: 'Captcha validation failed' });
+  const { email, password } = req.body;
+  const securityOk = await verifyAdminSecurityCheck(req);
+  if (!securityOk) {
+    return res.status(400).json({ error: 'Security check failed. Please verify and try again.' });
   }
   if (!isEmail(email) || !password) return res.status(401).json({ error: 'Invalid email or password' });
 
@@ -94,7 +83,7 @@ router.post('/login', async (req, res) => {
     return res.status(429).json({ error: 'Too many failed attempts. Please try again later.' });
   }
   const valid = await bcrypt.compare(password, user.password_hash);
-  if (!valid || user.role !== 'admin') {
+  if (!valid || !['admin', 'super_admin'].includes(user.role)) {
     const failedAttempts = Number(user.failed_login_attempts || 0) + 1;
     const lockUntil = failedAttempts >= ADMIN_LOGIN_LOCK_THRESHOLD
       ? new Date(Date.now() + ADMIN_LOGIN_LOCK_MS)
@@ -139,7 +128,12 @@ router.post('/login', async (req, res) => {
       maxAge: 24 * 60 * 60 * 1000
     });
 
-    return res.json({ user: { id: user.id, full_name: user.full_name, email: user.email, role: user.role }, csrfToken: freshCsrfToken });
+    req.session.save((saveErr) => {
+      if (saveErr) {
+        return res.status(500).json({ error: 'Could not persist admin session' });
+      }
+      return res.json({ user: { id: user.id, full_name: user.full_name, email: user.email, role: user.role }, csrfToken: freshCsrfToken });
+    });
   });
 
   return;
@@ -571,10 +565,66 @@ router.get('/trends', requireAdmin, async (_req, res) => {
   });
 });
 
-router.post('/content/notes', requireAdmin, upload.single('file'), async (req, res) => {
+// Notes management endpoints (GET, POST, DELETE)
+router.get(['/content/notes', '/academics/notes', '/notes'], requireAdmin, async (req, res) => {
+  const { categoryId, branchId, semesterId, status, difficulty } = req.query;
+  const params = [];
+  const clauses = ['n.deleted_at IS NULL'];
+
+  if (categoryId) {
+    params.push(Number(categoryId));
+    clauses.push(`n.category_id = $${params.length}`);
+  }
+
+  if (branchId) {
+    params.push(Number(branchId));
+    clauses.push(`n.branch_id = $${params.length}`);
+  }
+
+  if (semesterId) {
+    params.push(Number(semesterId));
+    clauses.push(`(n.semester_id = $${params.length} OR n.semester_id IS NULL)`);
+  }
+
+  if (status) {
+    params.push(status);
+    clauses.push(`n.status = $${params.length}`);
+  }
+
+  if (difficulty) {
+    params.push(difficulty);
+    clauses.push(`n.difficulty = $${params.length}`);
+  }
+
+  const whereClause = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT
+        n.id, n.subject, n.chapter, n.content, n.difficulty, n.format_type,
+        n.pdf_url, n.access_type, n.status, n.is_common, n.created_at,
+        ac.name AS category_name, ab.name AS branch_name, asem.label AS semester_label
+       FROM notes n
+       LEFT JOIN academic_categories ac ON ac.id = n.category_id
+       LEFT JOIN academic_branches ab ON ab.id = n.branch_id
+       LEFT JOIN academic_semesters asem ON asem.id = n.semester_id
+       ${whereClause}
+       ORDER BY n.created_at DESC`,
+      params
+    );
+    res.json({ notes: rows, count: rows.length });
+  } catch (err) {
+    console.error('[Admin Notes GET Error]:', err);
+    res.status(500).json({ error: 'Failed to fetch notes' });
+  }
+});
+
+router.post(['/content/notes', '/academics/notes', '/notes'], requireAdmin, upload.single('file'), async (req, res) => {
   const {
     subject,
     chapter,
+    description,
+    content,
     collegeName,
     difficulty,
     formatType,
@@ -585,71 +635,127 @@ router.post('/content/notes', requireAdmin, upload.single('file'), async (req, r
     accessType,
     status,
     isCommon,
-    collegeId,
-    courseId,
-    yearId
+    college_id,
+    course_id,
+    branch_id,
+    year_id,
+    semester_id
   } = req.body;
 
-  if (!subject || !chapter) {
-    return res.status(400).json({ error: 'subject and chapter are required' });
-  }
-
-  let fileUrl = null;
-  if (req.file) {
-    try {
-      const stored = await saveUploadedFile({
-        file: req.file,
-        folder: 'admin-uploads/notes',
-        prefix: 'note'
-      });
-      fileUrl = stored.url;
-    } catch (error) {
-      if (error?.code === 'INVALID_UPLOAD_FILE' || error?.statusCode === 400) {
-        return res.status(400).json({ error: error.message || 'Invalid file upload' });
-      }
-      return res.status(502).json({ error: 'Failed to upload note file' });
-    }
-  }
-  const content = fileUrl ? `PDF uploaded: ${fileUrl}` : 'Admin uploaded note';
+  const trimmedSubject = String(subject || '').trim();
+  const trimmedChapter = String(chapter || description || '').trim();
+  const parsedCategoryId = categoryId ? Number(categoryId) : null;
+  const parsedBranchId = (branchId || branch_id) ? Number(branchId || branch_id) : null;
+  const parsedSemesterId = (semesterId || semester_id) ? Number(semesterId || semester_id) : null;
   const parsedIsCommon = String(isCommon || '').toLowerCase() === 'true' || String(isCommon || '').toLowerCase() === 'on';
 
-  const { rows } = await pool.query(
-    `INSERT INTO notes (
-      subject, chapter, content, difficulty, format_type, created_by, college_name, pdf_url,
-      category_id, branch_id, semester_id, academic_subject, access_type, status, is_common, college_id, course_id, year_id,
-      source_type, approval_status
-     )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
-     RETURNING id, subject, chapter, college_name, pdf_url, category_id, branch_id, semester_id, created_at`,
-    [
-      subject,
-      chapter,
-      content,
-      difficulty || null,
-      formatType || 'detailed',
-      req.session.userId,
-      collegeName || null,
-      fileUrl,
-      categoryId ? Number(categoryId) : null,
-      branchId ? Number(branchId) : null,
-      semesterId ? Number(semesterId) : null,
-      academicSubject || null,
-      accessType || 'free',
-      status || 'published',
-      parsedIsCommon,
-      collegeId ? Number(collegeId) : null,
-      courseId ? Number(courseId) : null,
-      yearId ? Number(yearId) : null,
-      'admin_upload',
-      'published'
-    ]
-  );
+  if (!trimmedSubject) {
+    return res.status(400).json({ error: 'Subject is required' });
+  }
+  if (!trimmedChapter) {
+    return res.status(400).json({ error: 'Chapter / Topic is required' });
+  }
 
-  publishRealtimeEvent('content_changed', { contentType: 'notes', action: 'created', contentId: rows[0]?.id || null });
-  res.status(201).json({ note: rows[0] });
+  if (!req.file) {
+    return res.status(400).json({ error: 'PDF File is required' });
+  }
+
+  const isPdfFile = req.file.mimetype === 'application/pdf' ||
+    String(req.file.originalname || '').toLowerCase().endsWith('.pdf') ||
+    (req.file.buffer && req.file.buffer.length >= 4 && req.file.buffer.subarray(0, 4).toString('ascii') === '%PDF');
+
+  if (!isPdfFile) {
+    return res.status(400).json({ error: 'Only PDF files are supported for Notes' });
+  }
+
+  if (!req.file.buffer || req.file.buffer.length === 0) {
+    return res.status(400).json({ error: 'Uploaded file is empty' });
+  }
+
+  let stored = null;
+  try {
+    stored = await saveUploadedFile({
+      file: req.file,
+      folder: 'admin-uploads/notes',
+      prefix: 'note',
+      uploadedBy: req.session.userId,
+      entityType: 'note'
+    });
+  } catch (error) {
+    console.error('[Admin Notes Upload Error]:', error);
+    if (error?.code === 'INVALID_UPLOAD_FILE' || error?.statusCode === 400) {
+      return res.status(400).json({ error: error.message || 'Invalid file upload' });
+    }
+    return res.status(502).json({ error: 'Failed to upload note file to Supabase Storage: ' + (error?.message || 'Storage error') });
+  }
+
+  const fileUrl = stored?.url || null;
+  if (!fileUrl) {
+    return res.status(500).json({ error: 'Storage provider failed to generate file URL' });
+  }
+
+  const noteContent = content || `PDF uploaded: ${fileUrl}`;
+  const scopeType = parsedIsCommon ? 'GLOBAL' : (parsedBranchId ? 'BRANCH' : 'GLOBAL');
+
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO notes (
+        subject, chapter, content, difficulty, format_type, created_by, college_name, pdf_url,
+        category_id, branch_id, semester_id, academic_subject, access_type, status, is_common,
+        college_id, course_id, year_id, scope_type, source_type, approval_status
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, 'admin_upload', 'published')
+       RETURNING id, subject, chapter, pdf_url, category_id, branch_id, semester_id, access_type, status, created_at`,
+      [
+        trimmedSubject,
+        trimmedChapter,
+        noteContent,
+        difficulty || 'medium',
+        formatType || 'detailed',
+        req.session.userId,
+        collegeName || null,
+        fileUrl,
+        parsedCategoryId,
+        parsedBranchId,
+        parsedSemesterId,
+        academicSubject || null,
+        accessType || 'free',
+        status || 'published',
+        parsedIsCommon,
+        college_id ? Number(college_id) : null,
+        course_id ? Number(course_id) : null,
+        year_id ? Number(year_id) : null,
+        scopeType
+      ]
+    );
+
+    publishRealtimeEvent('content_changed', { contentType: 'notes', action: 'created', contentId: rows[0]?.id || null });
+    return res.status(201).json({ success: true, note: rows[0] });
+  } catch (dbError) {
+    console.error('[Admin Notes DB Insert Error] Rolling back file:', dbError);
+    const fileMatch = String(fileUrl || '').match(/\/api\/files\/(\d+)/);
+    if (fileMatch) {
+      await deleteUploadedFileById(fileMatch[1]).catch(() => {});
+    }
+    return res.status(500).json({ error: 'Database save failed: ' + dbError.message });
+  }
 });
 
-router.post('/content/papers', requireAdmin, upload.single('file'), async (req, res) => {
+router.delete(['/content/notes/:id', '/academics/notes/:id', '/notes/:id'], requireAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ error: 'Invalid note ID' });
+  }
+  const existing = await pool.query('SELECT pdf_url FROM notes WHERE id = $1', [id]);
+  const { rowCount } = await pool.query('UPDATE notes SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1', [id]);
+  if (rowCount === 0) return res.status(404).json({ error: 'Note not found' });
+  const fileMatch = String(existing.rows[0]?.pdf_url || '').match(/\/api\/files\/(\d+)/);
+  if (fileMatch) await deleteUploadedFileById(fileMatch[1]).catch(() => {});
+  publishRealtimeEvent('content_changed', { contentType: 'notes', action: 'deleted', contentId: id });
+  res.json({ message: 'Note deleted successfully' });
+});
+
+router.post(['/content/papers', '/academics/papers', '/papers'], requireAdmin, upload.single('file'), async (req, res) => {
   const {
     subject,
     examName,
@@ -670,52 +776,78 @@ router.post('/content/papers', requireAdmin, upload.single('file'), async (req, 
     return res.status(400).json({ error: 'subject, examName, and year are required' });
   }
 
+  if (!req.file && !req.body.paperUrl) {
+    return res.status(400).json({ error: 'PDF File is required' });
+  }
+
+  if (req.file) {
+    const isPdfFile = req.file.mimetype === 'application/pdf' ||
+      String(req.file.originalname || '').toLowerCase().endsWith('.pdf') ||
+      (req.file.buffer && req.file.buffer.length >= 4 && req.file.buffer.subarray(0, 4).toString('ascii') === '%PDF');
+
+    if (!isPdfFile) {
+      return res.status(400).json({ error: 'Only PDF files are supported for Previous Year Papers' });
+    }
+  }
+
   let fileUrl = req.body.paperUrl || null;
   if (req.file) {
     try {
       const stored = await saveUploadedFile({
         file: req.file,
         folder: 'admin-uploads/papers',
-        prefix: 'paper'
+        prefix: 'paper',
+        uploadedBy: req.session.userId,
+        entityType: 'previous_paper'
       });
       fileUrl = stored.url;
     } catch (error) {
       if (error?.code === 'INVALID_UPLOAD_FILE' || error?.statusCode === 400) {
         return res.status(400).json({ error: error.message || 'Invalid file upload' });
       }
-      return res.status(502).json({ error: 'Failed to upload paper file' });
+      return res.status(502).json({ error: 'Failed to upload paper file to Supabase Storage: ' + (error?.message || 'Storage error') });
     }
   }
   const parsedIsCommon = String(isCommon || '').toLowerCase() === 'true' || String(isCommon || '').toLowerCase() === 'on';
-  const { rows } = await pool.query(
-    `INSERT INTO previous_papers (
-      subject, exam_name, year, paper_url, summary_note_url, college_name, uploaded_by,
-      category_id, branch_id, semester_id, access_type, status, is_common, college_id, course_id, year_id
-     )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-     RETURNING id, subject, exam_name, year, paper_url, college_name, branch_id, semester_id, created_at`,
-    [
-      subject,
-      examName,
-      year,
-      fileUrl,
-      'notes-library.html',
-      collegeName || null,
-      req.session.userId,
-      categoryId ? Number(categoryId) : null,
-      branchId ? Number(branchId) : null,
-      semesterId ? Number(semesterId) : null,
-      accessType || 'free',
-      status || 'published',
-      parsedIsCommon,
-      collegeId ? Number(collegeId) : null,
-      courseId ? Number(courseId) : null,
-      yearId ? Number(yearId) : null
-    ]
-  );
 
-  publishRealtimeEvent('content_changed', { contentType: 'papers', action: 'created', contentId: rows[0]?.id || null });
-  res.status(201).json({ paper: rows[0] });
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO previous_papers (
+        subject, exam_name, year, paper_url, summary_note_url, college_name, uploaded_by,
+        category_id, branch_id, semester_id, access_type, status, is_common, college_id, course_id, year_id
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+       RETURNING id, subject, exam_name, year, paper_url, college_name, branch_id, semester_id, access_type, status, created_at`,
+      [
+        subject,
+        examName,
+        year,
+        fileUrl,
+        'notes-library.html',
+        collegeName || null,
+        req.session.userId,
+        categoryId ? Number(categoryId) : null,
+        branchId ? Number(branchId) : null,
+        semesterId ? Number(semesterId) : null,
+        accessType || 'free',
+        status || 'published',
+        parsedIsCommon,
+        collegeId ? Number(collegeId) : null,
+        courseId ? Number(courseId) : null,
+        yearId ? Number(yearId) : null
+      ]
+    );
+
+    publishRealtimeEvent('content_changed', { contentType: 'papers', action: 'created', contentId: rows[0]?.id || null });
+    res.status(201).json({ success: true, paper: rows[0] });
+  } catch (dbError) {
+    console.error('[Admin Papers DB Insert Error] Rolling back file:', dbError);
+    const fileMatch = String(fileUrl || '').match(/\/api\/files\/(\d+)/);
+    if (fileMatch) {
+      await deleteUploadedFileById(fileMatch[1]).catch(() => {});
+    }
+    return res.status(500).json({ error: 'Database save failed: ' + dbError.message });
+  }
 });
 
 router.get('/feedback', requireAdmin, async (_req, res) => {
@@ -747,8 +879,8 @@ router.put('/feedback/:id/reply', requireAdmin, async (req, res) => {
   res.json({ feedback: rows[0] });
 });
 
-// Papers management routes
-router.get('/papers', requireAdmin, async (_req, res) => {
+// Papers management routes (GET & DELETE)
+router.get(['/content/papers', '/academics/papers', '/papers'], requireAdmin, async (_req, res) => {
   const { categoryId, branchId, semesterId, status } = _req.query;
   const params = [];
   const clauses = [];
@@ -791,22 +923,27 @@ router.get('/papers', requireAdmin, async (_req, res) => {
   res.json({ papers: rows });
 });
 
-router.delete('/papers/:id', requireAdmin, async (req, res) => {
+router.delete(['/content/papers/:id', '/academics/papers/:id', '/papers/:id'], requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   const existing = await pool.query('SELECT paper_url FROM previous_papers WHERE id = $1', [id]);
   const { rowCount } = await pool.query('DELETE FROM previous_papers WHERE id = $1', [id]);
   if (rowCount === 0) return res.status(404).json({ error: 'Paper not found' });
   const fileMatch = String(existing.rows[0]?.paper_url || '').match(/\/api\/files\/(\d+)/);
-  if (fileMatch) await deleteUploadedFileById(fileMatch[1]);
+  if (fileMatch) await deleteUploadedFileById(fileMatch[1]).catch(() => {});
   publishRealtimeEvent('content_changed', { contentType: 'papers', action: 'deleted', contentId: id });
   res.json({ message: 'Paper deleted successfully' });
 });
 
 // Materials management routes
 router.get('/materials', requireAdmin, async (_req, res) => {
-  const { categoryId, branchId, semesterId, status } = _req.query;
+  const { materialType, categoryId, branchId, semesterId, status } = _req.query;
   const params = [];
   const clauses = [];
+
+  if (materialType) {
+    params.push(String(materialType).trim());
+    clauses.push(`(m.material_type = $${params.length} OR LOWER(m.category) = LOWER($${params.length}))`);
+  }
 
   if (categoryId) {
     params.push(Number(categoryId));
@@ -828,27 +965,36 @@ router.get('/materials', requireAdmin, async (_req, res) => {
     clauses.push(`m.status = $${params.length}`);
   }
 
+  clauses.push(`m.deleted_at IS NULL`);
+
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
 
-  const { rows } = await pool.query(
-    `SELECT
-      m.id, m.title, m.category, m.subject, m.description, m.file_url,
-      m.status, m.is_common, m.created_at,
-      ac.name AS category_name, ab.name AS branch_name, asem.label AS semester_label
-     FROM materials m
-     LEFT JOIN academic_categories ac ON ac.id = m.category_id
-     LEFT JOIN academic_branches ab ON ab.id = m.branch_id
-     LEFT JOIN academic_semesters asem ON asem.id = m.semester_id
-     ${where}
-     ORDER BY m.created_at DESC`,
-    params
-  );
-  res.json({ materials: rows });
+  try {
+    const { rows } = await pool.query(
+      `SELECT
+        m.id, m.title, COALESCE(m.material_type, 'book') AS material_type,
+        m.category, m.subject, m.description, m.file_url,
+        m.status, m.access_type, m.is_common, m.created_at,
+        ac.name AS category_name, ab.name AS branch_name, asem.label AS semester_label
+       FROM materials m
+       LEFT JOIN academic_categories ac ON ac.id = m.category_id
+       LEFT JOIN academic_branches ab ON ab.id = m.branch_id
+       LEFT JOIN academic_semesters asem ON asem.id = m.semester_id
+       ${where}
+       ORDER BY m.created_at DESC`,
+      params
+    );
+    res.json({ materials: rows });
+  } catch (err) {
+    console.error('[Admin Materials] GET Error:', err);
+    res.status(500).json({ error: 'Failed to fetch materials' });
+  }
 });
 
 router.post('/materials', requireAdmin, upload.single('file'), async (req, res) => {
   const {
     title,
+    materialType,
     category,
     subject,
     description,
@@ -857,69 +1003,131 @@ router.post('/materials', requireAdmin, upload.single('file'), async (req, res) 
     semesterId,
     accessType,
     status,
-    isCommon,
-    collegeId,
-    courseId,
-    yearId
+    isCommon
   } = req.body;
-  if (!title || !category || !subject) {
-    return res.status(400).json({ error: 'title, category, subject are required' });
-  }
 
-  let fileUrl = null;
-  if (req.file) {
-    try {
-      const stored = await saveUploadedFile({
-        file: req.file,
-        folder: 'admin-uploads/materials',
-        prefix: 'material'
-      });
-      fileUrl = stored.url;
-    } catch (error) {
-      if (error?.code === 'INVALID_UPLOAD_FILE' || error?.statusCode === 400) {
-        return res.status(400).json({ error: error.message || 'Invalid file upload' });
-      }
-      return res.status(502).json({ error: 'Failed to upload material file' });
-    }
-  }
+  // 1. Validation
+  const trimmedTitle = String(title || '').trim();
+  const trimmedType = String(materialType || category || '').trim();
+  const trimmedSubject = String(subject || '').trim();
+  const parsedCategoryId = categoryId ? Number(categoryId) : null;
+  const parsedBranchId = branchId ? Number(branchId) : null;
+  const parsedSemesterId = semesterId ? Number(semesterId) : null;
   const parsedIsCommon = String(isCommon || '').toLowerCase() === 'true' || String(isCommon || '').toLowerCase() === 'on';
-  const { rows } = await pool.query(
-    `INSERT INTO materials (
-      title, category, subject, description, file_url, uploaded_by,
-      category_id, branch_id, semester_id, access_type, status, is_common, college_id, course_id, year_id
-     )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-     RETURNING id, title, category, subject, file_url, category_id, branch_id, semester_id, created_at`,
-    [
-      title,
-      category,
-      subject,
-      description,
-      fileUrl,
-      req.session.userId,
-      categoryId ? Number(categoryId) : null,
-      branchId ? Number(branchId) : null,
-      semesterId ? Number(semesterId) : null,
-      accessType || 'free',
-      status || 'published',
-      parsedIsCommon,
-      collegeId ? Number(collegeId) : null,
-      courseId ? Number(courseId) : null,
-      yearId ? Number(yearId) : null
-    ]
-  );
 
-  publishRealtimeEvent('content_changed', { contentType: 'materials', action: 'created', contentId: rows[0]?.id || null });
-  res.status(201).json({ material: rows[0] });
+  if (!trimmedTitle) {
+    return res.status(400).json({ error: 'Title is required' });
+  }
+  if (!trimmedType) {
+    return res.status(400).json({ error: 'Material Type is required' });
+  }
+  if (!trimmedSubject) {
+    return res.status(400).json({ error: 'Subject is required' });
+  }
+  if (!parsedCategoryId) {
+    return res.status(400).json({ error: 'Academic Category is required' });
+  }
+
+  // File validation
+  if (!req.file) {
+    return res.status(400).json({ error: 'PDF File is required' });
+  }
+
+  const isPdfFile = req.file.mimetype === 'application/pdf' ||
+    String(req.file.originalname || '').toLowerCase().endsWith('.pdf') ||
+    (req.file.buffer && req.file.buffer.length >= 4 && req.file.buffer.subarray(0, 4).toString('ascii') === '%PDF');
+
+  if (!isPdfFile) {
+    return res.status(400).json({ error: 'Only PDF files are supported for Study Materials' });
+  }
+
+  if (!req.file.buffer || req.file.buffer.length === 0) {
+    return res.status(400).json({ error: 'Uploaded file is empty' });
+  }
+
+  // Retrieve Category Name for text category column
+  let categoryName = trimmedType;
+  try {
+    const catRes = await pool.query('SELECT name FROM academic_categories WHERE id = $1', [parsedCategoryId]);
+    if (catRes.rows.length > 0) {
+      categoryName = catRes.rows[0].name;
+    }
+  } catch (_e) {}
+
+  // 2. Upload file to Supabase Storage
+  let stored = null;
+  try {
+    stored = await saveUploadedFile({
+      file: req.file,
+      folder: 'admin-uploads/materials',
+      prefix: 'material',
+      uploadedBy: req.session.userId,
+      entityType: 'material'
+    });
+  } catch (error) {
+    console.error('[Admin Materials Upload] Supabase storage error:', error);
+    if (error?.code === 'INVALID_UPLOAD_FILE' || error?.statusCode === 400) {
+      return res.status(400).json({ error: error.message || 'Invalid file upload' });
+    }
+    return res.status(502).json({ error: 'Failed to upload material file to Supabase Storage: ' + (error?.message || 'Storage error') });
+  }
+
+  const fileUrl = stored?.url || null;
+  if (!fileUrl) {
+    return res.status(500).json({ error: 'Storage provider failed to generate file URL' });
+  }
+
+  // 3. PostgreSQL Database Insert with Rollback on Error
+  try {
+    const scopeType = parsedIsCommon ? 'GLOBAL' : (parsedBranchId ? 'BRANCH' : 'GLOBAL');
+    const { rows } = await pool.query(
+      `INSERT INTO materials (
+        title, material_type, category, subject, description, file_url, uploaded_by,
+        category_id, branch_id, semester_id, access_type, status, is_common, scope_type, source_type, approval_status
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'admin_upload', 'published')
+       RETURNING id, title, material_type, category, subject, description, file_url, category_id, branch_id, semester_id, access_type, status, is_common, created_at`,
+      [
+        trimmedTitle,
+        trimmedType,
+        categoryName,
+        trimmedSubject,
+        String(description || '').trim() || null,
+        fileUrl,
+        req.session.userId,
+        parsedCategoryId,
+        parsedBranchId,
+        parsedSemesterId,
+        accessType || 'free',
+        status || 'published',
+        parsedIsCommon,
+        scopeType
+      ]
+    );
+
+    publishRealtimeEvent('content_changed', { contentType: 'materials', action: 'created', contentId: rows[0]?.id || null });
+    return res.status(201).json({ success: true, material: rows[0] });
+  } catch (dbError) {
+    console.error('[Admin Materials DB Insert Error] Rolling back Supabase storage file:', dbError);
+    // SAFE ROLLBACK: Remove uploaded object if database insertion fails
+    const fileMatch = String(fileUrl || '').match(/\/api\/files\/(\d+)/);
+    if (fileMatch) {
+      await deleteUploadedFileById(fileMatch[1]).catch((e) => console.warn('Rollback delete file error:', e));
+    }
+    return res.status(500).json({ error: 'Database save failed: ' + dbError.message });
+  }
 });
 
 router.delete('/materials/:id', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ error: 'Invalid material ID' });
+  }
   const existing = await pool.query('SELECT file_url FROM materials WHERE id = $1', [id]);
-  const { rowCount } = await pool.query('DELETE FROM materials WHERE id = $1', [id]);
+  const { rowCount } = await pool.query('UPDATE materials SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1', [id]);
   if (rowCount === 0) return res.status(404).json({ error: 'Material not found' });
   const fileMatch = String(existing.rows[0]?.file_url || '').match(/\/api\/files\/(\d+)/);
-  if (fileMatch) await deleteUploadedFileById(fileMatch[1]);
+  if (fileMatch) await deleteUploadedFileById(fileMatch[1]).catch(() => {});
   publishRealtimeEvent('content_changed', { contentType: 'materials', action: 'deleted', contentId: id });
   res.json({ message: 'Material deleted successfully' });
 });

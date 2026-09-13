@@ -236,9 +236,23 @@ async function saveUploadedFile({
   });
 }
 
+async function rollbackUpload(uploadResult) {
+  if (!uploadResult || !uploadResult.storage_path) return;
+  try {
+    const { deleteFileFromSupabase } = require('./supabaseStorage');
+    await deleteFileFromSupabase({
+      bucket: uploadResult.bucket,
+      path: uploadResult.storage_path
+    });
+  } catch (err) {
+    console.warn('[UploadService] Rollback upload failed:', err.message);
+  }
+}
+
 module.exports = {
   createUploadMiddleware,
   saveUploadedFile,
+  rollbackUpload,
   getStorageProvider,
   createSafeFileName,
   assertValidUploadBuffer,

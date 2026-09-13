@@ -15,7 +15,7 @@ const DEFAULT_ABOUT_CONFIG = {
     ctaLabel: 'Get Started Free',
     ctaHref: 'login.html?mode=signup',
     highlightStats: [
-      { value: '10,000+', label: 'Students Enrolled' },
+      { value: 'Active', label: 'Learners Community' },
       { value: '500+', label: 'Study Resources' },
       { value: '98%', label: 'Student Satisfaction' },
       { value: '24/7', label: 'AI-Powered Support' }
@@ -73,9 +73,8 @@ const DEFAULT_CONTACT_CONFIG = {
     description: 'Have a question, feedback, or need support? We\'re here to help. Pick the right channel and we\'ll get back to you fast.'
   },
   channels: [
-    { icon: 'fa-envelope', label: 'Email Support', value: 'support@collegeos.in', href: 'mailto:support@collegeos.in', description: 'Best for billing, account, or detailed queries. We reply within 24 hours.' },
-    { icon: 'fa-brands fa-whatsapp', label: 'WhatsApp', value: '+91 90000 00000', href: 'https://wa.me/919000000000', description: 'Quick questions and real-time help. Available 9 AM – 9 PM IST.' },
-    { icon: 'fa-phone', label: 'Phone', value: '+91 90000 00000', href: 'tel:+919000000000', description: 'Call us during business hours for urgent issues.' }
+    { icon: 'fa-envelope', label: 'Email Support', value: 'support@collegeo.in', href: 'mailto:support@collegeo.in', description: 'Best for billing, account, or detailed queries. We reply within 24 hours.' },
+    { icon: 'fa-comments', label: 'Support Desk', value: 'Online Support Request', href: '/forms', description: 'Submit product feedback or open a support ticket directly from your account.' }
   ],
   hours: {
     visible: true,

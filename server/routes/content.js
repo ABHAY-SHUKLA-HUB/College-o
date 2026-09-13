@@ -6,35 +6,82 @@ const { resolveMembershipState } = require('../middleware/auth');
 
 const router = express.Router();
 
+const { resolveStudentAcademicScope, applyAcademicScopeToQuery } = require('../utils/academic-scope');
+
 router.get('/previous-papers', requireAuth, async (req, res) => {
-  const user = await pool.query('SELECT college_name FROM users WHERE id = $1', [req.session.userId]);
-  const profile = await pool.query(
-    `SELECT category_id, branch_id, semester_id, college_id, course_id, year_id FROM user_profiles WHERE user_id = $1`,
-    [req.session.userId]
-  );
-  const userCollege = user.rows[0]?.college_name;
-  const membership = await resolveMembershipState(req.session.userId);
-  if (!membership?.isAdmin && !membership?.premiumActive) {
-    return res.status(403).json({ error: 'Upgrade to Premium (Rs.49/month) to access papers.', code: 'UPGRADE_REQUIRED' });
+  const userId = req.session.userId;
+  const role = String(req.session.role || '').toLowerCase();
+  const isAdmin = role === 'admin' || role === 'super_admin';
+  const membership = await resolveMembershipState(userId);
+  const isPremium = Boolean(membership?.isAdmin || membership?.premiumActive);
+
+  const { college, search, categoryId, branchId, semesterId } = req.query;
+
+  const params = [];
+  const clauses = [
+    "COALESCE(pp.status, 'published') = 'published'",
+    "pp.deleted_at IS NULL"
+  ];
+
+  if (!isAdmin) {
+    const studentScope = await resolveStudentAcademicScope(userId);
+    if (!studentScope || !studentScope.profileComplete) {
+      return res.status(403).json({
+        error: 'ACADEMIC_PROFILE_REQUIRED',
+        message: 'Please complete your academic profile setup before accessing previous papers.'
+      });
+    }
+
+    const { sqlClause, params: scopeParams } = applyAcademicScopeToQuery(studentScope, {
+      alias: 'pp',
+      startIndex: params.length + 1,
+      legacySupport: true
+    });
+    params.push(...scopeParams);
+    clauses.push(sqlClause);
   }
 
-  const requestedCollege = req.query.college || userCollege;
-  const scope = buildAcademicScopeClauses(profile.rows[0], '');
-  const params = [...scope.params];
-  const clauses = [`COALESCE(status, 'published') = 'published'`, ...scope.clauses];
-  if (requestedCollege) {
-    params.push(requestedCollege);
-    clauses.push(`(college_name = $${params.length} OR college_name IS NULL)`);
+  if (categoryId) {
+    params.push(Number(categoryId));
+    clauses.push(`pp.category_id = $${params.length}`);
+  }
+
+  if (branchId) {
+    params.push(Number(branchId));
+    clauses.push(`(pp.branch_id = $${params.length} OR pp.is_common = TRUE)`);
+  }
+
+  if (semesterId) {
+    params.push(Number(semesterId));
+    clauses.push(`(pp.semester_id = $${params.length} OR pp.semester_id IS NULL)`);
+  }
+
+  if (college) {
+    params.push(college);
+    clauses.push(`(pp.college_name = $${params.length} OR pp.college_name IS NULL)`);
+  }
+
+  if (search) {
+    params.push(`%${search}%`);
+    clauses.push(`(LOWER(pp.subject) LIKE $${params.length} OR LOWER(pp.exam_name) LIKE $${params.length})`);
   }
 
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
   const { rows } = await pool.query(
-    `SELECT id, subject, exam_name, year, paper_url, summary_note_url, college_name, category_id, branch_id, semester_id, college_id, course_id, year_id, status, is_common
-     FROM previous_papers ${where}
-     ORDER BY year DESC`,
+    `SELECT
+      pp.id, pp.subject, pp.exam_name, pp.year, pp.paper_url, pp.summary_note_url,
+      pp.college_name, pp.category_id, pp.branch_id, pp.semester_id, pp.status, pp.is_common, pp.access_type,
+      ac.name AS category_name, ab.name AS branch_name, asem.label AS semester_label
+     FROM previous_papers pp
+     LEFT JOIN academic_categories ac ON ac.id = pp.category_id
+     LEFT JOIN academic_branches ab ON ab.id = pp.branch_id
+     LEFT JOIN academic_semesters asem ON asem.id = pp.semester_id
+     ${where}
+     ORDER BY pp.year DESC, pp.created_at DESC`,
     params
   );
-  res.json({ papers: rows });
+
+  res.json({ papers: rows, isPremium });
 });
 
 router.get('/daily-challenges/today', async (_req, res) => {

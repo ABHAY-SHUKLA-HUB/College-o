@@ -4,9 +4,11 @@ const { pool } = require('../db/pool');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { resolveMembershipState } = require('../middleware/auth');
 
+const { requireFeatureEnabled } = require('../middleware/featureToggle');
+
 const router = express.Router();
 
-router.get('/mine', requireAuth, async (req, res) => {
+router.get('/mine', requireAuth, requireFeatureEnabled('certificates'), async (req, res) => {
   const membership = await resolveMembershipState(req.session.userId);
   if (!membership?.isAdmin && !membership?.premiumActive) {
     return res.status(403).json({

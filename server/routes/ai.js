@@ -18,7 +18,10 @@ const {
 const { getAiGatewayAnalytics } = require('../ai/analytics/analyticsService');
 const { generateAiToolResponse } = require('../ai/services/gatewayService');
 
+const { requireFeatureEnabled } = require('../middleware/featureToggle');
+
 const router = express.Router();
+router.use(requireFeatureEnabled('ai_tools'));
 
 router.use(async (_req, _res, next) => {
   try {

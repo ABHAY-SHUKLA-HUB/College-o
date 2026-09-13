@@ -10,10 +10,11 @@ const {
   getSupportGovernanceConfig,
   isUserSupportSuspended
 } = require('../utils/supportGovernance');
+const { requireFeatureEnabled } = require('../middleware/featureToggle');
 
 const router = express.Router();
 
-router.use(requireAuth, guardSupportFeature);
+router.use(requireAuth, requireFeatureEnabled('support'), guardSupportFeature);
 
 async function getUserAcademicContext(userId) {
   const { rows } = await pool.query(

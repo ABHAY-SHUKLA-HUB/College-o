@@ -93,6 +93,52 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  window.openProtectedNoteViewer = function(noteId, encodedSubject) {
+    const subject = decodeURIComponent(encodedSubject || 'Academic Note');
+    const modal = document.getElementById('pdfViewerModal');
+    const titleEl = document.getElementById('pdfViewerTitle');
+    const iframe = document.getElementById('pdfViewerFrame');
+
+    if (titleEl) titleEl.textContent = subject;
+    if (iframe) {
+      iframe.src = `/api/academics/content/notes/${noteId}/view#toolbar=0&navpanes=0&scrollbar=1`;
+    }
+    if (modal) {
+      modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+  };
+
+  window.closeProtectedNoteViewer = function() {
+    const modal = document.getElementById('pdfViewerModal');
+    const iframe = document.getElementById('pdfViewerFrame');
+    if (iframe) iframe.src = 'about:blank';
+    if (modal) {
+      modal.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+  };
+
+  document.getElementById('closePdfViewerBtn')?.addEventListener('click', window.closeProtectedNoteViewer);
+
+  window.addEventListener('contextmenu', (e) => {
+    const modal = document.getElementById('pdfViewerModal');
+    if (modal && modal.style.display === 'flex') {
+      e.preventDefault();
+    }
+  });
+
+  window.addEventListener('keydown', (e) => {
+    const modal = document.getElementById('pdfViewerModal');
+    if (modal && modal.style.display === 'flex') {
+      if (e.key === 'Escape') window.closeProtectedNoteViewer();
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'p' || e.key === 'S' || e.key === 'P')) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }
+  });
+
   function parseSentences(input) {
     return String(input || '')
       .replace(/\s+/g, ' ')
@@ -123,8 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function getAiSourceText() {
-    const source = aiSourceInput?.value?.trim() || document.getElementById('chapterInput')?.value?.trim() || '';
-    return source;
+    return aiSourceInput?.value?.trim() || document.getElementById('chapterInput')?.value?.trim() || '';
   }
 
   function ensureSource() {
@@ -313,7 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderNotes(notes) {
     if (!notesFeed) return;
     if (!notes.length) {
-      notesFeed.innerHTML = '<div class="empty-state">No notes found for selected filters.</div>';
+      notesFeed.innerHTML = '<div class="empty-state">No published notes found for selected filters.</div>';
       return;
     }
 
@@ -321,22 +366,29 @@ document.addEventListener('DOMContentLoaded', () => {
       .map((n) => {
         const level = (n.difficulty || 'medium').toLowerCase();
         const format = n.format_type || 'general';
+        const safeSubject = encodeURIComponent(n.subject || 'Academic Note');
         const pdfAction = n.pdf_url
-          ? `<a class="btn secondary" href="${n.pdf_url}" target="_blank" rel="noopener" data-note-pdf-id="${n.id}" data-note-subject="${(n.subject || '').replace(/"/g, '&quot;')}">Open PDF</a>`
+          ? `<button class="btn primary sm" onclick="openProtectedNoteViewer('${n.id}', '${safeSubject}')"><i class="fa-solid fa-book-open"></i> Read Note</button>`
           : '<span class="pill">Text Note</span>';
+
+        const categoryBadge = n.category_name ? `<span class="pill" style="background:#e0f2fe; color:#0369a1;"><i class="fa-solid fa-layer-group"></i> ${n.category_name}</span>` : '';
+        const branchBadge = n.branch_name ? `<span class="pill" style="background:#f1f5f9; color:#334155;"><i class="fa-solid fa-graduation-cap"></i> ${n.branch_name}</span>` : (n.is_common ? '<span class="pill" style="background:#e0f2fe; color:#0284c7;">Common</span>' : '');
+        const semBadge = n.semester_label ? `<span class="pill" style="background:#f1f5f9; color:#475569;"><i class="fa-solid fa-calendar"></i> ${n.semester_label}</span>` : '';
 
         return `
           <article class="resource-card notes-card ${level}">
-            <h3>${n.subject} - ${n.chapter}</h3>
-            <div class="resource-meta">
-              <span class="pill">${n.college_name || 'All Colleges'}</span>
+            <h3 style="margin-bottom:6px;">${n.subject} - ${n.chapter}</h3>
+            <div class="resource-meta" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;">
+              ${categoryBadge}
+              ${branchBadge}
+              ${semBadge}
               <span class="pill">${format}</span>
               <span class="pill">${level}</span>
             </div>
-            <p class="muted">${(n.content || '').slice(0, 170)}${(n.content || '').length > 170 ? '...' : ''}</p>
+            <p class="muted" style="margin-bottom:12px;">${(n.content || '').slice(0, 170)}${(n.content || '').length > 170 ? '...' : ''}</p>
             <div class="actions">
               ${pdfAction}
-              <button class="btn primary" data-note-id="${n.id}">Bookmark</button>
+              <button class="btn secondary sm" data-note-id="${n.id}"><i class="fa-solid fa-bookmark"></i> Bookmark</button>
             </div>
           </article>
         `;
@@ -348,15 +400,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setStatus(`Bookmarked note #${button.dataset.noteId}`);
         emitNotesEvent('note_bookmarked', {
           noteId: Number(button.dataset.noteId) || null
-        });
-      });
-    });
-
-    notesFeed.querySelectorAll('[data-note-pdf-id]').forEach((link) => {
-      link.addEventListener('click', () => {
-        emitNotesEvent('note_pdf_opened', {
-          noteId: Number(link.dataset.notePdfId) || null,
-          subject: link.dataset.noteSubject || null
         });
       });
     });
@@ -445,11 +488,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function loadNotesFeed() {
-    if (!window.CollegeOSApi) return;
+    if (!window.CollegeOSApiClient) return;
     const query = {
       search: search?.value?.trim() || '',
       format: formatFilter?.value || '',
       college: collegeFilter?.value || '',
+      categoryId: categoryFilter?.value || '',
       branchId: branchFilter?.value || '',
       semesterId: semesterFilter?.value || ''
     };
@@ -460,18 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
         .join('&');
 
-      const response = await fetch(`/api/notes${queryString ? `?${queryString}` : ''}`, { credentials: 'include' });
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (data.code === 'UPGRADE_REQUIRED') {
-          hasPremiumAccess = false;
-          notesFeed.innerHTML = '<div class="empty-state"><h3>Premium Required</h3><p>Notes are locked for Free plan.</p><a class="btn warn" href="pricing.html">Upgrade to Premium (Rs.49/month)</a></div>';
-          setStatus(data.error || 'Premium required');
-          return;
-        }
-        throw new Error(data.error || 'Failed to load notes');
-      }
+      const data = await window.CollegeOSApiClient.request(`/api/notes${queryString ? `?${queryString}` : ''}`);
 
       hasPremiumAccess = true;
       renderNotes(data.notes || []);
@@ -485,7 +518,13 @@ document.addEventListener('DOMContentLoaded', () => {
         semesterId: query.semesterId || null
       });
     } catch (error) {
-      notesFeed.innerHTML = `<div class="empty-state">${error.message}</div>`;
+      if (error.code === 'UPGRADE_REQUIRED') {
+        hasPremiumAccess = false;
+        notesFeed.innerHTML = '<div class="empty-state"><h3>Premium Required</h3><p>Notes are locked for Free plan.</p><a class="btn warn" href="pricing.html">Upgrade to Premium (Rs.49/month)</a></div>';
+        setStatus(error.message || 'Premium required');
+        return;
+      }
+      notesFeed.innerHTML = `<div class="empty-state">${error.message || 'Failed to load notes'}</div>`;
     }
   }
 
@@ -528,10 +567,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (source && aiSourceInput && !aiSourceInput.value.trim()) {
       aiSourceInput.value = source;
     }
-  });
-
-  document.getElementById('downloadNotesBtn')?.addEventListener('click', () => {
-    window.print();
   });
 
   const triggerRefresh = () => loadNotesFeed();

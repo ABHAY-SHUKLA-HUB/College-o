@@ -24,7 +24,10 @@ const {
   toNumber
 } = require('../services/academicContributions');
 
+const { requireFeatureEnabled } = require('../middleware/featureToggle');
+
 const router = express.Router();
+router.use(requireFeatureEnabled('contributions'));
 
 const SUBJECT_ALIASES = {
   dbms: ['database', 'database management system', 'dbms'],
@@ -2047,6 +2050,173 @@ router.post('/:id/download', requireAuth, async (req, res, next) => {
       resource: result.rows[0],
       downloadUrl: result.rows[0].file_url
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// STUDENT CONTRIBUTION ENDPOINTS
+router.post('/', requireAuth, async (req, res, next) => {
+  try {
+    const userId = req.session.userId;
+    const collegeContext = await getUserCollegeContext(userId);
+    const collegeName = collegeContext?.collegeName || 'General College';
+
+    const {
+      title,
+      resourceType,
+      subjectName,
+      branchId,
+      semesterId,
+      subjectId,
+      examType,
+      examSession,
+      description,
+      tags,
+      fileUrl,
+      fileName,
+      fileSizeBytes
+    } = req.body;
+
+    if (!title || !resourceType || !fileUrl) {
+      return res.status(400).json({ error: 'Title, resourceType, and fileUrl are required' });
+    }
+
+    const { sanitizeText } = require('../utils/communitySanitizer');
+    const safeTitle = sanitizeText(title, 220);
+    const safeTitleNorm = normalizeTitle(safeTitle);
+    const safeDesc = sanitizeText(description || '', 2000);
+    const safeSubjectName = sanitizeText(subjectName || 'General', 180);
+    const safeResourceType = isAllowedResourceType(resourceType) ? String(resourceType).toLowerCase() : 'other';
+    const safeTags = toSafeTags(tags);
+    const safeExamSession = normalizeExamSession(examSession);
+
+    const qualityScore = computeQualityScore({
+      title: safeTitle,
+      description: safeDesc,
+      tags: safeTags,
+      subjectName: safeSubjectName,
+      fileSizeBytes: Number(fileSizeBytes || 0)
+    });
+
+    const { rows } = await pool.query(
+      `INSERT INTO academic_contributions (
+        user_id, college_name, title, title_normalized, resource_type,
+        branch_id, semester_id, subject_id, subject_name,
+        exam_type, exam_session, description, tags_json,
+        file_url, file_name, file_size_bytes, status, quality_score, created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5,
+        $6, $7, $8, $9,
+        $10, $11, $12, $13::jsonb,
+        $14, $15, $16, 'pending', $17, NOW(), NOW()
+      )
+      RETURNING *`,
+      [
+        userId,
+        collegeName,
+        safeTitle,
+        safeTitleNorm,
+        safeResourceType,
+        branchId ? Number(branchId) : null,
+        semesterId ? Number(semesterId) : null,
+        subjectId ? Number(subjectId) : null,
+        safeSubjectName,
+        examType || null,
+        safeExamSession,
+        safeDesc,
+        JSON.stringify(safeTags),
+        fileUrl,
+        fileName || 'attachment.pdf',
+        Number(fileSizeBytes || 0),
+        qualityScore
+      ]
+    );
+
+    return res.status(201).json({
+      message: 'Contribution submitted successfully and is pending review.',
+      contribution: rows[0]
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/mine', requireAuth, async (req, res, next) => {
+  try {
+    const userId = req.session.userId;
+    const { rows } = await pool.query(
+      `SELECT * FROM academic_contributions
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 100`,
+      [userId]
+    );
+    res.json({ contributions: rows });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/:id', requireAuth, async (req, res, next) => {
+  try {
+    const id = toNumber(req.params.id);
+    if (!id) return res.status(400).json({ error: 'Invalid contribution id' });
+
+    const isAdmin = req.session.role === 'admin' || req.session.role === 'super_admin';
+    const { rows } = await pool.query(
+      `SELECT c.*, u.full_name AS contributor_name, u.email AS contributor_email
+       FROM academic_contributions c
+       JOIN users u ON u.id = c.user_id
+       WHERE c.id = $1`,
+      [id]
+    );
+
+    const contribution = rows[0];
+    if (!contribution) return res.status(404).json({ error: 'Contribution not found' });
+
+    if (contribution.status !== 'approved' && !isAdmin && Number(contribution.user_id) !== Number(req.session.userId)) {
+      return res.status(404).json({ error: 'Contribution not found' });
+    }
+
+    res.json({ contribution });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.put('/:id', requireAuth, async (req, res, next) => {
+  try {
+    const id = toNumber(req.params.id);
+    if (!id) return res.status(400).json({ error: 'Invalid contribution id' });
+
+    const existing = await pool.query('SELECT * FROM academic_contributions WHERE id = $1', [id]);
+    const contribution = existing.rows[0];
+    if (!contribution) return res.status(404).json({ error: 'Contribution not found' });
+
+    const isAdmin = req.session.role === 'admin' || req.session.role === 'super_admin';
+    if (Number(contribution.user_id) !== Number(req.session.userId) && !isAdmin) {
+      return res.status(403).json({ error: 'Not authorized to edit this contribution' });
+    }
+
+    const { sanitizeText } = require('../utils/communitySanitizer');
+    const title = req.body.title ? sanitizeText(req.body.title, 220) : contribution.title;
+    const description = req.body.description ? sanitizeText(req.body.description, 2000) : contribution.description;
+    const subjectName = req.body.subjectName ? sanitizeText(req.body.subjectName, 180) : contribution.subject_name;
+
+    const { rows } = await pool.query(
+      `UPDATE academic_contributions
+       SET title = $1,
+           title_normalized = $2,
+           description = $3,
+           subject_name = $4,
+           updated_at = NOW()
+       WHERE id = $5
+       RETURNING *`,
+      [title, normalizeTitle(title), description, subjectName, id]
+    );
+
+    res.json({ message: 'Contribution updated successfully', contribution: rows[0] });
   } catch (error) {
     next(error);
   }

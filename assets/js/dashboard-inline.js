@@ -471,6 +471,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       window[cacheKey] = { ts: Date.now(), personalizedPayload, experiencePayload };
     }
 
+    if (personalizedPayload) {
+      if (personalizedPayload.stats) {
+        window._cachedStats = { data: personalizedPayload.stats, ts: Date.now() };
+      }
+      if (personalizedPayload.membership) {
+        window._cachedSubscription = { data: personalizedPayload.membership, ts: Date.now() };
+      }
+    }
+
     let profilePayload = null;
     let academicPayload = null;
     let statsPayload = {};

@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const { RtcTokenBuilder, RtcRole } = require('agora-access-token');
 const { pool } = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
+const { requireFeatureEnabled } = require('../middleware/featureToggle');
 const { createNotification } = require('../services/campusFeedService');
 const {
   asyncHandler,
@@ -560,7 +561,7 @@ async function ensureSeeded() {
 
 async function getUserContext(userId) {
   const { rows } = await pool.query(
-    'SELECT id, role, email, full_name, uid, admin_role FROM users WHERE id = $1 LIMIT 1',
+    'SELECT id, role, email, full_name, uid, admin_role, is_suspended, is_blocked FROM users WHERE id = $1 LIMIT 1',
     [userId]
   );
   return rows[0] || null;
@@ -1332,8 +1333,9 @@ router.post('/create', requireAuth, asyncHandler(async (req, res) => {
   publishLiveSessionEvent('created', row, { actorId: actor?.id || null });
 }));
 
-router.get('/upcoming', requireAuth, asyncHandler(async (req, res) => {
+router.get('/upcoming', requireAuth, requireFeatureEnabled('live_sessions'), asyncHandler(async (req, res) => {
   const viewer = await getUserContext(req.session.userId);
+  if (viewer?.is_suspended || viewer?.is_blocked) throw new ForbiddenError('Account is suspended.');
   const includeEnded = String(req.query?.includeEnded || 'true').toLowerCase() !== 'false';
   const scope = String(req.query?.scope || 'student');
   const sessions = await fetchSessionList(viewer, { includeEnded, scope, serialize: false });
@@ -1344,7 +1346,7 @@ router.get('/upcoming', requireAuth, asyncHandler(async (req, res) => {
   });
 }));
 
-router.get('/stream', requireAuth, asyncHandler(async (req, res) => {
+router.get('/stream', requireAuth, requireFeatureEnabled('live_sessions'), asyncHandler(async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
@@ -1373,8 +1375,9 @@ router.get('/stream', requireAuth, asyncHandler(async (req, res) => {
   });
 }));
 
-router.get('/:id', requireAuth, asyncHandler(async (req, res) => {
+router.get('/:id', requireAuth, requireFeatureEnabled('live_sessions'), asyncHandler(async (req, res) => {
   const viewer = await getUserContext(req.session.userId);
+  if (viewer?.is_suspended || viewer?.is_blocked) throw new ForbiddenError('Account is suspended.');
   const row = await getSessionRecord(req.params.id);
   if (!row) throw new NotFoundError('Live session');
   if (!assertRoleCanManage(viewer, row) && normalizeLower(viewer?.role) !== 'student') {
@@ -1526,8 +1529,9 @@ router.post('/:id/unlock-host', requireAuth, asyncHandler(async (req, res) => {
   });
 }));
 
-router.post('/:id/join', requireAuth, asyncHandler(async (req, res) => {
+router.post('/:id/join', requireAuth, requireFeatureEnabled('live_sessions'), asyncHandler(async (req, res) => {
   const viewer = await getUserContext(req.session.userId);
+  if (viewer?.is_suspended || viewer?.is_blocked) throw new ForbiddenError('Account is suspended.');
   const row = await getEffectiveRow(req.params.id);
   const status = deriveStatus(row);
   console.info('[Live Session] join attempt', { sessionId: row.session_id, actorUserId: viewer?.id || null, actorRole: viewer?.role || null, status });
@@ -1574,6 +1578,11 @@ router.post('/:id/join', requireAuth, asyncHandler(async (req, res) => {
     chatMessages: await fetchSessionMessages(refreshedRow || row, 25),
     canJoin: true
   });
+}));
+
+router.get('/:id/join', requireAuth, requireFeatureEnabled('live_sessions'), asyncHandler(async (req, res, next) => {
+  const handler = router.stack.find((l) => l.route && l.route.path === '/:id/join' && l.route.methods.post).route.stack[2].handle;
+  return handler(req, res, next);
 }));
 
 router.post('/:id/leave', requireAuth, asyncHandler(async (req, res) => {

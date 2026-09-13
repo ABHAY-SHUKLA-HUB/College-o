@@ -115,6 +115,7 @@ function getRateRecord(key) {
 
 function enforceRateLimit(req, res, scope, maxAttempts = 20, blockMs = 10 * 60 * 1000) {
   const now = Date.now();
+  const effectiveMaxAttempts = IS_DEV ? Math.max(maxAttempts, 1000) : maxAttempts;
   const key = `${scope}:${getRequesterIp(req)}`;
   const record = getRateRecord(key);
 
@@ -134,7 +135,7 @@ function enforceRateLimit(req, res, scope, maxAttempts = 20, blockMs = 10 * 60 *
   }
 
   record.count += 1;
-  if (record.count > maxAttempts) {
+  if (record.count > effectiveMaxAttempts) {
     record.blockedUntil = now + blockMs;
     const retryAfter = Math.ceil(blockMs / 1000);
     console.warn('[RATE_LIMIT] blocked', {
@@ -192,118 +193,21 @@ async function requirePublicSecurityCheck(req, res) {
     return false;
   }
 
-  const turnstileToken = extractTurnstileToken(req.body || {});
+  const body = req.body || {};
+  const turnstileToken = extractTurnstileToken(body);
   const verification = await verifyTurnstileToken(turnstileToken, getRequesterIp(req));
+
   if (!verification.ok) {
     const message = verification.message || 'Security verification failed. Please try again.';
-    if (/expired/i.test(message)) {
-      rejectSecurityFailure(res, 'Security check expired. Please verify again.', 400, verification.code || 'TURNSTILE_EXPIRED');
+    if (/expired/i.test(message) || verification.code === 'TURNSTILE_EXPIRED') {
+      rejectSecurityFailure(res, 'Security check expired. Please verify again.', 400, 'TURNSTILE_EXPIRED');
       return false;
     }
-    rejectSecurityFailure(res, message, 503, verification.code || 'SECURITY_CHECK_FAILED');
+    rejectSecurityFailure(res, message, 400, verification.code || 'SECURITY_CHECK_FAILED');
     return false;
   }
 
   return true;
-}
-
-function buildCaptchaChallenge(_req) {
-  // Do NOT include requester IP in the signed payload. Signing IP caused
-  // brittle verification failures when proxies/multiple XFF entries changed
-  // the apparent client IP between requests. Using nonce+expires is sufficient
-  // to prevent trivial replay while keeping verification reliable.
-  const a = randomInt(1, 10);
-  const b = randomInt(1, 10);
-  const expiresAt = Date.now() + CAPTCHA_TTL_MS;
-  const nonce = crypto.randomBytes(12).toString('hex');
-  const payload = `${a}:${b}:${expiresAt}:${nonce}`;
-  const signature = crypto.createHmac('sha256', CAPTCHA_SECRET).update(payload).digest('hex');
-  return {
-    id: nonce,
-    question: `${a} + ${b} = ?`,
-    challengeText: `${a} + ${b} = ?`,
-    prompt: `${a} + ${b} = ?`,
-    captchaText: `${a} + ${b} = ?`,
-    a,
-    b,
-    expiresAt,
-    nonce,
-    signature
-  };
-}
-
-function verifyCaptchaPayload(req, captcha) {
-  // CRITICAL: Reject missing captcha (fail-closed, not fail-open)
-  if (!captcha || typeof captcha !== 'object') {
-    if (process.env.NODE_ENV !== 'production' && CAPTCHA_DEV_BYPASS) {
-      console.warn('[auth:captcha] dev bypass enabled - missing captcha accepted');
-      return true;
-    }
-    console.warn('[auth:captcha] verification failed - missing captcha');
-    // Track failures per IP to throttle abusive clients
-    try {
-      const ip = getRequesterIp(req);
-      const rec = getRateRecord(`auth:captcha_fail:${ip}`);
-      rec.count += 1;
-      if (rec.count > 10) rec.blockedUntil = Date.now() + (15 * 60 * 1000);
-    } catch (e) { /* best-effort */ }
-    return false;
-  }
-
-  const answer = Number(captcha?.answer);
-  const a = Number(captcha?.a);
-  const b = Number(captcha?.b);
-  const expiresAt = Number(captcha?.expiresAt);
-  const nonce = String(captcha?.nonce || '');
-  const signature = String(captcha?.signature || '');
-
-  if (!Number.isInteger(answer) || !Number.isInteger(a) || !Number.isInteger(b) || !expiresAt || !nonce || !signature) {
-    console.warn('[auth:captcha] verification failed - malformed captcha payload', { ip: getRequesterIp(req) });
-    try {
-      const ip = getRequesterIp(req);
-      const rec = getRateRecord(`auth:captcha_fail:${ip}`);
-      rec.count += 1;
-      if (rec.count > 10) rec.blockedUntil = Date.now() + (15 * 60 * 1000);
-    } catch (e) { /* best-effort */ }
-    return false;
-  }
-
-  if (Date.now() > expiresAt) {
-    console.warn('[auth:captcha] verification failed - captcha expired', { ip: getRequesterIp(req), expiresAt });
-    return false;
-  }
-
-  try {
-    const payload = `${a}:${b}:${expiresAt}:${nonce}`;
-    const expected = crypto.createHmac('sha256', CAPTCHA_SECRET).update(payload).digest();
-    const provided = Buffer.from(signature, 'hex');
-    const ok = provided.length === expected.length && timingSafeEqual(provided, expected);
-    if (!ok) {
-      console.warn('[auth:captcha] verification failed - signature mismatch', { ip: getRequesterIp(req) });
-      try {
-        const ip = getRequesterIp(req);
-        const rec = getRateRecord(`auth:captcha_fail:${ip}`);
-        rec.count += 1;
-        if (rec.count > 10) rec.blockedUntil = Date.now() + (15 * 60 * 1000);
-      } catch (e) { /* best-effort */ }
-      return false;
-    }
-  } catch (err) {
-    console.warn('[auth:captcha] verification error', { err: err && err.message });
-    return false;
-  }
-
-  const correct = answer === a + b;
-  if (!correct) {
-    console.warn('[auth:captcha] verification failed - incorrect answer', { ip: getRequesterIp(req) });
-    try {
-      const ip = getRequesterIp(req);
-      const rec = getRateRecord(`auth:captcha_fail:${ip}`);
-      rec.count += 1;
-      if (rec.count > 10) rec.blockedUntil = Date.now() + (15 * 60 * 1000);
-    } catch (e) { /* best-effort */ }
-  }
-  return correct;
 }
 
 function hashOtpCode(target, code) {
@@ -581,6 +485,12 @@ async function resolveStudentLandingPath(db, userId) {
     return '/admin-dashboard';
   }
 
+  const { isStudentAcademicProfileComplete } = require('../utils/academic-scope');
+  const isComplete = await isStudentAcademicProfileComplete(userId);
+  if (!isComplete) {
+    return '/academic-onboarding';
+  }
+
   return '/dashboard';
 }
 
@@ -752,8 +662,8 @@ const DEFAULT_AUTH_EXPERIENCE_CONFIG = {
       'Privacy-first data handling'
     ],
     stats: {
-      value: '10k+',
-      label: 'active learners'
+      value: 'Active',
+      label: 'Learners Community'
     }
   },
   text: {
@@ -780,8 +690,8 @@ const DEFAULT_AUTH_EXPERIENCE_CONFIG = {
     googleClientSecretConfigured: Boolean(GOOGLE_CLIENT_SECRET)
   },
   support: {
-    email: 'support@collegeos.in',
-    whatsapp: '+919000000000',
+    email: 'support@collegeo.in',
+    whatsapp: '',
     helpText: 'Share your issue and our team will help you quickly.'
   },
   legal: {
@@ -956,8 +866,16 @@ async function ensureAuthSchema() {
   authSchemaEnsured = true;
 }
 
+let cachedAuthConfigPayload = null;
+let cachedAuthConfigExpiresAt = 0;
+
 router.get('/config', async (_req, res) => {
   try {
+    if (cachedAuthConfigPayload && Date.now() < cachedAuthConfigExpiresAt) {
+      setCacheHeaders(res, 300);
+      return res.json(cachedAuthConfigPayload);
+    }
+
     const [experienceResult, contactConfigResult] = await Promise.all([
       pool.query("SELECT value_json FROM platform_settings WHERE key = 'student_experience_config' LIMIT 1"),
       pool.query("SELECT value_json FROM platform_settings WHERE key = 'contact-us-config' LIMIT 1")
@@ -1000,67 +918,16 @@ router.get('/config', async (_req, res) => {
       authConfig.support.whatsapp = String(whatsappChannel.value);
     }
 
+    cachedAuthConfigPayload = { config: authConfig };
+    cachedAuthConfigExpiresAt = Date.now() + 60000;
     setCacheHeaders(res, 300);
-    return res.json({ config: authConfig });
+    return res.json(cachedAuthConfigPayload);
   } catch (error) {
     return res.status(500).json({ error: 'Failed to load authentication config' });
   }
 });
 
-router.get('/captcha/challenge', (req, res) => {
-  const startedAt = Date.now();
-  const requestId = crypto.randomBytes(8).toString('hex');
-  // CAPTCHA gets its own limiter so normal refreshes do not trip the login limiter.
-  const rateBlocked = enforceRateLimit(req, res, 'auth:captcha_challenge', 180, 60 * 1000);
-  if (rateBlocked) {
-    console.warn('[auth:captcha] challenge rate-limited', {
-      requestId,
-      ip: getRequesterIp(req),
-      path: req.path,
-      responseTimeMs: Date.now() - startedAt
-    });
-    return;
-  }
 
-  console.info('[auth:captcha] request received', {
-    requestId,
-    ip: getRequesterIp(req),
-    path: req.path,
-    origin: req.headers.origin || '',
-    userAgent: req.headers['user-agent'] || ''
-  });
-
-  res.setHeader('Cache-Control', CAPTCHA_CHALLENGE_CACHE_CONTROL);
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-  try {
-    const challenge = buildCaptchaChallenge(req);
-    res.json({
-      ok: true,
-      captchaId: challenge.id,
-      captcha: challenge,
-      question: challenge.question,
-      challenge: challenge.challengeText,
-      challengeText: challenge.challengeText,
-      prompt: challenge.prompt,
-      captchaText: challenge.captchaText,
-      expiresAt: challenge.expiresAt,
-      expiresInSeconds: Math.floor(CAPTCHA_TTL_MS / 1000)
-    });
-    console.info('[auth:captcha] captcha generated', {
-      requestId,
-      responseTimeMs: Date.now() - startedAt,
-      captchaId: challenge.id
-    });
-  } catch (error) {
-    console.warn('[auth:captcha] captcha failed', {
-      requestId,
-      responseTimeMs: Date.now() - startedAt,
-      reason: error?.message || String(error)
-    });
-    res.status(500).json({ ok: false, error: 'Captcha generation failed' });
-  }
-});
 
 router.get('/google', async (req, res) => {
   const rateBlocked = enforceRateLimit(req, res, 'auth:google_start', 20, 15 * 60 * 1000);
@@ -2066,5 +1933,4 @@ router.get('/me', async (req, res) => {
 });
 
 module.exports = router;
-module.exports.buildCaptchaChallenge = buildCaptchaChallenge;
 module.exports.ensureAuthSchema = ensureAuthSchema;

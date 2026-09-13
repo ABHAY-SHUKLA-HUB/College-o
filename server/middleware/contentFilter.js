@@ -37,11 +37,12 @@ async function getUserAcademicFilters(userId) {
   }
 }
 
-function buildAcademicScopeClauses(profile, alias = '') {
+function buildAcademicScopeClauses(profile, alias = '', allowedFields = null) {
   const prefix = alias ? `${alias}.` : '';
   const clauses = [];
   const params = [];
-  const fields = ['category_id', 'branch_id', 'semester_id', 'college_id', 'course_id', 'year_id'];
+  const defaultFields = ['category_id', 'branch_id', 'semester_id', 'college_id', 'course_id', 'year_id'];
+  const fields = Array.isArray(allowedFields) && allowedFields.length ? allowedFields : defaultFields;
 
   for (const field of fields) {
     const value = profile?.[field];

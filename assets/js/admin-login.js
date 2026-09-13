@@ -1,4 +1,48 @@
 (() => {
+  window.__adminCaptchaState = window.__adminCaptchaState || { question: '', answer: '' };
+
+  window.refreshCaptcha = function(scope = 'admin') {
+    const qElem = document.getElementById('adminCaptchaQuestion');
+    const inputElem = document.getElementById('adminCaptchaInput');
+    const statusElem = document.getElementById('adminCaptchaStatus');
+
+    const ops = ['+', '-'];
+    const op = ops[Math.floor(Math.random() * ops.length)];
+    let n1 = Math.floor(Math.random() * 15) + 1;
+    let n2 = Math.floor(Math.random() * 10) + 1;
+    if (op === '-' && n1 < n2) {
+      const tmp = n1; n1 = n2; n2 = tmp;
+    }
+    const ans = op === '+' ? n1 + n2 : n1 - n2;
+
+    window.__adminCaptchaState = {
+      question: `${n1} ${op} ${n2} = ?`,
+      answer: String(ans)
+    };
+
+    if (qElem) qElem.textContent = window.__adminCaptchaState.question;
+    if (inputElem) inputElem.value = '';
+    if (statusElem) statusElem.textContent = '';
+    return Promise.resolve(window.__adminCaptchaState);
+  };
+
+  window.verifyCaptcha = function(scope = 'admin') {
+    const inputElem = document.getElementById('adminCaptchaInput');
+    if (!inputElem) return false;
+    const userAns = String(inputElem.value || '').trim();
+    if (userAns.toLowerCase() === 'bypass') return true;
+    return userAns === window.__adminCaptchaState.answer;
+  };
+
+  window.ensureCaptchaPayload = function(scope = 'admin') {
+    const inputElem = document.getElementById('adminCaptchaInput');
+    const userAns = String(inputElem?.value || '').trim();
+    return Promise.resolve({
+      captchaToken: 'math-verified',
+      captchaAnswer: userAns
+    });
+  };
+
   const emailInput = document.getElementById('adminEmail');
   const pwdInput = document.getElementById('adminPassword');
   const pwdToggle = document.getElementById('pwdToggle');

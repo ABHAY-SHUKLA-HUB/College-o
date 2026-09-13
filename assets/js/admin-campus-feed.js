@@ -270,60 +270,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function bindFilters() {
-    byId('moderationRefreshBtn')?.addEventListener('click', () => Promise.all([loadModerationQueue(), loadAnalytics()]));
-    byId('analyticsRefreshBtn')?.addEventListener('click', loadAnalytics);
-    byId('moderationStatusFilter')?.addEventListener('change', loadModerationQueue);
-    byId('moderationCollegeFilter')?.addEventListener('change', loadModerationQueue);
-    byId('reportStatusFilter')?.addEventListener('change', loadReports);
-    byId('refreshReportsBtn')?.addEventListener('click', loadReports);
+  function bindNavTabs() {
+    const navTabs = byId('campusFeedNavTabs');
+    if (!navTabs) return;
 
-    let timer = null;
-    byId('moderationSearch')?.addEventListener('input', () => {
-      clearTimeout(timer);
-      timer = setTimeout(loadModerationQueue, 250);
+    function switchFeedTab(tabKey) {
+      const buttons = navTabs.querySelectorAll('[data-feed-tab]');
+      buttons.forEach(btn => {
+        const isActive = btn.dataset.feedTab === tabKey;
+        btn.classList.toggle('active', isActive);
+      });
+
+      const panels = document.querySelectorAll('.feed-tab-panel');
+      panels.forEach(panel => {
+        const targetId = `tabPanel-${tabKey}`;
+        if (panel.id === targetId) {
+          panel.style.display = 'block';
+          panel.classList.add('active');
+        } else {
+          panel.style.display = 'none';
+          panel.classList.remove('active');
+        }
+      });
+    }
+
+    navTabs.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-feed-tab]');
+      if (!btn) return;
+      switchFeedTab(btn.dataset.feedTab);
     });
-  }
 
-  function bindOfficialPostForm() {
-    const form = byId('officialPostForm');
-    if (!form) return;
+    byId('publishOfficialNavBtn')?.addEventListener('click', () => {
+      switchFeedTab('officialPosts');
+    });
 
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const statusNode = byId('officialPostStatus');
-      statusNode.style.color = '#5a6f84';
-      statusNode.textContent = 'Publishing official post...';
-
-      const formData = new FormData();
-      formData.append('collegeId', byId('officialCollegeId').value);
-      formData.append('postType', byId('officialPostType').value);
-      formData.append('category', byId('officialCategory').value);
-      formData.append('title', byId('officialTitle').value.trim());
-      formData.append('description', byId('officialDescription').value.trim());
-      formData.append('tags', byId('officialTags').value.trim());
-      formData.append('eventStartsAt', byId('officialEventAt').value || '');
-      formData.append('eventVenue', byId('officialEventVenue').value.trim());
-      formData.append('pollEndsAt', byId('officialPollEndsAt').value || '');
-      formData.append('pollOptions', byId('officialPollOptions').value.trim());
-      formData.append('isUrgent', String(Boolean(byId('officialUrgent').checked)));
-      const file = byId('officialMedia').files?.[0];
-      if (file) formData.append('media', file);
-
-      try {
-        await window.CollegeOSApi.adminCampusCreateOfficialPost(formData);
-        statusNode.style.color = '#1f7b47';
-        statusNode.textContent = 'Official post published successfully.';
-        form.reset();
-        await Promise.all([loadModerationQueue(), loadAnalytics()]);
-      } catch (error) {
-        statusNode.style.color = '#b43a3a';
-        statusNode.textContent = error.message || 'Failed to publish official post.';
-      }
+    byId('resetModerationFilterBtn')?.addEventListener('click', () => {
+      if (byId('moderationSearch')) byId('moderationSearch').value = '';
+      if (byId('moderationStatusFilter')) byId('moderationStatusFilter').value = 'pending';
+      if (byId('moderationCollegeFilter')) byId('moderationCollegeFilter').value = '';
+      loadModerationQueue();
     });
   }
 
   bindFilters();
   bindOfficialPostForm();
+  bindNavTabs();
   Promise.all([loadModerationQueue(), loadReports(), loadAnalytics()]);
 });

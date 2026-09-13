@@ -846,51 +846,417 @@ async function addLiveHubSession(session = {}) {
   await loadLiveSessionControl();
 }
 
+let currentAdminUser = null;
+let currentAdminPermissions = [];
+let currentAdminRole = '';
+let adminAuthStatus = 'LOADING'; // 'LOADING' | 'AUTHENTICATED' | 'UNAUTHENTICATED'
+let adminPermissionStatus = 'LOADING'; // 'LOADING' | 'AUTHORIZED' | 'UNAUTHORIZED'
+
+function isSuperAdminRole(role) {
+  const norm = String(role || '').toLowerCase().trim();
+  return norm === 'super_admin' || norm === 'superadmin' || norm === 'admin';
+}
+
+function checkRoutePermission(requiredPermission) {
+  if (!requiredPermission) return true;
+  if (adminPermissionStatus === 'LOADING') return true;
+  if (isSuperAdminRole(currentAdminRole)) return true;
+  if (currentAdminPermissions.includes('*')) return true;
+  return currentAdminPermissions.includes(requiredPermission);
+}
+
 async function ensureAdminSession() {
+  adminAuthStatus = 'LOADING';
+  adminPermissionStatus = 'LOADING';
   try {
     const perm = await window.CollegeOSApi.adminControlPermissions();
-    cById('controlPermissionInfo').textContent = `Signed in as ${perm.role}. Permissions: ${perm.permissions.join(', ')}`;
+    if (!perm || !perm.role) {
+      adminAuthStatus = 'UNAUTHENTICATED';
+      adminPermissionStatus = 'UNAUTHORIZED';
+      window.location.href = 'admin-login.html';
+      return false;
+    }
+    
+    currentAdminRole = String(perm.role || '').toLowerCase();
+    currentAdminPermissions = Array.isArray(perm.permissions) ? perm.permissions : [];
+    currentAdminUser = perm.user || null;
+    
+    adminAuthStatus = 'AUTHENTICATED';
+    adminPermissionStatus = 'AUTHORIZED';
+
+    const infoEl = cById('controlPermissionInfo');
+    if (infoEl) {
+      infoEl.textContent = `Signed in as ${perm.role}. Permissions: ${currentAdminPermissions.join(', ')}`;
+    }
+    return true;
   } catch (_error) {
+    console.error('[ensureAdminSession] Failed:', _error?.message || String(_error));
+    adminAuthStatus = 'UNAUTHENTICATED';
+    adminPermissionStatus = 'UNAUTHORIZED';
     window.location.href = 'admin-login.html';
+    return false;
   }
 }
 
-function bindTabs() {
-  const activatePanel = (panelId) => {
-    if (!panelId || !cById(panelId)) return;
-    document.querySelectorAll('.control-tab').forEach((node) => {
-      if (node.dataset.panel === panelId) node.classList.add('active');
-      else node.classList.remove('active');
-    });
-    document.querySelectorAll('.control-panel').forEach((panel) => panel.classList.remove('active'));
-    cById(panelId).classList.add('active');
-  };
+let currentRouteToken = 0;
+let activeRouteKey = '';
 
-  document.querySelectorAll('.control-tab').forEach((tab) => {
-    tab.addEventListener('click', () => {
-      activatePanel(tab.dataset.panel);
-    });
-  });
+const ADMIN_ROUTE_REGISTRY = [
+  {
+    hash: '#students-management',
+    path: '/admin/students',
+    aliases: ['#students', '#student-management', '/admin/students', '/admin/student-management'],
+    key: 'students',
+    panelId: 'panel-students',
+    title: 'Student Management',
+    requiredPermission: 'view_students',
+    loader: (token) => loadStudents(false, token)
+  },
+  {
+    hash: '#membership-management',
+    path: '/admin/memberships',
+    aliases: ['#memberships', '#membership-plans', '#membership', '/admin/memberships', '/admin-memberships.html'],
+    key: 'memberships',
+    panelId: 'panel-memberships',
+    title: 'Membership Plan & Entitlement System',
+    requiredPermission: 'manage_memberships',
+    loader: (token) => loadMembershipPlansPanel(token)
+  },
+  {
+    hash: '#payments-governance',
+    path: '/admin/payments',
+    aliases: ['#payments', '#payment-queue', '#payments-verification', '#payments-governance', '/admin/payments'],
+    key: 'payments',
+    panelId: 'panel-payments',
+    title: 'Memberships & Payments Governance',
+    requiredPermission: 'verify_payments',
+    loader: (token) => loadPayments(token)
+  },
+  {
+    hash: '#analytics',
+    path: '/admin/analytics',
+    aliases: ['#analytics-dashboard', '#dashboard-analytics', '#analytics', '/admin/analytics', '/admin-control.html', '/admin-control'],
+    key: 'analytics',
+    panelId: 'panel-analytics',
+    title: 'Analytics Dashboard',
+    requiredPermission: 'view_analytics',
+    loader: (token) => loadAnalytics(token)
+  },
+  {
+    hash: '#academic-structure',
+    path: '/admin/academic-structure',
+    aliases: ['#academics', '#academic', '#universities', '#courses', '#batches', '#academic-structure', '/admin/academic-structure', '/admin/academics'],
+    key: 'academic-structure',
+    panelId: 'panel-academic-structure',
+    title: 'Academic Structure & Scope Management',
+    requiredPermission: 'manage_academic_content',
+    loader: () => loadAcademicStructurePanel()
+  },
+  {
+    hash: '#content-governance',
+    path: '/admin/content',
+    aliases: ['#content', '#bulk-content', '#content-governance', '/admin/content'],
+    key: 'content',
+    panelId: 'panel-content',
+    title: 'Bulk Content Management',
+    requiredPermission: 'manage_content',
+    loader: () => loadContentOverview()
+  },
+  {
+    hash: '#branches',
+    path: '/admin/branches',
+    aliases: ['#branch-management', '#branches', '/admin/branches'],
+    key: 'branches',
+    panelId: 'panel-branches',
+    title: 'Branch & Course Management',
+    requiredPermission: 'manage_academic_content',
+    loader: () => loadBranches()
+  },
+  {
+    hash: '#onboarding',
+    path: '/admin/onboarding',
+    aliases: ['#onboarding-config', '#onboarding', '/admin/onboarding'],
+    key: 'onboarding',
+    panelId: 'panel-onboarding',
+    title: 'Onboarding & Recommendations',
+    requiredPermission: 'manage_settings',
+    loader: async () => {
+      await loadOnboardingConfig();
+      await loadRecommendationRules();
+    }
+  },
+  {
+    hash: '#mock-tests',
+    path: '/admin/mock-tests',
+    aliases: ['#mocktests', '#mock-tests', '/admin/mock-tests'],
+    key: 'mocktests',
+    panelId: 'panel-mocktests',
+    title: 'Mock Test Studio',
+    requiredPermission: 'manage_assessments',
+    loader: () => loadMockTests()
+  },
+  {
+    hash: '#roadmaps',
+    path: '/admin/roadmaps',
+    aliases: ['#study-roadmaps', '#roadmaps', '/admin/roadmaps'],
+    key: 'roadmaps',
+    panelId: 'panel-roadmaps',
+    title: 'Study Roadmaps',
+    requiredPermission: 'manage_content',
+    loader: () => loadRoadmaps()
+  },
+  {
+    hash: '#notifications',
+    path: '/admin/notifications',
+    aliases: ['#notify', '#announcements', '#notifications', '/admin/notifications'],
+    key: 'notify',
+    panelId: 'panel-notify',
+    title: 'Notifications & Announcements',
+    requiredPermission: 'manage_settings',
+    loader: () => loadAnnouncements()
+  },
+  {
+    hash: '#moderation',
+    path: '/admin/moderation',
+    aliases: ['#forum-moderation', '#moderation', '/admin/moderation'],
+    key: 'moderation',
+    panelId: 'panel-moderation',
+    title: 'Forum & Feedback Moderation',
+    requiredPermission: 'manage_community',
+    loader: async () => {
+      await loadForumPosts();
+      await loadFeedback();
+    }
+  },
+  {
+    hash: '#referrals',
+    path: '/admin/referrals',
+    aliases: ['#referral-management', '#referrals', '/admin/referrals'],
+    key: 'referrals',
+    panelId: 'panel-referrals',
+    title: 'Referral Management',
+    requiredPermission: 'manage_settings',
+    loader: async () => {
+      await loadReferralHistory();
+      await loadTopReferrers();
+    }
+  },
+  {
+    hash: '#roles-permissions',
+    path: '/admin/roles',
+    aliases: ['#roles', '#permissions', '#roles-permissions', '/admin/roles', '/admin/permissions'],
+    key: 'roles',
+    panelId: 'panel-roles',
+    title: 'Roles & Permissions',
+    requiredPermission: 'manage_roles',
+    loader: () => loadRoles()
+  },
+  {
+    hash: '#system-settings',
+    path: '/admin/settings',
+    aliases: ['#settings', '#feature-toggles', '#system-settings', '/admin/settings', '/admin/features'],
+    key: 'settings',
+    panelId: 'panel-settings',
+    title: 'System Settings & Feature Toggles',
+    requiredPermission: 'manage_settings',
+    loader: async () => {
+      await loadSettings();
+      await loadContributionVisibilitySettings();
+      await loadCodingSettings();
+      await loadMembershipConfig();
+      await loadExperienceConfig();
+      await loadFeatureVisibilityMatrix();
+    }
+  },
+  {
+    hash: '#coding-challenges',
+    path: '/admin/coding',
+    aliases: ['#coding', '#coding-governance', '#coding-challenges', '/admin/coding', '/admin/coding-governance'],
+    key: 'coding',
+    panelId: 'panel-coding',
+    title: 'Coding Challenges Governance',
+    requiredPermission: 'manage_coding',
+    loader: () => loadCodingDashboardPanel()
+  },
+  {
+    hash: '#experience',
+    path: '/admin/experience',
+    aliases: ['#experience-studio', '#experience', '/admin/experience'],
+    key: 'experience',
+    panelId: 'panel-experience',
+    title: 'Experience Studio',
+    requiredPermission: 'manage_settings',
+    loader: () => loadExperienceConfig()
+  },
+  {
+    hash: '#live-sessions',
+    path: '/admin/live-sessions',
+    aliases: ['#live-session-control', '#live-sessions', '/admin/live-sessions'],
+    key: 'live-sessions',
+    panelId: 'panel-live-sessions',
+    title: 'Live Session Control',
+    requiredPermission: 'manage_live_sessions',
+    loader: () => loadLiveSessionControl()
+  },
+  {
+    hash: '#audit-logs',
+    path: '/admin/audit-logs',
+    aliases: ['#audit', '#audit-logs', '/admin/audit-logs', '/admin/audit'],
+    key: 'audit',
+    panelId: 'panel-audit',
+    title: 'Audit & Activity Logs',
+    requiredPermission: 'view_audit_logs',
+    loader: () => loadAuditLogs()
+  },
+  {
+    hash: '#company',
+    path: '/admin/company',
+    aliases: ['#company-support', '#company', '/admin/company'],
+    key: 'company',
+    panelId: 'panel-company',
+    title: 'Company & Support Management',
+    requiredPermission: 'manage_settings',
+    loader: () => {}
+  }
+];
 
-  if (window.location.hash === '#live-session-control') {
-    window.setTimeout(() => {
-      activatePanel('panel-live-sessions');
-      cById('liveSessionControlBlock')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 0);
+function resolveRouteFromHash(rawHashOrUrl) {
+  const normHash = String(window.location.hash || rawHashOrUrl || '').toLowerCase().trim();
+  const normPath = String(window.location.pathname || rawHashOrUrl || '').toLowerCase().trim();
+
+  // 1. Check hash first if hash exists
+  if (normHash && normHash !== '#') {
+    const foundHash = ADMIN_ROUTE_REGISTRY.find(r => r.hash === normHash || (r.aliases && r.aliases.includes(normHash)));
+    if (foundHash) return foundHash;
   }
 
-  window.addEventListener('hashchange', () => {
-    if (window.location.hash === '#live-session-control') {
-      activatePanel('panel-live-sessions');
-      cById('liveSessionControlBlock')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // 2. Check path next
+  if (normPath) {
+    const foundPath = ADMIN_ROUTE_REGISTRY.find(r => r.path === normPath || (r.aliases && r.aliases.includes(normPath)));
+    if (foundPath) return foundPath;
+
+    if (normPath.includes('/admin/student')) return ADMIN_ROUTE_REGISTRY.find(r => r.key === 'students');
+    if (normPath.includes('/admin/payment') || normPath.includes('/admin/member')) return ADMIN_ROUTE_REGISTRY.find(r => r.key === 'payments');
+    if (normPath.includes('/admin/setting') || normPath.includes('/admin/feature')) return ADMIN_ROUTE_REGISTRY.find(r => r.key === 'settings');
+    if (normPath.includes('/admin/audit')) return ADMIN_ROUTE_REGISTRY.find(r => r.key === 'audit');
+    if (normPath.includes('/admin/role') || normPath.includes('/admin/permission')) return ADMIN_ROUTE_REGISTRY.find(r => r.key === 'roles');
+    if (normPath.includes('/admin/academic')) return ADMIN_ROUTE_REGISTRY.find(r => r.key === 'academic-structure');
+    if (normPath.includes('/admin/coding')) return ADMIN_ROUTE_REGISTRY.find(r => r.key === 'coding');
+    if (normPath.includes('/admin/live')) return ADMIN_ROUTE_REGISTRY.find(r => r.key === 'live-sessions');
+  }
+
+  // 3. Fallback for /admin-control.html without hash -> analytics
+  if (normPath.endsWith('admin-control.html') || normPath.endsWith('admin-control')) {
+    return ADMIN_ROUTE_REGISTRY.find(r => r.key === 'analytics');
+  }
+
+  return null; // Return null for unknown routes (404)
+}
+
+function resolvePanelFromHash(hash) {
+  const route = resolveRouteFromHash(hash);
+  return route ? route.panelId : 'panel-analytics';
+}
+
+async function activateAdminRoute(rawHashOrUrl) {
+  const route = resolveRouteFromHash(rawHashOrUrl);
+
+  // 1. Deactivate & HIDE ALL module containers
+  document.querySelectorAll('.control-panel').forEach((panel) => {
+    panel.setAttribute('hidden', 'hidden');
+    panel.classList.remove('active');
+  });
+
+  // Handle 404 Unknown Route
+  if (!route) {
+    const notFoundPanel = cById('panel-not-found');
+    if (notFoundPanel) {
+      notFoundPanel.removeAttribute('hidden');
+      notFoundPanel.classList.add('active');
+    }
+    document.title = '404 Page Not Found | College OS Admin';
+    return;
+  }
+
+  // Handle 403 Access Denied
+  if (route.requiredPermission && !checkRoutePermission(route.requiredPermission)) {
+    const accessDeniedPanel = cById('panel-access-denied');
+    if (accessDeniedPanel) {
+      const msg = cById('accessDeniedMessage');
+      if (msg) msg.textContent = `Access Denied: You do not have the required permission (${route.requiredPermission}) to access ${route.title}.`;
+      accessDeniedPanel.removeAttribute('hidden');
+      accessDeniedPanel.classList.add('active');
+    }
+    document.title = `403 Access Denied | College OS Admin`;
+    return;
+  }
+
+  currentRouteToken += 1;
+  const token = currentRouteToken;
+  activeRouteKey = route.key;
+  document.title = `${route.title} | College OS Admin`;
+
+  // 2. Remove active class from all sidebar links and dropdown option
+  document.querySelectorAll('.co-admin-nav-link').forEach((link) => {
+    const href = (link.getAttribute('href') || '').toLowerCase();
+    if (href.includes(route.hash.toLowerCase()) || (route.path && href.includes(route.path.toLowerCase())) || (route.aliases && route.aliases.some(a => href.includes(a.toLowerCase())))) {
+      link.classList.add('active');
+    } else {
+      link.classList.remove('active');
     }
   });
+
+  // 3. Update quick switcher dropdown and active route breadcrumb badge
+  const quickSelect = cById('quickModuleSelect');
+  if (quickSelect) quickSelect.value = route.hash;
+  const breadcrumbText = cById('activeRouteBreadcrumbText');
+  if (breadcrumbText) breadcrumbText.textContent = route.title;
+
+  // 4. Activate target module container
+  const targetPanel = cById(route.panelId);
+  if (targetPanel) {
+    targetPanel.removeAttribute('hidden');
+    targetPanel.classList.add('active');
+  }
+
+  // 5. Reset main content scroll container to top (0, 0)
+  const mainContent = document.querySelector('.co-admin-main');
+  if (mainContent) mainContent.scrollTop = 0;
+  window.scrollTo(0, 0);
+
+  // 6. Scroll active sidebar navigation item into view safely
+  const activeLink = document.querySelector('.co-admin-nav-link.active');
+  if (activeLink && typeof activeLink.scrollIntoView === 'function') {
+    activeLink.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+
+  // 7. Execute data loader ONLY for the active module
+  if (typeof route.loader === 'function') {
+    try {
+      await route.loader(token);
+      if (route.key === 'students') {
+        const raw = window.location.hash || '';
+        const match = raw.match(/#(?:students|students-management)(?:\/|\?studentId=)(\d+)/i) || window.location.search.match(/studentId=(\d+)/i);
+        if (match && match[1]) {
+          const targetStudentId = Number(match[1]);
+          if (targetStudentId > 0) {
+            window.setTimeout(() => {
+              openStudentDrawer(targetStudentId).catch(() => {});
+            }, 150);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`[RouteLoader:${route.key}] Error:`, err.message);
+    }
+  }
 }
 
-async function loadAnalytics() {
+async function loadAnalytics(token) {
   const kpiNode = cById('analyticsKpis');
   const branchNode = cById('analyticsBranchTable');
   const data = await window.CollegeOSApi.adminControlAnalytics();
+  if (token && token !== currentRouteToken) return;
 
   const kpis = [
     ['Total Students', data.totals.total_students],
@@ -903,118 +1269,610 @@ async function loadAnalytics() {
     ['Roadmap Avg Completion', `${data.roadmapStats.avg_completion}%`]
   ];
 
-  kpiNode.innerHTML = kpis.map((item) => `
-    <div class="kpi-card">
-      <div class="kpi-label">${item[0]}</div>
-      <div class="kpi-value">${item[1]}</div>
-    </div>
-  `).join('');
-
-  const rows = data.branchWise || [];
-  if (!rows.length) {
-    branchNode.innerHTML = '<tr><td colspan="3" class="co-admin-table-empty">No branch analytics found.</td></tr>';
-    return;
+  if (kpiNode) {
+    kpiNode.innerHTML = kpis.map((item) => `
+      <div class="kpi-card">
+        <div class="kpi-label">${item[0]}</div>
+        <div class="kpi-value">${item[1]}</div>
+      </div>
+    `).join('');
   }
 
-  branchNode.innerHTML = rows.map((row) => `
-    <tr>
-      <td>${row.category || '-'}</td>
-      <td>${row.branch || '-'}</td>
-      <td>${row.students || 0}</td>
-    </tr>
-  `).join('');
+  const rows = data.branchWise || [];
+  if (branchNode) {
+    if (!rows.length) {
+      branchNode.innerHTML = '<tr><td colspan="3" class="co-admin-table-empty">No branch analytics found.</td></tr>';
+      return;
+    }
+
+    branchNode.innerHTML = rows.map((row) => `
+      <tr>
+        <td>${row.category || '-'}</td>
+        <td>${row.branch || '-'}</td>
+        <td>${row.students || 0}</td>
+      </tr>
+    `).join('');
+  }
 }
 
-async function loadStudents(includeDeleted = false) {
+const studentCache = new Map();
+let studentCurrentPage = 1;
+let studentTotalPages = 1;
+let studentTotalItems = 0;
+let studentSearchDebounceTimer = null;
+
+async function loadStudents(includeDeleted = false, token, page = 1) {
+  studentCurrentPage = Math.max(1, page);
   const tbody = cById('studentsTableBody');
+  const limit = Number(cById('studentPerPageSelect')?.value || 20);
+
   const payload = await window.CollegeOSApi.adminControlStudents({
-    search: cById('studentSearchInput').value,
-    membership: cById('studentMembershipFilter').value,
-    status: cById('studentStatusFilter').value,
+    search: cById('studentSearchInput')?.value || '',
+    membership: cById('studentMembershipFilter')?.value || '',
+    status: cById('studentStatusFilter')?.value || '',
+    collegeId: cById('studentCollegeFilter')?.value || '',
+    branchId: cById('studentBranchFilter')?.value || '',
+    semesterId: cById('studentSemesterFilter')?.value || '',
+    sortBy: cById('studentSortBySelect')?.value || 'created_at',
+    sortDir: cById('studentSortDirSelect')?.value || 'DESC',
+    page: studentCurrentPage,
+    limit,
     includeDeleted
   });
 
+  if (token && token !== currentRouteToken) return;
+
   const rows = payload.students || [];
+  const pagination = payload.pagination || { page: 1, limit: 20, total: 0, totalPages: 1 };
+  const stats = payload.stats || {};
+
+  studentTotalPages = pagination.totalPages || 1;
+  studentTotalItems = pagination.total || 0;
+
+  // Update KPI cards
+  if (cById('kpiTotalStudents')) cById('kpiTotalStudents').textContent = String(stats.total ?? studentTotalItems);
+  if (cById('kpiActiveStudents')) cById('kpiActiveStudents').textContent = String(stats.active ?? 0);
+  if (cById('kpiSuspendedStudents')) cById('kpiSuspendedStudents').textContent = String(stats.suspended ?? 0);
+  if (cById('kpiRecentStudents')) cById('kpiRecentStudents').textContent = String(stats.premium ?? 0);
+
+  // Update Pagination Controls
+  const infoNode = cById('studentPaginationInfo');
+  const pageIndicatorNode = cById('studentPageIndicator');
+  const prevBtn = cById('studentPrevPageBtn');
+  const nextBtn = cById('studentNextPageBtn');
+
+  if (infoNode) {
+    const startIdx = studentTotalItems === 0 ? 0 : (studentCurrentPage - 1) * limit + 1;
+    const endIdx = Math.min(studentCurrentPage * limit, studentTotalItems);
+    infoNode.textContent = `Showing ${startIdx}-${endIdx} of ${studentTotalItems} students`;
+  }
+  if (pageIndicatorNode) {
+    pageIndicatorNode.textContent = `Page ${studentCurrentPage} of ${studentTotalPages}`;
+  }
+  if (prevBtn) prevBtn.disabled = studentCurrentPage <= 1;
+  if (nextBtn) nextBtn.disabled = studentCurrentPage >= studentTotalPages;
+
+  if (!tbody) return;
+
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="9" class="co-admin-table-empty">No students found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="co-admin-table-empty">No students found. Try adjusting search or filters.</td></tr>';
     return;
   }
 
   const formatDate = (value) => {
     if (!value) return '-';
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString();
+    return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString('en-IN');
   };
 
-  tbody.innerHTML = rows.map((student) => `
+  tbody.innerHTML = rows.map((student) => {
+    studentCache.set(Number(student.id), student);
+    return `
     <tr>
       <td><input class="student-row-checkbox" type="checkbox" value="${student.id}" /></td>
       <td>
-        <strong>${student.full_name}</strong>
-        <div class="muted">${student.email}</div>
-        <div class="muted">UID: ${student.uid || '-'}</div>
-      </td>
-      <td>
-        <div>${student.college_name || '-'}</div>
-        <div class="muted">${student.course_name || student.category_name || '-'}</div>
-        <div class="muted">${student.branch_name || '-'} · ${student.semester_label || '-'}</div>
-      </td>
-      <td>${asStatusBadge(student.subscription_tier)}</td>
-      <td class="mono">${Number(student.xp || 0).toLocaleString('en-IN')}</td>
-      <td>
-        <div class="muted">Signup: ${formatDate(student.signup_date)}</div>
-        <div class="muted">Last login: ${formatDate(student.last_login_at)}</div>
-      </td>
-      <td>${escapeHtml(student.device || '-')}</td>
-      <td>${student.deleted_at ? asStatusBadge('deleted') : (student.is_blocked ? asStatusBadge('blocked') : (student.is_suspended ? asStatusBadge('suspended') : asStatusBadge('active')))}</td>
-      <td>
-        <div class="control-actions">
-          <button class="btn secondary sm" data-action="view" data-id="${student.id}">View</button>
-          <button class="btn secondary sm" data-action="reset" data-id="${student.id}">Reset Password</button>
-          <button class="btn secondary sm" data-action="activate" data-id="${student.id}">Activate</button>
-          <button class="btn warn sm" data-action="suspend" data-id="${student.id}">Suspend</button>
-          <button class="btn warn sm" data-action="block" data-id="${student.id}">Block</button>
-          <button class="btn danger sm" data-action="delete" data-id="${student.id}">Delete</button>
-          <button class="btn primary sm" data-action="restore" data-id="${student.id}">Restore</button>
-          <button class="btn primary sm" data-action="premium" data-id="${student.id}">Premium</button>
-          <button class="btn secondary sm" data-action="free" data-id="${student.id}">Free</button>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:34px; height:34px; border-radius:50%; background:var(--primary-color,#2563eb); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; flex-shrink:0;">
+            ${(student.full_name || 'S').charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <strong>${escapeHtml(student.full_name)}</strong>
+            <div class="muted">${escapeHtml(student.email)}</div>
+            <div class="muted">ID: ${escapeHtml(student.uid || student.id)}</div>
+          </div>
         </div>
       </td>
-    </tr>
-  `).join('');
+      <td>
+        <div>${escapeHtml(student.college_name || '-')}</div>
+        <div class="muted">${escapeHtml(student.course_name || student.category_name || '-')}</div>
+        <div class="muted">${escapeHtml(student.branch_name || '-')} · ${escapeHtml(student.semester_label || '-')}</div>
+      </td>
+      <td>${student.deleted_at ? asStatusBadge('deleted') : (student.is_blocked ? asStatusBadge('blocked') : (student.is_suspended ? asStatusBadge('suspended') : asStatusBadge('active')))}</td>
+      <td>${asStatusBadge(student.subscription_tier)}</td>
+      <td>${formatDate(student.signup_date)}</td>
+      <td>${formatDate(student.last_login_at)}</td>
+      <td style="text-align:right;">
+        <div style="display:inline-flex; align-items:center; gap:6px;">
+          <button class="btn primary btn-sm" data-action="view" data-id="${student.id}"><i class="fa-solid fa-eye"></i> View</button>
+          <div class="co-admin-dropdown">
+            <button class="btn secondary btn-sm co-admin-dropdown-toggle" type="button"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+            <div class="co-admin-dropdown-menu align-right">
+              <button class="co-admin-dropdown-item" data-action="view" data-id="${student.id}"><i class="fa-solid fa-user-gear"></i> Manage Account</button>
+              <button class="co-admin-dropdown-item" data-action="grant" data-id="${student.id}"><i class="fa-solid fa-crown"></i> Manage Membership</button>
+              <button class="co-admin-dropdown-item" data-action="reset" data-id="${student.id}"><i class="fa-solid fa-key"></i> Reset Password</button>
+              <div class="co-admin-dropdown-divider"></div>
+              <button class="co-admin-dropdown-item" data-action="activate" data-id="${student.id}"><i class="fa-solid fa-check text-success"></i> Activate Account</button>
+              <button class="co-admin-dropdown-item" data-action="suspend" data-id="${student.id}"><i class="fa-solid fa-pause text-warn"></i> Suspend Account</button>
+              <button class="co-admin-dropdown-item danger" data-action="block" data-id="${student.id}"><i class="fa-solid fa-ban"></i> Block Account</button>
+              ${student.deleted_at ? `<button class="co-admin-dropdown-item" data-action="restore" data-id="${student.id}"><i class="fa-solid fa-rotate-left"></i> Restore</button>` : `<button class="co-admin-dropdown-item danger" data-action="delete" data-id="${student.id}"><i class="fa-solid fa-trash"></i> Soft Delete</button>`}
+            </div>
+          </div>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
 
   tbody.querySelectorAll('button[data-action]').forEach((button) => {
-    button.addEventListener('click', async () => {
+    button.addEventListener('click', async (e) => {
+      e.stopPropagation();
       const action = button.dataset.action;
       const id = Number(button.dataset.id);
       try {
-        if (action === 'view') {
-          const detail = await window.CollegeOSApi.adminControlStudentDetail(id);
-          window.alert(JSON.stringify(detail, null, 2));
+        if (action === 'view' || action === 'grant') {
+          await openStudentDrawer(id, action === 'grant' ? 'membership' : 'overview');
         } else if (action === 'reset') {
-          const newPassword = window.prompt('Enter new password (min 6 chars):', 'Student@123');
-          if (!newPassword) return;
-          await window.CollegeOSApi.adminControlResetStudentPassword(id, newPassword);
-          window.alert('Password reset successful.');
+          await openStudentDrawer(id, 'security');
         } else if (action === 'activate' || action === 'suspend' || action === 'block') {
-          await window.CollegeOSApi.adminControlStudentStatus(id, action);
+          const reason = window.prompt(`Reason for setting status to "${action}":`, '');
+          if (reason === null) return;
+          await window.CollegeOSApi.adminControlStudentStatus(id, action, { reason: reason || 'Admin action' });
+          await loadStudents(includeDeleted, token, studentCurrentPage);
         } else if (action === 'delete') {
-          if (!window.confirm('Soft delete this student?')) return;
+          if (!window.confirm('Soft delete this student record?')) return;
           await window.CollegeOSApi.adminControlDeleteStudent(id);
+          await loadStudents(includeDeleted, token, studentCurrentPage);
         } else if (action === 'restore') {
           await window.CollegeOSApi.adminControlRestoreStudent(id);
-        } else if (action === 'premium') {
-          await window.CollegeOSApi.adminControlStudentMembership(id, { tier: 'premium', paymentStatus: 'approved' });
-        } else if (action === 'free') {
-          await window.CollegeOSApi.adminControlStudentMembership(id, { tier: 'free', paymentStatus: 'expired' });
+          await loadStudents(includeDeleted, token, studentCurrentPage);
         }
-        await loadStudents(includeDeleted);
       } catch (error) {
-        window.alert(error.message);
+        window.alert(error.message || 'Operation failed');
       }
     });
   });
 }
+
+async function openStudentDrawer(id, initialTab = 'overview') {
+  try {
+    const detail = await window.CollegeOSApi.adminControlStudentDetail(id);
+    const student = detail.student || {};
+    const profile = detail.profile || {};
+    const payments = detail.payments || [];
+    const academicActivity = detail.academicActivity || {};
+    const codingActivity = detail.codingActivity || {};
+    const certificates = detail.certificates || [];
+    const auditHistory = detail.auditHistory || [];
+    const effectiveFeatures = detail.effectiveFeatures || {};
+
+    const nameNode = cById('drawerStudentName');
+    const subNode = cById('drawerStudentSub');
+    if (nameNode) nameNode.textContent = student.full_name || `Student #${id}`;
+    if (subNode) subNode.textContent = `${student.email || ''} • Student ID: ${student.uid || id} • ${profile.college_name || 'College OS'}`;
+
+    const bodyNode = cById('drawerStudentContent');
+    if (!bodyNode) return;
+
+    bodyNode.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:14px; background:var(--surface-1,#f8fafc); border-radius:10px; margin-bottom:14px; border:1px solid #e2e8f0;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:44px; height:44px; border-radius:50%; background:#2563eb; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px;">
+            ${(student.full_name || 'S').charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <div style="font-weight:700; font-size:16px; color:#0f172a;">${escapeHtml(student.full_name)}</div>
+            <div style="font-size:12px; color:#64748b;">${escapeHtml(student.email)} &bull; <strong>ID:</strong> ${escapeHtml(student.uid || student.id)}</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          ${student.deleted_at ? asStatusBadge('deleted') : (student.is_blocked ? asStatusBadge('blocked') : (student.is_suspended ? asStatusBadge('suspended') : asStatusBadge('active')))}
+          ${asStatusBadge(student.subscription_tier || 'free')}
+        </div>
+      </div>
+
+      <!-- Detail Tabs Header -->
+      <div style="display:flex; gap:4px; overflow-x:auto; padding-bottom:8px; margin-bottom:16px; border-bottom:1px solid #e2e8f0;" id="studentDrawerTabNav">
+        <button class="btn btn-sm secondary ${initialTab === 'overview' ? 'active' : ''}" data-tab="overview"><i class="fa-solid fa-user"></i> Overview</button>
+        <button class="btn btn-sm secondary ${initialTab === 'membership' ? 'active' : ''}" data-tab="membership"><i class="fa-solid fa-crown"></i> Membership</button>
+        <button class="btn btn-sm secondary ${initialTab === 'payments' ? 'active' : ''}" data-tab="payments"><i class="fa-solid fa-receipt"></i> Payments (${payments.length})</button>
+        <button class="btn btn-sm secondary ${initialTab === 'academic' ? 'active' : ''}" data-tab="academic"><i class="fa-solid fa-graduation-cap"></i> Academic</button>
+        <button class="btn btn-sm secondary ${initialTab === 'coding' ? 'active' : ''}" data-tab="coding"><i class="fa-solid fa-code"></i> Coding</button>
+        <button class="btn btn-sm secondary ${initialTab === 'certificates' ? 'active' : ''}" data-tab="certificates"><i class="fa-solid fa-certificate"></i> Certificates (${certificates.length})</button>
+        <button class="btn btn-sm secondary ${initialTab === 'features' ? 'active' : ''}" data-tab="features"><i class="fa-solid fa-toggle-on"></i> Feature Access</button>
+        <button class="btn btn-sm secondary ${initialTab === 'security' ? 'active' : ''}" data-tab="security"><i class="fa-solid fa-shield-halved"></i> Security & Account</button>
+        <button class="btn btn-sm secondary ${initialTab === 'audit' ? 'active' : ''}" data-tab="audit"><i class="fa-solid fa-history"></i> Audit Log (${auditHistory.length})</button>
+      </div>
+
+      <!-- Tab Content Area -->
+      <div id="studentDrawerTabPanels">
+        <!-- Panel: Overview -->
+        <div data-tab-panel="overview" style="${initialTab === 'overview' ? '' : 'display:none;'}">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; font-size:0.88rem;">
+            <div style="background:#fff; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
+              <strong style="display:block; color:#0f172a; margin-bottom:6px;"><i class="fa-solid fa-id-card"></i> Profile & Identity</strong>
+              <div><strong>Full Name:</strong> ${escapeHtml(student.full_name)}</div>
+              <div><strong>Email:</strong> ${escapeHtml(student.email)}</div>
+              <div><strong>Student ID (UID):</strong> ${escapeHtml(student.uid || student.id)}</div>
+              <div><strong>College:</strong> ${escapeHtml(profile.college_name || '-')}</div>
+              <div><strong>Course / Branch:</strong> ${escapeHtml(profile.course_name || '-')} / ${escapeHtml(profile.branch_name || '-')}</div>
+              <div><strong>Semester:</strong> ${escapeHtml(profile.semester_label || '-')}</div>
+              <div><strong>Target Exam:</strong> ${escapeHtml(profile.target_exam || '-')}</div>
+            </div>
+            <div style="background:#fff; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
+              <strong style="display:block; color:#0f172a; margin-bottom:6px;"><i class="fa-solid fa-clock"></i> Account State & Activity</strong>
+              <div><strong>Account Status:</strong> ${student.is_blocked ? asStatusBadge('blocked') : (student.is_suspended ? asStatusBadge('suspended') : asStatusBadge('active'))}</div>
+              <div><strong>Current Membership:</strong> ${asStatusBadge(student.subscription_tier || 'free')}</div>
+              <div><strong>Membership Expiry:</strong> ${student.subscription_expiry ? new Date(student.subscription_expiry).toLocaleDateString('en-IN') : 'N/A (Free)'}</div>
+              <div><strong>Joined Date:</strong> ${student.signup_date ? new Date(student.signup_date).toLocaleDateString('en-IN') : '-'}</div>
+              <div><strong>Last Active:</strong> ${student.last_login_at ? new Date(student.last_login_at).toLocaleString('en-IN') : 'Never'}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel: Membership -->
+        <div data-tab-panel="membership" style="${initialTab === 'membership' ? '' : 'display:none;'}">
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:14px; border-radius:8px; margin-bottom:16px;">
+            <h4 style="margin:0 0 8px; font-size:0.95rem; color:#0f172a;"><i class="fa-solid fa-crown"></i> Active Membership State</h4>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; font-size:0.85rem;">
+              <div><strong>Current Tier:</strong> ${asStatusBadge(student.subscription_tier || 'free')}</div>
+              <div><strong>Payment Status:</strong> ${asStatusBadge(student.payment_status || 'free')}</div>
+              <div><strong>Start Date:</strong> ${student.subscription_started_at ? new Date(student.subscription_started_at).toLocaleDateString('en-IN') : '-'}</div>
+              <div><strong>Expiry Date:</strong> ${student.subscription_expiry ? new Date(student.subscription_expiry).toLocaleDateString('en-IN') : '-'}</div>
+            </div>
+          </div>
+
+          <!-- Grant Membership Section -->
+          <div style="background:#fff; border:1px solid #e2e8f0; padding:14px; border-radius:8px; margin-bottom:14px;">
+            <h4 style="margin:0 0 8px; font-size:0.92rem; color:#0f172a;"><i class="fa-solid fa-plus-circle"></i> Admin Grant Membership</h4>
+            <p style="font-size:0.8rem; color:#64748b; margin:0 0 10px;">Select an active configured membership tier and duration to grant manually to this student.</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+              <div>
+                <label style="font-size:0.8rem; font-weight:600;">Plan Tier</label>
+                <select id="grantTierSelect" class="co-admin-select">
+                  <option value="premium">Premium Plan</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:0.8rem; font-weight:600;">Duration</label>
+                <select id="grantDurationSelect" class="co-admin-select">
+                  <option value="30">30 Days</option>
+                  <option value="90">90 Days</option>
+                  <option value="180">180 Days (6 Months)</option>
+                  <option value="365">365 Days (1 Year)</option>
+                </select>
+              </div>
+            </div>
+            <div style="margin-bottom:10px;">
+              <label style="font-size:0.8rem; font-weight:600;">Admin Audit Reason *</label>
+              <input id="grantReasonInput" class="co-admin-input" placeholder="Mandatory reason (e.g. Scholarship award, Manual UPI verification)" />
+            </div>
+            <button class="btn primary btn-sm" id="btnExecuteGrantMembership"><i class="fa-solid fa-check"></i> Grant Membership</button>
+          </div>
+
+          <!-- Extend Membership Section -->
+          <div style="background:#fff; border:1px solid #e2e8f0; padding:14px; border-radius:8px; margin-bottom:14px;">
+            <h4 style="margin:0 0 8px; font-size:0.92rem; color:#0f172a;"><i class="fa-solid fa-clock-rotate-left"></i> Extend Membership</h4>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+              <div>
+                <label style="font-size:0.8rem; font-weight:600;">Days to Add</label>
+                <select id="extendDaysSelect" class="co-admin-select">
+                  <option value="30">Add 30 Days</option>
+                  <option value="60">Add 60 Days</option>
+                  <option value="90">Add 90 Days</option>
+                  <option value="180">Add 180 Days</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:0.8rem; font-weight:600;">Reason *</label>
+                <input id="extendReasonInput" class="co-admin-input" placeholder="Reason for extension" />
+              </div>
+            </div>
+            <button class="btn secondary btn-sm" id="btnExecuteExtendMembership"><i class="fa-solid fa-calendar-plus"></i> Extend Membership</button>
+          </div>
+
+          <!-- Revoke Membership Section -->
+          <div style="background:#fff1f2; border:1px solid #fecdd3; padding:14px; border-radius:8px;">
+            <h4 style="margin:0 0 8px; font-size:0.92rem; color:#9f1239;"><i class="fa-solid fa-ban"></i> Revoke / Cancel Membership</h4>
+            <p style="font-size:0.8rem; color:#881337; margin:0 0 10px;">Reverts membership tier to Free and sets expiry to NOW. Historical payment records will be preserved.</p>
+            <div style="margin-bottom:10px;">
+              <input id="revokeReasonInput" class="co-admin-input" placeholder="Mandatory reason for revoking membership" />
+            </div>
+            <button class="btn danger btn-sm" id="btnExecuteRevokeMembership"><i class="fa-solid fa-trash"></i> Revoke Membership</button>
+          </div>
+        </div>
+
+        <!-- Panel: Payments -->
+        <div data-tab-panel="payments" style="${initialTab === 'payments' ? '' : 'display:none;'}">
+          <div style="background:#fff; border:1px solid #e2e8f0; padding:14px; border-radius:8px;">
+            <h4 style="margin:0 0 10px; font-size:0.95rem; color:#0f172a;"><i class="fa-solid fa-receipt"></i> Payment History</h4>
+            ${payments.length ? `
+              <div class="co-admin-table-wrap">
+                <table class="co-admin-data-table">
+                  <thead><tr><th>Txn ID</th><th>Method</th><th>Amount</th><th>Status</th><th>Submitted</th><th>Approved</th></tr></thead>
+                  <tbody>
+                    ${payments.map(p => `
+                      <tr>
+                        <td><code>${escapeHtml(p.transaction_id || `#${p.id}`)}</code></td>
+                        <td>${escapeHtml(p.payment_method || 'UPI')}</td>
+                        <td><strong>₹${Number(p.amount_inr || 0).toLocaleString('en-IN')}</strong></td>
+                        <td>${asStatusBadge(p.status)}</td>
+                        <td>${p.submitted_at ? new Date(p.submitted_at).toLocaleString('en-IN') : '-'}</td>
+                        <td>${p.approved_at ? new Date(p.approved_at).toLocaleString('en-IN') : '-'}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            ` : '<p class="muted" style="margin:0; font-size:0.85rem;">No payment transactions recorded for this student.</p>'}
+          </div>
+        </div>
+
+        <!-- Panel: Academic Activity -->
+        <div data-tab-panel="academic" style="${initialTab === 'academic' ? '' : 'display:none;'}">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+            <div style="background:#fff; padding:14px; border-radius:8px; border:1px solid #e2e8f0;">
+              <h4 style="margin:0 0 8px; font-size:0.92rem; color:#0f172a;"><i class="fa-solid fa-clipboard-question"></i> Quiz Performance</h4>
+              <div style="font-size:1.4rem; font-weight:700; color:#2563eb;">${academicActivity.quizzes?.attempts || 0} <span style="font-size:0.8rem; font-weight:400; color:#64748b;">Attempts</span></div>
+              <div style="font-size:0.85rem; color:#475569; margin-top:4px;">Average Score: <strong>${academicActivity.quizzes?.avg_score || 0}%</strong></div>
+            </div>
+            <div style="background:#fff; padding:14px; border-radius:8px; border:1px solid #e2e8f0;">
+              <h4 style="margin:0 0 8px; font-size:0.92rem; color:#0f172a;"><i class="fa-solid fa-flask-vial"></i> Mock Test Performance</h4>
+              <div style="font-size:1.4rem; font-weight:700; color:#2563eb;">${academicActivity.mockTests?.attempts || 0} <span style="font-size:0.8rem; font-weight:400; color:#64748b;">Attempts</span></div>
+              <div style="font-size:0.85rem; color:#475569; margin-top:4px;">Average Accuracy: <strong>${academicActivity.mockTests?.avg_accuracy || 0}%</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel: Coding Activity -->
+        <div data-tab-panel="coding" style="${initialTab === 'coding' ? '' : 'display:none;'}">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+            <div style="background:#fff; padding:14px; border-radius:8px; border:1px solid #e2e8f0;">
+              <h4 style="margin:0 0 8px; font-size:0.92rem; color:#0f172a;"><i class="fa-solid fa-code"></i> Total Code Submissions</h4>
+              <div style="font-size:1.4rem; font-weight:700; color:#2563eb;">${codingActivity.total_submissions || 0}</div>
+            </div>
+            <div style="background:#fff; padding:14px; border-radius:8px; border:1px solid #e2e8f0;">
+              <h4 style="margin:0 0 8px; font-size:0.92rem; color:#0f172a;"><i class="fa-solid fa-circle-check" style="color:#16a34a;"></i> Solved Problems</h4>
+              <div style="font-size:1.4rem; font-weight:700; color:#16a34a;">${codingActivity.solved_problems || 0}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel: Certificates -->
+        <div data-tab-panel="certificates" style="${initialTab === 'certificates' ? '' : 'display:none;'}">
+          <div style="background:#fff; border:1px solid #e2e8f0; padding:14px; border-radius:8px;">
+            <h4 style="margin:0 0 10px; font-size:0.95rem; color:#0f172a;"><i class="fa-solid fa-certificate"></i> Issued Certificates</h4>
+            ${certificates.length ? `
+              <div class="co-admin-table-wrap">
+                <table class="co-admin-data-table">
+                  <thead><tr><th>Code</th><th>Title</th><th>Status</th><th>Issued At</th></tr></thead>
+                  <tbody>
+                    ${certificates.map(c => `
+                      <tr>
+                        <td><code>${escapeHtml(c.certificate_code || `#${c.id}`)}</code></td>
+                        <td><strong>${escapeHtml(c.title)}</strong></td>
+                        <td>${asStatusBadge(c.status || 'active')}</td>
+                        <td>${c.issued_at ? new Date(c.issued_at).toLocaleDateString('en-IN') : '-'}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            ` : '<p class="muted" style="margin:0; font-size:0.85rem;">No certificates issued to this student yet.</p>'}
+          </div>
+        </div>
+
+        <!-- Panel: Feature Access Preview -->
+        <div data-tab-panel="features" style="${initialTab === 'features' ? '' : 'display:none;'}">
+          <div style="background:#fff; border:1px solid #e2e8f0; padding:14px; border-radius:8px;">
+            <h4 style="margin:0 0 8px; font-size:0.95rem; color:#0f172a;"><i class="fa-solid fa-toggle-on"></i> Effective Feature Access Matrix (Read-Only)</h4>
+            <p style="font-size:0.8rem; color:#64748b; margin:0 0 12px;">This matrix is computed using Part 4's Central Feature Resolver and this student's membership entitlement.</p>
+            <div class="co-admin-table-wrap">
+              <table class="co-admin-data-table">
+                <thead><tr><th>Feature Key</th><th>Visibility</th><th>Enabled</th><th>Access Mode</th><th>Effective State</th></tr></thead>
+                <tbody>
+                  ${Object.keys(effectiveFeatures).map(key => {
+                    const feat = effectiveFeatures[key] || {};
+                    return `
+                      <tr>
+                        <td><code>${escapeHtml(key)}</code></td>
+                        <td>${feat.is_visible ? asStatusBadge('visible') : asStatusBadge('hidden')}</td>
+                        <td>${feat.is_enabled ? asStatusBadge('enabled') : asStatusBadge('disabled')}</td>
+                        <td><span class="co-admin-chip">${escapeHtml(feat.access_mode || 'all')}</span></td>
+                        <td><strong>${feat.accessible ? '<span class="status-badge ok">Accessible</span>' : `<span class="status-badge warn">${escapeHtml(feat.reason || 'Restricted')}</span>`}</strong></td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel: Security & Account -->
+        <div data-tab-panel="security" style="${initialTab === 'security' ? '' : 'display:none;'}">
+          <!-- Password Reset Card -->
+          <div style="background:#fff; border:1px solid #e2e8f0; padding:14px; border-radius:8px; margin-bottom:14px;">
+            <h4 style="margin:0 0 8px; font-size:0.92rem; color:#0f172a;"><i class="fa-solid fa-key"></i> Administrative Password Reset</h4>
+            <p style="font-size:0.8rem; color:#64748b; margin:0 0 10px;">Sets a new bcrypt-hashed password for the student and invalidates any active backend sessions immediately.</p>
+            <div style="margin-bottom:10px;">
+              <input id="secNewPasswordInput" type="password" class="co-admin-input" placeholder="New Password (min 6 characters)" />
+            </div>
+            <button class="btn primary btn-sm" id="btnExecuteResetPassword"><i class="fa-solid fa-lock"></i> Reset Password & Purge Active Sessions</button>
+          </div>
+
+          <!-- Account Status Change Card -->
+          <div style="background:#fff; border:1px solid #e2e8f0; padding:14px; border-radius:8px;">
+            <h4 style="margin:0 0 8px; font-size:0.92rem; color:#0f172a;"><i class="fa-solid fa-user-shield"></i> Account Status Enforcement</h4>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+              <div>
+                <label style="font-size:0.8rem; font-weight:600;">Status</label>
+                <select id="secStatusSelect" class="co-admin-select">
+                  <option value="active" ${!student.is_suspended && !student.is_blocked ? 'selected' : ''}>Active</option>
+                  <option value="suspended" ${student.is_suspended ? 'selected' : ''}>Suspended</option>
+                  <option value="blocked" ${student.is_blocked ? 'selected' : ''}>Blocked</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:0.8rem; font-weight:600;">Audit Reason *</label>
+                <input id="secStatusReasonInput" class="co-admin-input" placeholder="Reason for status change" />
+              </div>
+            </div>
+            <button class="btn secondary btn-sm" id="btnExecuteStatusChange"><i class="fa-solid fa-floppy-disk"></i> Update Status & Purge Sessions</button>
+          </div>
+        </div>
+
+        <!-- Panel: Audit History -->
+        <div data-tab-panel="audit" style="${initialTab === 'audit' ? '' : 'display:none;'}">
+          <div style="background:#fff; border:1px solid #e2e8f0; padding:14px; border-radius:8px;">
+            <h4 style="margin:0 0 10px; font-size:0.95rem; color:#0f172a;"><i class="fa-solid fa-history"></i> Audit Logs for Student #${id}</h4>
+            ${auditHistory.length ? `
+              <div class="co-admin-table-wrap">
+                <table class="co-admin-data-table">
+                  <thead><tr><th>Date</th><th>Actor</th><th>Action</th><th>Details</th></tr></thead>
+                  <tbody>
+                    ${auditHistory.map(log => `
+                      <tr>
+                        <td>${new Date(log.created_at).toLocaleString('en-IN')}</td>
+                        <td><span class="co-admin-chip">${escapeHtml(log.actor_role || 'admin')}</span></td>
+                        <td><code>${escapeHtml(log.action)}</code></td>
+                        <td>${formatAuditMetadata(log.metadata)}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            ` : '<p class="muted" style="margin:0; font-size:0.85rem;">No audit logs recorded for this student.</p>'}
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Tab Switching Handlers
+    const tabButtons = bodyNode.querySelectorAll('#studentDrawerTabNav button');
+    tabButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = btn.dataset.tab;
+        tabButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        bodyNode.querySelectorAll('#studentDrawerTabPanels > div').forEach(p => {
+          p.style.display = p.dataset.tabPanel === target ? 'block' : 'none';
+        });
+      });
+    });
+
+    // Membership Grant Event
+    bodyNode.querySelector('#btnExecuteGrantMembership')?.addEventListener('click', async () => {
+      const tier = bodyNode.querySelector('#grantTierSelect').value;
+      const durationDays = Number(bodyNode.querySelector('#grantDurationSelect').value || 30);
+      const reason = bodyNode.querySelector('#grantReasonInput').value.trim();
+      if (!reason) { alert('Admin reason is required for granting membership.'); return; }
+      try {
+        await window.CollegeOSApi.adminControlGrantMembership(id, { tier, durationDays, reason });
+        alert('Membership granted successfully!');
+        await openStudentDrawer(id, 'membership');
+        await loadStudents(false, currentRouteToken, studentCurrentPage);
+      } catch (e) { alert(e.message); }
+    });
+
+    // Membership Extend Event
+    bodyNode.querySelector('#btnExecuteExtendMembership')?.addEventListener('click', async () => {
+      const days = Number(bodyNode.querySelector('#extendDaysSelect').value || 30);
+      const reason = bodyNode.querySelector('#extendReasonInput').value.trim();
+      if (!reason) { alert('Reason is required for extending membership.'); return; }
+      try {
+        await window.CollegeOSApi.adminControlExtendMembership(id, { days, reason });
+        alert('Membership extended successfully!');
+        await openStudentDrawer(id, 'membership');
+        await loadStudents(false, currentRouteToken, studentCurrentPage);
+      } catch (e) { alert(e.message); }
+    });
+
+    // Membership Revoke Event
+    bodyNode.querySelector('#btnExecuteRevokeMembership')?.addEventListener('click', async () => {
+      const reason = bodyNode.querySelector('#revokeReasonInput').value.trim();
+      if (!reason) { alert('Reason is required for revoking membership.'); return; }
+      if (!confirm('Are you sure you want to revoke membership for this student?')) return;
+      try {
+        await window.CollegeOSApi.adminControlRevokeMembership(id, { reason });
+        alert('Membership revoked successfully!');
+        await openStudentDrawer(id, 'membership');
+        await loadStudents(false, currentRouteToken, studentCurrentPage);
+      } catch (e) { alert(e.message); }
+    });
+
+    // Password Reset Event
+    bodyNode.querySelector('#btnExecuteResetPassword')?.addEventListener('click', async () => {
+      const newPassword = bodyNode.querySelector('#secNewPasswordInput').value.trim();
+      if (!newPassword || newPassword.length < 6) { alert('Password must be at least 6 characters.'); return; }
+      try {
+        await window.CollegeOSApi.adminControlResetStudentPassword(id, newPassword);
+        alert('Password reset successfully and active sessions invalidated.');
+        bodyNode.querySelector('#secNewPasswordInput').value = '';
+      } catch (e) { alert(e.message); }
+    });
+
+    // Account Status Change Event
+    bodyNode.querySelector('#btnExecuteStatusChange')?.addEventListener('click', async () => {
+      const status = bodyNode.querySelector('#secStatusSelect').value;
+      const reason = bodyNode.querySelector('#secStatusReasonInput').value.trim();
+      if (!reason) { alert('Reason is required for status change.'); return; }
+      try {
+        await window.CollegeOSApi.adminControlStudentStatus(id, status, { reason });
+        alert(`Account status updated to ${status}!`);
+        await openStudentDrawer(id, 'security');
+        await loadStudents(false, currentRouteToken, studentCurrentPage);
+      } catch (e) { alert(e.message); }
+    });
+
+    if (window.CollegeAdminDrawer) {
+      window.CollegeAdminDrawer.open('studentDetailDrawer');
+    }
+  } catch (err) {
+    alert(err.message || 'Failed to load student details.');
+  }
+}
+
+window.handleDrawerStudentStatusSubmit = async function(studentId) {
+  const actionNode = cById('drawerStudentActionSelect');
+  const reasonNode = cById('drawerStudentReasonText');
+  const action = actionNode ? actionNode.value : '';
+  const reason = reasonNode ? reasonNode.value.trim() : '';
+
+  if (!reason) {
+    alert('Please enter a mandatory administrative reason before executing state change.');
+    return;
+  }
+
+  if (!confirm(`Are you sure you want to perform "${action}" for student #${studentId}?\nReason: ${reason}`)) {
+    return;
+  }
+
+  try {
+    if (action === 'activate' || action === 'suspend' || action === 'block') {
+      await window.CollegeOSApi.adminControlStudentStatus(studentId, action, { reason });
+    } else if (action === 'premium') {
+      await window.CollegeOSApi.adminControlStudentMembership(studentId, { tier: 'premium', paymentStatus: 'approved', reason });
+    } else if (action === 'free') {
+      await window.CollegeOSApi.adminControlStudentMembership(studentId, { tier: 'free', paymentStatus: 'expired', reason });
+    }
+    alert('Administrative state change executed successfully.');
+    if (window.CollegeAdminDrawer) {
+      window.CollegeAdminDrawer.close('studentDetailDrawer');
+    }
+    await loadStudents();
+  } catch (err) {
+    alert(err.message || 'Failed to update student state.');
+  }
+};
 
 async function runBulkStudents() {
   const action = cById('studentBulkAction').value;
@@ -1027,39 +1885,51 @@ async function runBulkStudents() {
   await loadStudents();
 }
 
-async function loadPayments() {
-  const status = cById('paymentStatusFilter').value;
+async function loadPayments(token) {
+  const status = cById('paymentStatusFilter')?.value || 'all';
   const paymentsResp = await window.CollegeOSApi.adminMembershipPayments(status);
   const summaryResp = await window.CollegeOSApi.adminControlRevenueSummary();
+  if (token && token !== currentRouteToken) return;
 
-  const summary = cById('paymentSummaryKpis');
-  summary.innerHTML = [
-    ['Monthly Revenue', `Rs.${Number(summaryResp.monthlyRevenue || 0).toLocaleString('en-IN')}`],
-    ['Lifetime Revenue', `Rs.${Number(summaryResp.lifetimeRevenue || 0).toLocaleString('en-IN')}`],
-    ['Pending Approvals', summaryResp.pendingApprovals || 0],
-    ['Active Memberships', summaryResp.activeMemberships || 0],
-    ['Expired Memberships', summaryResp.expiredMemberships || 0]
-  ].map((item) => `<div class="kpi-card"><div class="kpi-label">${item[0]}</div><div class="kpi-value">${item[1]}</div></div>`).join('');
+  const setKpi = (id, val) => {
+    const el = cById(id);
+    if (el) el.textContent = val;
+  };
+  setKpi('kpiActiveMemberships', summaryResp.activeMemberships || 0);
+  setKpi('kpiFreePlanStudents', summaryResp.freePlanStudents || summaryResp.freeStudents || 0);
+  setKpi('kpiPremiumStudents', summaryResp.premiumStudents || summaryResp.activeMemberships || 0);
+  setKpi('kpiExpiringStudents', summaryResp.expiringSoon || summaryResp.expiredMemberships || 0);
+  setKpi('kpiPendingPayments', summaryResp.pendingApprovals || 0);
+  setKpi('kpiTotalRevenue', `₹${Number(summaryResp.lifetimeRevenue || summaryResp.totalRevenue || 0).toLocaleString('en-IN')}`);
 
   const rows = paymentsResp.payments || [];
   const tbody = cById('paymentsTableBody');
+  if (!tbody) return;
+
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="co-admin-table-empty">No payment requests found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="co-admin-table-empty">No payment verification records found.</td></tr>';
     return;
   }
 
   tbody.innerHTML = rows.map((payment) => `
     <tr>
-      <td class="mono">${payment.id}</td>
-      <td>${payment.full_name}<div class="muted">${payment.email}</div></td>
-      <td class="mono">${payment.transaction_id}</td>
-      <td>${asStatusBadge(payment.status)}</td>
-      <td>${payment.screenshot_url ? `<a class="btn secondary sm" href="${payment.screenshot_url}" target="_blank" rel="noreferrer">View</a>` : '-'}</td>
-      <td>${payment.submitted_at ? new Date(payment.submitted_at).toLocaleDateString('en-IN') : '-'}</td>
+      <td><input type="checkbox" class="payment-row-checkbox" value="${payment.id}" /></td>
       <td>
-        <div class="control-actions">
-          <button class="btn primary sm" data-pay-action="approve" data-payment-id="${payment.id}">Approve</button>
-          <button class="btn warn sm" data-pay-action="reject" data-payment-id="${payment.id}">Reject</button>
+        <strong>${escapeHtml(payment.full_name || 'Student')}</strong>
+        <div class="muted" style="font-size: 0.8rem;">${escapeHtml(payment.email || '-')}</div>
+      </td>
+      <td><span class="mono">${escapeHtml(payment.plan || payment.membership_plan || 'Premium')}</span></td>
+      <td>
+        <span class="mono">${escapeHtml(payment.transaction_id || payment.upi_ref || '-')}</span>
+        ${payment.screenshot_url ? `<br/><a class="btn secondary sm" style="font-size:0.75rem; padding: 2px 6px; margin-top:2px;" href="${escapeHtml(payment.screenshot_url)}" target="_blank" rel="noreferrer"><i class="fa-solid fa-receipt"></i> Proof</a>` : ''}
+      </td>
+      <td><strong>₹${Number(payment.amount || payment.price || 500).toLocaleString('en-IN')}</strong></td>
+      <td>${payment.submitted_at ? new Date(payment.submitted_at).toLocaleDateString('en-IN') : '-'}</td>
+      <td>${asStatusBadge(payment.status)}</td>
+      <td style="text-align:right;">
+        <div class="control-actions" style="justify-content: flex-end;">
+          <button class="btn primary sm" data-pay-action="approve" data-payment-id="${payment.id}"><i class="fa-solid fa-check"></i> Approve</button>
+          <button class="btn warn sm" data-pay-action="reject" data-payment-id="${payment.id}"><i class="fa-solid fa-xmark"></i> Reject</button>
         </div>
       </td>
     </tr>
@@ -2008,8 +2878,8 @@ async function loadExperienceConfig() {
   cById('expAuthBrandDescription').value = config.auth?.branding?.description || 'Sign in to continue your learning flow with profile-based recommendations, progress tracking, and verified access controls.';
   cById('expAuthFeatures').value = Array.isArray(config.auth?.branding?.features) ? config.auth.branding.features.join('\n') : '';
   cById('expAuthTrustPoints').value = Array.isArray(config.auth?.branding?.trustPoints) ? config.auth.branding.trustPoints.join('\n') : '';
-  cById('expAuthStatValue').value = config.auth?.branding?.stats?.value || '10k+';
-  cById('expAuthStatLabel').value = config.auth?.branding?.stats?.label || 'active learners';
+  cById('expAuthStatValue').value = config.auth?.branding?.stats?.value || 'Active';
+  cById('expAuthStatLabel').value = config.auth?.branding?.stats?.label || 'Learners Community';
 
   cById('expAuthLoginTitle').value = config.auth?.text?.loginTitle || 'Welcome back';
   cById('expAuthLoginDescription').value = config.auth?.text?.loginDescription || 'Sign in to continue with your personalized learning workspace.';
@@ -2020,8 +2890,8 @@ async function loadExperienceConfig() {
   cById('expAuthSupportLinkLabel').value = config.auth?.text?.supportLinkLabel || 'Need help? Contact support';
   cById('expAuthFooterConsentText').value = config.auth?.text?.footerConsentText || 'By continuing, you agree to';
 
-  cById('expAuthSupportEmail').value = config.auth?.support?.email || 'support@collegeos.in';
-  cById('expAuthSupportWhatsapp').value = config.auth?.support?.whatsapp || '+919000000000';
+  cById('expAuthSupportEmail').value = config.auth?.support?.email || 'support@collegeo.in';
+  cById('expAuthSupportWhatsapp').value = config.auth?.support?.whatsapp || '';
   cById('expAuthSupportHelpText').value = config.auth?.support?.helpText || 'Share your issue and our team will help you quickly.';
   cById('expAuthTermsTitle').value = config.auth?.legal?.termsTitle || 'Terms and Conditions';
   cById('expAuthTermsText').value = config.auth?.legal?.termsText || 'By creating an account, you agree to use College OS responsibly, provide accurate profile information, and follow platform policies for fair usage.';
@@ -2228,48 +3098,185 @@ async function saveLiveSessionControl() {
   await loadLiveSessionControl();
 }
 
+const auditLogCache = new Map();
+
+function sanitizeSecrets(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  const copy = Array.isArray(obj) ? [...obj] : { ...obj };
+  for (const k of Object.keys(copy)) {
+    if (/password|secret|token|key|auth|cookie|credential/i.test(k)) {
+      copy[k] = '[REDACTED_SECRET]';
+    } else if (typeof copy[k] === 'object' && copy[k] !== null) {
+      copy[k] = sanitizeSecrets(copy[k]);
+    }
+  }
+  return copy;
+}
+
+function openAuditDrawer(logId) {
+  const log = auditLogCache.get(Number(logId));
+  if (!log) {
+    alert('Log details not found in cache.');
+    return;
+  }
+
+  const actionNode = cById('drawerAuditAction');
+  const actorNode = cById('drawerAuditActor');
+  if (actionNode) actionNode.textContent = `Action: ${log.action}`;
+  if (actorNode) actorNode.textContent = `Actor: ${log.actor_name || 'System'} (${log.actor_role || 'admin'}) • ${new Date(log.created_at).toLocaleString('en-IN')}`;
+
+  const sanitizedMeta = sanitizeSecrets(log.metadata || {});
+  const beforeState = sanitizeSecrets(log.metadata?.before || log.metadata?.previous || null);
+  const afterState = sanitizeSecrets(log.metadata?.after || log.metadata?.current || log.metadata?.updated || null);
+
+  const bodyNode = cById('drawerAuditContent');
+  if (!bodyNode) return;
+
+  bodyNode.innerHTML = `
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; font-size:0.88rem;">
+      <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
+        <strong style="display:block; color:#0f172a; margin-bottom:4px;">Operation Metadata</strong>
+        <div><strong>Module / Target:</strong> ${log.target_type || '-'}:${log.target_id || '-'}</div>
+        <div><strong>Timestamp:</strong> ${new Date(log.created_at).toLocaleString('en-IN')}</div>
+        <div><strong>IP / Session:</strong> ${log.ip_address || 'Internal/Secure'}</div>
+      </div>
+      <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
+        <strong style="display:block; color:#0f172a; margin-bottom:4px;">Actor Context</strong>
+        <div><strong>Actor Name:</strong> ${escapeHtml(log.actor_name || 'System')}</div>
+        <div><strong>Role:</strong> ${escapeHtml(log.actor_role || 'Admin')}</div>
+        <div><strong>Result:</strong> <span class="badge badge-success">Success</span></div>
+      </div>
+    </div>
+
+    ${(beforeState || afterState) ? `
+      <h4 style="margin:14px 0 8px; font-size:0.95rem; color:#0f172a;"><i class="fa-solid fa-code-compare"></i> Safe State Comparison (Before vs After)</h4>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+        <div style="background:#fff1f2; border:1px solid #fecdd3; padding:12px; border-radius:8px;">
+          <strong style="color:#9f1239; font-size:0.85rem; display:block; margin-bottom:6px;">Previous State (Before)</strong>
+          <pre style="margin:0; font-size:0.78rem; overflow:auto; max-height:220px; color:#881337;">${JSON.stringify(beforeState || {}, null, 2)}</pre>
+        </div>
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:12px; border-radius:8px;">
+          <strong style="color:#166534; font-size:0.85rem; display:block; margin-bottom:6px;">Current State (After)</strong>
+          <pre style="margin:0; font-size:0.78rem; overflow:auto; max-height:220px; color:#14532d;">${JSON.stringify(afterState || {}, null, 2)}</pre>
+        </div>
+      </div>
+    ` : ''}
+
+    <h4 style="margin:14px 0 8px; font-size:0.95rem; color:#0f172a;"><i class="fa-solid fa-file-code"></i> Complete Metadata Payload (Sanitized)</h4>
+    <pre style="background:#1e293b; color:#f8fafc; padding:14px; border-radius:8px; font-size:0.82rem; overflow:auto; max-height:280px;">${JSON.stringify(sanitizedMeta, null, 2)}</pre>
+  `;
+
+  if (window.CollegeAdminDrawer) {
+    window.CollegeAdminDrawer.open('auditDetailDrawer');
+  }
+}
+
+function formatAuditMetadata(meta) {
+  if (!meta || typeof meta !== 'object' || Object.keys(meta).length === 0) {
+    return '<span class="muted">-</span>';
+  }
+  const keys = Object.keys(meta);
+  const summaryParts = keys.slice(0, 2).map((k) => `${k}: ${typeof meta[k] === 'object' ? JSON.stringify(meta[k]) : meta[k]}`);
+  const summaryText = summaryParts.join(' | ') + (keys.length > 2 ? ` (+${keys.length - 2} more)` : '');
+  const jsonStr = JSON.stringify(sanitizeSecrets(meta), null, 2);
+
+  return `
+    <details class="co-admin-audit-meta">
+      <summary style="cursor:pointer;font-size:12px;color:var(--primary-color,#2563eb);">${summaryText}</summary>
+      <pre style="margin:4px 0 0;padding:6px;background:var(--surface-1,#f8fafc);border-radius:6px;font-size:11px;max-height:160px;overflow:auto;">${jsonStr}</pre>
+    </details>
+  `;
+}
+
 async function loadAuditLogs() {
-  const limit = Number(cById('auditLimitInput').value || 100);
+  const limit = Number(cById('auditLimitInput')?.value || 100);
   const data = await window.CollegeOSApi.adminControlAuditLogs(limit);
   const rows = data.logs || [];
   const tbody = cById('auditTableBody');
+  if (!tbody) return;
   if (!rows.length) {
     tbody.innerHTML = '<tr><td colspan="6" class="co-admin-table-empty">No audit logs found.</td></tr>';
     return;
   }
 
-  tbody.innerHTML = rows.map((log) => `
+  tbody.innerHTML = rows.map((log, index) => {
+    const id = log.id || (index + 1);
+    auditLogCache.set(Number(id), log);
+    return `
     <tr>
       <td>${new Date(log.created_at).toLocaleString('en-IN')}</td>
-      <td>${log.actor_name || '-'}</td>
-      <td>${log.actor_role || '-'}</td>
-      <td>${log.action}</td>
-      <td>${log.target_type || '-'}:${log.target_id || '-'}</td>
-      <td class="mono">${JSON.stringify(log.metadata || {})}</td>
+      <td><strong>${escapeHtml(log.actor_name || '-')}</strong></td>
+      <td><span class="co-admin-chip">${escapeHtml(log.actor_role || '-')}</span></td>
+      <td><code>${escapeHtml(log.action)}</code></td>
+      <td>${escapeHtml(log.target_type || '-')}:${escapeHtml(log.target_id || '-')}</td>
+      <td>
+        <button class="btn secondary btn-sm" onclick="openAuditDrawer(${id})"><i class="fa-solid fa-eye"></i> View Diff</button>
+      </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function bindEvents() {
-  cById('refreshAnalyticsBtn').addEventListener('click', () => loadAnalytics().catch((e) => window.alert(e.message)));
+  cById('refreshAnalyticsBtn')?.addEventListener('click', () => loadAnalytics().catch((e) => window.alert(e.message)));
 
-  cById('loadStudentsBtn').addEventListener('click', () => loadStudents(false).catch((e) => window.alert(e.message)));
-  cById('showDeletedStudentsBtn').addEventListener('click', () => loadStudents(true).catch((e) => window.alert(e.message)));
-  cById('bulkStudentsBtn').addEventListener('click', () => runBulkStudents().catch((e) => window.alert(e.message)));
-  cById('studentsSelectAll').addEventListener('change', (event) => {
+  const reloadStudents = () => loadStudents(false, currentRouteToken, 1).catch((e) => window.alert(e.message));
+
+  cById('loadStudentsBtn')?.addEventListener('click', reloadStudents);
+  cById('showDeletedStudentsBtn')?.addEventListener('click', () => loadStudents(true, currentRouteToken, 1).catch((e) => window.alert(e.message)));
+  cById('studentSearchInput')?.addEventListener('input', () => {
+    if (studentSearchDebounceTimer) clearTimeout(studentSearchDebounceTimer);
+    studentSearchDebounceTimer = setTimeout(reloadStudents, 300);
+  });
+  cById('studentStatusFilter')?.addEventListener('change', reloadStudents);
+  cById('studentMembershipFilter')?.addEventListener('change', reloadStudents);
+  cById('studentCollegeFilter')?.addEventListener('change', reloadStudents);
+  cById('studentBranchFilter')?.addEventListener('change', reloadStudents);
+  cById('studentSemesterFilter')?.addEventListener('change', reloadStudents);
+  cById('studentSortBySelect')?.addEventListener('change', reloadStudents);
+  cById('studentSortDirSelect')?.addEventListener('change', reloadStudents);
+  cById('studentPerPageSelect')?.addEventListener('change', reloadStudents);
+
+  cById('studentPrevPageBtn')?.addEventListener('click', () => {
+    if (studentCurrentPage > 1) {
+      loadStudents(false, currentRouteToken, studentCurrentPage - 1).catch((e) => window.alert(e.message));
+    }
+  });
+
+  cById('studentNextPageBtn')?.addEventListener('click', () => {
+    if (studentCurrentPage < studentTotalPages) {
+      loadStudents(false, currentRouteToken, studentCurrentPage + 1).catch((e) => window.alert(e.message));
+    }
+  });
+
+  cById('resetStudentsFilterBtn')?.addEventListener('click', () => {
+    if (cById('studentSearchInput')) cById('studentSearchInput').value = '';
+    if (cById('studentStatusFilter')) cById('studentStatusFilter').value = '';
+    if (cById('studentMembershipFilter')) cById('studentMembershipFilter').value = '';
+    if (cById('studentCollegeFilter')) cById('studentCollegeFilter').value = '';
+    if (cById('studentBranchFilter')) cById('studentBranchFilter').value = '';
+    if (cById('studentSemesterFilter')) cById('studentSemesterFilter').value = '';
+    if (cById('studentSortBySelect')) cById('studentSortBySelect').value = 'created_at';
+    if (cById('studentSortDirSelect')) cById('studentSortDirSelect').value = 'DESC';
+    if (cById('studentPerPageSelect')) cById('studentPerPageSelect').value = '20';
+    reloadStudents();
+  });
+
+  cById('bulkStudentsBtn')?.addEventListener('click', () => runBulkStudents().catch((e) => window.alert(e.message)));
+  cById('studentsSelectAll')?.addEventListener('change', (event) => {
     document.querySelectorAll('.student-row-checkbox').forEach((node) => {
       node.checked = event.target.checked;
     });
   });
 
-  cById('loadPaymentsBtn').addEventListener('click', () => loadPayments().catch((e) => window.alert(e.message)));
-  cById('bulkPaymentsBtn').addEventListener('click', () => runBulkPayments().catch((e) => window.alert(e.message)));
-  cById('expireMembershipsBtn').addEventListener('click', async () => {
+  cById('loadPaymentsBtn')?.addEventListener('click', () => loadPayments().catch((e) => window.alert(e.message)));
+  cById('bulkPaymentsBtn')?.addEventListener('click', () => runBulkPayments().catch((e) => window.alert(e.message)));
+  cById('expireMembershipsBtn')?.addEventListener('click', async () => {
     await window.CollegeOSApi.adminControlDeactivateExpired();
     await loadPayments();
   });
 
-  cById('runContentBulkBtn').addEventListener('click', () => runContentBulkAction().catch((e) => window.alert(e.message)));
+  cById('runContentBulkBtn')?.addEventListener('click', () => runContentBulkAction().catch((e) => window.alert(e.message)));
 
   cById('loadBranchesBtn')?.addEventListener('click', () => loadBranches().catch((e) => window.alert(e.message)));
   cById('createBranchBtn')?.addEventListener('click', () => createBranch().catch((e) => window.alert(e.message)));
@@ -2289,30 +3296,30 @@ function bindEvents() {
   cById('createRecommendationRuleBtn')?.addEventListener('click', () => createRecommendationRule().catch((e) => window.alert(e.message)));
   cById('loadRecommendationRulesBtn')?.addEventListener('click', () => loadRecommendationRules().catch((e) => window.alert(e.message)));
 
-  cById('createMockBtn').addEventListener('click', () => createMockTest().catch((e) => window.alert(e.message)));
-  cById('loadMockBtn').addEventListener('click', () => loadMockTests().catch((e) => window.alert(e.message)));
+  cById('createMockBtn')?.addEventListener('click', () => createMockTest().catch((e) => window.alert(e.message)));
+  cById('loadMockBtn')?.addEventListener('click', () => loadMockTests().catch((e) => window.alert(e.message)));
 
-  cById('createRoadmapBtn').addEventListener('click', () => createRoadmap().catch((e) => window.alert(e.message)));
-  cById('loadRoadmapsBtn').addEventListener('click', () => loadRoadmaps().catch((e) => window.alert(e.message)));
+  cById('createRoadmapBtn')?.addEventListener('click', () => createRoadmap().catch((e) => window.alert(e.message)));
+  cById('loadRoadmapsBtn')?.addEventListener('click', () => loadRoadmaps().catch((e) => window.alert(e.message)));
 
-  cById('sendNotificationBtn').addEventListener('click', () => sendNotification(false).catch((e) => window.alert(e.message)));
-  cById('sendReminderBtn').addEventListener('click', () => sendNotification(true).catch((e) => window.alert(e.message)));
-  cById('createAnnouncementBtn').addEventListener('click', () => createAnnouncement().catch((e) => window.alert(e.message)));
-  cById('loadAnnouncementsBtn').addEventListener('click', () => loadAnnouncements().catch((e) => window.alert(e.message)));
+  cById('sendNotificationBtn')?.addEventListener('click', () => sendNotification(false).catch((e) => window.alert(e.message)));
+  cById('sendReminderBtn')?.addEventListener('click', () => sendNotification(true).catch((e) => window.alert(e.message)));
+  cById('createAnnouncementBtn')?.addEventListener('click', () => createAnnouncement().catch((e) => window.alert(e.message)));
+  cById('loadAnnouncementsBtn')?.addEventListener('click', () => loadAnnouncements().catch((e) => window.alert(e.message)));
 
-  cById('loadForumBtn').addEventListener('click', () => loadForumPosts().catch((e) => window.alert(e.message)));
-  cById('loadFeedbackBtn').addEventListener('click', () => loadFeedback().catch((e) => window.alert(e.message)));
+  cById('loadForumBtn')?.addEventListener('click', () => loadForumPosts().catch((e) => window.alert(e.message)));
+  cById('loadFeedbackBtn')?.addEventListener('click', () => loadFeedback().catch((e) => window.alert(e.message)));
 
-  cById('assignRewardBtn').addEventListener('click', () => assignReferralReward().catch((e) => window.alert(e.message)));
-  cById('loadReferralHistoryBtn').addEventListener('click', () => loadReferralHistory().catch((e) => window.alert(e.message)));
-  cById('loadTopReferrersBtn').addEventListener('click', () => loadTopReferrers().catch((e) => window.alert(e.message)));
+  cById('assignRewardBtn')?.addEventListener('click', () => assignReferralReward().catch((e) => window.alert(e.message)));
+  cById('loadReferralHistoryBtn')?.addEventListener('click', () => loadReferralHistory().catch((e) => window.alert(e.message)));
+  cById('loadTopReferrersBtn')?.addEventListener('click', () => loadTopReferrers().catch((e) => window.alert(e.message)));
 
-  cById('assignRoleBtn').addEventListener('click', () => assignRole().catch((e) => window.alert(e.message)));
-  cById('updatePermissionsBtn').addEventListener('click', () => updateRolePermissions().catch((e) => window.alert(e.message)));
-  cById('loadRolesBtn').addEventListener('click', () => loadRoles().catch((e) => window.alert(e.message)));
+  cById('assignRoleBtn')?.addEventListener('click', () => assignRole().catch((e) => window.alert(e.message)));
+  cById('updatePermissionsBtn')?.addEventListener('click', () => updateRolePermissions().catch((e) => window.alert(e.message)));
+  cById('loadRolesBtn')?.addEventListener('click', () => loadRoles().catch((e) => window.alert(e.message)));
 
-  cById('saveSettingsBtn').addEventListener('click', () => saveSettings().catch((e) => window.alert(e.message)));
-  cById('loadSettingsBtn').addEventListener('click', () => loadSettings().catch((e) => window.alert(e.message)));
+  cById('saveSettingsBtn')?.addEventListener('click', () => saveSettings().catch((e) => window.alert(e.message)));
+  cById('loadSettingsBtn')?.addEventListener('click', () => loadSettings().catch((e) => window.alert(e.message)));
   cById('saveContributionVisibilityBtn')?.addEventListener('click', () => saveContributionVisibilitySettings().catch((e) => window.alert(e.message)));
   cById('loadContributionVisibilityBtn')?.addEventListener('click', () => loadContributionVisibilitySettings().catch((e) => window.alert(e.message)));
   cById('saveCodingSettingsBtn')?.addEventListener('click', () => saveCodingSettings().catch((e) => window.alert(e.message)));
@@ -2346,48 +3353,1684 @@ function bindEvents() {
     }))
   }).then(() => loadLiveSessionControl()).catch((e) => window.alert(e.message)));
 
-  cById('loadAuditBtn').addEventListener('click', () => loadAuditLogs().catch((e) => window.alert(e.message)));
+  cById('loadAuditBtn')?.addEventListener('click', () => loadAuditLogs().catch((e) => window.alert(e.message)));
+  cById('refreshFeatureMatrixBtn')?.addEventListener('click', () => loadFeatureVisibilityMatrix().catch((e) => window.alert(e.message)));
+}
+
+const FEATURE_META_MAP = {
+  study_materials: { name: 'Study Materials', desc: 'Curated course materials, syllabus notes & lecture resources.', link: 'admin-materials.html', adminModuleId: 'ADM-03' },
+  notes_library: { name: 'Notes Library', desc: 'Community & verified student notes repository.', link: 'admin-notes.html', adminModuleId: 'ADM-04' },
+  previous_papers: { name: 'Previous Papers', desc: 'University and college past exam question papers.', link: 'admin-papers.html', adminModuleId: 'ADM-05' },
+  quizzes: { name: 'Quizzes', desc: 'Subject-wise diagnostic quizzes & practice assessments.', link: 'admin-quizzes.html', adminModuleId: 'ADM-06' },
+  mock_tests: { name: 'Mock Test Studio', desc: 'Full-length practice exams & timed mock tests.', link: 'admin-mock-tests.html', adminModuleId: 'ADM-07' },
+  study_roadmaps: { name: 'Study Roadmaps', desc: 'Personalized career & academic learning paths.', link: 'admin-roadmaps.html', adminModuleId: 'ADM-08' },
+  academic_structure: { name: 'Academic Structure', desc: 'Branch selection, category setup & semester mapping.', link: 'admin-academics.html', adminModuleId: 'ADM-09' },
+  coding_challenges: { name: 'Coding Challenges', desc: 'Algorithmic contests, code execution & problem bank.', link: 'admin-coding-challenges.html', adminModuleId: 'ADM-14' },
+  certificates: { name: 'Certificates & Credentials', desc: 'Issuance governance, verification system & badges.', link: 'admin-certificates.html', adminModuleId: 'ADM-13' },
+  student_contributions: { name: 'Student Contributions', desc: 'Student uploads, note sharing & moderation queue.', link: 'admin-academics.html#contributions', adminModuleId: 'ADM-12' },
+  campus_feed: { name: 'Campus Feed', desc: 'College discussions, news, updates & community posts.', link: 'admin-campus-feed.html', adminModuleId: 'ADM-16' },
+  ai_tools: { name: 'AI Tools Studio', desc: 'AI assistant tools, prompt lifecycle & quota limits.', link: 'admin-ai-tools.html', adminModuleId: 'ADM-17' },
+  support: { name: 'Support Governance', desc: 'Student tickets, helper trust levels & reward points.', link: 'admin-support-governance.html', adminModuleId: 'ADM-15' },
+  live_sessions: { name: 'Live Sessions', desc: 'Mentorship webinars, live labs & instructor sessions.', link: 'admin-control.html#live-sessions', adminModuleId: 'ADM-21' },
+  referrals: { name: 'Referrals & Rewards', desc: 'Invite classmates and earn platform points & rewards.', link: 'admin-control.html#referrals', adminModuleId: 'ADM-22' },
+  student_experience: { name: 'Student Experience', desc: 'Product feedback, feature requests & discussion forum.', link: 'admin-control.html#experience', adminModuleId: 'ADM-23' },
+  membership: { name: 'Memberships & Subscriptions', desc: 'Pricing plans, subscription tiers & payment verification.', link: 'admin-control.html#membership-management', adminModuleId: 'ADM-11' }
+};
+
+async function loadFeatureVisibilityMatrix() {
+  const mount = cById('featureVisibilityMatrixGrid');
+  if (!mount) return;
+
+  try {
+    const res = await window.CollegeOSApi.adminControlFeatureVisibilityGet();
+    const matrix = res.matrix || {};
+
+    const keys = Object.keys(FEATURE_META_MAP);
+    mount.innerHTML = keys.map((key) => {
+      const meta = FEATURE_META_MAP[key];
+      const feat = matrix[key] || { is_visible: true, is_enabled: true, maintenance_mode: false, access_mode: 'EVERYONE', maintenance_message: '' };
+      
+      const visible = feat.is_visible !== false;
+      const enabled = feat.is_enabled !== false;
+      const maintenance = Boolean(feat.maintenance_mode);
+      const accessMode = feat.access_mode || 'EVERYONE';
+
+      let statusTag = 'LIVE';
+      let statusClass = 'bg-emerald-100 text-emerald-800';
+      if (!visible) {
+        statusTag = 'HIDDEN';
+        statusClass = 'bg-slate-200 text-slate-800';
+      } else if (maintenance) {
+        statusTag = 'MAINTENANCE';
+        statusClass = 'bg-amber-100 text-amber-800';
+      } else if (!enabled) {
+        statusTag = 'DISABLED';
+        statusClass = 'bg-rose-100 text-rose-800';
+      }
+
+      return `
+        <div style="border:1px solid var(--border-color, #dbe4ef); border-radius:12px; padding:14px; background:var(--surface-1, #f8fafc); display:flex; flex-direction:column; justify-content:space-between; gap:12px;">
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px;">
+              <div>
+                <strong style="font-size:15px; color:var(--text-primary, #0f172a);">${meta.name}</strong>
+                <span class="muted" style="font-size:11px; margin-left:6px;">(${meta.adminModuleId})</span>
+              </div>
+              <span style="font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; border:1px solid #cbd5e1; white-space:nowrap;" class="${statusClass}">${statusTag}</span>
+            </div>
+            <p style="margin:0 0 10px; font-size:12px; color:var(--text-secondary, #475569);">${meta.desc}</p>
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:10px;">
+              <div>
+                <label style="font-size:11px; font-weight:600; display:block; margin-bottom:2px;">Student Visibility:</label>
+                <select id="vis_${key}" class="co-admin-select-sm" style="width:100%;">
+                  <option value="true" ${visible ? 'selected' : ''}>Visible (Shown)</option>
+                  <option value="false" ${!visible ? 'selected' : ''}>Hidden (Off Nav)</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:11px; font-weight:600; display:block; margin-bottom:2px;">Feature Availability:</label>
+                <select id="ena_${key}" class="co-admin-select-sm" style="width:100%;">
+                  <option value="true" ${enabled ? 'selected' : ''}>Enabled (Active)</option>
+                  <option value="false" ${!enabled ? 'selected' : ''}>Disabled (Blocked)</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:10px;">
+              <div>
+                <label style="font-size:11px; font-weight:600; display:block; margin-bottom:2px;">Maintenance Mode:</label>
+                <select id="maintMode_${key}" class="co-admin-select-sm" style="width:100%;">
+                  <option value="false" ${!maintenance ? 'selected' : ''}>Maintenance OFF</option>
+                  <option value="true" ${maintenance ? 'selected' : ''}>Maintenance ON</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:11px; font-weight:600; display:block; margin-bottom:2px;">Access Rule:</label>
+                <select id="access_${key}" class="co-admin-select-sm" style="width:100%;">
+                  <option value="EVERYONE" ${accessMode === 'EVERYONE' ? 'selected' : ''}>Everyone</option>
+                  <option value="AUTHENTICATED" ${accessMode === 'AUTHENTICATED' ? 'selected' : ''}>Logged In Students</option>
+                  <option value="MEMBERSHIP_REQUIRED" ${accessMode === 'MEMBERSHIP_REQUIRED' ? 'selected' : ''}>Membership Required</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="margin-bottom:8px;">
+              <input id="maintMsg_${key}" placeholder="Custom maintenance message (optional)" value="${escapeHtml(feat.maintenance_message || feat.maintenanceMessage || '')}" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:5px 8px; font-size:12px; background:#fff;" />
+            </div>
+
+            <div style="font-size:10px; color:var(--text-secondary, #64748b);">
+              Updated: ${feat.updatedAt ? new Date(feat.updatedAt).toLocaleString('en-IN') : 'Default'} | By: ${escapeHtml(feat.updatedBy || 'System')}
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1fr solid #e2e8f0; pt:8px;">
+            <button class="btn primary btn-sm" style="font-size:11px; padding:4px 10px;" onclick="window.CollegeOSSaveFeatureControl('${key}')"><i class="fa-solid fa-floppy-disk"></i> Save Feature State</button>
+            <a href="${meta.link}" style="font-size:11px; color:var(--primary-color, #2563eb); text-decoration:none; font-weight:600;"><i class="fa-solid fa-arrow-right"></i> Manage Module</a>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    mount.innerHTML = `<p class="error">Failed to load feature matrix: ${err.message}</p>`;
+  }
+}
+
+window.CollegeOSSaveFeatureControl = async function(featureKey) {
+  const meta = FEATURE_META_MAP[featureKey] || { name: featureKey };
+  const is_visible = cById(`vis_${featureKey}`)?.value === 'true';
+  const is_enabled = cById(`ena_${featureKey}`)?.value === 'true';
+  const maintenance_mode = cById(`maintMode_${featureKey}`)?.value === 'true';
+  const access_mode = cById(`access_${featureKey}`)?.value || 'EVERYONE';
+  const maintenanceMessage = cById(`maintMsg_${featureKey}`)?.value.trim() || '';
+
+  const confirmMsg = (!is_enabled || maintenance_mode || !is_visible)
+    ? `Warning: Setting ${meta.name} to Disabled/Hidden/Maintenance will restrict or hide student access immediately. Proceed?`
+    : `Save configuration changes for ${meta.name}?`;
+
+  if (!window.confirm(confirmMsg)) return;
+
+  try {
+    await window.CollegeOSApi.adminControlFeatureVisibilityPut({
+      featureKey,
+      is_visible,
+      is_enabled,
+      maintenance_mode,
+      access_mode,
+      maintenanceMessage,
+      reason: `Admin Feature Control saved for ${featureKey}`
+    });
+
+    if (window.CollegeOSToast && typeof window.CollegeOSToast.show === 'function') {
+      window.CollegeOSToast.show(`${meta.name} feature state saved cleanly`, 'success');
+    } else {
+      window.alert(`${meta.name} feature state saved cleanly`);
+    }
+
+    await loadFeatureVisibilityMatrix();
+  } catch (err) {
+    window.alert(err.message || 'Failed to update feature status');
+  }
+};
+
+window.CollegeOSToggleFeature = window.CollegeOSSaveFeatureControl;
+
+/* ============================================================
+ * PART 6: MEMBERSHIP PLAN & ENTITLEMENT SYSTEM UI HANDLERS
+ * ============================================================ */
+
+let currentMembershipPlansCache = [];
+
+async function loadMembershipPlansPanel() {
+  const mount = cById('membershipPlansTableBody');
+  if (mount) mount.innerHTML = '<tr><td colspan="7" class="co-admin-table-empty">Loading membership plans...</td></tr>';
+  try {
+    const res = await window.CollegeOSApi.adminControlMembershipPlans();
+    currentMembershipPlansCache = res.plans || [];
+    renderMembershipPlans(currentMembershipPlansCache);
+  } catch (err) {
+    if (mount) mount.innerHTML = `<tr class="error"><td colspan="7">Failed to load membership plans: ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+function renderMembershipPlans(plans) {
+  const mount = cById('membershipPlansTableBody');
+  if (!mount) return;
+  if (!plans || plans.length === 0) {
+    mount.innerHTML = '<tr><td colspan="7" class="co-admin-table-empty">No membership plans found. Click "Create New Plan" to add one.</td></tr>';
+    return;
+  }
+
+  mount.innerHTML = plans.map(plan => {
+    const statusClass = plan.status === 'ACTIVE' ? 'ok' : (plan.status === 'ARCHIVED' ? 'danger' : 'warn');
+    const purchasableBadge = plan.is_purchasable ? '<span class="status-badge ok">Yes</span>' : '<span class="status-badge warn">No</span>';
+    const durationText = `${plan.duration_value} ${plan.duration_unit}`;
+    const priceText = Number(plan.price) === 0 ? 'FREE' : `₹${plan.price}`;
+
+    return `
+      <tr>
+        <td>
+          <div style="font-weight:700; color:var(--text-primary,#0f172a);">${escapeHtml(plan.name)}</div>
+          <div style="font-size:0.75rem; color:#64748b; font-family:monospace;">Code: ${escapeHtml(plan.code)}</div>
+        </td>
+        <td>
+          <div style="font-weight:700; color:#047857;">${priceText} / ${durationText}</div>
+          <div style="font-size:0.75rem; color:#64748b;">${escapeHtml(plan.currency)}</div>
+        </td>
+        <td><span class="status-badge ${statusClass}">${escapeHtml(plan.status)}</span></td>
+        <td>${purchasableBadge}</td>
+        <td><strong style="color:var(--primary-color,#2563eb);">${plan.active_subscribers_count || 0}</strong> members</td>
+        <td><span class="status-badge ok">${(plan.entitlements || []).length} features</span></td>
+        <td style="text-align:right;">
+          <div style="display:flex; gap:6px; justify-content:flex-end;">
+            <button class="btn secondary btn-sm" type="button" onclick="window.CollegeOSEditPlan(${plan.id})"><i class="fa-solid fa-pen"></i> Edit</button>
+            <button class="btn secondary btn-sm" type="button" onclick="window.CollegeOSConfigureEntitlements(${plan.id})"><i class="fa-solid fa-key"></i> Features</button>
+            <button class="btn danger btn-sm" type="button" onclick="window.CollegeOSArchivePlan(${plan.id})"><i class="fa-solid fa-box-archive"></i></button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function loadActiveMembershipsView(page = 1) {
+  const mount = cById('activeMembershipsTableBody');
+  if (mount) mount.innerHTML = '<tr><td colspan="6" class="co-admin-table-empty">Loading active student subscriptions...</td></tr>';
+  try {
+    const res = await window.CollegeOSApi.adminControlActiveMemberships(page, 20);
+    const list = res.activeMemberships || [];
+    if (list.length === 0) {
+      mount.innerHTML = '<tr><td colspan="6" class="co-admin-table-empty">No active student subscriptions found.</td></tr>';
+      return;
+    }
+    mount.innerHTML = list.map(m => `
+      <tr>
+        <td>
+          <div style="font-weight:600;">${escapeHtml(m.student_name || 'Student #' + m.student_id)}</div>
+          <div style="font-size:0.75rem; color:#64748b;">${escapeHtml(m.student_email)}</div>
+        </td>
+        <td><span class="status-badge ok">${escapeHtml(m.plan_name || m.plan_code || 'Premium')}</span></td>
+        <td><span class="status-badge info">${escapeHtml(m.source || 'PAYMENT')}</span></td>
+        <td>${m.started_at ? new Date(m.started_at).toLocaleDateString('en-IN') : 'N/A'}</td>
+        <td>${m.expires_at ? new Date(m.expires_at).toLocaleDateString('en-IN') : 'Lifetime / Continuous'}</td>
+        <td><strong>₹${m.price_at_activation != null ? m.price_at_activation : '0'}</strong></td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    if (mount) mount.innerHTML = `<tr class="error"><td colspan="6">Failed to load active subscriptions: ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+async function loadMembershipHistoryView(page = 1) {
+  const mount = cById('membershipHistoryTableBody');
+  if (mount) mount.innerHTML = '<tr><td colspan="6" class="co-admin-table-empty">Loading subscription history...</td></tr>';
+  try {
+    const res = await window.CollegeOSApi.adminControlMembershipHistory(page, 20);
+    const list = res.membershipHistory || [];
+    if (list.length === 0) {
+      mount.innerHTML = '<tr><td colspan="6" class="co-admin-table-empty">No historical subscription records found.</td></tr>';
+      return;
+    }
+    mount.innerHTML = list.map(m => `
+      <tr>
+        <td>
+          <div style="font-weight:600;">${escapeHtml(m.student_name || 'Student #' + m.student_id)}</div>
+          <div style="font-size:0.75rem; color:#64748b;">${escapeHtml(m.student_email)}</div>
+        </td>
+        <td><span class="status-badge secondary">${escapeHtml(m.plan_name || m.plan_code || 'Plan')}</span></td>
+        <td><span class="status-badge warn">${escapeHtml(m.status)}</span></td>
+        <td><span class="status-badge info">${escapeHtml(m.source || 'PAYMENT')}</span></td>
+        <td>${m.started_at ? new Date(m.started_at).toLocaleDateString('en-IN') : ''} - ${m.expires_at ? new Date(m.expires_at).toLocaleDateString('en-IN') : 'Ended'}</td>
+        <td>₹${m.price_at_activation != null ? m.price_at_activation : '0'}</td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    if (mount) mount.innerHTML = `<tr class="error"><td colspan="6">Failed to load subscription history: ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+window.CollegeOSEditPlan = function(planId) {
+  const plan = currentMembershipPlansCache.find(p => p.id === planId);
+  if (!plan) return;
+
+  cById('planModalTitle').textContent = 'Edit Membership Plan';
+  cById('planFormId').value = plan.id;
+  cById('planFormCode').value = plan.code;
+  cById('planFormCode').disabled = true; // Code is immutable once created
+  cById('planFormName').value = plan.name;
+  cById('planFormDescription').value = plan.description || '';
+  cById('planFormPrice').value = plan.price;
+  cById('planFormDurationValue').value = plan.duration_value;
+  cById('planFormDurationUnit').value = plan.duration_unit;
+  cById('planFormStatus').value = plan.status;
+  cById('planFormDisplayOrder').value = plan.display_order;
+  cById('planFormPurchasable').checked = Boolean(plan.is_purchasable);
+  cById('planFormBenefits').value = Array.isArray(plan.display_benefits) ? plan.display_benefits.join('\n') : '';
+
+  const modal = cById('planFormModal');
+  if (modal) modal.style.display = 'flex';
+};
+
+window.CollegeOSConfigureEntitlements = function(planId) {
+  const plan = currentMembershipPlansCache.find(p => p.id === planId);
+  if (!plan) return;
+
+  cById('entitlementsModalTitle').textContent = `Configure Entitlements for ${plan.name}`;
+  cById('entitlementsPlanId').value = plan.id;
+
+  const currentEnts = new Set(plan.entitlements || []);
+  const listMount = cById('entitlementsCheckboxesList');
+
+  const registryFeatures = [
+    { key: 'study_materials', label: 'Study Materials' },
+    { key: 'notes_library', label: 'Notes Library' },
+    { key: 'previous_papers', label: 'Previous Papers' },
+    { key: 'quizzes', label: 'Quizzes' },
+    { key: 'mock_tests', label: 'Mock Test Studio' },
+    { key: 'study_roadmaps', label: 'Study Roadmaps' },
+    { key: 'academic_structure', label: 'Academic Structure' },
+    { key: 'career_guidance', label: 'Career Guidance' },
+    { key: 'ai_study_assistant', label: 'AI Study Tools' },
+    { key: 'certificates', label: 'Certificates' },
+    { key: 'company_support', label: 'Company Support' },
+    { key: 'campus_feed', label: 'Campus Feed' },
+    { key: 'forum', label: 'Student Forum' },
+    { key: 'referrals', label: 'Referral Rewards' },
+    { key: 'contributions', label: 'Student Contributions' },
+    { key: 'ai_tools', label: 'AI Career Tools' },
+    { key: 'live_sessions', label: 'Live Sessions' }
+  ];
+
+  if (listMount) {
+    listMount.innerHTML = registryFeatures.map(f => {
+      const checked = currentEnts.has(f.key) ? 'checked' : '';
+      return `
+        <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; padding:4px 6px; cursor:pointer;">
+          <input type="checkbox" name="entitlementKey" value="${f.key}" ${checked} />
+          <span>${escapeHtml(f.label)}</span>
+        </label>
+      `;
+    }).join('');
+  }
+
+  const modal = cById('planEntitlementsModal');
+  if (modal) modal.style.display = 'flex';
+};
+
+window.CollegeOSArchivePlan = async function(planId) {
+  const plan = currentMembershipPlansCache.find(p => p.id === planId);
+  if (!plan) return;
+
+  if (!window.confirm(`Are you sure you want to archive/delete plan "${plan.name}"? If active subscribers exist, it will be archived safely.`)) {
+    return;
+  }
+
+  try {
+    const res = await window.CollegeOSApi.adminControlArchiveMembershipPlan(planId);
+    window.alert(res.message || 'Plan archived/deleted successfully');
+    await loadMembershipPlansPanel();
+  } catch (err) {
+    window.alert(err.message || 'Failed to archive plan');
+  }
+};
+
+/* ============================================================
+ * PART 7: PRODUCTION PAYMENTS + UPI + QR + MANUAL VERIFICATION UI
+ * ============================================================ */
+
+let currentPendingQueueCache = [];
+let selectedReviewPaymentId = null;
+
+async function loadPayments(token) {
+  await loadPaymentsQueue();
+}
+
+async function loadPaymentsQueue(page = 1) {
+  const mount = cById('paymentQueueTableBody');
+  if (mount) mount.innerHTML = '<tr><td colspan="6" class="co-admin-table-empty">Loading pending verification requests...</td></tr>';
+  try {
+    const res = await window.CollegeOSApi.adminControlPaymentQueue(page, 20);
+    currentPendingQueueCache = res.pendingQueue || [];
+    if (currentPendingQueueCache.length === 0) {
+      if (mount) mount.innerHTML = '<tr><td colspan="6" class="co-admin-table-empty">No pending payment verification requests in queue.</td></tr>';
+      return;
+    }
+    renderPaymentQueue(currentPendingQueueCache);
+  } catch (err) {
+    if (mount) mount.innerHTML = `<tr class="error"><td colspan="6">Failed to load payment queue: ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+function renderPaymentQueue(items) {
+  const mount = cById('paymentQueueTableBody');
+  if (!mount) return;
+
+  mount.innerHTML = items.map(item => {
+    const dupBadge = item.is_duplicate_utr
+      ? '<span class="status-badge danger" title="Duplicate UTR detected"><i class="fa-solid fa-triangle-exclamation"></i> Duplicate UTR</span>'
+      : '';
+
+    const proofLink = item.proof_url
+      ? `<a href="${escapeHtml(item.proof_url)}" target="_blank" style="color:var(--primary-color,#2563eb); font-weight:600;"><i class="fa-solid fa-image"></i> View Proof</a>`
+      : '<span style="color:#94a3b8; font-size:0.8rem;">No Proof</span>';
+
+    return `
+      <tr>
+        <td>
+          <div style="font-weight:600;">${escapeHtml(item.student_name || 'Student #' + item.student_id)}</div>
+          <div style="font-size:0.75rem; color:#64748b;">${escapeHtml(item.student_email)}</div>
+        </td>
+        <td>
+          <div style="font-weight:700; color:#047857;">₹${item.amount_inr}</div>
+        </td>
+        <td>
+          <code style="background:#f1f5f9; padding:2px 6px; border-radius:4px; font-weight:600;">${escapeHtml(item.utr_reference)}</code>
+          ${dupBadge}
+        </td>
+        <td>${proofLink}</td>
+        <td>${item.submitted_at ? new Date(item.submitted_at).toLocaleString('en-IN') : 'N/A'}</td>
+        <td style="text-align:right;">
+          <button class="btn primary btn-sm" type="button" onclick="window.CollegeOSReviewPayment(${item.id})"><i class="fa-solid fa-magnifying-glass"></i> Review</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function loadPaymentTransactions(page = 1) {
+  const mount = cById('paymentTransactionsTableBody');
+  if (mount) mount.innerHTML = '<tr><td colspan="6" class="co-admin-table-empty">Loading payment transactions...</td></tr>';
+  const status = cById('payTxStatusFilter')?.value || 'all';
+  const search = cById('payTxSearchInput')?.value || '';
+
+  try {
+    const res = await window.CollegeOSApi.adminControlPaymentTransactions(page, 20, status, search);
+    const list = res.transactions || [];
+    if (list.length === 0) {
+      mount.innerHTML = '<tr><td colspan="6" class="co-admin-table-empty">No payment transactions match filter.</td></tr>';
+      return;
+    }
+
+    mount.innerHTML = list.map(tx => {
+      const statusClass = tx.status === 'approved' ? 'ok' : (tx.status === 'rejected' ? 'danger' : 'warn');
+      return `
+        <tr>
+          <td>
+            <div style="font-weight:600;">${escapeHtml(tx.student_name || 'Student #' + tx.student_id)}</div>
+            <div style="font-size:0.75rem; color:#64748b;">${escapeHtml(tx.student_email)}</div>
+          </td>
+          <td><strong>₹${tx.amount_inr}</strong></td>
+          <td><code>${escapeHtml(tx.utr_reference)}</code></td>
+          <td><span class="status-badge ${statusClass}">${escapeHtml(tx.status)}</span></td>
+          <td>${tx.submitted_at ? new Date(tx.submitted_at).toLocaleDateString('en-IN') : ''}</td>
+          <td>
+            ${tx.approved_at ? new Date(tx.approved_at).toLocaleDateString('en-IN') : (tx.rejection_reason ? 'Rejected' : '-')}
+            ${tx.approved_by_name ? `<div style="font-size:0.75rem; color:#64748b;">By: ${escapeHtml(tx.approved_by_name)}</div>` : ''}
+          </td>
+        </tr>
+      `;
+    }).join('');
+  } catch (err) {
+    if (mount) mount.innerHTML = `<tr class="error"><td colspan="6">Failed to load transactions: ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+async function loadPaymentSettings() {
+  try {
+    const res = await window.CollegeOSApi.adminControlPaymentSettingsGet();
+    const s = res.settings || {};
+    if (cById('psPaymentEnabled')) cById('psPaymentEnabled').checked = Boolean(s.payment_enabled);
+    if (cById('psUpiId')) cById('psUpiId').value = s.upi_id || '';
+    if (cById('psPayeeName')) cById('psPayeeName').value = s.payee_name || '';
+    if (cById('psInstructions')) cById('psInstructions').value = Array.isArray(s.instructions) ? s.instructions.join('\n') : '';
+    if (cById('psSupportMessage')) cById('psSupportMessage').value = s.support_message || '';
+
+    const previewBox = cById('psQrPreviewBox');
+    if (previewBox) {
+      if (s.qr_image_url) {
+        previewBox.innerHTML = `<img src="${escapeHtml(s.qr_image_url)}" alt="QR Code" style="max-width:100%; max-height:100%; object-fit:contain;" />`;
+      } else {
+        previewBox.innerHTML = '<span style="font-size:0.75rem; color:#94a3b8;">No QR</span>';
+      }
+    }
+  } catch (err) {
+    window.alert(err.message || 'Failed to load payment settings');
+  }
+}
+
+window.CollegeOSReviewPayment = function(paymentId) {
+  const item = currentPendingQueueCache.find(i => i.id === paymentId);
+  if (!item) return;
+
+  selectedReviewPaymentId = paymentId;
+  cById('prStudent').textContent = `${item.student_name} (${item.student_email})`;
+  cById('prAmount').textContent = `₹${item.amount_inr}`;
+  cById('prUtr').textContent = item.utr_reference;
+
+  const warn = cById('prDuplicateWarn');
+  if (warn) warn.style.display = item.is_duplicate_utr ? 'block' : 'none';
+
+  const proofBox = cById('prProofContainer');
+  if (proofBox) {
+    if (item.proof_url) {
+      proofBox.innerHTML = `<a href="${escapeHtml(item.proof_url)}" target="_blank"><img src="${escapeHtml(item.proof_url)}" alt="Proof Screenshot" style="max-width:100%; max-height:240px; border-radius:6px; object-fit:contain;" /></a>`;
+    } else {
+      proofBox.innerHTML = '<span style="font-size:0.85rem; color:#64748b;">No screenshot uploaded</span>';
+    }
+  }
+
+  cById('prRejectReasonInput').value = '';
+  cById('paymentReviewModal').style.display = 'flex';
+};
+
+function bindPaymentTabEvents() {
+  const qBtn = cById('payTabQueueBtn');
+  const txBtn = cById('payTabTransactionsBtn');
+  const setBtn = cById('payTabSettingsBtn');
+
+  if (qBtn && txBtn && setBtn) {
+    qBtn.onclick = () => {
+      qBtn.classList.add('active');
+      txBtn.classList.remove('active');
+      setBtn.classList.remove('active');
+      cById('paymentQueueView').style.display = 'block';
+      cById('paymentTransactionsView').style.display = 'none';
+      cById('paymentSettingsView').style.display = 'none';
+      loadPaymentsQueue(1);
+    };
+
+    txBtn.onclick = () => {
+      txBtn.classList.add('active');
+      qBtn.classList.remove('active');
+      setBtn.classList.remove('active');
+      cById('paymentTransactionsView').style.display = 'block';
+      cById('paymentQueueView').style.display = 'none';
+      cById('paymentSettingsView').style.display = 'none';
+      loadPaymentTransactions(1);
+    };
+
+    setBtn.onclick = () => {
+      setBtn.classList.add('active');
+      qBtn.classList.remove('active');
+      txBtn.classList.remove('active');
+      cById('paymentSettingsView').style.display = 'block';
+      cById('paymentQueueView').style.display = 'none';
+      cById('paymentTransactionsView').style.display = 'none';
+      loadPaymentSettings();
+    };
+  }
+
+  const closeReviewBtn = cById('closePayReviewModalBtn');
+  if (closeReviewBtn) {
+    closeReviewBtn.onclick = () => {
+      cById('paymentReviewModal').style.display = 'none';
+    };
+  }
+
+  const approvePayBtn = cById('approvePayBtn');
+  if (approvePayBtn) {
+    approvePayBtn.onclick = async () => {
+      if (!selectedReviewPaymentId) return;
+      if (!window.confirm('Approve payment and activate student membership now?')) return;
+
+      try {
+        const res = await window.CollegeOSApi.adminControlApprovePayment(selectedReviewPaymentId);
+        window.alert(res.message || 'Payment approved and membership activated!');
+        cById('paymentReviewModal').style.display = 'none';
+        await loadPaymentsQueue(1);
+      } catch (err) {
+        window.alert(err.message || 'Failed to approve payment');
+      }
+    };
+  }
+
+  const rejectPayBtn = cById('rejectPayBtn');
+  if (rejectPayBtn) {
+    rejectPayBtn.onclick = async () => {
+      if (!selectedReviewPaymentId) return;
+      const reason = cById('prRejectReasonInput').value.trim();
+      if (!reason) {
+        window.alert('Please enter a rejection reason.');
+        return;
+      }
+
+      if (!window.confirm(`Reject payment with reason: "${reason}"?`)) return;
+
+      try {
+        const res = await window.CollegeOSApi.adminControlRejectPayment(selectedReviewPaymentId, reason);
+        window.alert(res.message || 'Payment rejected successfully');
+        cById('paymentReviewModal').style.display = 'none';
+        await loadPaymentsQueue(1);
+      } catch (err) {
+        window.alert(err.message || 'Failed to reject payment');
+      }
+    };
+  }
+
+  const psForm = cById('paymentSettingsForm');
+  if (psForm) {
+    psForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const payment_enabled = cById('psPaymentEnabled').checked;
+      const upi_id = cById('psUpiId').value.trim();
+      const payee_name = cById('psPayeeName').value.trim();
+      const instructions = cById('psInstructions').value.split('\n').map(s => s.trim()).filter(Boolean);
+      const support_message = cById('psSupportMessage').value.trim();
+
+      try {
+        await window.CollegeOSApi.adminControlPaymentSettingsPut({
+          payment_enabled,
+          upi_id,
+          payee_name,
+          instructions,
+          support_message
+        });
+        window.alert('Payment settings saved successfully!');
+        await loadPaymentSettings();
+      } catch (err) {
+        window.alert(err.message || 'Failed to save payment settings');
+      }
+    };
+  }
+
+  const uploadQrBtn = cById('uploadQrBtn');
+  const qrFileInput = cById('psQrFileInput');
+  if (uploadQrBtn && qrFileInput) {
+    uploadQrBtn.onclick = async () => {
+      const file = qrFileInput.files[0];
+      if (!file) {
+        window.alert('Please select an image file first.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('qrImage', file);
+
+      try {
+        const res = await fetch('/api/admin/control/payments/settings/qr', {
+          method: 'POST',
+          body: formData
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Upload failed');
+        window.alert('Payment QR code updated successfully!');
+        qrFileInput.value = '';
+        await loadPaymentSettings();
+      } catch (err) {
+        window.alert(err.message || 'Failed to upload QR image');
+      }
+    };
+  }
+
+  const refreshQueueBtn = cById('loadPaymentsQueueBtn');
+  if (refreshQueueBtn) {
+    refreshQueueBtn.onclick = () => loadPaymentsQueue(1);
+  }
+}
+
+function bindMembershipEvents() {
+  const openBtn = cById('openCreatePlanModalBtn');
+  if (openBtn) {
+    openBtn.onclick = () => {
+      cById('planModalTitle').textContent = 'Create Membership Plan';
+      cById('planFormId').value = '';
+      cById('planFormCode').value = '';
+      cById('planFormCode').disabled = false;
+      cById('planFormName').value = '';
+      cById('planFormDescription').value = '';
+      cById('planFormPrice').value = '49.00';
+      cById('planFormDurationValue').value = '30';
+      cById('planFormDurationUnit').value = 'DAYS';
+      cById('planFormStatus').value = 'ACTIVE';
+      cById('planFormDisplayOrder').value = '0';
+      cById('planFormPurchasable').checked = true;
+      cById('planFormBenefits').value = '';
+      cById('planFormModal').style.display = 'flex';
+    };
+  }
+
+  const closePlanModalBtn = cById('closePlanModalBtn');
+  if (closePlanModalBtn) {
+    closePlanModalBtn.onclick = () => {
+      cById('planFormModal').style.display = 'none';
+    };
+  }
+
+  const closeEntModalBtn = cById('closeEntitlementsModalBtn');
+  if (closeEntModalBtn) {
+    closeEntModalBtn.onclick = () => {
+      cById('planEntitlementsModal').style.display = 'none';
+    };
+  }
+
+  const planForm = cById('planForm');
+  if (planForm) {
+    planForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const planId = cById('planFormId').value;
+      const code = cById('planFormCode').value.trim();
+      const name = cById('planFormName').value.trim();
+      const description = cById('planFormDescription').value.trim();
+      const price = parseFloat(cById('planFormPrice').value || '0');
+      const duration_value = parseInt(cById('planFormDurationValue').value || '30', 10);
+      const duration_unit = cById('planFormDurationUnit').value;
+      const status = cById('planFormStatus').value;
+      const display_order = parseInt(cById('planFormDisplayOrder').value || '0', 10);
+      const is_purchasable = cById('planFormPurchasable').checked;
+      const benefitsText = cById('planFormBenefits').value;
+      const display_benefits = benefitsText.split('\n').map(s => s.trim()).filter(Boolean);
+
+      try {
+        if (planId) {
+          // Edit existing
+          await window.CollegeOSApi.adminControlUpdateMembershipPlan(planId, {
+            name,
+            description,
+            price,
+            duration_value,
+            duration_unit,
+            status,
+            is_purchasable,
+            display_order,
+            display_benefits
+          });
+          window.alert('Membership plan updated successfully!');
+        } else {
+          // Create new
+          await window.CollegeOSApi.adminControlCreateMembershipPlan({
+            code,
+            name,
+            description,
+            price,
+            duration_value,
+            duration_unit,
+            status,
+            is_purchasable,
+            display_order,
+            display_benefits
+          });
+          window.alert('New membership plan created successfully!');
+        }
+        cById('planFormModal').style.display = 'none';
+        await loadMembershipPlansPanel();
+      } catch (err) {
+        window.alert(err.message || 'Failed to save membership plan');
+      }
+    };
+  }
+
+  const entForm = cById('entitlementsForm');
+  if (entForm) {
+    entForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const planId = cById('entitlementsPlanId').value;
+      const checkboxes = document.querySelectorAll('input[name="entitlementKey"]:checked');
+      const entitlements = Array.from(checkboxes).map(cb => cb.value);
+
+      try {
+        await window.CollegeOSApi.adminControlSetPlanEntitlements(planId, entitlements);
+        window.alert('Plan entitlements updated successfully!');
+        cById('planEntitlementsModal').style.display = 'none';
+        await loadMembershipPlansPanel();
+      } catch (err) {
+        window.alert(err.message || 'Failed to update plan entitlements');
+      }
+    };
+  }
+
+  // Sub-tabs handling
+  const subtabPlansBtn = cById('subtabPlansBtn');
+  const subtabActiveBtn = cById('subtabActiveMembershipsBtn');
+  const subtabHistoryBtn = cById('subtabMembershipHistoryBtn');
+
+  if (subtabPlansBtn && subtabActiveBtn && subtabHistoryBtn) {
+    subtabPlansBtn.onclick = () => {
+      subtabPlansBtn.classList.add('active');
+      subtabActiveBtn.classList.remove('active');
+      subtabHistoryBtn.classList.remove('active');
+      cById('membershipPlansView').style.display = 'block';
+      cById('activeMembershipsView').style.display = 'none';
+      cById('membershipHistoryView').style.display = 'none';
+      loadMembershipPlansPanel();
+    };
+
+    subtabActiveBtn.onclick = () => {
+      subtabActiveBtn.classList.add('active');
+      subtabPlansBtn.classList.remove('active');
+      subtabHistoryBtn.classList.remove('active');
+      cById('activeMembershipsView').style.display = 'block';
+      cById('membershipPlansView').style.display = 'none';
+      cById('membershipHistoryView').style.display = 'none';
+      loadActiveMembershipsView(1);
+    };
+
+    subtabHistoryBtn.onclick = () => {
+      subtabHistoryBtn.classList.add('active');
+      subtabPlansBtn.classList.remove('active');
+      subtabActiveBtn.classList.remove('active');
+      cById('membershipHistoryView').style.display = 'block';
+      cById('membershipPlansView').style.display = 'none';
+      cById('activeMembershipsView').style.display = 'none';
+      loadMembershipHistoryView(1);
+    };
+  }
+
+  const refreshBtn = cById('loadMembershipPlansBtn');
+  if (refreshBtn) {
+    refreshBtn.onclick = () => loadMembershipPlansPanel();
+  }
+}
+
+/* ============================================================
+ * PART 2: ACADEMIC STRUCTURE & STUDENT SCOPE GOVERNANCE
+ * ============================================================ */
+
+let asCurrentUniversities = [];
+let asCurrentCourses = [];
+let asCurrentBatches = [];
+let asAssignCurrentPage = 1;
+
+async function loadAcademicStructurePanel() {
+  bindAcademicStructureSubtabs();
+  await loadAcademicStructureOverview();
+}
+
+function bindAcademicStructureSubtabs() {
+  const tabOverview = cById('asTabOverviewBtn');
+  const tabUnis = cById('asTabUniversitiesBtn');
+  const tabCourses = cById('asTabCoursesBtn');
+  const tabBatches = cById('asTabBatchesBtn');
+  const tabAssign = cById('asTabAssignmentsBtn');
+
+  const viewOverview = cById('asViewOverview');
+  const viewUnis = cById('asViewUniversities');
+  const viewCourses = cById('asViewCourses');
+  const viewBatches = cById('asViewBatches');
+  const viewAssign = cById('asViewAssignments');
+
+  if (!tabOverview || !tabUnis || !tabCourses || !tabBatches || !tabAssign) return;
+
+  const resetSubtabs = () => {
+    [tabOverview, tabUnis, tabCourses, tabBatches, tabAssign].forEach(b => b.classList.remove('active'));
+    [viewOverview, viewUnis, viewCourses, viewBatches, viewAssign].forEach(v => v.style.display = 'none');
+  };
+
+  tabOverview.onclick = () => {
+    resetSubtabs();
+    tabOverview.classList.add('active');
+    viewOverview.style.display = 'block';
+    loadAcademicStructureOverview();
+  };
+
+  tabUnis.onclick = () => {
+    resetSubtabs();
+    tabUnis.classList.add('active');
+    viewUnis.style.display = 'block';
+    loadAsUniversities();
+  };
+
+  tabCourses.onclick = () => {
+    resetSubtabs();
+    tabCourses.classList.add('active');
+    viewCourses.style.display = 'block';
+    loadAsCourses();
+  };
+
+  tabBatches.onclick = () => {
+    resetSubtabs();
+    tabBatches.classList.add('active');
+    viewBatches.style.display = 'block';
+    loadAsBatches();
+  };
+
+  tabAssign.onclick = () => {
+    resetSubtabs();
+    tabAssign.classList.add('active');
+    viewAssign.style.display = 'block';
+    loadAsStudentAssignments(1);
+  };
+}
+
+async function loadAcademicStructureOverview() {
+  const refreshBtn = cById('loadAcademicStructureOverviewBtn');
+  if (refreshBtn) refreshBtn.disabled = true;
+
+  try {
+    const res = await fetch('/api/admin/academic-structure/overview', { credentials: 'include' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch overview');
+
+    const stats = data.stats || {};
+    if (cById('kpiActiveUniversities')) cById('kpiActiveUniversities').textContent = stats.activeUniversities || 0;
+    if (cById('kpiActiveCourses')) cById('kpiActiveCourses').textContent = stats.activeCourses || 0;
+    if (cById('kpiActiveBatches')) cById('kpiActiveBatches').textContent = stats.activeBatches || 0;
+    if (cById('kpiStudentsConfigured')) cById('kpiStudentsConfigured').textContent = stats.studentsAssigned || 0;
+
+    // Render Health Alerts
+    const healthBanner = cById('academicHealthBannerContainer');
+    if (healthBanner) {
+      const alerts = data.healthAlerts || [];
+      if (alerts.length === 0) {
+        healthBanner.innerHTML = `
+          <div style="background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:10px 14px; border-radius:8px; font-size:0.85rem; display:flex; align-items:center; gap:8px;">
+            <i class="fa-solid fa-circle-check"></i>
+            <span><strong>System Healthy:</strong> Academic structure is active and ready for student onboarding.</span>
+          </div>
+        `;
+      } else {
+        healthBanner.innerHTML = alerts.map(a => `
+          <div style="background:${a.severity === 'CRITICAL' ? '#fef2f2' : '#fffbe6'}; border:1px solid ${a.severity === 'CRITICAL' ? '#fca5a5' : '#ffe58f'}; color:${a.severity === 'CRITICAL' ? '#991b1b' : '#d48806'}; padding:10px 14px; border-radius:8px; font-size:0.85rem; display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span><strong>${a.severity} WARNING:</strong> ${escapeHtml(a.message)}</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    // Render Onboarding Preview Tree
+    const treeBox = cById('asOnboardingPreviewTree');
+    if (treeBox) {
+      const preview = data.onboardingPreview || [];
+      if (preview.length === 0) {
+        treeBox.innerHTML = '<div style="color:#94a3b8; text-align:center; padding:16px;">No active universities configured.</div>';
+      } else {
+        treeBox.innerHTML = preview.map(u => `
+          <div style="margin-bottom:12px; border-bottom:1px dashed #e2e8f0; padding-bottom:8px;">
+            <div style="font-weight:700; color:#1e293b;">
+              <i class="fa-solid fa-building-columns" style="color:#2563eb;"></i> ${escapeHtml(u.name)} <code style="font-size:0.75rem; background:#e2e8f0; padding:1px 5px; border-radius:3px;">${escapeHtml(u.code)}</code>
+            </div>
+            ${u.courses && u.courses.length > 0 ? `
+              <div style="margin-left:18px; margin-top:6px; display:flex; flex-direction:column; gap:4px;">
+                ${u.courses.map(c => `
+                  <div>
+                    <span style="font-weight:600; color:#334155;"><i class="fa-solid fa-book-open" style="font-size:0.8rem; color:#64748b;"></i> ${escapeHtml(c.name)}</span>
+                    ${c.batches && c.batches.length > 0 ? `
+                      <div style="margin-left:18px; display:flex; gap:6px; flex-wrap:wrap; margin-top:2px;">
+                        ${c.batches.map(b => `<span style="background:#e0f2fe; color:#0369a1; padding:1px 6px; border-radius:4px; font-size:0.75rem; font-weight:600;">${escapeHtml(b.name)}</span>`).join('')}
+                      </div>
+                    ` : '<div style="margin-left:18px; color:#ef4444; font-size:0.75rem;">(No active batches)</div>'}
+                  </div>
+                `).join('')}
+              </div>
+            ` : '<div style="margin-left:18px; color:#ef4444; font-size:0.75rem; margin-top:4px;">(No active courses)</div>'}
+          </div>
+        `).join('');
+      }
+    }
+  } catch (err) {
+    console.error('Overview error:', err);
+  } finally {
+    if (refreshBtn) refreshBtn.disabled = false;
+  }
+}
+
+async function loadAsUniversities() {
+  const search = cById('asUniSearchInput')?.value || '';
+  const status = cById('asUniStatusFilter')?.value || 'ALL';
+  const tbody = cById('asUniversitiesTableBody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="co-admin-table-empty">Loading universities...</td></tr>';
+
+  try {
+    const res = await fetch(`/api/admin/academic-structure/universities?search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}`, { credentials: 'include' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch universities');
+
+    asCurrentUniversities = data.universities || [];
+    if (asCurrentUniversities.length === 0) {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="co-admin-table-empty">No universities found.</td></tr>';
+      return;
+    }
+
+    if (tbody) {
+      tbody.innerHTML = asCurrentUniversities.map(u => `
+        <tr>
+          <td><code style="background:#e2e8f0; padding:2px 6px; border-radius:4px; font-weight:700;">${escapeHtml(u.code)}</code></td>
+          <td>
+            <div style="font-weight:700;">${escapeHtml(u.name)}</div>
+            ${u.short_name ? `<div style="font-size:0.75rem; color:#64748b;">${escapeHtml(u.short_name)}</div>` : ''}
+          </td>
+          <td>${escapeHtml([u.campus, u.city, u.state].filter(Boolean).join(', ') || 'Main Campus')}</td>
+          <td>${asStatusBadge(u.status)}</td>
+          <td>${u.display_order}</td>
+          <td><strong>${u.courses_count || 0}</strong></td>
+          <td><strong>${u.students_count || 0}</strong></td>
+          <td style="text-align:right;">
+            <div class="control-actions" style="justify-content:flex-end;">
+              <button class="btn secondary btn-sm" onclick="openEditAsUniModal(${u.id})"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
+              <button class="btn danger btn-sm" onclick="deleteAsUni(${u.id})"><i class="fa-solid fa-trash-can"></i> Delete</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    populateUniversityDropdowns(asCurrentUniversities);
+  } catch (err) {
+    if (tbody) tbody.innerHTML = `<tr class="error"><td colspan="8">${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+function populateUniversityDropdowns(unis) {
+  const activeUnis = unis.filter(u => u.status === 'ACTIVE' || u.status === 'INACTIVE');
+  const optionsHtml = '<option value="">Select University...</option>' + activeUnis.map(u => `<option value="${u.id}">${escapeHtml(u.name)} (${escapeHtml(u.code)})</option>`).join('');
+  const filterOptionsHtml = '<option value="">All Universities</option>' + activeUnis.map(u => `<option value="${u.id}">${escapeHtml(u.name)}</option>`).join('');
+
+  ['asCourseUniSelect', 'asBatchUniSelect', 'reassignUniversitySelect'].forEach(id => {
+    const el = cById(id);
+    if (el) el.innerHTML = optionsHtml;
+  });
+
+  ['asCourseUniFilter', 'asBatchUniFilter', 'asAssignUniFilter'].forEach(id => {
+    const el = cById(id);
+    if (el) {
+      const cur = el.value;
+      el.innerHTML = filterOptionsHtml;
+      el.value = cur;
+    }
+  });
+}
+
+function openAddAsUniModal() {
+  cById('asUniModalTitle').textContent = 'Add University';
+  cById('asUniId').value = '';
+  cById('asUniCode').value = '';
+  cById('asUniCode').disabled = false;
+  cById('asUniShortName').value = '';
+  cById('asUniName').value = '';
+  cById('asUniStatus').value = 'ACTIVE';
+  cById('asUniDisplayOrder').value = '0';
+  cById('asUniPriorityRank').value = '1';
+  cById('asUniModal').style.display = 'flex';
+}
+
+function openEditAsUniModal(uniId) {
+  const uni = asCurrentUniversities.find(u => u.id === uniId);
+  if (!uni) return;
+  cById('asUniModalTitle').textContent = 'Edit University';
+  cById('asUniId').value = uni.id;
+  cById('asUniCode').value = uni.code || '';
+  cById('asUniShortName').value = uni.short_name || '';
+  cById('asUniName').value = uni.name || '';
+  cById('asUniStatus').value = uni.status || 'ACTIVE';
+  cById('asUniDisplayOrder').value = uni.display_order || 0;
+  cById('asUniPriorityRank').value = uni.priority_rank || 1;
+  cById('asUniModal').style.display = 'flex';
+}
+
+async function deleteAsUni(uniId) {
+  const uni = asCurrentUniversities.find(u => u.id === uniId);
+  if (!uni) return;
+
+  if (!window.confirm(`Delete or archive University "${uni.name}"?`)) return;
+
+  try {
+    const res = await fetch(`/api/admin/academic-structure/universities/${uniId}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to delete university');
+
+    window.alert(data.message || 'University deleted successfully');
+    await loadAsUniversities();
+    await loadAcademicStructureOverview();
+  } catch (err) {
+    window.alert(err.message || 'Failed to delete university');
+  }
+}
+
+async function loadAsCourses() {
+  const uniId = cById('asCourseUniFilter')?.value || '';
+  const search = cById('asCourseSearchInput')?.value || '';
+  const status = cById('asCourseStatusFilter')?.value || 'ALL';
+  const tbody = cById('asCoursesTableBody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="co-admin-table-empty">Loading courses...</td></tr>';
+
+  try {
+    const res = await fetch(`/api/admin/academic-structure/courses?universityId=${uniId}&search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}`, { credentials: 'include' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch courses');
+
+    asCurrentCourses = data.courses || [];
+    if (asCurrentCourses.length === 0) {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="co-admin-table-empty">No courses found.</td></tr>';
+      return;
+    }
+
+    if (tbody) {
+      tbody.innerHTML = asCurrentCourses.map(c => `
+        <tr>
+          <td><strong>${escapeHtml(c.university_name)}</strong></td>
+          <td><code style="background:#e2e8f0; padding:2px 6px; border-radius:4px; font-weight:700;">${escapeHtml(c.code)}</code></td>
+          <td><div style="font-weight:700;">${escapeHtml(c.name)}</div></td>
+          <td>${escapeHtml(c.degree_type || '-')} (${c.duration_years || 4} Years)</td>
+          <td>${asStatusBadge(c.status)}</td>
+          <td><strong>${c.batches_count || 0}</strong></td>
+          <td><strong>${c.students_count || 0}</strong></td>
+          <td style="text-align:right;">
+            <div class="control-actions" style="justify-content:flex-end;">
+              <button class="btn secondary btn-sm" onclick="openEditAsCourseModal(${c.id})"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
+              <button class="btn danger btn-sm" onclick="deleteAsCourse(${c.id})"><i class="fa-solid fa-trash-can"></i> Delete</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+  } catch (err) {
+    if (tbody) tbody.innerHTML = `<tr class="error"><td colspan="8">${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+function openAddAsCourseModal() {
+  cById('asCourseModalTitle').textContent = 'Add Course';
+  cById('asCourseId').value = '';
+  cById('asCourseUniSelect').value = cById('asCourseUniFilter')?.value || '';
+  cById('asCourseCode').value = '';
+  cById('asCourseDegreeType').value = 'B.Tech';
+  cById('asCourseName').value = '';
+  cById('asCourseDuration').value = '4';
+  cById('asCourseStatus').value = 'ACTIVE';
+  cById('asCourseDisplayOrder').value = '0';
+  cById('asCourseModal').style.display = 'flex';
+}
+
+function openEditAsCourseModal(courseId) {
+  const course = asCurrentCourses.find(c => c.id === courseId);
+  if (!course) return;
+  cById('asCourseModalTitle').textContent = 'Edit Course';
+  cById('asCourseId').value = course.id;
+  cById('asCourseUniSelect').value = course.university_id;
+  cById('asCourseCode').value = course.code || '';
+  cById('asCourseDegreeType').value = course.degree_type || '';
+  cById('asCourseName').value = course.name || '';
+  cById('asCourseDuration').value = course.duration_years || 4;
+  cById('asCourseStatus').value = course.status || 'ACTIVE';
+  cById('asCourseDisplayOrder').value = course.display_order || 0;
+  cById('asCourseModal').style.display = 'flex';
+}
+
+async function deleteAsCourse(courseId) {
+  const course = asCurrentCourses.find(c => c.id === courseId);
+  if (!course) return;
+
+  if (!window.confirm(`Delete or archive Course "${course.name}"?`)) return;
+
+  try {
+    const res = await fetch(`/api/admin/academic-structure/courses/${courseId}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to delete course');
+
+    window.alert(data.message || 'Course deleted successfully');
+    await loadAsCourses();
+    await loadAcademicStructureOverview();
+  } catch (err) {
+    window.alert(err.message || 'Failed to delete course');
+  }
+}
+
+async function loadAsBatches() {
+  const uniId = cById('asBatchUniFilter')?.value || '';
+  const courseId = cById('asBatchCourseFilter')?.value || '';
+  const search = cById('asBatchSearchInput')?.value || '';
+  const status = cById('asBatchStatusFilter')?.value || 'ALL';
+  const tbody = cById('asBatchesTableBody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="co-admin-table-empty">Loading batches...</td></tr>';
+
+  try {
+    const res = await fetch(`/api/admin/academic-structure/batches?universityId=${uniId}&courseId=${courseId}&search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}`, { credentials: 'include' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch batches');
+
+    asCurrentBatches = data.batches || [];
+    if (asCurrentBatches.length === 0) {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="co-admin-table-empty">No batches found.</td></tr>';
+      return;
+    }
+
+    if (tbody) {
+      tbody.innerHTML = asCurrentBatches.map(b => `
+        <tr>
+          <td><strong style="color:#0369a1; font-weight:700;">${escapeHtml(b.name)}</strong></td>
+          <td>${escapeHtml(b.university_name)}</td>
+          <td>${escapeHtml(b.course_name)}</td>
+          <td>${b.start_year}${b.end_year ? ' - ' + b.end_year : ''}</td>
+          <td>${asStatusBadge(b.status)}</td>
+          <td><strong>${b.students_count || 0}</strong></td>
+          <td style="text-align:right;">
+            <div class="control-actions" style="justify-content:flex-end;">
+              <button class="btn secondary btn-sm" onclick="openEditAsBatchModal(${b.id})"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
+              <button class="btn danger btn-sm" onclick="deleteAsBatch(${b.id})"><i class="fa-solid fa-trash-can"></i> Delete</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+  } catch (err) {
+    if (tbody) tbody.innerHTML = `<tr class="error"><td colspan="7">${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+async function loadAsCoursesForUniversity(uniId, targetSelectId, selectedCourseId = '') {
+  const select = cById(targetSelectId);
+  if (!select) return;
+  if (!uniId) {
+    select.innerHTML = '<option value="">Select University First</option>';
+    select.disabled = true;
+    return;
+  }
+
+  select.disabled = true;
+  select.innerHTML = '<option value="">Loading courses...</option>';
+
+  try {
+    const res = await fetch(`/api/student/academic-options/courses?universityId=${uniId}`, { credentials: 'include' });
+    const data = await res.json();
+    const courses = data.courses || [];
+    if (courses.length === 0) {
+      select.innerHTML = '<option value="">No courses available</option>';
+    } else {
+      select.innerHTML = '<option value="">Select Course...</option>' + courses.map(c => `<option value="${c.id}">${escapeHtml(c.name)} (${escapeHtml(c.code)})</option>`).join('');
+      select.disabled = false;
+      if (selectedCourseId) select.value = selectedCourseId;
+    }
+  } catch (err) {
+    select.innerHTML = '<option value="">Failed to load courses</option>';
+  }
+}
+
+async function loadAsBatchesForCourse(uniId, courseId, targetSelectId, selectedBatchId = '') {
+  const select = cById(targetSelectId);
+  if (!select) return;
+  if (!uniId || !courseId) {
+    select.innerHTML = '<option value="">Select Course First</option>';
+    select.disabled = true;
+    return;
+  }
+
+  select.disabled = true;
+  select.innerHTML = '<option value="">Loading batches...</option>';
+
+  try {
+    const res = await fetch(`/api/student/academic-options/batches?universityId=${uniId}&courseId=${courseId}`, { credentials: 'include' });
+    const data = await res.json();
+    const batches = data.batches || [];
+    if (batches.length === 0) {
+      select.innerHTML = '<option value="">No batches available</option>';
+    } else {
+      select.innerHTML = '<option value="">Select Batch...</option>' + batches.map(b => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
+      select.disabled = false;
+      if (selectedBatchId) select.value = selectedBatchId;
+    }
+  } catch (err) {
+    select.innerHTML = '<option value="">Failed to load batches</option>';
+  }
+}
+
+function openAddAsBatchModal() {
+  cById('asBatchModalTitle').textContent = 'Add Batch';
+  cById('asBatchId').value = '';
+  cById('asBatchUniSelect').value = cById('asBatchUniFilter')?.value || '';
+  cById('asBatchCourseSelect').innerHTML = '<option value="">Select University First</option>';
+  cById('asBatchCourseSelect').disabled = true;
+  cById('asBatchName').value = '2026-2030';
+  cById('asBatchStartYear').value = '2026';
+  cById('asBatchEndYear').value = '2030';
+  cById('asBatchStatus').value = 'ACTIVE';
+  cById('asBatchDisplayOrder').value = '0';
+
+  if (cById('asBatchUniSelect').value) {
+    loadAsCoursesForUniversity(cById('asBatchUniSelect').value, 'asBatchCourseSelect');
+  }
+
+  cById('asBatchModal').style.display = 'flex';
+}
+
+function openEditAsBatchModal(batchId) {
+  const batch = asCurrentBatches.find(b => b.id === batchId);
+  if (!batch) return;
+  cById('asBatchModalTitle').textContent = 'Edit Batch';
+  cById('asBatchId').value = batch.id;
+  cById('asBatchUniSelect').value = batch.university_id;
+  loadAsCoursesForUniversity(batch.university_id, 'asBatchCourseSelect', batch.course_id);
+  cById('asBatchName').value = batch.name || '';
+  cById('asBatchStartYear').value = batch.start_year || 2026;
+  cById('asBatchEndYear').value = batch.end_year || 2030;
+  cById('asBatchStatus').value = batch.status || 'ACTIVE';
+  cById('asBatchDisplayOrder').value = batch.display_order || 0;
+  cById('asBatchModal').style.display = 'flex';
+}
+
+async function deleteAsBatch(batchId) {
+  const batch = asCurrentBatches.find(b => b.id === batchId);
+  if (!batch) return;
+
+  if (!window.confirm(`Delete or archive Batch "${batch.name}"?`)) return;
+
+  try {
+    const res = await fetch(`/api/admin/academic-structure/batches/${batchId}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to delete batch');
+
+    window.alert(data.message || 'Batch deleted successfully');
+    await loadAsBatches();
+    await loadAcademicStructureOverview();
+  } catch (err) {
+    window.alert(err.message || 'Failed to delete batch');
+  }
+}
+
+async function loadAsStudentAssignments(page = 1) {
+  asAssignCurrentPage = page;
+  const search = cById('asAssignSearchInput')?.value || '';
+  const profileStatus = cById('asAssignStatusFilter')?.value || 'all';
+  const uniId = cById('asAssignUniFilter')?.value || '';
+  const courseId = cById('asAssignCourseFilter')?.value || '';
+
+  const tbody = cById('asAssignmentsTableBody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="co-admin-table-empty">Loading student assignments...</td></tr>';
+
+  try {
+    const res = await fetch(`/api/admin/academic-structure/student-assignments?page=${page}&limit=20&search=${encodeURIComponent(search)}&profileStatus=${profileStatus}&universityId=${uniId}&courseId=${courseId}`, { credentials: 'include' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch student assignments');
+
+    const students = data.students || [];
+    const pagination = data.pagination || { page: 1, totalPages: 1, total: 0 };
+
+    if (students.length === 0) {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="co-admin-table-empty">No student assignments found matching filters.</td></tr>';
+      return;
+    }
+
+    if (tbody) {
+      tbody.innerHTML = students.map(s => {
+        const isComplete = s.isComplete;
+        const prof = s.academicProfile;
+        return `
+          <tr>
+            <td>
+              <div style="font-weight:700;">${escapeHtml(s.fullName || 'Student #' + s.studentId)}</div>
+              <div style="font-size:0.75rem; color:#64748b;">${escapeHtml(s.email)}</div>
+            </td>
+            <td>
+              ${isComplete 
+                ? '<span class="status-badge ok"><i class="fa-solid fa-circle-check"></i> Complete</span>'
+                : '<span class="status-badge warn"><i class="fa-solid fa-clock"></i> Incomplete</span>'}
+            </td>
+            <td>${prof ? escapeHtml(prof.universityName) : '<span style="color:#94a3b8;">Not set</span>'}</td>
+            <td>${prof ? escapeHtml(prof.courseName) : '<span style="color:#94a3b8;">Not set</span>'}</td>
+            <td>${prof ? `<span style="background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px; font-weight:600;">${escapeHtml(prof.batchName)}</span>` : '<span style="color:#94a3b8;">Not set</span>'}</td>
+            <td>${s.profileCompletedAt ? new Date(s.profileCompletedAt).toLocaleDateString('en-IN') : '-'}</td>
+            <td style="text-align:right;">
+              <button class="btn primary btn-sm" onclick='openReassignStudentModal(${JSON.stringify(s).replace(/'/g, "&#39;")})'><i class="fa-solid fa-user-pen"></i> Reassign</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Pagination info
+    if (cById('asAssignPaginationInfo')) {
+      cById('asAssignPaginationInfo').textContent = `Showing ${students.length} of ${pagination.total} students (Page ${pagination.page} of ${pagination.totalPages})`;
+    }
+    if (cById('asAssignPageIndicator')) {
+      cById('asAssignPageIndicator').textContent = `Page ${pagination.page}`;
+    }
+    if (cById('asAssignPrevPageBtn')) {
+      cById('asAssignPrevPageBtn').disabled = pagination.page <= 1;
+      cById('asAssignPrevPageBtn').onclick = () => loadAsStudentAssignments(pagination.page - 1);
+    }
+    if (cById('asAssignNextPageBtn')) {
+      cById('asAssignNextPageBtn').disabled = pagination.page >= pagination.totalPages;
+      cById('asAssignNextPageBtn').onclick = () => loadAsStudentAssignments(pagination.page + 1);
+    }
+  } catch (err) {
+    if (tbody) tbody.innerHTML = `<tr class="error"><td colspan="7">${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+function openReassignStudentModal(student) {
+  cById('reassignStudentId').value = student.studentId;
+  cById('reassignStudentNameEmail').textContent = `${student.fullName} (${student.email})`;
+
+  const prof = student.academicProfile;
+  if (prof) {
+    cById('reassignCurrentScope').textContent = `${prof.universityName} • ${prof.courseName} • ${prof.batchName}`;
+    cById('reassignCurrentScope').style.color = '#047857';
+  } else {
+    cById('reassignCurrentScope').textContent = 'Not configured (Incomplete profile)';
+    cById('reassignCurrentScope').style.color = '#d97706';
+  }
+
+  cById('reassignReasonInput').value = '';
+  cById('reassignCourseSelect').innerHTML = '<option value="">Select University First</option>';
+  cById('reassignCourseSelect').disabled = true;
+  cById('reassignBatchSelect').innerHTML = '<option value="">Select Course First</option>';
+  cById('reassignBatchSelect').disabled = true;
+
+  // Preselect if existing
+  if (prof && prof.universityId) {
+    cById('reassignUniversitySelect').value = prof.universityId;
+    loadAsCoursesForUniversity(prof.universityId, 'reassignCourseSelect', prof.courseId).then(() => {
+      if (prof.courseId) {
+        loadAsBatchesForCourse(prof.universityId, prof.courseId, 'reassignBatchSelect', prof.batchId);
+      }
+    });
+  } else {
+    cById('reassignUniversitySelect').value = '';
+  }
+
+  cById('studentReassignModal').style.display = 'flex';
+}
+
+function bindAcademicStructureEvents() {
+  // Add University Modal Open / Close / Submit
+  const openAddUniBtn = cById('openAddUniModalBtn');
+  if (openAddUniBtn) openAddUniBtn.onclick = openAddAsUniModal;
+
+  const closeUniBtn = cById('closeAsUniModalBtn');
+  if (closeUniBtn) closeUniBtn.onclick = () => cById('asUniModal').style.display = 'none';
+
+  const uniForm = cById('asUniForm');
+  if (uniForm) {
+    uniForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const uniId = cById('asUniId').value;
+      const body = {
+        code: cById('asUniCode').value.trim(),
+        shortName: cById('asUniShortName').value.trim(),
+        name: cById('asUniName').value.trim(),
+        status: cById('asUniStatus').value,
+        displayOrder: parseInt(cById('asUniDisplayOrder').value || '0', 10),
+        priorityRank: parseInt(cById('asUniPriorityRank').value || '1', 10)
+      };
+
+      try {
+        const url = uniId ? `/api/admin/academic-structure/universities/${uniId}` : '/api/admin/academic-structure/universities';
+        const method = uniId ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          credentials: 'include'
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to save university');
+
+        window.alert(data.message || 'University saved successfully');
+        cById('asUniModal').style.display = 'none';
+        await loadAsUniversities();
+        await loadAcademicStructureOverview();
+      } catch (err) {
+        window.alert(err.message || 'Failed to save university');
+      }
+    };
+  }
+
+  // Add Course Modal Open / Close / Submit & Dependent Selectors
+  const openAddCourseBtn = cById('openAddCourseModalBtn');
+  if (openAddCourseBtn) openAddCourseBtn.onclick = openAddAsCourseModal;
+
+  const closeCourseBtn = cById('closeAsCourseModalBtn');
+  if (closeCourseBtn) closeCourseBtn.onclick = () => cById('asCourseModal').style.display = 'none';
+
+  const courseForm = cById('asCourseForm');
+  if (courseForm) {
+    courseForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const courseId = cById('asCourseId').value;
+      const body = {
+        universityId: parseInt(cById('asCourseUniSelect').value, 10),
+        code: cById('asCourseCode').value.trim(),
+        degreeType: cById('asCourseDegreeType').value.trim(),
+        name: cById('asCourseName').value.trim(),
+        durationYears: parseInt(cById('asCourseDuration').value || '4', 10),
+        status: cById('asCourseStatus').value,
+        displayOrder: parseInt(cById('asCourseDisplayOrder').value || '0', 10)
+      };
+
+      try {
+        const url = courseId ? `/api/admin/academic-structure/courses/${courseId}` : '/api/admin/academic-structure/courses';
+        const method = courseId ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          credentials: 'include'
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to save course');
+
+        window.alert(data.message || 'Course saved successfully');
+        cById('asCourseModal').style.display = 'none';
+        await loadAsCourses();
+        await loadAcademicStructureOverview();
+      } catch (err) {
+        window.alert(err.message || 'Failed to save course');
+      }
+    };
+  }
+
+  // Add Batch Modal Open / Close / Submit & Dependent Selectors
+  const openAddBatchBtn = cById('openAddBatchModalBtn');
+  if (openAddBatchBtn) openAddBatchBtn.onclick = openAddAsBatchModal;
+
+  const closeBatchBtn = cById('closeAsBatchModalBtn');
+  if (closeBatchBtn) closeBatchBtn.onclick = () => cById('asBatchModal').style.display = 'none';
+
+  const batchUniSelect = cById('asBatchUniSelect');
+  if (batchUniSelect) {
+    batchUniSelect.onchange = () => {
+      loadAsCoursesForUniversity(batchUniSelect.value, 'asBatchCourseSelect');
+    };
+  }
+
+  const batchForm = cById('asBatchForm');
+  if (batchForm) {
+    batchForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const batchId = cById('asBatchId').value;
+      const body = {
+        universityId: parseInt(cById('asBatchUniSelect').value, 10),
+        courseId: parseInt(cById('asBatchCourseSelect').value, 10),
+        name: cById('asBatchName').value.trim(),
+        startYear: parseInt(cById('asBatchStartYear').value || '2026', 10),
+        endYear: parseInt(cById('asBatchEndYear').value || '2030', 10),
+        status: cById('asBatchStatus').value,
+        displayOrder: parseInt(cById('asBatchDisplayOrder').value || '0', 10)
+      };
+
+      try {
+        const url = batchId ? `/api/admin/academic-structure/batches/${batchId}` : '/api/admin/academic-structure/batches';
+        const method = batchId ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          credentials: 'include'
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to save batch');
+
+        window.alert(data.message || 'Batch saved successfully');
+        cById('asBatchModal').style.display = 'none';
+        await loadAsBatches();
+        await loadAcademicStructureOverview();
+      } catch (err) {
+        window.alert(err.message || 'Failed to save batch');
+      }
+    };
+  }
+
+  // Reassign Modal Selectors & Form Submit
+  const reassignUniSelect = cById('reassignUniversitySelect');
+  if (reassignUniSelect) {
+    reassignUniSelect.onchange = () => {
+      loadAsCoursesForUniversity(reassignUniSelect.value, 'reassignCourseSelect');
+      cById('reassignBatchSelect').innerHTML = '<option value="">Select Course First</option>';
+      cById('reassignBatchSelect').disabled = true;
+    };
+  }
+
+  const reassignCourseSelect = cById('reassignCourseSelect');
+  if (reassignCourseSelect) {
+    reassignCourseSelect.onchange = () => {
+      loadAsBatchesForCourse(reassignUniSelect.value, reassignCourseSelect.value, 'reassignBatchSelect');
+    };
+  }
+
+  const closeReassignBtn = cById('closeReassignModalBtn');
+  if (closeReassignBtn) {
+    closeReassignBtn.onclick = () => cById('studentReassignModal').style.display = 'none';
+  }
+
+  const reassignForm = cById('reassignStudentForm');
+  if (reassignForm) {
+    reassignForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const studentId = parseInt(cById('reassignStudentId').value, 10);
+      const universityId = parseInt(cById('reassignUniversitySelect').value, 10);
+      const courseId = parseInt(cById('reassignCourseSelect').value, 10);
+      const batchId = parseInt(cById('reassignBatchSelect').value, 10);
+      const reason = cById('reassignReasonInput').value.trim();
+
+      if (!studentId || !universityId || !courseId || !batchId || !reason) {
+        window.alert('All fields including University, Course, Batch, and Reason are required.');
+        return;
+      }
+
+      if (!window.confirm('Confirm reassigning student academic profile? This will change their resource scope.')) return;
+
+      try {
+        const res = await fetch('/api/admin/academic-structure/reassign-student', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ studentId, universityId, courseId, batchId, reason }),
+          credentials: 'include'
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to reassign student profile');
+
+        window.alert(data.message || 'Student academic profile reassigned successfully!');
+        cById('studentReassignModal').style.display = 'none';
+        await loadAsStudentAssignments(asAssignCurrentPage);
+        await loadAcademicStructureOverview();
+      } catch (err) {
+        window.alert(err.message || 'Failed to reassign student academic profile');
+      }
+    };
+  }
+
+  // Filter Event Listeners
+  if (cById('asUniSearchInput')) cById('asUniSearchInput').oninput = loadAsUniversities;
+  if (cById('asUniStatusFilter')) cById('asUniStatusFilter').onchange = loadAsUniversities;
+
+  if (cById('asCourseUniFilter')) cById('asCourseUniFilter').onchange = loadAsCourses;
+  if (cById('asCourseSearchInput')) cById('asCourseSearchInput').oninput = loadAsCourses;
+  if (cById('asCourseStatusFilter')) cById('asCourseStatusFilter').onchange = loadAsCourses;
+
+  if (cById('asBatchUniFilter')) {
+    cById('asBatchUniFilter').onchange = () => {
+      loadAsCoursesForUniversity(cById('asBatchUniFilter').value, 'asBatchCourseFilter').then(() => {
+        loadAsBatches();
+      });
+    };
+  }
+  if (cById('asBatchCourseFilter')) cById('asBatchCourseFilter').onchange = loadAsBatches;
+  if (cById('asBatchSearchInput')) cById('asBatchSearchInput').oninput = loadAsBatches;
+  if (cById('asBatchStatusFilter')) cById('asBatchStatusFilter').onchange = loadAsBatches;
+
+  if (cById('asAssignSearchInput')) cById('asAssignSearchInput').oninput = () => loadAsStudentAssignments(1);
+  if (cById('asAssignStatusFilter')) cById('asAssignStatusFilter').onchange = () => loadAsStudentAssignments(1);
+  if (cById('asAssignUniFilter')) {
+    cById('asAssignUniFilter').onchange = () => {
+      loadAsCoursesForUniversity(cById('asAssignUniFilter').value, 'asAssignCourseFilter').then(() => {
+        loadAsStudentAssignments(1);
+      });
+    };
+  }
+  if (cById('asAssignCourseFilter')) cById('asAssignCourseFilter').onchange = () => loadAsStudentAssignments(1);
+  if (cById('asAssignResetBtn')) {
+    cById('asAssignResetBtn').onclick = () => {
+      cById('asAssignSearchInput').value = '';
+      cById('asAssignStatusFilter').value = 'all';
+      cById('asAssignUniFilter').value = '';
+      cById('asAssignCourseFilter').value = '';
+      cById('asAssignCourseFilter').disabled = true;
+      loadAsStudentAssignments(1);
+    };
+  }
+
+  const overviewRefreshBtn = cById('loadAcademicStructureOverviewBtn');
+  if (overviewRefreshBtn) {
+    overviewRefreshBtn.onclick = loadAcademicStructureOverview;
+  }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  bindTabs();
   await ensureAdminSession();
   bindEvents();
+  bindMembershipEvents();
+  bindPaymentTabEvents();
+  bindAcademicStructureEvents();
   bindLiveSessionRealtime();
 
-  const bootstrapJobs = [
-    ['analytics', () => loadAnalytics()],
-    ['students', () => loadStudents(false)],
-    ['payments', () => loadPayments()],
-    ['content overview', () => loadContentOverview()],
-    ['onboarding config', () => loadOnboardingConfig()],
-    ['recommendation rules', () => loadRecommendationRules()],
-    ['mock tests', () => loadMockTests()],
-    ['roadmaps', () => loadRoadmaps()],
-    ['announcements', () => loadAnnouncements()],
-    ['referrals', () => loadReferralHistory()],
-    ['top referrers', () => loadTopReferrers()],
-    ['roles', () => loadRoles()],
-    ['settings', () => loadSettings()],
-    ['contribution visibility', () => loadContributionVisibilitySettings()],
-    ['coding settings', () => loadCodingSettings()],
-    ['coding dashboard panel', () => loadCodingDashboardPanel()],
-    ['membership config', () => loadMembershipConfig()],
-    ['experience settings', () => loadExperienceConfig()],
-    ['live session control', () => loadLiveSessionControl()],
-    ['audit logs', () => loadAuditLogs()]
-  ];
-
-  const outcomes = await Promise.allSettled(bootstrapJobs.map((job) => job[1]()));
-  const failed = outcomes
-    .map((result, index) => ({ result, label: bootstrapJobs[index][0] }))
-    .filter((item) => item.result.status === 'rejected');
-
-  if (failed.length) {
-    const details = failed
-      .slice(0, 3)
-      .map((item) => `${item.label}: ${item.result.reason?.message || 'request failed'}`)
-      .join(' | ');
-    cById('controlPermissionInfo').textContent += ` | Some modules failed to load. ${details}`;
+  const quickSelect = cById('quickModuleSelect');
+  if (quickSelect) {
+    quickSelect.addEventListener('change', () => {
+      window.location.hash = quickSelect.value;
+    });
   }
+
+  window.addEventListener('hashchange', () => {
+    activateAdminRoute(window.location.href);
+  });
+
+  await activateAdminRoute(window.location.href);
 });

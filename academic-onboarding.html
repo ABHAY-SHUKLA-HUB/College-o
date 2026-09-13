@@ -3,400 +3,520 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Academic Setup — College OS</title>
+  <title>Complete Academic Profile — College OS</title>
+  <meta name="description" content="Complete your academic profile setup on College OS to personalize your portal." />
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --ao-bg: #0b0f19;
+      --ao-card-bg: rgba(17, 24, 39, 0.85);
+      --ao-card-border: rgba(255, 255, 255, 0.1);
+      --ao-primary: #6366f1;
+      --ao-primary-hover: #4f46e5;
+      --ao-text: #f9fafb;
+      --ao-text-muted: #9ca3af;
+      --ao-card-selected-bg: rgba(99, 102, 241, 0.12);
+      --ao-card-selected-border: #6366f1;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background-color: var(--ao-bg);
+      color: var(--ao-text);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
       min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      margin: 0;
+    }
+
+    .onboarding-navbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid var(--ao-card-border);
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(12px);
+    }
+
+    .onboarding-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: #fff;
+    }
+
+    .onboarding-brand i {
+      color: var(--ao-primary);
+      font-size: 1.5rem;
+    }
+
+    .onboarding-container {
+      flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px 16px;
+      padding: 2.5rem 1.5rem;;
     }
-    .wizard-card {
-      background: #fff;
+
+    .onboarding-card {
+      background: var(--ao-card-bg);
+      border: 1px solid var(--ao-card-border);
       border-radius: 20px;
-      box-shadow: 0 24px 64px rgba(0,0,0,0.22);
+      padding: 2.5rem;
       width: 100%;
-      max-width: 520px;
-      padding: 40px 40px 32px;
-      animation: rise 0.45s cubic-bezier(0.22,0.61,0.36,1) both;
+      max-width: 680px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(16px);
     }
-    @keyframes rise { from{opacity:0;transform:translateY(32px)} to{opacity:1;transform:translateY(0)} }
-    .wizard-brand { text-align:center; margin-bottom:32px; }
-    .logo-chip {
-      display:inline-flex; align-items:center; gap:7px;
-      background:linear-gradient(135deg,#667eea,#764ba2); color:#fff;
-      border-radius:50px; padding:6px 16px; font-size:12px; font-weight:700;
-      letter-spacing:.5px; margin-bottom:14px;
+
+    .onboarding-header {
+      text-align: center;
+      margin-bottom: 2rem;
     }
-    .wizard-brand h1 { font-size:25px; font-weight:800; color:#1a1a2e; margin-bottom:6px; }
-    .wizard-brand p  { color:#888; font-size:13.5px; }
-    .stepper { display:flex; align-items:center; margin-bottom:30px; }
-    .stepper-step { display:flex; flex-direction:column; align-items:center; gap:6px; flex:1; }
-    .stepper-circle {
-      width:36px; height:36px; border-radius:50%; border:2px solid #e0e0e0;
-      display:flex; align-items:center; justify-content:center;
-      font-size:13px; font-weight:700; color:#bbb; background:#f7f7f9;
-      transition:all .3s; flex-shrink:0;
+
+    .onboarding-header h1 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      margin: 0 0 0.5rem 0;
+      letter-spacing: -0.02em;
     }
-    .stepper-circle.done   { background:#22c55e; border-color:#22c55e; color:#fff; }
-    .stepper-circle.active { background:linear-gradient(135deg,#667eea,#764ba2); border-color:transparent; color:#fff; box-shadow:0 4px 14px rgba(102,126,234,.45); }
-    .stepper-label { font-size:10px; color:#bbb; font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
-    .stepper-label.active { color:#667eea; }
-    .stepper-label.done   { color:#22c55e; }
-    .stepper-line { flex:1; height:2px; background:#eee; margin:0 6px; margin-bottom:22px; border-radius:2px; transition:background .3s; }
-    .stepper-line.done { background:#22c55e; }
-    .step-pane { display:none; }
-    .step-pane.active { display:block; animation:fadeIn .3s ease both; }
-    @keyframes fadeIn { from{opacity:0;transform:translateX(14px)} to{opacity:1;transform:translateX(0)} }
-    .step-heading { font-size:16px; font-weight:700; color:#1a1a2e; margin-bottom:4px; }
-    .step-sub { font-size:13px; color:#999; margin-bottom:20px; }
-    .cat-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    .cat-card {
-      border:2px solid #ebebeb; border-radius:12px; padding:18px 12px 14px;
-      cursor:pointer; transition:all .2s; text-align:center; -webkit-user-select:none; user-select:none;
+
+    .onboarding-header p {
+      color: var(--ao-text-muted);
+      font-size: 0.95rem;
+      margin: 0;
     }
-    .cat-card:hover { border-color:#b8acf6; background:#fafaff; transform:translateY(-2px); box-shadow:0 6px 18px rgba(102,126,234,.12); }
-    .cat-card.selected { border-color:#667eea; background:#f0efff; box-shadow:0 4px 16px rgba(102,126,234,.2); }
-    .cat-icon { font-size:30px; margin-bottom:8px; line-height:1; }
-    .cat-name { font-size:14px; font-weight:700; color:#1a1a2e; margin-bottom:3px; }
-    .cat-desc { font-size:11px; color:#aaa; }
-    .cat-card.selected .cat-name { color:#667eea; }
-    .branch-search {
-      width:100%; padding:10px 14px; border:2px solid #ebebeb; border-radius:10px;
-      font-size:14px; font-family:inherit; margin-bottom:12px; transition:border-color .2s; background:#fafaff;
+
+    /* Step Stepper Indicator */
+    .stepper {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2.5rem;
+      position: relative;
     }
-    .branch-search:focus { outline:none; border-color:#667eea; background:#fff; }
-    .branch-list { display:flex; flex-direction:column; gap:7px; max-height:268px; overflow-y:auto; padding-right:4px; }
-    .branch-list::-webkit-scrollbar { width:4px; }
-    .branch-list::-webkit-scrollbar-track { background:#f0f0f0; border-radius:4px; }
-    .branch-list::-webkit-scrollbar-thumb { background:#c4b5fd; border-radius:4px; }
-    .branch-item {
-      display:flex; align-items:center; gap:12px; padding:11px 14px;
-      border:2px solid #ebebeb; border-radius:10px; cursor:pointer; transition:all .18s; -webkit-user-select:none; user-select:none;
+
+    .stepper::before {
+      content: '';
+      position: absolute;
+      top: 18px;
+      left: 10%;
+      right: 10%;
+      height: 2px;
+      background: var(--ao-card-border);
+      z-index: 1;
     }
-    .branch-item:hover { border-color:#b8acf6; background:#fafaff; }
-    .branch-item.selected { border-color:#667eea; background:#f0efff; }
-    .branch-radio {
-      width:18px; height:18px; border-radius:50%; border:2px solid #d0d0d0;
-      display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .2s;
+
+    .stepper-progress {
+      position: absolute;
+      top: 18px;
+      left: 10%;
+      height: 2px;
+      background: var(--ao-primary);
+      z-index: 1;
+      transition: width 0.3s ease;
+      width: 0%;
     }
-    .branch-item.selected .branch-radio { border-color:#667eea; background:#667eea; box-shadow:0 0 0 3px rgba(102,126,234,.2); }
-    .branch-radio-dot { width:7px; height:7px; border-radius:50%; background:#fff; opacity:0; transition:opacity .2s; }
-    .branch-item.selected .branch-radio-dot { opacity:1; }
-    .branch-name { font-size:14px; font-weight:600; color:#333; }
-    .branch-item.selected .branch-name { color:#667eea; }
-    .sem-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); gap:10px; }
-    .sem-pill {
-      padding:14px 8px 10px; border:2px solid #ebebeb; border-radius:12px;
-      text-align:center; cursor:pointer; transition:all .2s; -webkit-user-select:none; user-select:none;
+
+    .step-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      position: relative;
+      z-index: 2;
     }
-    .sem-pill:hover { border-color:#b8acf6; background:#fafaff; transform:translateY(-2px); box-shadow:0 5px 14px rgba(102,126,234,.12); }
-    .sem-pill.selected { border-color:#667eea; background:#f0efff; box-shadow:0 4px 14px rgba(102,126,234,.22); }
-    .sem-num { font-size:20px; font-weight:800; color:#1a1a2e; line-height:1; }
-    .sem-pill.selected .sem-num { color:#667eea; }
-    .sem-tag { font-size:10px; color:#aaa; margin-top:4px; font-weight:600; text-transform:uppercase; letter-spacing:.4px; }
-    .sem-pill.selected .sem-tag { color:#a29fe6; }
-    .skeleton {
-      background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%);
-      background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:10px; height:78px;
+
+    .step-circle {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: #1f2937;
+      border: 2px solid var(--ao-card-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--ao-text-muted);
+      transition: all 0.3s ease;
     }
-    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-    .field-error { margin-top:10px; font-size:12px; color:#ef4444; display:none; align-items:center; gap:5px; }
-    .field-error.show { display:flex; }
-    .btn-row { display:flex; gap:10px; margin-top:28px; }
-    .btn-back {
-      padding:12px 22px; border:2px solid #ebebeb; background:#fff; border-radius:10px;
-      font-size:14px; font-weight:600; color:#666; cursor:pointer; transition:all .2s; flex-shrink:0;
+
+    .step-item.active .step-circle {
+      border-color: var(--ao-primary);
+      background: var(--ao-primary);
+      color: #fff;
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
     }
-    .btn-back:hover { border-color:#ccc; background:#f9f9f9; }
-    .btn-next {
-      flex:1; padding:13px; border:none; background:linear-gradient(135deg,#667eea,#764ba2);
-      border-radius:10px; font-size:14px; font-weight:700; color:#fff; cursor:pointer;
-      transition:all .25s; display:flex; align-items:center; justify-content:center; gap:8px;
+
+    .step-item.completed .step-circle {
+      border-color: #10b981;
+      background: #10b981;
+      color: #fff;
     }
-    .btn-next:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 7px 22px rgba(102,126,234,.42); }
-    .btn-next:disabled { opacity:.55; cursor:not-allowed; transform:none; box-shadow:none; }
-    .spinner { width:16px; height:16px; border:2px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0; }
-    @keyframes spin { to{transform:rotate(360deg)} }
-    .success-wrap { text-align:center; padding:16px 0 8px; }
-    .success-ring {
-      width:80px; height:80px; border-radius:50%;
-      background:linear-gradient(135deg,#22c55e,#16a34a); display:flex; align-items:center;
-      justify-content:center; margin:0 auto 22px; box-shadow:0 8px 28px rgba(34,197,94,.35);
-      animation:pop .5s cubic-bezier(.17,.89,.32,1.49) both;
+
+    .step-label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--ao-text-muted);
     }
-    @keyframes pop { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
-    .success-ring svg { width:36px; height:36px; }
-    .success-wrap h2 { font-size:23px; font-weight:800; color:#1a1a2e; margin-bottom:8px; }
-    .success-wrap .sub { color:#888; font-size:14px; margin-bottom:22px; line-height:1.5; }
-    .chip-row { display:flex; justify-content:center; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
-    .chip { background:#f0efff; color:#667eea; border:1.5px solid #c4b5fd; border-radius:50px; padding:5px 16px; font-size:13px; font-weight:600; }
-    .redirect-note { font-size:12px; color:#c0c0c0; }
-    @media(max-width:480px) { .wizard-card{padding:28px 18px 22px} .sem-grid{grid-template-columns:repeat(3,1fr)} }
+
+    .step-item.active .step-label {
+      color: #fff;
+      font-weight: 600;
+    }
+
+    /* Option Cards */
+    .options-grid {
+      display: grid;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .option-card {
+      background: rgba(31, 41, 55, 0.5);
+      border: 1.5px solid var(--ao-card-border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s ease;
+    }
+
+    .option-card:hover {
+      border-color: rgba(99, 102, 241, 0.5);
+      background: rgba(31, 41, 55, 0.8);
+      transform: translateY(-1px);
+    }
+
+    .option-card.selected {
+      background: var(--ao-card-selected-bg);
+      border-color: var(--ao-card-selected-border);
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
+    }
+
+    .option-info h3 {
+      margin: 0 0 0.25rem 0;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .option-info p {
+      margin: 0;
+      font-size: 0.85rem;
+      color: var(--ao-text-muted);
+    }
+
+    .radio-check {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid var(--ao-text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .option-card.selected .radio-check {
+      border-color: var(--ao-primary);
+      background: var(--ao-primary);
+    }
+
+    .option-card.selected .radio-check::after {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #fff;
+    }
+
+    /* Actions Bar */
+    .actions-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--ao-card-border);
+    }
+
+    .btn-ao {
+      padding: 0.85rem 1.75rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary-ao {
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-primary-ao:hover:not(:disabled) {
+      background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+    }
+
+    .btn-primary-ao:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary-ao {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--ao-text);
+      border: 1px solid var(--ao-card-border);
+    }
+
+    .btn-secondary-ao:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    /* Review Summary */
+    .review-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin-bottom: 1.5rem;
+    }
+
+    .review-table tr td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--ao-card-border);
+    }
+
+    .review-table tr td:first-child {
+      color: var(--ao-text-muted);
+      font-weight: 500;
+      width: 35%;
+    }
+
+    .review-table tr td:last-child {
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .selection-banner {
+      background: rgba(99, 102, 241, 0.08);
+      border-left: 3px solid var(--ao-primary);
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      margin-bottom: 1.5rem;
+      font-size: 0.85rem;
+      color: #c7d2fe;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .loading-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--ao-text-muted);
+    }
+
+    .loading-state i {
+      font-size: 2rem;
+      color: var(--ao-primary);
+      margin-bottom: 1rem;
+    }
+
+    .error-banner-ao {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+      padding: 0.85rem 1.25rem;
+      border-radius: 10px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 640px) {
+      .onboarding-card {
+        padding: 1.75rem 1.25rem;;
+      }
+      .actions-bar {
+        flex-direction: column-reverse;
+      }
+      .btn-ao {
+        width: 100%;
+        justify-content: center;
+      }
+    }
   </style>
 </head>
 <body>
-<div class="wizard-card" id="wizardCard">
-  <div class="wizard-brand">
-    <div class="logo-chip">
-      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5zm0 7v-7m0 0L3 9m9 5 9-5"/>
-      </svg>
-      College OS
+
+  <!-- Navbar -->
+  <header class="onboarding-navbar">
+    <div class="onboarding-brand">
+      <i class="fa-solid fa-graduation-cap"></i>
+      <span>College OS</span>
     </div>
-    <h1>Set up your profile</h1>
-    <p>Takes under a minute &middot; Personalises everything for you</p>
-  </div>
-  <div class="stepper">
-    <div class="stepper-step">
-      <div class="stepper-circle active" id="sc1">1</div>
-      <span class="stepper-label active" id="sl1">College</span>
+    <div style="font-size: 0.85rem; color: var(--ao-text-muted);">
+      Academic Identity Setup
     </div>
-    <div class="stepper-line" id="sline1"></div>
-    <div class="stepper-step">
-      <div class="stepper-circle" id="sc2">2</div>
-      <span class="stepper-label" id="sl2">Course</span>
+  </header>
+
+  <!-- Container -->
+  <main class="onboarding-container">
+    <div class="onboarding-card">
+
+      <!-- Header -->
+      <div class="onboarding-header">
+        <h1>Complete Your Academic Profile</h1>
+        <p>Select your University, Course, and Batch to setup your personal portal.</p>
+      </div>
+
+      <!-- Stepper Progress Bar -->
+      <div class="stepper">
+        <div class="stepper-progress" id="stepperProgress"></div>
+        
+        <div class="step-item active" id="stepIndicator1">
+          <div class="step-circle">1</div>
+          <div class="step-label">University</div>
+        </div>
+
+        <div class="step-item" id="stepIndicator2">
+          <div class="step-circle">2</div>
+          <div class="step-label">Course</div>
+        </div>
+
+        <div class="step-item" id="stepIndicator3">
+          <div class="step-circle">3</div>
+          <div class="step-label">Batch</div>
+        </div>
+
+        <div class="step-item" id="stepIndicator4">
+          <div class="step-circle">4</div>
+          <div class="step-label">Confirm</div>
+        </div>
+      </div>
+
+      <!-- Error Alert -->
+      <div class="error-banner-ao hidden" id="errorAlert">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span id="errorMessage">An error occurred. Please try again.</span>
+      </div>
+
+      <!-- STEP 1: UNIVERSITY SELECTION -->
+      <div class="step-panel" id="stepPanel1">
+        <div style="margin-bottom: 1rem; font-weight: 600; color: #fff;">Select your University:</div>
+        <div class="options-grid" id="universityGrid">
+          <div class="loading-state">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <p>Loading available universities...</p>
+          </div>
+        </div>
+        <div class="actions-bar">
+          <div></div>
+          <button type="button" class="btn-ao btn-primary-ao" id="btnNext1" disabled>
+            Next: Select Course <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 2: COURSE SELECTION -->
+      <div class="step-panel hidden" id="stepPanel2">
+        <div class="selection-banner" id="bannerUniSelected">
+          Selected University: <strong>-</strong>
+        </div>
+        <div style="margin-bottom: 1rem; font-weight: 600; color: #fff;">Select your Course / Program:</div>
+        <div class="options-grid" id="courseGrid">
+          <div class="loading-state">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <p>Loading available courses...</p>
+          </div>
+        </div>
+        <div class="actions-bar">
+          <button type="button" class="btn-ao btn-secondary-ao" id="btnBack2">
+            <i class="fa-solid fa-arrow-left"></i> Back
+          </button>
+          <button type="button" class="btn-ao btn-primary-ao" id="btnNext2" disabled>
+            Next: Select Batch <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 3: BATCH SELECTION -->
+      <div class="step-panel hidden" id="stepPanel3">
+        <div class="selection-banner" id="bannerCourseSelected">
+          Selected: <strong>-</strong>
+        </div>
+        <div style="margin-bottom: 1rem; font-weight: 600; color: #fff;">Select your Academic Batch:</div>
+        <div class="options-grid" id="batchGrid">
+          <div class="loading-state">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <p>Loading available batches...</p>
+          </div>
+        </div>
+        <div class="actions-bar">
+          <button type="button" class="btn-ao btn-secondary-ao" id="btnBack3">
+            <i class="fa-solid fa-arrow-left"></i> Back
+          </button>
+          <button type="button" class="btn-ao btn-primary-ao" id="btnNext3" disabled>
+            Next: Review <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 4: REVIEW & CONFIRM -->
+      <div class="step-panel hidden" id="stepPanel4">
+        <div style="margin-bottom: 1rem; font-weight: 600; color: #fff;">Review your Academic Profile:</div>
+        <table class="review-table">
+          <tr>
+            <td>University</td>
+            <td id="reviewUni">-</td>
+          </tr>
+          <tr>
+            <td>Course / Degree</td>
+            <td id="reviewCourse">-</td>
+          </tr>
+          <tr>
+            <td>Academic Batch</td>
+            <td id="reviewBatch">-</td>
+          </tr>
+        </table>
+        
+        <p style="font-size: 0.85rem; color: var(--ao-text-muted); margin-bottom: 1.5rem;">
+          <i class="fa-solid fa-shield-halved" style="color: var(--ao-primary);"></i> 
+          Your academic scope determines your tailored study materials, roadmaps, and mock tests.
+        </p>
+
+        <div class="actions-bar">
+          <button type="button" class="btn-ao btn-secondary-ao" id="btnBack4">
+            <i class="fa-solid fa-arrow-left"></i> Edit Selection
+          </button>
+          <button type="button" class="btn-ao btn-primary-ao" id="btnSubmitProfile">
+            <i class="fa-solid fa-check"></i> Complete Profile &amp; Enter Dashboard
+          </button>
+        </div>
+      </div>
+
     </div>
-    <div class="stepper-line" id="sline2"></div>
-    <div class="stepper-step">
-      <div class="stepper-circle" id="sc3">3</div>
-      <span class="stepper-label" id="sl3">Semester</span>
-    </div>
-  </div>
-  <!-- Step 1 -->
-  <div class="step-pane active" id="pane1">
-    <p class="step-heading">What's your academic stream?</p>
-    <p class="step-sub">We'll tailor quizzes, notes &amp; roadmaps to your stream.</p>
-    <div class="cat-grid" id="catGrid">
-      <div class="skeleton"></div><div class="skeleton"></div>
-    </div>
-    <div class="field-error" id="catError">Please select a category to continue.</div>
-  </div>
-  <!-- Step 2 -->
-  <div class="step-pane" id="pane2">
-    <p class="step-heading" id="branchHeading">Which branch are you in?</p>
-    <p class="step-sub" id="branchSub">Select your specialisation or course.</p>
-    <input class="branch-search" id="branchSearch" type="search" placeholder="Search branch&hellip;" autocomplete="off" />
-    <div class="branch-list" id="branchList">
-      <div class="skeleton" style="height:46px"></div>
-      <div class="skeleton" style="height:46px"></div>
-      <div class="skeleton" style="height:46px"></div>
-    </div>
-    <div class="field-error" id="branchError">Please select a branch to continue.</div>
-  </div>
-  <!-- Step 3 -->
-  <div class="step-pane" id="pane3">
-    <p class="step-heading">Which semester / year are you in?</p>
-    <p class="step-sub">Content will be filtered for your current level.</p>
-    <div class="sem-grid" id="semGrid">
-      <div class="skeleton"></div><div class="skeleton"></div>
-      <div class="skeleton"></div><div class="skeleton"></div>
-    </div>
-    <div class="field-error" id="semError">Please select your semester to continue.</div>
-  </div>
-  <div class="btn-row">
-    <button class="btn-back" id="btnBack" style="display:none">&#8592; Back</button>
-    <button class="btn-next" id="btnNext">Continue &#8594;</button>
-  </div>
-</div>
-<script>
-  var step = 1;
-  var state = { categoryId:null, categoryName:'', branchId:null, branchName:'', semesterId:null, semesterLabel:'', yearId:null };
-  var catGrid     = document.getElementById('catGrid');
-  var branchList  = document.getElementById('branchList');
-  var semGrid     = document.getElementById('semGrid');
-  var branchSearch= document.getElementById('branchSearch');
-  var btnBack     = document.getElementById('btnBack');
-  var btnNext     = document.getElementById('btnNext');
-  var yearByValue = {};
+  </main>
 
-  function escHtml(s){ return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
-
-  function catIcon(name){
-    var n=name.toLowerCase();
-    if(n.indexOf('engineer')>=0)return'&#9881;&#65039;';
-    if(n.indexOf('commerce')>=0||n.indexOf('business')>=0)return'&#128202;';
-    if(n.indexOf('management')>=0||n.indexOf('mba')>=0)return'&#128200;';
-    if(n.indexOf('computer')>=0||n.indexOf('information technology')>=0)return'&#128187;';
-    if(n.indexOf('medical')>=0||n.indexOf('pharma')>=0||n.indexOf('health')>=0)return'&#129754;';
-    if(n.indexOf('law')>=0||n.indexOf('legal')>=0)return'&#9878;&#65039;';
-    if(n.indexOf('science')>=0)return'&#128300;';
-    if(n.indexOf('art')>=0||n.indexOf('design')>=0)return'&#127912;';
-    return'&#127891;';
-  }
-
-  function catDesc(name){
-    var n=name.toLowerCase();
-    if(n.indexOf('engineer')>=0)return'B.Tech / B.E / Diploma';
-    if(n.indexOf('commerce')>=0)return'B.Com / CA / CMA';
-    if(n.indexOf('management')>=0)return'BBA / MBA / PGDM';
-    if(n.indexOf('science')>=0)return'B.Sc / M.Sc / Research';
-    if(n.indexOf('medical')>=0)return'MBBS / BDS / Nursing';
-    if(n.indexOf('law')>=0)return'BA LLB / LLM';
-    if(n.indexOf('art')>=0)return'BA / B.Fine Arts';
-    return'Academic programs';
-  }
-
-  async function loadCategories(){
-    try{
-      var data=await fetch('/api/academics/categories').then(function(r){return r.json();});
-      catGrid.innerHTML=data.categories.map(function(c){
-        return'<div class="cat-card" data-id="'+c.id+'" data-name="'+escHtml(c.name)+'"><div class="cat-icon">'+catIcon(c.name)+'</div><div class="cat-name">'+escHtml(c.name)+'</div><div class="cat-desc">'+catDesc(c.name)+'</div></div>';
-      }).join('');
-      catGrid.querySelectorAll('.cat-card').forEach(function(el){
-        el.addEventListener('click',function(){
-          catGrid.querySelectorAll('.cat-card').forEach(function(c){c.classList.remove('selected');});
-          el.classList.add('selected');
-          state.categoryId=el.dataset.id; state.categoryName=el.dataset.name;
-          hideErr('catError');
-        });
-      });
-    }catch(e){
-      catGrid.innerHTML='<p style="color:#ef4444;font-size:13px;grid-column:1/-1">Failed to load. Please refresh.</p>';
-    }
-  }
-
-  var allBranches=[];
-  async function loadBranches(categoryId){
-    branchList.innerHTML='<div class="skeleton" style="height:46px"></div>'.repeat(3);
-    branchSearch.value='';
-    try{
-      var data=await fetch('/api/academics/branches?categoryId='+categoryId).then(function(r){return r.json();});
-      allBranches=data.branches;
-      renderBranches(data.branches);
-      var isEng=state.categoryName.toLowerCase().indexOf('engineer')>=0;
-      document.getElementById('branchHeading').textContent=isEng?'Which branch are you in?':'Which course are you studying?';
-      document.getElementById('branchSub').textContent=isEng?'Select your engineering specialisation.':'Choose your degree programme.';
-    }catch(e){
-      branchList.innerHTML='<p style="color:#ef4444;font-size:13px;padding:6px 0">Failed to load. Please refresh.</p>';
-    }
-  }
-
-  function renderBranches(list){
-    if(!list.length){ branchList.innerHTML='<p style="color:#aaa;font-size:13px;padding:6px 0">No branches found.</p>'; return; }
-    branchList.innerHTML=list.map(function(b){
-      return'<div class="branch-item'+(state.branchId==b.id?' selected':'')+'" data-id="'+b.id+'" data-name="'+escHtml(b.name)+'"><div class="branch-radio"><div class="branch-radio-dot"></div></div><span class="branch-name">'+escHtml(b.name)+'</span></div>';
-    }).join('');
-    branchList.querySelectorAll('.branch-item').forEach(function(el){
-      el.addEventListener('click',function(){
-        branchList.querySelectorAll('.branch-item').forEach(function(i){i.classList.remove('selected');});
-        el.classList.add('selected');
-        state.branchId=el.dataset.id; state.branchName=el.dataset.name;
-        hideErr('branchError');
-      });
-    });
-  }
-
-  branchSearch.addEventListener('input',function(){
-    var q=branchSearch.value.toLowerCase();
-    renderBranches(allBranches.filter(function(b){return b.name.toLowerCase().indexOf(q)>=0;}));
-  });
-
-  async function loadSemesters(){
-    semGrid.innerHTML='<div class="skeleton"></div>'.repeat(4);
-    try{
-      var payloads=await Promise.all([
-        fetch('/api/academics/semesters').then(function(r){return r.json();}),
-        fetch('/api/academics/years').then(function(r){return r.json();})
-      ]);
-      var data=payloads[0];
-      var years=payloads[1] && payloads[1].years ? payloads[1].years : [];
-      yearByValue={};
-      years.forEach(function(y){ yearByValue[String(y.year_value)] = y.id; });
-      semGrid.innerHTML=data.semesters.map(function(s){
-        var num=s.label.match(/\d+/); num=num?num[0]:s.label.charAt(0).toUpperCase();
-        var tag=/year/i.test(s.label)?'Year':/semester/i.test(s.label)?'Sem':'';
-        return'<div class="sem-pill'+(state.semesterId==s.id?' selected':'')+'" data-id="'+s.id+'" data-label="'+escHtml(s.label)+'" data-year="'+(s.year_number || '')+'"><div class="sem-num">'+num+'</div><div class="sem-tag">'+tag+'</div></div>';
-      }).join('');
-      semGrid.querySelectorAll('.sem-pill').forEach(function(el){
-        el.addEventListener('click',function(){
-          semGrid.querySelectorAll('.sem-pill').forEach(function(p){p.classList.remove('selected');});
-          el.classList.add('selected');
-          state.semesterId=el.dataset.id; state.semesterLabel=el.dataset.label;
-          state.yearId=yearByValue[String(el.dataset.year || '')] || null;
-          hideErr('semError');
-        });
-      });
-    }catch(e){
-      semGrid.innerHTML='<p style="color:#ef4444;font-size:13px;grid-column:1/-1">Failed to load. Please refresh.</p>';
-    }
-  }
-
-  function updateStepper(){
-    for(var i=1;i<=3;i++){
-      var circle=document.getElementById('sc'+i);
-      var label=document.getElementById('sl'+i);
-      circle.className='stepper-circle'; label.className='stepper-label';
-      if(i<step){ circle.classList.add('done'); circle.textContent='✓'; label.classList.add('done'); }
-      else if(i===step){ circle.classList.add('active'); circle.textContent=i; label.classList.add('active'); }
-      else{ circle.textContent=i; }
-      if(i<=2){ document.getElementById('sline'+i).className='stepper-line'+(i<step?' done':''); }
-    }
-    btnBack.style.display=step>1?'block':'none';
-    btnNext.textContent=step===3?'Complete Setup':'Continue \u2192';
-  }
-
-  function showPane(n){
-    document.querySelectorAll('.step-pane').forEach(function(p){p.classList.remove('active');});
-    document.getElementById('pane'+n).classList.add('active');
-  }
-
-  function showErr(id){ document.getElementById(id).classList.add('show'); }
-  function hideErr(id){ document.getElementById(id).classList.remove('show'); }
-
-  btnNext.addEventListener('click',async function(){
-    if(step===1){
-      if(!state.categoryId){ showErr('catError'); return; }
-      step=2; updateStepper(); showPane(2); await loadBranches(state.categoryId);
-    } else if(step===2){
-      if(!state.branchId){ showErr('branchError'); return; }
-      step=3; updateStepper(); showPane(3); await loadSemesters();
-    } else {
-      if(!state.semesterId){ showErr('semError'); return; }
-      await submitSetup();
-    }
-  });
-
-  btnBack.addEventListener('click',function(){ if(step>1){ step--; updateStepper(); showPane(step); } });
-
-  async function submitSetup(){
-    btnNext.disabled=true;
-    btnNext.innerHTML='<div class="spinner"></div> Setting up\u2026';
-    try{
-      var res=await fetch('/api/academics/onboarding/complete',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        credentials:'include',
-        body:JSON.stringify({categoryId:parseInt(state.categoryId),branchId:parseInt(state.branchId),semesterId:parseInt(state.semesterId),collegeId:parseInt(state.categoryId),courseId:parseInt(state.branchId),yearId:state.yearId ? parseInt(state.yearId) : null,weakSubjects:[]})
-      });
-      if(!res.ok){ var e=await res.json(); throw new Error(e.error||'Setup failed'); }
-      showSuccess();
-      setTimeout(function(){ window.location.href='/dashboard'; },2400);
-    }catch(err){
-      btnNext.disabled=false;
-      btnNext.textContent='Complete Setup';
-      document.getElementById('semError').textContent='Setup failed: '+(err.message||'Please try again.');
-      showErr('semError');
-    }
-  }
-
-  function showSuccess(){
-    document.getElementById('wizardCard').innerHTML=
-      '<div class="success-wrap">'+
-      '<div class="success-ring"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>'+
-      '<h2>You\'re all set! &#127881;</h2>'+
-      '<p class="sub">Your profile is saved.<br>Content is now personalised for you.</p>'+
-      '<div class="chip-row"><span class="chip">'+escHtml(state.categoryName)+'</span><span class="chip">'+escHtml(state.branchName)+'</span><span class="chip">'+escHtml(state.semesterLabel)+'</span></div>'+
-      '<p class="redirect-note">Taking you to your dashboard\u2026</p>'+
-      '</div>';
-  }
-
-  loadCategories();
-  updateStepper();
-</script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/academic-onboarding.js"></script>
 </body>
 </html>

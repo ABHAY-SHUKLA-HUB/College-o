@@ -1,0 +1,6 @@
+Contact: mailto:security@collegeo.in
+Contact: mailto:support@collegeo.in
+Expires: 2027-12-31T23:59:59.000Z
+Preferred-Languages: en
+Canonical: https://collegeo.in/.well-known/security.txt
+Policy: https://collegeo.in/privacy

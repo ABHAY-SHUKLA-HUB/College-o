@@ -4,7 +4,11 @@ const { requireAuth } = require('../middleware/auth');
 const { resolveMembershipState } = require('../middleware/auth');
 const { createUploadMiddleware, saveUploadedFile } = require('../services/uploadService');
 
+const { requireFeatureEnabled } = require('../middleware/featureToggle');
+
 const router = express.Router();
+router.use(requireFeatureEnabled('membership'));
+
 const MEMBERSHIP_CONFIG_CACHE_TTL_MS = 30 * 1000;
 const membershipConfigCache = { payload: null, loadedAt: 0 };
 
@@ -143,23 +147,63 @@ async function getUserProfile(userId) {
   return rows[0] || null;
 }
 
+const { ensureMembershipSchema, getStudentActiveMembership } = require('../services/entitlementResolver');
+
+// GET /api/subscriptions/plans - Public student endpoint to fetch active, purchasable membership plans
+router.get('/plans', async (_req, res) => {
+  try {
+    await ensureMembershipSchema();
+    const { rows } = await pool.query(`
+      SELECT 
+        id,
+        code,
+        name,
+        description,
+        price,
+        currency,
+        duration_value,
+        duration_unit,
+        display_benefits,
+        display_order
+      FROM membership_plans
+      WHERE status = 'ACTIVE' AND is_purchasable = TRUE
+      ORDER BY display_order ASC, price ASC
+    `);
+
+    const formattedPlans = rows.map(p => ({
+      id: p.id,
+      code: p.code,
+      name: p.name,
+      description: p.description,
+      priceInr: Number(p.price),
+      price: Number(p.price),
+      currency: p.currency,
+      durationValue: p.duration_value,
+      durationUnit: p.duration_unit,
+      displayBenefits: Array.isArray(p.display_benefits) ? p.display_benefits : (typeof p.display_benefits === 'string' ? JSON.parse(p.display_benefits) : [])
+    }));
+
+    res.json({ success: true, plans: formattedPlans });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch membership plans', details: err.message });
+  }
+});
+
 async function countMockAttempts(userId) {
-  const { rows } = await pool.query(
-    'SELECT COUNT(*)::int AS count FROM mock_test_attempts WHERE user_id = $1',
-    [userId]
-  );
-  return rows[0]?.count || 0;
+  try {
+    const { rows } = await pool.query('SELECT COUNT(*)::int AS count FROM mock_test_attempts WHERE user_id = $1', [userId]);
+    return rows[0]?.count || 0;
+  } catch {
+    return 0;
+  }
 }
 
 router.get('/me', requireAuth, async (req, res) => {
   const userId = req.session.userId;
-  const membershipConfig = await getMembershipCenterConfig();
-  const premiumPlan = membershipConfig?.plans?.premium || {};
-  const premiumPrice = Number(premiumPlan.priceInr || 49);
-  const durationDays = Number(premiumPlan.durationDays || 30);
+  await ensureMembershipSchema();
 
-  const [membership, historyResult, attemptsCount] = await Promise.all([
-    resolveMembershipState(userId),
+  const [membershipState, historyResult, attemptsCount, dbPlansRes] = await Promise.all([
+    getStudentActiveMembership(userId),
     pool.query(
       `SELECT
         id,
@@ -177,50 +221,52 @@ router.get('/me', requireAuth, async (req, res) => {
        ORDER BY submitted_at DESC`,
       [userId]
     ),
-    countMockAttempts(userId)
+    countMockAttempts(userId),
+    pool.query(`
+      SELECT id, code, name, description, price, currency, duration_value, duration_unit, display_benefits
+      FROM membership_plans
+      WHERE status = 'ACTIVE' AND is_purchasable = TRUE
+      ORDER BY display_order ASC
+    `)
   ]);
 
-  if (!membership) return res.status(404).json({ error: 'User not found' });
+  const activePlanCode = membershipState.planCode || 'free';
+  const premiumDbPlan = dbPlansRes.rows.find(p => p.code !== 'free') || dbPlansRes.rows[0];
+  const premiumPrice = premiumDbPlan ? Number(premiumDbPlan.price) : 49;
+  const durationDays = premiumDbPlan ? Number(premiumDbPlan.duration_value) : 30;
 
-  const plan = membership.premiumActive ? 'premium' : 'free';
-  const status = membership.status;
-  const statusLabel = membership.statusLabel;
+  const formattedPlans = dbPlansRes.rows.map(p => ({
+    id: p.id,
+    code: p.code,
+    name: p.code,
+    displayName: p.name,
+    priceInr: Number(p.price),
+    description: p.description,
+    features: Array.isArray(p.display_benefits) ? p.display_benefits : (typeof p.display_benefits === 'string' ? JSON.parse(p.display_benefits) : [])
+  }));
 
-  const comparison = {
-    free: membershipConfig?.plans?.free?.features || ['Limited notes access', 'Basic dashboard', '2 mock attempts'],
-    premium: membershipConfig?.plans?.premium?.features || ['Unlimited tests', 'Full notes', 'Roadmap access', 'Certificates', 'Downloads']
-  };
+  const membershipConfig = await getMembershipCenterConfig();
 
   return res.json({
-    plan,
-    tier: plan,
+    plan: activePlanCode,
+    tier: activePlanCode,
     amountInr: premiumPrice,
     billingDurationDays: durationDays,
-    status,
-    statusLabel,
-    startDate: membership.startDate,
-    expiryDate: membership.expiryDate,
-    remainingDays: membership.remainingDays,
+    status: membershipState.status.toLowerCase(),
+    statusLabel: membershipState.hasActiveMembership ? 'Active Member' : 'Free Learner',
+    startDate: membershipState.startedAt,
+    expiryDate: membershipState.expiresAt,
+    remainingDays: membershipState.expiresAt ? Math.max(0, Math.ceil((new Date(membershipState.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : null,
     freeMockAttemptLimit: 2,
     freeMockAttemptsUsed: attemptsCount,
     freeMockAttemptsRemaining: Math.max(0, 2 - attemptsCount),
     membershipConfig,
-    benefits: comparison,
-    plans: [
-      {
-        name: 'free',
-        priceInr: Number(membershipConfig?.plans?.free?.priceInr || 0),
-        description: membershipConfig?.plans?.free?.description || 'Limited feature access'
-      },
-      {
-        name: 'premium',
-        priceInr: premiumPrice,
-        description: premiumPlan.description || `Full access for ${durationDays} days after admin approval`
-      }
-    ],
+    plans: formattedPlans,
     paymentHistory: historyResult.rows
   });
 });
+
+
 
 router.get('/payments', requireAuth, async (req, res) => {
   const { rows } = await pool.query(
@@ -245,22 +291,88 @@ router.get('/payments', requireAuth, async (req, res) => {
   res.json({ payments: rows });
 });
 
-router.post('/payment-request', requireAuth, upload.single('paymentScreenshot'), async (req, res) => {
+const { getPaymentSettings } = require('./admin-control');
+
+// GET /api/subscriptions/payment-settings - Public student endpoint to fetch persistent payment settings
+router.get('/payment-settings', async (_req, res) => {
+  try {
+    const settings = await getPaymentSettings();
+    res.json({
+      success: true,
+      paymentEnabled: settings.payment_enabled,
+      upiId: settings.upi_id,
+      payeeName: settings.payee_name,
+      qrImageUrl: settings.qr_image_url,
+      instructions: settings.instructions,
+      supportMessage: settings.support_message
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch payment settings', details: err.message });
+  }
+});
+
+const handlePaymentScreenshotUpload = (req, res, next) => {
+  if (req.is('multipart/form-data')) {
+    return upload.single('paymentScreenshot')(req, res, next);
+  }
+  return next();
+};
+
+router.post('/payment-request', requireAuth, handlePaymentScreenshotUpload, async (req, res) => {
+  console.log('[DEBUG payment-request] Handler started for user:', req.session.userId);
+  const settings = await getPaymentSettings();
+  if (!settings.payment_enabled) {
+    return res.status(403).json({
+      error: 'PAYMENTS_DISABLED',
+      message: 'New payment submissions are currently disabled by administrator.'
+    });
+  }
+
+  console.log('[DEBUG payment-request] Payment enabled. Fetching user profile...');
   const user = await getUserProfile(req.session.userId);
-  const membershipConfig = await getMembershipCenterConfig();
-  const premiumPlan = membershipConfig?.plans?.premium || {};
-  const premiumPrice = Number(premiumPlan.priceInr || 49);
+  console.log('[DEBUG payment-request] User profile fetched:', user?.email);
+  await ensureMembershipSchema();
+  console.log('[DEBUG payment-request] Membership schema ensured.');
+
+  let targetPlanId = req.body.planId ? parseInt(req.body.planId, 10) : null;
+  let targetPlanCode = req.body.planCode ? String(req.body.planCode).trim().toLowerCase() : null;
+
+  let planRes;
+  let matchedPlan = null;
+
+  if (targetPlanId) {
+    planRes = await pool.query("SELECT id, code, name, price FROM membership_plans WHERE id = $1 AND status = 'ACTIVE' AND is_purchasable = TRUE", [targetPlanId]);
+  } else if (targetPlanCode) {
+    planRes = await pool.query("SELECT id, code, name, price FROM membership_plans WHERE code = $1 AND status = 'ACTIVE' AND is_purchasable = TRUE", [targetPlanCode]);
+  } else {
+    planRes = await pool.query("SELECT id, code, name, price FROM membership_plans WHERE code = 'premium' AND status = 'ACTIVE' AND is_purchasable = TRUE LIMIT 1");
+  }
+
+  if (planRes.rows.length === 0) {
+    planRes = await pool.query("SELECT id, code, name, price FROM membership_plans WHERE status = 'ACTIVE' AND is_purchasable = TRUE AND price > 0 ORDER BY display_order ASC LIMIT 1");
+  }
+
+  if (planRes.rows.length > 0) {
+    matchedPlan = planRes.rows[0];
+  }
+
+  const authoritativePrice = matchedPlan ? Number(matchedPlan.price) : 49;
+  const planIdSnapshot = matchedPlan ? matchedPlan.id : null;
+  const planCodeSnapshot = matchedPlan ? matchedPlan.code : 'premium';
+  const planNameSnapshot = matchedPlan ? matchedPlan.name : 'Premium Membership';
+
   if (!user) return res.status(404).json({ error: 'User not found' });
 
   const fullName = String(req.body.fullName || user.full_name || '').trim();
   const email = String(req.body.email || user.email || '').trim().toLowerCase();
-  const paymentMethod = String(req.body.paymentMethod || '').trim();
-  const transactionId = String(req.body.transactionId || '').trim();
-  const paymentDate = toIsoDate(req.body.paymentDate);
+  const paymentMethod = String(req.body.paymentMethod || 'UPI').trim();
+  const rawUtr = String(req.body.transactionId || req.body.utr || '').trim();
+  const transactionId = rawUtr.toUpperCase();
+  const paymentDate = toIsoDate(req.body.paymentDate || new Date());
   const note = String(req.body.note || '').trim() || null;
 
   if (!fullName || !email || !paymentMethod || !transactionId || !paymentDate) {
-    return res.status(400).json({ error: 'fullName, email, paymentMethod, transactionId, and paymentDate are required' });
+    return res.status(400).json({ error: 'fullName, email, paymentMethod, transactionId (UTR), and paymentDate are required' });
   }
 
   if (email !== String(user.email || '').toLowerCase()) {
@@ -302,10 +414,10 @@ router.post('/payment-request', requireAuth, upload.single('paymentScreenshot'),
   try {
     const { rows } = await pool.query(
       `INSERT INTO membership_payment_requests
-       (user_id, full_name, email, payment_method, transaction_id, screenshot_url, payment_date, amount_inr, note, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7::date, $8, $9, 'pending')
+       (user_id, plan_id, full_name, email, payment_method, transaction_id, screenshot_url, payment_date, amount_inr, note, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::date, $9, $10, 'pending')
        RETURNING id, payment_date, transaction_id, amount_inr, status, submitted_at`,
-      [req.session.userId, fullName, email, paymentMethod, transactionId, screenshotUrl, paymentDate, premiumPrice, note]
+      [req.session.userId, planIdSnapshot, fullName, email, paymentMethod, transactionId, screenshotUrl, paymentDate, authoritativePrice, note]
     );
 
     await pool.query(

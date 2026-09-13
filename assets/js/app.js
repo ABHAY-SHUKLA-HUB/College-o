@@ -22,30 +22,30 @@ const navGroups = [
   {
     title: 'Learning',
     items: [
-      { href: 'study.html', label: 'Study', icon: 'fa-book-open', key: 'study' },
-      { href: 'mock-tests.html', label: 'Mock Test', icon: 'fa-flask', key: 'mock' },
-      { href: 'notes-library.html', label: 'Notes', icon: 'fa-file-lines', key: 'notes' },
-      { href: 'academic-contribution-hub.html', label: 'Contribute', icon: 'fa-upload', key: 'contribute' },
-      { href: 'study-roadmap.html', label: 'Roadmap', icon: 'fa-map', key: 'roadmap' },
-      { href: 'coding-challenges.html', label: 'Coding Challenges', icon: 'fa-code', key: 'codingChallenges' },
-      { label: 'Live Hub', icon: 'fa-satellite-dish', key: 'liveHub', action: 'liveHub' },
-      { href: 'ai-tools.html', label: 'AI Tools', icon: 'fa-sparkles', key: 'aiTools' }
+      { href: 'study.html', label: 'Study', icon: 'fa-book-open', key: 'study', featureKey: 'study_materials' },
+      { href: 'mock-tests.html', label: 'Mock Test', icon: 'fa-flask', key: 'mock', featureKey: 'mock_tests' },
+      { href: 'notes-library.html', label: 'Notes', icon: 'fa-file-lines', key: 'notes', featureKey: 'notes_library' },
+      { href: 'academic-contribution-hub.html', label: 'Contribute', icon: 'fa-upload', key: 'contribute', featureKey: 'student_contributions' },
+      { href: 'study-roadmap.html', label: 'Roadmap', icon: 'fa-map', key: 'roadmap', featureKey: 'study_roadmaps' },
+      { href: 'coding-challenges.html', label: 'Coding Challenges', icon: 'fa-code', key: 'codingChallenges', featureKey: 'coding_challenges' },
+      { label: 'Live Hub', icon: 'fa-satellite-dish', key: 'liveHub', action: 'liveHub', featureKey: 'live_sessions' },
+      { href: 'ai-tools.html', label: 'AI Tools', icon: 'fa-sparkles', key: 'aiTools', featureKey: 'ai_tools' }
     ]
   },
   {
     title: 'Community',
     items: [
-      { href: 'college-feed.html', label: 'Campus Feed', icon: 'fa-newspaper', key: 'campusFeed' },
-      { href: 'forum.html', label: 'Forum', icon: 'fa-comments', key: 'forum' },
-      { href: 'support-hub.html', label: 'Support Hub', icon: 'fa-life-ring', key: 'supportHub' },
-      { href: 'support-dashboard.html', label: 'Support Dashboard', icon: 'fa-chart-line', key: 'supportDashboard', roles: ['admin', 'super_admin', 'support_admin', 'support'] }
+      { href: 'college-feed.html', label: 'Campus Feed', icon: 'fa-newspaper', key: 'campusFeed', featureKey: 'campus_feed' },
+      { href: 'forum.html', label: 'Forum', icon: 'fa-comments', key: 'forum', featureKey: 'student_experience' },
+      { href: 'support-hub.html', label: 'Support Hub', icon: 'fa-life-ring', key: 'supportHub', featureKey: 'support' },
+      { href: 'support-dashboard.html', label: 'Support Dashboard', icon: 'fa-chart-line', key: 'supportDashboard', featureKey: 'support', roles: ['admin', 'super_admin', 'support_admin', 'support'] }
     ]
   },
   {
     title: 'Account',
     items: [
       { href: 'profile.html', label: 'Profile', icon: 'fa-user', key: 'profile' },
-      { href: 'pricing.html', label: 'Membership', icon: 'fa-crown', key: 'membership' },
+      { href: 'pricing.html', label: 'Membership', icon: 'fa-crown', key: 'membership', featureKey: 'membership' },
       { href: 'settings.html', label: 'Settings', icon: 'fa-gear', key: 'settings' }
     ]
   },
@@ -306,11 +306,16 @@ window.addEventListener('storage', (event) => {
 
 function navHtml() {
   const current = pageName();
+  const matrix = window.collegeOsFeaturesMatrix || {};
   return navGroups
     .map((group) => {
       const links = group.items
         .filter((item) => {
-          if (item.key === 'codingChallenges' && window.collegeOsCodingEnabled !== true) return false;
+          if (item.featureKey && matrix[item.featureKey]) {
+            const feat = matrix[item.featureKey];
+            if (feat.visible === false || feat.is_visible === false) return false;
+          }
+          if (item.key === 'codingChallenges' && window.collegeOsCodingEnabled === false) return false;
           if (!Array.isArray(item.roles) || !item.roles.length) return true;
           const role = String(window.collegeOsCurrentUser?.role || '').toLowerCase();
           return item.roles.some((allowed) => String(allowed || '').toLowerCase() === role);
@@ -1196,7 +1201,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
+async function initStudentFeatureMatrix() {
+  try {
+    const res = await fetch('/api/meta/features');
+    if (res.ok) {
+      const data = await res.json();
+      window.collegeOsFeaturesMatrix = data.effectiveFeatures || data.features || {};
+      renderSidebarNav();
+    }
+  } catch (err) {
+    // Fail safe defaults
+  }
+}
+
     const backgroundTasks = [
+      initStudentFeatureMatrix(),
       hydrateSidebarProfile(),
       hydrateCommonStats(),
       hydrateNotificationBadge(),

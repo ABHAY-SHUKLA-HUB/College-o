@@ -10,10 +10,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const settingsName = document.getElementById('settingsName');
   const settingsEmail = document.getElementById('settingsEmail');
-  const settingsCollege = document.getElementById('settingsCollege');
-  const settingsCategory = document.getElementById('settingsCategory');
-  const settingsBranch = document.getElementById('settingsBranch');
-  const settingsSemester = document.getElementById('settingsSemester');
+  const settingsUniSelect = document.getElementById('settingsUniversitySelect');
+  const settingsCourseSelect = document.getElementById('settingsCourseSelect');
+  const settingsBatchSelect = document.getElementById('settingsBatchSelect');
   const settingsTargetExam = document.getElementById('settingsTargetExam');
   const settingsCareerInterest = document.getElementById('settingsCareerInterest');
   const settingsStudyMode = document.getElementById('settingsStudyMode');
@@ -46,82 +45,101 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   const academicState = {
-    categories: [],
-    semesters: [],
-    profile: null,
-    initialCategoryId: null
+    profile: null
   };
 
-  function normalizeList(payload, key) {
-    if (Array.isArray(payload?.[key])) return payload[key];
-    if (Array.isArray(payload)) return payload;
-    return [];
+  async function apiFetch(url, opts = {}) {
+    if (window.CollegeOSApiClient?.request) {
+      return window.CollegeOSApiClient.request(url, opts);
+    }
+    const res = await fetch(url, { credentials: 'include', headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) }, ...opts });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || data.message || `Request failed with status ${res.status}`);
+    }
+    return res.json();
   }
 
-  function fillSelect(selectNode, options, placeholder, selectedValue = '') {
-    if (!selectNode) return;
-    const selected = selectedValue ? String(selectedValue) : '';
-    const html = [`<option value="">${placeholder}</option>`]
-      .concat(
-        options.map((item) => {
-          const id = String(item.id);
-          const text = String(item.label || item.name || item.code || id);
-          const chosen = id === selected ? ' selected' : '';
-          return `<option value="${id}"${chosen}>${text}</option>`;
-        })
-      );
-    selectNode.innerHTML = html.join('');
-  }
+  async function loadCoursesForSettings(uniId, selectedCourseId = null) {
+    if (!settingsCourseSelect) return;
+    settingsCourseSelect.disabled = !uniId;
+    settingsBatchSelect.disabled = true;
+    settingsBatchSelect.innerHTML = '<option value="">Select Batch</option>';
 
-  async function loadBranchesForCategory(categoryId, selectedBranchId = '') {
-    if (!settingsBranch) return;
-    settingsBranch.disabled = !categoryId;
-
-    if (!categoryId) {
-      fillSelect(settingsBranch, [], 'Select Branch');
+    if (!uniId) {
+      settingsCourseSelect.innerHTML = '<option value="">Select Course</option>';
       return;
     }
 
     try {
-      const payload = await window.CollegeOSApi.getAcademicBranches(categoryId);
-      const branches = normalizeList(payload, 'branches');
-      fillSelect(settingsBranch, branches, 'Select Branch', selectedBranchId);
-    } catch {
-      fillSelect(settingsBranch, [], 'Select Branch');
-      setFeedback('Unable to load branches right now. Please try again.');
+      const res = await apiFetch(`/api/student/academic-options/courses?universityId=${uniId}`);
+      const courses = res.courses || [];
+      settingsCourseSelect.innerHTML = '<option value="">Select Course</option>' + 
+        courses.map(c => `<option value="${c.id}" ${c.id === selectedCourseId ? 'selected' : ''}>${c.name} ${c.department ? ' (' + c.department + ')' : ''}</option>`).join('');
+      settingsCourseSelect.disabled = false;
+
+      if (selectedCourseId) {
+        await loadBatchesForSettings(uniId, selectedCourseId, academicState.profile?.batchId);
+      }
+    } catch (err) {
+      console.error(err);
+      settingsCourseSelect.innerHTML = '<option value="">Failed to load courses</option>';
+    }
+  }
+
+  async function loadBatchesForSettings(uniId, courseId, selectedBatchId = null) {
+    if (!settingsBatchSelect) return;
+    settingsBatchSelect.disabled = !courseId;
+
+    if (!courseId) {
+      settingsBatchSelect.innerHTML = '<option value="">Select Batch</option>';
+      return;
+    }
+
+    try {
+      const res = await apiFetch(`/api/student/academic-options/batches?universityId=${uniId}&courseId=${courseId}`);
+      const batches = res.batches || [];
+      settingsBatchSelect.innerHTML = '<option value="">Select Batch</option>' + 
+        batches.map(b => `<option value="${b.id}" ${b.id === selectedBatchId ? 'selected' : ''}>Batch ${b.name} (${b.start_year}-${b.end_year || b.start_year + 4})</option>`).join('');
+      settingsBatchSelect.disabled = false;
+    } catch (err) {
+      console.error(err);
+      settingsBatchSelect.innerHTML = '<option value="">Failed to load batches</option>';
     }
   }
 
   async function loadAcademicSettings() {
-    if (!settingsCategory || !settingsBranch || !settingsSemester) return;
+    if (!settingsUniSelect) return;
 
     try {
-      const [categoriesPayload, semestersPayload, profilePayload] = await Promise.all([
-        window.CollegeOSApi.getAcademicCategories(),
-        window.CollegeOSApi.getAcademicSemesters(),
-        window.CollegeOSApi.getStudentAcademicProfile()
+      const [unisRes, statusRes] = await Promise.all([
+        apiFetch('/api/student/academic-options/universities'),
+        apiFetch('/api/student/academic-profile/status').catch(() => ({ isComplete: false, profile: null }))
       ]);
 
-      academicState.categories = normalizeList(categoriesPayload, 'categories');
-      academicState.semesters = normalizeList(semestersPayload, 'semesters');
-      academicState.profile = profilePayload?.profile || null;
-      academicState.initialCategoryId = academicState.profile?.categoryId ? String(academicState.profile.categoryId) : null;
+      const universities = unisRes.universities || [];
+      const profile = statusRes.profile || null;
+      academicState.profile = profile;
 
-      fillSelect(settingsCategory, academicState.categories, 'Select Category', academicState.profile?.categoryId || '');
-      fillSelect(settingsSemester, academicState.semesters, 'Select Semester', academicState.profile?.semesterId || '');
+      settingsUniSelect.innerHTML = '<option value="">Select University</option>' + 
+        universities.map(u => `<option value="${u.id}" ${u.id === profile?.universityId ? 'selected' : ''}>${u.name}</option>`).join('');
 
-      await loadBranchesForCategory(
-        settingsCategory.value,
-        academicState.profile?.branchId || ''
-      );
+      if (profile?.universityId) {
+        await loadCoursesForSettings(profile.universityId, profile.courseId);
+      }
 
-      if (settingsTargetExam) settingsTargetExam.value = academicState.profile?.targetExam || '';
-      if (settingsCareerInterest) settingsCareerInterest.value = academicState.profile?.careerInterest || '';
-      if (settingsStudyMode) settingsStudyMode.value = academicState.profile?.preferredStudyMode || '';
-    } catch {
-      fillSelect(settingsCategory, [], 'Select Category');
-      fillSelect(settingsBranch, [], 'Select Branch');
-      fillSelect(settingsSemester, [], 'Select Semester');
+      settingsUniSelect.onchange = async () => {
+        const uId = parseInt(settingsUniSelect.value, 10);
+        if (uId) await loadCoursesForSettings(uId, null);
+      };
+
+      settingsCourseSelect.onchange = async () => {
+        const uId = parseInt(settingsUniSelect.value, 10);
+        const cId = parseInt(settingsCourseSelect.value, 10);
+        if (uId && cId) await loadBatchesForSettings(uId, cId, null);
+      };
+    } catch (err) {
+      console.error(err);
       setFeedback('Could not load academic options.');
     }
   }
@@ -244,7 +262,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const me = await window.CollegeOSApi.getMe();
     if (settingsName) settingsName.value = me?.user?.full_name || '';
     if (settingsEmail) settingsEmail.value = me?.user?.email || '';
-    if (settingsCollege) settingsCollege.value = me?.user?.college_name || '';
 
     await loadAcademicSettings();
 
@@ -258,10 +275,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch {
     // Keep default values.
   }
-
-  settingsCategory?.addEventListener('change', async () => {
-    await loadBranchesForCategory(settingsCategory.value, '');
-  });
 
   await loadSessions();
 
@@ -327,48 +340,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     try {
-      await window.CollegeOSApi.updateProfile({
-        fullName: settingsName?.value?.trim(),
-        collegeName: settingsCollege?.value?.trim()
-      });
+      if (settingsName?.value) {
+        await window.CollegeOSApi.updateProfile({
+          fullName: settingsName.value.trim()
+        }).catch(() => {});
+      }
 
-      const categoryId = Number(settingsCategory?.value || 0) || null;
-      const branchId = Number(settingsBranch?.value || 0) || null;
-      const semesterId = Number(settingsSemester?.value || 0) || null;
-      const targetExam = settingsTargetExam?.value?.trim() || null;
-      const careerInterest = settingsCareerInterest?.value?.trim() || null;
-      const preferredStudyMode = settingsStudyMode?.value || null;
+      const uniId = parseInt(settingsUniSelect?.value, 10);
+      const courseId = parseInt(settingsCourseSelect?.value, 10);
+      const batchId = parseInt(settingsBatchSelect?.value, 10);
 
-      const hasAnyAcademicSelection = Boolean(categoryId || branchId || semesterId);
-      const hasFullAcademicSelection = Boolean(categoryId && branchId && semesterId);
+      const hasAnyAcademicSelection = Boolean(uniId || courseId || batchId);
+      const hasFullAcademicSelection = Boolean(uniId && courseId && batchId);
 
       if (hasAnyAcademicSelection && !hasFullAcademicSelection) {
-        throw new Error('Please select Category, Branch, and Semester to save academic settings.');
+        throw new Error('Please select University, Course, and Batch to save academic settings.');
       }
 
       if (hasFullAcademicSelection) {
-        const categoryChanged =
-          academicState.initialCategoryId && academicState.initialCategoryId !== String(categoryId);
-
-        if (!academicState.profile || categoryChanged) {
-          await window.CollegeOSApi.completeAcademicOnboarding({
-            categoryId,
-            branchId,
-            semesterId,
-            targetExam,
-            careerInterest,
-            preferredStudyMode,
-            weakSubjects: []
-          });
-        } else {
-          await window.CollegeOSApi.updateAcademicProfile({
-            branchId,
-            semesterId,
-            targetExam,
-            careerInterest,
-            preferredStudyMode
-          });
-        }
+        await apiFetch('/api/student/academic-profile', {
+          method: 'POST',
+          body: JSON.stringify({ universityId: uniId, courseId, batchId })
+        });
       }
 
       if (currentPassword?.value && newPassword?.value) {
@@ -379,14 +372,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       await window.CollegeOSApi.updateSettingsIcons({
-        iconSize: size.value,
-        iconStyle: style.value,
+        iconSize: size ? size.value : 'medium',
+        iconStyle: style ? style.value : 'fontawesome',
         preferences: getPreferencesPayload()
-      });
+      }).catch(() => {});
 
       applyTheme(themeMode?.value || 'system');
       applyLocalAccessibility();
-      setFeedback('Settings saved successfully.');
+      setFeedback('Settings saved successfully!');
       await loadAcademicSettings();
       if (currentPassword) currentPassword.value = '';
       if (newPassword) newPassword.value = '';

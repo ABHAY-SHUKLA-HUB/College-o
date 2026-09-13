@@ -161,12 +161,11 @@
         <article class="section-card">
           <div class="section-head"><i class="fa-solid fa-user-gear"></i><h3>Account Settings</h3></div>
           <div class="settings-grid">
-            <div class="field"><label>Change Name</label><input id="settingsName" placeholder="Full name" /></div>
-            <div class="field"><label>Change Email</label><input id="settingsEmail" type="email" placeholder="Email address" /></div>
-            <div class="field"><label>Update College</label><input id="settingsCollege" placeholder="College name" /></div>
-            <div class="field"><label>Academic Category</label><select id="settingsCategory"><option value="">Select Category</option></select></div>
-            <div class="field"><label>Branch / Course</label><select id="settingsBranch" disabled><option value="">Select Branch</option></select></div>
-            <div class="field"><label>Semester / Year</label><select id="settingsSemester"><option value="">Select Semester</option></select></div>
+            <div class="field"><label>Full Name</label><input id="settingsName" placeholder="Full name" /></div>
+            <div class="field"><label>Email Address</label><input id="settingsEmail" type="email" placeholder="Email address" readonly style="opacity: 0.8; cursor: not-allowed;" /></div>
+            <div class="field"><label>University / College</label><select id="settingsUniversitySelect"><option value="">Select University</option></select></div>
+            <div class="field"><label>Department &amp; Course</label><select id="settingsCourseSelect" disabled><option value="">Select Course</option></select></div>
+            <div class="field"><label>Academic Batch / Session</label><select id="settingsBatchSelect" disabled><option value="">Select Batch</option></select></div>
             <div class="field"><label>Target Exam</label><input id="settingsTargetExam" placeholder="Optional (e.g., GATE, CAT)" /></div>
             <div class="field"><label>Career Interest</label><input id="settingsCareerInterest" placeholder="Optional career goal" /></div>
             <div class="field"><label>Preferred Study Mode</label><select id="settingsStudyMode"><option value="">Select Study Mode</option><option value="self-paced">Self-Paced</option><option value="structured">Structured Course</option><option value="mixed">Mixed Approach</option></select></div>

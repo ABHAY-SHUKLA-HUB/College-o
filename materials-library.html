@@ -175,6 +175,7 @@
       line-height: 1.4;
       display: -webkit-box;
       -webkit-line-clamp: 2;
+      line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
@@ -201,16 +202,7 @@
       color: #475569;
     }
 
-    .material-access {
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      background: #dbeafe;
-      color: #0369a1;
-    }
-
-    .material-access.premium {
+    .material-tag.premium {
       background: #fef08a;
       color: #a16207;
     }
@@ -235,6 +227,38 @@
       color: #94a3b8;
     }
 
+    /* Protected PDF Viewer Modal */
+    .pdf-viewer-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(10px);
+      z-index: 999999;
+      flex-direction: column;
+    }
+
+    .pdf-viewer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 24px;
+      background: #0f172a;
+      color: #fff;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .pdf-viewer-body {
+      flex: 1;
+      width: 100%;
+      height: calc(100vh - 60px);
+      position: relative;
+      background: #1e293b;
+    }
+
     @media (max-width: 768px) {
       .materials-grid {
         grid-template-columns: 1fr;
@@ -255,7 +279,7 @@
   <template data-page>
     <section class="materials-hero">
       <h1><i class="fa-solid fa-book-open"></i> Learning Materials</h1>
-      <p>Explore curated books, presentations, and reference materials to enhance your learning experience.</p>
+      <p>Explore official books, presentations, and reference study materials published for your academic program.</p>
     </section>
 
     <section class="card">
@@ -263,7 +287,7 @@
         <div>
           <p style="margin: 0 0 10px 0; font-weight: 600; font-size: 0.9rem; color: #475569;">Material Type</p>
           <div class="materials-btn-group">
-            <button class="materials-btn active" data-type-filter="all"><i class="fa-solid fa-book"></i> All Materials</button>
+            <button class="materials-btn active" data-type-filter="all"><i class="fa-solid fa-border-all"></i> All Materials</button>
             <button class="materials-btn" data-type-filter="book"><i class="fa-solid fa-book"></i> Books</button>
             <button class="materials-btn" data-type-filter="ppt"><i class="fa-solid fa-presentation"></i> Presentations</button>
           </div>
@@ -271,20 +295,20 @@
 
         <div class="materials-filter-row">
           <div>
-            <label style="font-weight: 600; font-size: 0.85rem; color: #475569; display: block; margin-bottom: 6px;">Subject</label>
-            <select id="materialsSubjectFilter" class="materials-select" style="width:100%;"><option value="">All Subjects</option></select>
+            <label style="font-weight: 600; font-size: 0.85rem; color: #475569; display: block; margin-bottom: 6px;">Subject Category</label>
+            <select id="materialsSubjectFilter" class="materials-select" style="width:100%;"><option value="">All Categories</option></select>
           </div>
           <div>
             <label style="font-weight: 600; font-size: 0.85rem; color: #475569; display: block; margin-bottom: 6px;">Semester</label>
             <select id="materialsSemesterFilter" class="materials-select" style="width:100%;"><option value="">All Semesters</option></select>
           </div>
           <div>
-            <label style="font-weight: 600; font-size: 0.85rem; color: #475569; display: block; margin-bottom: 6px;">Branch</label>
+            <label style="font-weight: 600; font-size: 0.85rem; color: #475569; display: block; margin-bottom: 6px;">Branch / Course</label>
             <select id="materialsBranchFilter" class="materials-select" style="width:100%;"><option value="">All Branches</option></select>
           </div>
           <div>
             <label style="font-weight: 600; font-size: 0.85rem; color: #475569; display: block; margin-bottom: 6px;">Search</label>
-            <input id="materialsSearch" type="text" class="materials-select" style="width:100%;" placeholder="Search by title..." />
+            <input id="materialsSearch" type="text" class="materials-select" style="width:100%;" placeholder="Search by title or subject..." />
           </div>
         </div>
       </div>
@@ -297,6 +321,23 @@
     </section>
   </template>
 
+  <!-- Protected PDF Viewer Modal overlay -->
+  <div id="pdfViewerModal" class="pdf-viewer-modal">
+    <div class="pdf-viewer-header">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <i class="fa-solid fa-shield-halved" style="color:#0ea5e9; font-size:1.3rem;"></i>
+        <div>
+          <h4 id="pdfViewerTitle" style="margin:0; font-size:1rem; font-weight:600; color:#fff;">Document Viewer</h4>
+          <span style="font-size:0.75rem; color:#94a3b8;"><i class="fa-solid fa-lock"></i> Protected View Mode — Application Download Disabled</span>
+        </div>
+      </div>
+      <button id="closePdfViewerBtn" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:6px 14px; border-radius:8px; cursor:pointer; font-weight:500; display:flex; align-items:center; gap:6px;"><i class="fa-solid fa-xmark"></i> Close Viewer</button>
+    </div>
+    <div class="pdf-viewer-body">
+      <iframe id="pdfViewerFrame" style="width:100%; height:100%; border:none;" src="about:blank"></iframe>
+    </div>
+  </div>
+
   <script src="assets/js/api.js"></script>
   <script src="assets/js/app-base.js"></script>
   <script>
@@ -308,6 +349,55 @@
       search: ''
     };
 
+    function openProtectedPdfViewer(materialId, encodedTitle) {
+      const title = decodeURIComponent(encodedTitle || 'Study Material');
+      const modal = document.getElementById('pdfViewerModal');
+      const titleEl = document.getElementById('pdfViewerTitle');
+      const iframe = document.getElementById('pdfViewerFrame');
+
+      if (titleEl) titleEl.textContent = title;
+      if (iframe) {
+        iframe.src = `/api/academics/content/materials/${materialId}/view#toolbar=0&navpanes=0&scrollbar=1`;
+      }
+      if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+      }
+    }
+
+    function closeProtectedPdfViewer() {
+      const modal = document.getElementById('pdfViewerModal');
+      const iframe = document.getElementById('pdfViewerFrame');
+      if (iframe) iframe.src = 'about:blank';
+      if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+      }
+    }
+
+    document.getElementById('closePdfViewerBtn')?.addEventListener('click', closeProtectedPdfViewer);
+
+    // Prevent context menu and keyboard save shortcuts when viewer modal is active
+    window.addEventListener('contextmenu', (e) => {
+      const modal = document.getElementById('pdfViewerModal');
+      if (modal && modal.style.display === 'flex') {
+        e.preventDefault();
+      }
+    });
+
+    window.addEventListener('keydown', (e) => {
+      const modal = document.getElementById('pdfViewerModal');
+      if (modal && modal.style.display === 'flex') {
+        if (e.key === 'Escape') {
+          closeProtectedPdfViewer();
+        }
+        if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'p' || e.key === 'S' || e.key === 'P')) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }
+    });
+
     async function loadMaterialsOptions() {
       try {
         const [categoriesResp, semestersResp, branchesResp] = await Promise.all([
@@ -317,7 +407,7 @@
         ]);
 
         const subjectSelect = document.getElementById('materialsSubjectFilter');
-        if (categoriesResp.categories) {
+        if (subjectSelect && categoriesResp.categories) {
           categoriesResp.categories.forEach(cat => {
             const option = document.createElement('option');
             option.value = cat.id;
@@ -327,7 +417,7 @@
         }
 
         const semesterSelect = document.getElementById('materialsSemesterFilter');
-        if (semestersResp.semesters) {
+        if (semesterSelect && semestersResp.semesters) {
           semestersResp.semesters.forEach(sem => {
             const option = document.createElement('option');
             option.value = sem.id;
@@ -337,7 +427,7 @@
         }
 
         const branchSelect = document.getElementById('materialsBranchFilter');
-        if (branchesResp.branches) {
+        if (branchSelect && branchesResp.branches) {
           branchesResp.branches.forEach(br => {
             const option = document.createElement('option');
             option.value = br.id;
@@ -352,7 +442,8 @@
 
     async function loadMaterials() {
       const grid = document.getElementById('materialsGrid');
-      grid.innerHTML = '<div class="materials-loader">Loading materials...</div>';
+      if (!grid) return;
+      grid.innerHTML = '<div class="materials-loader"><i class="fa-solid fa-spinner fa-spin"></i> Loading materials...</div>';
 
       try {
         const params = new URLSearchParams();
@@ -375,8 +466,9 @@
             const isBook = material.material_type === 'book';
             const isPpt = material.material_type === 'ppt';
             const icon = isBook ? '📚' : isPpt ? '🎯' : '📄';
-            const typeName = isBook ? 'Book' : isPpt ? 'Presentation' : 'Material';
+            const typeName = isBook ? 'Book' : isPpt ? 'Presentation' : 'Document';
             const typeClass = isBook ? 'book' : isPpt ? 'ppt' : '';
+            const safeTitle = encodeURIComponent(material.title || '');
             
             return `
               <div class="material-card ${typeClass}">
@@ -384,6 +476,7 @@
                 <span class="material-type-badge ${typeClass}">${typeName}</span>
                 <h3 class="material-title">${material.title}</h3>
                 <div class="material-meta">
+                  ${material.subject ? `<div class="material-meta-item"><i class="fa-solid fa-book-open"></i><span>Subject: ${material.subject}</span></div>` : ''}
                   ${material.category_name ? `<div class="material-meta-item"><i class="fa-solid fa-tag"></i><span>${material.category_name}</span></div>` : ''}
                   ${material.branch_name ? `<div class="material-meta-item"><i class="fa-solid fa-graduation-cap"></i><span>${material.branch_name}</span></div>` : ''}
                   ${material.semester_label ? `<div class="material-meta-item"><i class="fa-solid fa-calendar"></i><span>${material.semester_label}</span></div>` : ''}
@@ -391,10 +484,10 @@
                 ${material.description ? `<p class="material-desc">${material.description}</p>` : ''}
                 <div class="material-footer">
                   <div class="material-tags">
-                    <span class="material-tag"><i class="fa-solid fa-check-circle"></i> Verified</span>
+                    <span class="material-tag"><i class="fa-solid fa-shield-check"></i> Verified</span>
                     ${material.is_premium ? '<span class="material-tag premium"><i class="fa-solid fa-crown"></i> Premium</span>' : ''}
                   </div>
-                  <a href="${material.file_url}" target="_blank" class="btn primary sm"><i class="fa-solid fa-download"></i> View</a>
+                  <button class="btn primary sm" onclick="openProtectedPdfViewer('${material.id}', '${safeTitle}')"><i class="fa-solid fa-book-open"></i> Read Material</button>
                 </div>
               </div>
             `;
@@ -425,22 +518,22 @@
         });
       });
 
-      document.getElementById('materialsSubjectFilter').addEventListener('change', (e) => {
+      document.getElementById('materialsSubjectFilter')?.addEventListener('change', (e) => {
         materialsFilters.subject = e.target.value;
         loadMaterials();
       });
 
-      document.getElementById('materialsSemesterFilter').addEventListener('change', (e) => {
+      document.getElementById('materialsSemesterFilter')?.addEventListener('change', (e) => {
         materialsFilters.semester = e.target.value;
         loadMaterials();
       });
 
-      document.getElementById('materialsBranchFilter').addEventListener('change', (e) => {
+      document.getElementById('materialsBranchFilter')?.addEventListener('change', (e) => {
         materialsFilters.branch = e.target.value;
         loadMaterials();
       });
 
-      document.getElementById('materialsSearch').addEventListener('input', (e) => {
+      document.getElementById('materialsSearch')?.addEventListener('input', (e) => {
         materialsFilters.search = e.target.value;
         loadMaterials();
       });

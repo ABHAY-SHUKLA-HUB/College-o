@@ -86,6 +86,9 @@ desktop.ini
 .tunnel-subdomain.txt
 
 # 🧹 Temporary & Cache Files
+scratch/
+tmp/
+temp/
 *.tmp
 *.temp
 *.bak

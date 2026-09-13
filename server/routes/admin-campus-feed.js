@@ -194,6 +194,18 @@ router.post('/posts/:id/moderate', requireAdmin, async (req, res) => {
   return res.json({ message: `Post ${nextStatus} successfully`, post: row });
 });
 
+router.post('/posts/:id/approve', requireAdmin, async (req, res) => {
+  req.body = { ...req.body, action: 'approve' };
+  const handler = router.stack.find(layer => layer.route && layer.route.path === '/posts/:id/moderate').route.stack[1].handle;
+  return handler(req, res);
+});
+
+router.post('/posts/:id/reject', requireAdmin, async (req, res) => {
+  req.body = { ...req.body, action: 'reject' };
+  const handler = router.stack.find(layer => layer.route && layer.route.path === '/posts/:id/moderate').route.stack[1].handle;
+  return handler(req, res);
+});
+
 router.post('/posts/:id/feature', requireAdmin, async (req, res) => {
   await ensureCampusFeedSchema();
   const postId = Number(req.params.id);

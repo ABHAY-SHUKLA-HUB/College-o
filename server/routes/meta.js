@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../db/pool');
 const { ensureUniversityCatalogSchema } = require('../utils/universities');
+const { readFeatureMatrix, getEffectiveFeatureMatrix } = require('../middleware/featureToggle');
 
 const router = express.Router();
 
@@ -75,6 +76,20 @@ router.get('/universities', async (req, res) => {
   universitiesCache.set(cacheKey, { rows, loadedAt: Date.now() });
   setPublicCacheHeaders(res, 60);
   return res.json({ universities: rows, query });
+});
+
+router.get('/features', async (req, res) => {
+  try {
+    const rawMatrix = await readFeatureMatrix();
+    const effectiveFeatures = await getEffectiveFeatureMatrix(req.session || null);
+    return res.json({
+      success: true,
+      features: rawMatrix,
+      effectiveFeatures
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to fetch features state' });
+  }
 });
 
 module.exports = router;

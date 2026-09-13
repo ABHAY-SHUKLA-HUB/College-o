@@ -3,10 +3,58 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Study Materials - Admin</title>
+  <title>Material Distribution Workspace - College OS Admin</title>
   <script src="assets/js/theme-init.js"></script>
   <link rel="stylesheet" href="assets/css/styles.css" />
   <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <style>
+    .co-admin-subnav-pills {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.06);
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      margin-left: 16px;
+    }
+    .co-admin-subnav-pills a {
+      padding: 6px 14px;
+      border-radius: 7px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #475569;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 140ms ease;
+    }
+    .co-admin-subnav-pills a:hover {
+      color: #0ea5e9;
+      background: rgba(255, 255, 255, 0.8);
+    }
+    .co-admin-subnav-pills a.active {
+      background: #0ea5e9;
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(14, 165, 233, 0.3);
+    }
+    .co-admin-form-compact-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+    @media (max-width: 1024px) {
+      .co-admin-form-compact-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 640px) {
+      .co-admin-form-compact-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body class="admin-portal">
   <div class="co-admin-shell">
@@ -15,94 +63,143 @@
         <span class="co-admin-brand-mark"><i class="fa-solid fa-shield-halved"></i></span>
         <div>
           <h1>College OS Admin</h1>
-          <p>Premium academic asset controls for distributed study resources and supporting material libraries.</p>
+          <p>Academic operations, learner management, content publishing, and platform oversight in one workspace.</p>
         </div>
       </div>
+
+      <div class="co-admin-sidebar-nav-container">
       <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Admin Navigation</p>
+        <p class="co-admin-nav-label">Overview</p>
         <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-dashboard.html"><i class="fa-solid fa-chart-pie"></i><span>Overview</span></a>
-          <a class="co-admin-nav-link" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control System</span></a>
-          <a class="co-admin-nav-link" href="admin-academics.html#contributions"><i class="fa-solid fa-upload"></i><span>Contribution Control</span></a>
-          <a class="co-admin-nav-link" href="admin-support-governance.html"><i class="fa-solid fa-shield-halved"></i><span>Support Governance</span></a>
-          <a class="co-admin-nav-link" href="admin-notes.html"><i class="fa-solid fa-file-lines"></i><span>Notes</span></a>
-          <a class="co-admin-nav-link" href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i><span>Papers</span></a>
-          <a class="co-admin-nav-link active" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i><span>Materials</span></a>
-          <a class="co-admin-nav-link" href="admin-quizzes.html"><i class="fa-solid fa-clipboard-question"></i><span>Quizzes</span></a>
-          <a class="co-admin-nav-link" href="admin-certificates.html"><i class="fa-solid fa-graduation-cap"></i><span>Certificates</span></a>
-          <a class="co-admin-nav-link" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Roadmaps</span></a>
-          <a class="co-admin-nav-link" href="admin-mock-tests.html"><i class="fa-solid fa-flask-vial"></i><span>Mock Test Studio</span></a>
-          <a class="co-admin-nav-link" href="admin-ai-tools.html"><i class="fa-solid fa-sparkles"></i><span>AI Tools</span></a>
-          <a class="co-admin-nav-link" href="admin-campus-feed.html"><i class="fa-solid fa-newspaper"></i><span>Campus Feed</span></a>
+          <a class="co-admin-nav-link" href="admin-dashboard.html"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a>
+          <a class="co-admin-nav-link" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control Center</span></a>
         </nav>
       </section>
+
+      <section class="co-admin-nav-section">
+        <p class="co-admin-nav-label">Academic Content</p>
+        <nav class="co-admin-nav">
+          <a class="co-admin-nav-link active" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i><span>Study Materials</span></a>
+          <a class="co-admin-nav-link" href="admin-notes.html"><i class="fa-solid fa-file-lines"></i><span>Notes Library</span></a>
+          <a class="co-admin-nav-link" href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i><span>Previous Papers</span></a>
+          <a class="co-admin-nav-link" href="admin-quizzes.html"><i class="fa-solid fa-clipboard-question"></i><span>Quizzes</span></a>
+          <a class="co-admin-nav-link" href="admin-mock-tests.html"><i class="fa-solid fa-flask-vial"></i><span>Mock Test Studio</span></a>
+          <a class="co-admin-nav-link" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Study Roadmaps</span></a>
+          <a class="co-admin-nav-link" href="admin-academics.html"><i class="fa-solid fa-graduation-cap"></i><span>Academic Structure</span></a>
+        </nav>
+      </section>
+
+      <section class="co-admin-nav-section">
+        <p class="co-admin-nav-label">Student Management</p>
+        <nav class="co-admin-nav">
+          <a class="co-admin-nav-link" href="admin-control.html#students-management"><i class="fa-solid fa-user-graduate"></i><span>Students</span></a>
+          <a class="co-admin-nav-link" href="admin-control.html#membership-management"><i class="fa-solid fa-id-card"></i><span>Memberships & Payments</span></a>
+          <a class="co-admin-nav-link" href="admin-academics.html#contributions"><i class="fa-solid fa-upload"></i><span>Student Contributions</span></a>
+          <a class="co-admin-nav-link" href="admin-certificates.html"><i class="fa-solid fa-certificate"></i><span>Certificates</span></a>
+        </nav>
+      </section>
+
+      <section class="co-admin-nav-section">
+        <p class="co-admin-nav-label">Coding Challenges</p>
+        <nav class="co-admin-nav">
+          <a class="co-admin-nav-link" href="admin-coding-challenges.html"><i class="fa-solid fa-code"></i><span>Coding Governance</span></a>
+        </nav>
+      </section>
+
+      <section class="co-admin-nav-section">
+        <p class="co-admin-nav-label">Community & Support</p>
+        <nav class="co-admin-nav">
+          <a class="co-admin-nav-link" href="admin-support-governance.html"><i class="fa-solid fa-headset"></i><span>Support Governance</span></a>
+          <a class="co-admin-nav-link" href="admin-campus-feed.html"><i class="fa-solid fa-newspaper"></i><span>Campus Feed</span></a>
+          <a class="co-admin-nav-link" href="admin-ai-tools.html"><i class="fa-solid fa-sparkles"></i><span>AI Tools Studio</span></a>
+        </nav>
+      </section>
+
+      <section class="co-admin-nav-section">
+        <p class="co-admin-nav-label">System</p>
+        <nav class="co-admin-nav">
+          <a class="co-admin-nav-link" href="admin-control.html#system-settings"><i class="fa-solid fa-gear"></i><span>Settings & Feature Toggles</span></a>
+          <a class="co-admin-nav-link" href="admin-control.html#audit-logs"><i class="fa-solid fa-list-check"></i><span>Audit & Activity Logs</span></a>
+        </nav>
+      </section>
+      </div>
+
+      <div class="co-admin-side-card">
+        <strong>Admin Workspace</strong>
+        <p>Use this dashboard to manage student operations, academic content, premium adoption, and platform quality without breaking workflow.</p>
+      </div>
     </aside>
 
-    <main class="co-admin-main co-admin-page-block">
+    <div class="co-admin-workspace">
       <header class="co-admin-topbar">
-        <div class="co-admin-topbar-title">
-          <h2>Study Materials</h2>
-          <p>Manage tutorial packs, reference books, and learning resources with a cleaner production-grade admin interface.</p>
+        <div class="co-admin-topbar-title" style="display:flex; align-items:center;">
+          <h2>Material Distribution Workspace</h2>
+          <nav class="co-admin-subnav-pills">
+            <a href="admin-notes.html"><i class="fa-solid fa-file-lines"></i> Notes</a>
+            <a href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i> Papers</a>
+            <a class="active" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i> Materials</a>
+          </nav>
         </div>
         <div class="co-admin-topbar-actions">
           <a class="co-admin-chip" href="admin-dashboard.html"><i class="fa-solid fa-arrow-left"></i><span>Back to Dashboard</span></a>
         </div>
       </header>
 
-      <section class="co-admin-subhero">
-        <h1>Material Distribution Workspace</h1>
-        <p>Publish PDFs, subject resources, and supporting study content with stronger form clarity and cleaner table presentation.</p>
-        <div class="co-admin-subnav">
-          <a href="admin-notes.html"><i class="fa-solid fa-file-lines"></i> Notes</a>
-          <a href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i> Papers</a>
-          <a class="active" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i> Materials</a>
-        </div>
-      </section>
+      <div class="co-admin-breadcrumbs" id="adminBreadcrumb"></div>
 
-      <section class="co-admin-panel">
-        <div class="co-admin-section-head"><div><h3>Upload Study Material</h3><p>Improved form UI for metadata, file upload, subject tagging, and content classification.</p></div></div>
+      <main class="co-admin-main co-admin-page-block">
+
+      <section class="co-admin-panel" style="padding:18px 22px;">
+        <div class="co-admin-section-head" style="margin-bottom:14px;">
+          <div>
+            <h3 style="margin:0; font-size:1.15rem; font-weight:600;"><i class="fa-solid fa-upload" style="color:#0ea5e9; margin-right:6px;"></i> Upload Study Material</h3>
+            <p style="margin:2px 0 0; font-size:0.85rem; color:#64748b;">Publish curriculum materials, select target course/branch and semester, attach PDF file, and publish to students.</p>
+          </div>
+        </div>
+        
         <form id="uploadMaterialForm" enctype="multipart/form-data" class="co-admin-form">
-          <fieldset style="border:0; padding:0; margin:0;">
-            <legend style="font-size:13px; text-transform:uppercase; color:#64748b; margin-bottom:12px; letter-spacing:1px;">Material Information</legend>
-            <div class="co-admin-form-grid">
-              <div class="co-admin-field"><label>Title *</label><input name="title" required /></div>
-              <div class="co-admin-field"><label>Material Type *</label><select id="materialTypeSelect" name="materialType" required><option value="">Select type</option><option value="book">Book</option><option value="ppt">PowerPoint Presentation</option></select></div>
-              <div class="co-admin-field"><label>Subject</label><input name="subject" /></div>
-              <div class="co-admin-field"><label>Academic Category *</label><select id="materialCategoryId" name="categoryId" required><option value="">Select category</option></select></div>
+          <div class="co-admin-form-compact-grid">
+            <div class="co-admin-field"><label>Title *</label><input name="title" required placeholder="e.g. Operating Systems Guide" /></div>
+            <div class="co-admin-field"><label>Material Type *</label><select id="materialTypeSelect" name="materialType" required><option value="">Select type</option><option value="book">Book</option><option value="ppt">PowerPoint Presentation</option><option value="doc">Document / Reference</option></select></div>
+            <div class="co-admin-field"><label>Subject *</label><input name="subject" required placeholder="e.g. Computer Networks" /></div>
+            <div class="co-admin-field"><label>Academic Category *</label><select id="materialCategoryId" name="categoryId" required><option value="">Select category</option></select></div>
+            
+            <div class="co-admin-field"><label>Branch / Course *</label><select id="materialBranchId" name="branchId" required disabled><option value="">Select branch or course</option></select></div>
+            <div class="co-admin-field"><label>Semester *</label><select id="materialSemesterId" name="semesterId" required><option value="">Select semester</option></select></div>
+            <div class="co-admin-field"><label>Access</label><select name="accessType"><option value="free">Free</option><option value="premium">Premium</option></select></div>
+            <div class="co-admin-field"><label>Status</label><select name="status"><option value="published">Published</option><option value="draft">Draft</option></select></div>
+
+            <div class="co-admin-field"><label>File (PDF) *</label><input type="file" id="materialFileInput" name="file" accept="application/pdf" required /></div>
+            <div class="co-admin-field" style="grid-column: span 3;"><label>Description</label><input name="description" placeholder="Brief overview of the material content" /></div>
+          </div>
+
+          <div class="actions" style="margin-top:14px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+            <label style="margin:0; cursor:pointer; display:flex; align-items:center; gap:8px; font-weight:500; font-size:0.88rem; color:#334155;">
+              <input type="checkbox" id="isCommonCheckbox" name="isCommon" style="width:16px; height:16px;" /> Common for all branches/courses
+            </label>
+            <div style="display:flex; align-items:center; gap:14px;">
+              <p class="muted" id="uploadStatus" style="margin:0; font-weight:500; font-size:0.9rem;"></p>
+              <button class="btn primary" type="submit" id="uploadSubmitBtn" style="padding:10px 24px; font-size:0.95rem; font-weight:600;"><i class="fa-solid fa-upload"></i> Upload Material</button>
             </div>
-          </fieldset>
-          <fieldset style="border:0; padding:0; margin:18px 0 0;">
-            <legend style="font-size:13px; text-transform:uppercase; color:#64748b; margin-bottom:12px; letter-spacing:1px;">Academic Details</legend>
-            <div class="co-admin-form-grid">
-              <div class="co-admin-field"><label>Branch / Course *</label><select id="materialBranchId" name="branchId" required disabled><option value="">Select branch or course</option></select></div>
-              <div class="co-admin-field"><label>Semester *</label><select id="materialSemesterId" name="semesterId" required><option value="">Select semester</option></select></div>
-              <div class="co-admin-field"><label>Access</label><select name="accessType"><option value="free">Free</option><option value="premium">Premium</option></select></div>
-              <div class="co-admin-field"><label>Status</label><select name="status"><option value="published">Published</option><option value="draft">Draft</option></select></div>
-            </div>
-          </fieldset>
-          <fieldset style="border:0; padding:0; margin:18px 0 0;">
-            <legend style="font-size:13px; text-transform:uppercase; color:#64748b; margin-bottom:12px; letter-spacing:1px;">Content & Distribution</legend>
-            <div class="co-admin-form-grid">
-              <div class="co-admin-field full"><label>Description</label><textarea name="description" rows="3" placeholder="Brief overview of the material content"></textarea></div>
-              <div class="co-admin-field"><label>File (PDF) *</label><input type="file" name="file" accept="application/pdf" required /></div>
-              <div class="co-admin-field full"><label><input type="checkbox" name="isCommon" /> Common for all branches/courses</label></div>
-            </div>
-          </fieldset>
-          <div class="actions" style="margin-top:16px;"><button class="btn primary" type="submit"><i class="fa-solid fa-upload"></i> Upload Material</button></div>
-          <p class="muted" id="uploadStatus" style="margin-top:12px;"></p>
+          </div>
         </form>
       </section>
 
-      <section class="co-admin-panel">
-        <div class="co-admin-section-head"><div><h3>Materials Library</h3><p>Industry-grade resource management with type-based filtering, metadata visibility, and bulk controls.</p></div></div>
-        <div class="co-admin-table-wrap">
-          <div class="co-admin-form-grid" style="margin-bottom:16px;">
-            <div class="co-admin-field"><label>Filter Material Type</label><select id="materialsFilterType"><option value="">All Types</option><option value="book">Book</option><option value="ppt">PowerPoint</option></select></div>
-            <div class="co-admin-field"><label>Filter Category</label><select id="materialsFilterCategoryId"><option value="">All categories</option></select></div>
-            <div class="co-admin-field"><label>Filter Branch / Course</label><select id="materialsFilterBranchId" disabled><option value="">All branches/courses</option></select></div>
-            <div class="co-admin-field"><label>Filter Semester</label><select id="materialsFilterSemesterId"><option value="">All semesters</option></select></div>
-            <div class="co-admin-field"><label>Filter Status</label><select id="materialsFilterStatus"><option value="published">Published</option><option value="draft">Draft</option></select></div>
+      <section class="co-admin-panel" style="padding:18px 22px; margin-top:20px;">
+        <div class="co-admin-section-head" style="margin-bottom:14px;">
+          <div>
+            <h3 style="margin:0; font-size:1.15rem; font-weight:600;"><i class="fa-solid fa-layer-group" style="color:#0ea5e9; margin-right:6px;"></i> Materials Library</h3>
+            <p style="margin:2px 0 0; font-size:0.85rem; color:#64748b;">Manage published study materials with type-based filtering, branch/semester metadata, and administrative controls.</p>
           </div>
+        </div>
+        <div class="co-admin-form-compact-grid" style="display:grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap:14px; margin-bottom:14px;">
+          <div class="co-admin-field"><label>Filter Material Type</label><select id="materialsFilterType"><option value="">All Types</option><option value="book">Book</option><option value="ppt">PowerPoint</option><option value="doc">Document</option></select></div>
+          <div class="co-admin-field"><label>Filter Category</label><select id="materialsFilterCategoryId"><option value="">All categories</option></select></div>
+          <div class="co-admin-field"><label>Filter Branch / Course</label><select id="materialsFilterBranchId" disabled><option value="">All branches/courses</option></select></div>
+          <div class="co-admin-field"><label>Filter Semester</label><select id="materialsFilterSemesterId"><option value="">All semesters</option></select></div>
+          <div class="co-admin-field"><label>Filter Status</label><select id="materialsFilterStatus"><option value="published">Published</option><option value="draft">Draft</option></select></div>
+        </div>
+        <div class="co-admin-table-wrap">
           <table class="co-admin-data-table">
             <thead><tr><th>Title</th><th>Type</th><th>Category</th><th>Branch / Course</th><th>Semester</th><th>Description</th><th>File</th><th>Actions</th></tr></thead>
             <tbody id="materialsTableBody"><tr><td colspan="8" class="co-admin-table-empty">Loading materials...</td></tr></tbody>
@@ -110,10 +207,12 @@
         </div>
       </section>
     </main>
+    </div>
   </div>
 
   <script src="assets/js/api.js"></script>
   <script src="assets/js/admin-materials.js"></script>
+  <script src="assets/js/admin-module-registry.js?v=20260701-1"></script>
   <script src="assets/js/admin-responsive.js?v=20260701-1"></script>
 </body>
 </html>

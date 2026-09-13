@@ -53,65 +53,85 @@ router.get('/stream', requireAuth, async (req, res) => {
 
 router.get('/mine', requireAuth, async (req, res) => {
   setPrivateCacheHeaders(res, 5);
-  const { rows } = await pool.query(
-    'SELECT id, message, kind, is_read, created_at FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100',
-    [req.session.userId]
-  );
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, COALESCE(type, kind, \'SYSTEM\') AS type, COALESCE(kind, \'SYSTEM\') AS kind, COALESCE(title, \'Notification\') AS title, message, entity_type, entity_id, is_read, created_at FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100',
+      [req.session.userId]
+    );
 
-  const unreadResult = await pool.query(
-    'SELECT COUNT(*)::int AS unread_count FROM notifications WHERE user_id = $1 AND is_read = FALSE',
-    [req.session.userId]
-  );
+    const unreadResult = await pool.query(
+      'SELECT COUNT(*)::int AS unread_count FROM notifications WHERE user_id = $1 AND is_read = FALSE',
+      [req.session.userId]
+    );
 
-  res.json({ notifications: rows, unreadCount: unreadResult.rows[0].unread_count });
+    res.json({ notifications: rows, unreadCount: unreadResult.rows[0]?.unread_count || 0 });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load notifications', details: err.message });
+  }
 });
 
 router.get('/unread-count', requireAuth, async (req, res) => {
   setPrivateCacheHeaders(res, 5);
-  const { rows } = await pool.query(
-    'SELECT COUNT(*)::int AS unread_count FROM notifications WHERE user_id = $1 AND is_read = FALSE',
-    [req.session.userId]
-  );
-  res.json({ unreadCount: rows[0].unread_count });
+  try {
+    const { rows } = await pool.query(
+      'SELECT COUNT(*)::int AS unread_count FROM notifications WHERE user_id = $1 AND is_read = FALSE',
+      [req.session.userId]
+    );
+    res.json({ unreadCount: rows[0]?.unread_count || 0 });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load unread count', details: err.message });
+  }
 });
 
 router.put('/mine/read-all', requireAuth, async (req, res) => {
-  const result = await pool.query(
-    `UPDATE notifications
-     SET is_read = TRUE
-     WHERE user_id = $1 AND is_read = FALSE`,
-    [req.session.userId]
-  );
-  res.json({ message: 'All notifications marked as read', updatedCount: result.rowCount });
-  publishRealtimeEvent('notification_changed', { userId: req.session.userId });
+  try {
+    const result = await pool.query(
+      `UPDATE notifications
+       SET is_read = TRUE, read_at = NOW()
+       WHERE user_id = $1 AND is_read = FALSE`,
+      [req.session.userId]
+    );
+    res.json({ message: 'All notifications marked as read', updatedCount: result.rowCount });
+    publishRealtimeEvent('notification_changed', { userId: req.session.userId });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to mark all notifications as read', details: err.message });
+  }
 });
 
 router.put('/mine/:id/read', requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid notification id' });
 
-  const { rows } = await pool.query(
-    `UPDATE notifications
-     SET is_read = TRUE
-     WHERE id = $1 AND user_id = $2
-     RETURNING id, is_read`,
-    [id, req.session.userId]
-  );
+  try {
+    const { rows } = await pool.query(
+      `UPDATE notifications
+       SET is_read = TRUE, read_at = NOW()
+       WHERE id = $1 AND user_id = $2
+       RETURNING id, is_read`,
+      [id, req.session.userId]
+    );
 
-  if (!rows[0]) return res.status(404).json({ error: 'Notification not found' });
-  publishRealtimeEvent('notification_changed', { userId: req.session.userId });
-  res.json({ notification: rows[0], message: 'Notification marked as read' });
+    if (!rows[0]) return res.status(404).json({ error: 'Notification not found' });
+    publishRealtimeEvent('notification_changed', { userId: req.session.userId });
+    res.json({ notification: rows[0], message: 'Notification marked as read' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to mark notification as read', details: err.message });
+  }
 });
 
 router.delete('/mine/:id', requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid notification id' });
 
-  const result = await pool.query('DELETE FROM notifications WHERE id = $1 AND user_id = $2', [id, req.session.userId]);
-  if (result.rowCount === 0) return res.status(404).json({ error: 'Notification not found' });
+  try {
+    const result = await pool.query('DELETE FROM notifications WHERE id = $1 AND user_id = $2', [id, req.session.userId]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Notification not found' });
 
-  publishRealtimeEvent('notification_changed', { userId: req.session.userId });
-  res.json({ message: 'Notification deleted successfully' });
+    publishRealtimeEvent('notification_changed', { userId: req.session.userId });
+    res.json({ message: 'Notification deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete notification', details: err.message });
+  }
 });
 
 module.exports = router;

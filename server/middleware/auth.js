@@ -40,7 +40,7 @@ async function resolveMembershipState(userId) {
   if (!user) return null;
 
   const now = new Date();
-  const isAdmin = user.role === 'admin';
+  const isAdmin = user.role === 'admin' || user.role === 'super_admin';
   const startedAt = toDate(user.subscription_started_at);
   const expiryAt = toDate(user.subscription_expiry);
   const paymentStatus = String(user.payment_status || '').toLowerCase();
@@ -131,11 +131,34 @@ async function resolveMembershipState(userId) {
   };
 }
 
-function requireAuth(req, res, next) {
-  if (!req.session.userId) {
+async function requireAuth(req, res, next) {
+  if (!req.session || !req.session.userId) {
     return res.status(401).json({ error: 'Authentication required' });
   }
-  return next();
+
+  // Admins bypass student account status checks
+  if (req.session.role === 'admin' || req.session.role === 'super_admin') {
+    return next();
+  }
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT is_suspended, is_blocked, deleted_at FROM users WHERE id = $1',
+      [req.session.userId]
+    );
+
+    const user = rows[0];
+    if (!user || user.deleted_at || user.is_suspended || user.is_blocked) {
+      return res.status(403).json({
+        error: 'ACCOUNT_SUSPENDED',
+        message: 'Your account has been suspended or deactivated by an administrator.'
+      });
+    }
+
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
 }
 
 async function getAccessSnapshot(userId) {
@@ -196,7 +219,7 @@ async function requireTrialOrPaid(req, res, next) {
 }
 
 async function requireAdmin(req, res, next) {
-  if (!req.session.userId) {
+  if (!req.session || !req.session.userId) {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
@@ -209,7 +232,6 @@ async function requireAdmin(req, res, next) {
     return res.status(403).json({ error: 'Admin access required' });
   }
 
-  // Heal stale sessions so subsequent checks are instant.
   req.session.role = rows[0].role;
   return next();
 }

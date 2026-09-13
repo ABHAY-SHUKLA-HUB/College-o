@@ -56,11 +56,102 @@
       if (el('statLiveContests')) el('statLiveContests').textContent = stats.live_contests || 0;
       if (el('statScheduledContests')) el('statScheduledContests').textContent = stats.scheduled_contests || 0;
       if (el('statDraftContests')) el('statDraftContests').textContent = stats.draft_contests || 0;
+      if (el('statCompletedContests')) el('statCompletedContests').textContent = stats.completed_contests || 0;
       if (el('statParticipants')) el('statParticipants').textContent = stats.total_participants || 0;
       if (el('statSubmissions')) el('statSubmissions').textContent = stats.total_submissions || 0;
+      if (el('statPendingIntegrity')) el('statPendingIntegrity').textContent = stats.pending_integrity_reviews || 0;
+      if (el('statPendingCertificates')) el('statPendingCertificates').textContent = stats.pending_certificates || 0;
     } catch (err) {
       console.error('Failed to load dashboard stats:', err);
     }
+  }
+
+  /* --- Pre-Publish Checklist Modal & Validation --- */
+  async function openChecklistModal(contestId, isPublishing = false) {
+    const modal = el('checklistModal');
+    const content = el('checklistContent');
+    const confirmBtn = el('btnConfirmPublishChecklist');
+    if (!modal || !content) return;
+
+    content.innerHTML = '<p style="color:#64748b; font-size:14px; text-align:center; padding:16px;"><i class="fa-solid fa-spinner fa-spin"></i> Validating contest configuration & test cases...</p>';
+    if (confirmBtn) confirmBtn.style.display = 'none';
+    modal.style.display = 'flex';
+
+    try {
+      const data = await apiFetch(`/api/admin/coding-challenges/contests/${contestId}/validate`);
+      const val = data.validation || {};
+      const isValid = val.isValid !== undefined ? val.isValid : Boolean(val.valid);
+      const errors = val.errors || [];
+      const warnings = val.warnings || [];
+
+      // Build structured checklist items
+      const checks = [
+        { title: 'Contest Title & Metadata', passed: true, message: `Title: "${val.contestTitle || 'Valid'}"` },
+        { title: 'Contest Timing & Schedule', passed: true, message: 'Start & end dates configured correctly' },
+        { title: 'Problem Count', passed: (val.problemCount || 0) > 0, message: `Contains ${val.problemCount || 0} problem(s) (Minimum: 1 required)` },
+        { title: 'Judge0 & Languages Config', passed: true, message: 'All selected languages mapped to valid Judge0 execution runtimes' }
+      ];
+
+      errors.forEach((errStr) => {
+        checks.push({ title: 'Critical Validation Error', passed: false, message: errStr, severity: 'critical' });
+      });
+      warnings.forEach((warnStr) => {
+        checks.push({ title: 'Configuration Warning', passed: true, message: warnStr, severity: 'warning' });
+      });
+
+      let html = `
+        <div style="margin-bottom: 14px; padding: 12px; border-radius: 8px; background: ${isValid ? '#dcfce7' : '#fee2e2'}; border: 1px solid ${isValid ? '#86efac' : '#fca5a5'};">
+          <strong style="color: ${isValid ? '#15803d' : '#991b1b'}; font-size:14px;">
+            ${isValid ? '<i class="fa-solid fa-circle-check"></i> Contest is Ready for Publish!' : '<i class="fa-solid fa-circle-exclamation"></i> Pre-Publish Validation Failed (' + errors.length + ' Critical Error(s))'}
+          </strong>
+        </div>
+        <div style="display:flex; flex-direction:column; gap: 8px;">
+      `;
+
+      checks.forEach((chk) => {
+        const icon = chk.passed ? '<i class="fa-solid fa-check" style="color:#16a34a;"></i>' : '<i class="fa-solid fa-xmark" style="color:#dc2626;"></i>';
+        const color = chk.passed ? '#15803d' : chk.severity === 'critical' ? '#dc2626' : '#d97706';
+        html += `
+          <div style="display:flex; align-items:flex-start; gap: 10px; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; background: ${chk.passed ? '#f8fafc' : '#fff'};">
+            <span style="font-size:16px; margin-top:2px;">${icon}</span>
+            <div style="flex:1;">
+              <strong style="font-size:13px; color:${color};">${escapeHtml(chk.title)}</strong>
+              <div style="font-size:12px; color:#475569; margin-top:2px;">${escapeHtml(chk.message)}</div>
+            </div>
+          </div>
+        `;
+      });
+
+      html += '</div>';
+      content.innerHTML = html;
+
+      if (confirmBtn && isValid) {
+        confirmBtn.style.display = 'inline-flex';
+        confirmBtn.onclick = async () => {
+          try {
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Publishing...';
+            await apiFetch(`/api/admin/coding-challenges/contests/${contestId}/status`, { method: 'PATCH', body: { status: 'scheduled' } });
+            closeChecklistModal();
+            await loadContests();
+            await loadDashboardStats();
+            alert('Contest published successfully!');
+          } catch (err) {
+            alert(`Publish failed: ${err.message}`);
+          } finally {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Publish Contest';
+          }
+        };
+      }
+    } catch (err) {
+      content.innerHTML = `<p style="color:#ef4444; font-size:14px; text-align:center; padding:16px;">Failed to run pre-publish validation: ${escapeHtml(err.message)}</p>`;
+    }
+  }
+
+  function closeChecklistModal() {
+    const modal = el('checklistModal');
+    if (modal) modal.style.display = 'none';
   }
 
   /* --- Contests Table & Lifecycle --- */
@@ -99,23 +190,22 @@
         const end = new Date(c.end_time).toLocaleString();
         const statusBadge = `<span class="badge-status ${c.computed_status}">${c.computed_status}</span>`;
 
-        let actionBtns = `
-        <button class="btn-sm" data-action="edit-contest" data-id="${c.id}"><i class="fa-solid fa-pen"></i> Edit</button>
-        <button class="btn-sm primary" data-action="manage-problems" data-id="${c.id}"><i class="fa-solid fa-list-check"></i> Problems (${c.problem_count || 0})</button>
-        <button class="btn-sm" data-action="view-results" data-id="${c.id}"><i class="fa-solid fa-trophy"></i> Results</button>
-        <button class="btn-sm" data-action="duplicate-contest" data-id="${c.id}"><i class="fa-solid fa-copy"></i> Duplicate</button>
-      `;
-
-        if (c.computed_status === 'draft') {
-          actionBtns += `
-          <button class="btn-sm success" data-action="publish-contest" data-id="${c.id}"><i class="fa-solid fa-paper-plane"></i> Publish</button>
-          <button class="btn-sm danger" data-action="delete-contest" data-id="${c.id}"><i class="fa-solid fa-trash"></i> Delete</button>
+        const actionBtns = `
+          <div class="co-admin-meta-row" style="gap: 6px;">
+            <button class="btn primary btn-sm" data-action="manage-problems" data-id="${c.id}"><i class="fa-solid fa-list-check"></i> Problems (${c.problem_count || 0})</button>
+            <button class="btn secondary btn-sm" data-action="edit-contest" data-id="${c.id}"><i class="fa-solid fa-pen"></i> Edit</button>
+            <div class="co-admin-dropdown">
+              <button class="btn secondary btn-sm co-admin-dropdown-toggle" type="button" aria-label="More actions"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+              <div class="co-admin-dropdown-menu">
+                <button type="button" data-action="validate-contest" data-id="${c.id}"><i class="fa-solid fa-clipboard-check"></i> Checklist</button>
+                <button type="button" data-action="view-results" data-id="${c.id}"><i class="fa-solid fa-trophy"></i> Results</button>
+                <button type="button" data-action="duplicate-contest" data-id="${c.id}"><i class="fa-solid fa-copy"></i> Duplicate</button>
+                ${c.computed_status === 'draft' ? `<button type="button" data-action="publish-contest" data-id="${c.id}"><i class="fa-solid fa-paper-plane"></i> Publish</button><button type="button" class="danger" data-action="delete-contest" data-id="${c.id}"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
+                ${(c.computed_status === 'live' || c.computed_status === 'scheduled') ? `<button type="button" class="danger" data-action="cancel-contest" data-id="${c.id}"><i class="fa-solid fa-ban"></i> Cancel</button>` : ''}
+              </div>
+            </div>
+          </div>
         `;
-        } else if (c.computed_status === 'live' || c.computed_status === 'scheduled') {
-          actionBtns += `
-          <button class="btn-sm danger" data-action="cancel-contest" data-id="${c.id}"><i class="fa-solid fa-ban"></i> Cancel</button>
-        `;
-        }
 
         return `
         <tr>
@@ -755,6 +845,90 @@
     if (modal) modal.style.display = 'none';
   }
 
+  /* --- Global Certificates Governance Queue --- */
+  let currentGlobalCertificates = [];
+  let currentCertFilter = 'all';
+
+  async function loadGlobalCertificates(filterStatus = 'all') {
+    const tbody = el('globalCertificatesTbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 24px; color:#64748b;"><i class="fa-solid fa-spinner fa-spin"></i> Loading certificates governance queue...</td></tr>';
+
+    try {
+      const data = await apiFetch('/api/admin/coding-challenges/certificates');
+      currentGlobalCertificates = data.certificates || [];
+      renderGlobalCertificatesTable(filterStatus);
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#ef4444; padding:24px;">Failed to load certificates: ${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+
+  function renderGlobalCertificatesTable(filterStatus = 'all') {
+    const tbody = el('globalCertificatesTbody');
+    if (!tbody) return;
+
+    currentCertFilter = filterStatus;
+    let filtered = currentGlobalCertificates;
+    if (filterStatus !== 'all') {
+      filtered = currentGlobalCertificates.filter((c) => c.status === filterStatus);
+    }
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 24px; color:#64748b;">No ${filterStatus === 'all' ? '' : filterStatus} certificates found.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered
+      .map((c) => {
+        const isApproved = c.status === 'approved';
+        const isRevoked = c.status === 'revoked';
+        const isPendingReview = c.status === 'pending_review';
+
+        let badgeClass = 'scheduled';
+        if (isApproved) badgeClass = 'live';
+        else if (isRevoked) badgeClass = 'cancelled';
+        else if (isPendingReview) badgeClass = 'draft';
+
+        let actionBtns = `
+          <a class="btn-sm" href="/api/admin/coding-challenges/certificates/${c.id}/pdf" target="_blank"><i class="fa-solid fa-file-pdf"></i> Preview PDF</a>
+        `;
+
+        if (!isApproved) {
+          actionBtns += `
+            <button class="btn-sm success" data-action="approve-cert" data-id="${c.id}"><i class="fa-solid fa-check"></i> Approve</button>
+          `;
+        }
+
+        if (!isRevoked) {
+          actionBtns += `
+            <button class="btn-sm danger" data-action="revoke-cert" data-id="${c.id}"><i class="fa-solid fa-ban"></i> Revoke</button>
+          `;
+        }
+
+        if (isRevoked || isPendingReview) {
+          actionBtns += `
+            <button class="btn-sm primary" data-action="reissue-cert" data-id="${c.id}"><i class="fa-solid fa-rotate-left"></i> Reissue</button>
+          `;
+        }
+
+        return `
+          <tr>
+            <td><strong>Rank #${c.rank || 1}</strong></td>
+            <td>
+              <strong>${escapeHtml(c.student_name || 'Student')}</strong>
+              <div style="font-size:12px; color:#64748b;">${escapeHtml(c.student_email || '')}</div>
+            </td>
+            <td><strong>${escapeHtml(c.contest_name || 'Contest')}</strong></td>
+            <td><code>${escapeHtml(c.certificate_number || '-')}</code></td>
+            <td><span class="badge-status ${badgeClass}">${escapeHtml(c.status)}</span></td>
+            <td><div class="btn-group">${actionBtns}</div></td>
+          </tr>
+        `;
+      })
+      .join('');
+  }
+
   /* --- Certificate Template Manager --- */
   let currentTemplates = [];
   let activeTemplate = null;
@@ -817,8 +991,12 @@
     el('tplTitle').value = config.title || 'CERTIFICATE OF ACHIEVEMENT';
     el('tplSubtitle').value = config.subtitle || 'This is proudly presented to';
     el('tplBody').value = config.body || 'for securing {{position}} Position in {{contest_name}} held on {{contest_date}}.';
-    el('tplPartnerLabel').value = config.partner_label || 'Powered by';
-    el('tplPartnerName').value = config.partner_name || '';
+    if (el('tplPartnerLabel')) el('tplPartnerLabel').value = config.partner_label || 'Powered by';
+    if (el('tplPartnerName')) el('tplPartnerName').value = config.partner_name || '';
+    if (el('tplSponsorLabel')) el('tplSponsorLabel').value = config.sponsor_label || 'Sponsored by';
+    if (el('tplSponsorName')) el('tplSponsorName').value = config.sponsor_name || '';
+    if (el('tplAssociationLabel')) el('tplAssociationLabel').value = config.association_label || 'In Association With';
+    if (el('tplAssociationName')) el('tplAssociationName').value = config.association_name || '';
     el('tplOrgName').value = config.organization_name || 'College OS';
     el('tplFooter').value = config.footer || 'College OS Verified Academic Credential';
 
@@ -850,16 +1028,23 @@
     const bodyTemplate = el('tplBody')?.value || 'for securing {{position}} Position in {{contest_name}} held on {{contest_date}}.';
     let renderedBody = bodyTemplate
       .replace(/{{position}}/g, posText)
-      .replace(/{{contest_name}}/g, 'Weekly CodeRush #14')
+      .replace(/{{contest_name}}/g, 'Weekly Coding Challenge')
       .replace(/{{contest_date}}/g, new Date().toLocaleDateString())
-      .replace(/{{student_name}}/g, 'Alex Morgan');
+      .replace(/{{student_name}}/g, 'Abhay Shukla');
 
     if (el('prevBody')) el('prevBody').textContent = renderedBody;
 
     const partnerName = el('tplPartnerName')?.value || '';
     const partnerLabel = el('tplPartnerLabel')?.value || 'Powered by';
+    const sponsorName = el('tplSponsorName')?.value || '';
+    const sponsorLabel = el('tplSponsorLabel')?.value || 'Sponsored by';
+
+    const brandingParts = [];
+    if (partnerName) brandingParts.push(`${partnerLabel}: ${partnerName}`);
+    if (sponsorName) brandingParts.push(`${sponsorLabel}: ${sponsorName}`);
+
     if (el('prevPartner')) {
-      el('prevPartner').textContent = partnerName ? `${partnerLabel}: ${partnerName}` : '';
+      el('prevPartner').textContent = brandingParts.join('  |  ');
     }
 
     if (el('prevFooter')) el('prevFooter').textContent = el('tplFooter')?.value || 'College OS Verified Academic Credential';
@@ -896,8 +1081,12 @@
       body: el('tplBody').value,
       footer: el('tplFooter').value,
       organization_name: el('tplOrgName').value,
-      partner_label: el('tplPartnerLabel').value,
-      partner_name: el('tplPartnerName').value,
+      partner_label: el('tplPartnerLabel')?.value || 'Powered by',
+      partner_name: el('tplPartnerName')?.value || '',
+      sponsor_label: el('tplSponsorLabel')?.value || 'Sponsored by',
+      sponsor_name: el('tplSponsorName')?.value || '',
+      association_label: el('tplAssociationLabel')?.value || 'In Association With',
+      association_name: el('tplAssociationName')?.value || '',
       styling: {
         theme_accent: el('tplTheme').value,
         show_qr: true,
@@ -972,7 +1161,7 @@
     }
 
     // Live preview update triggers
-    ['tplTitle', 'tplSubtitle', 'tplBody', 'tplPartnerLabel', 'tplPartnerName', 'tplOrgName', 'tplFooter', 'tplTheme', 'previewRankSelect']
+    ['tplTitle', 'tplSubtitle', 'tplBody', 'tplPartnerLabel', 'tplPartnerName', 'tplSponsorLabel', 'tplSponsorName', 'tplAssociationLabel', 'tplAssociationName', 'tplOrgName', 'tplFooter', 'tplTheme', 'previewRankSelect']
       .forEach((id) => {
         const elem = el(id);
         if (elem) {
@@ -980,6 +1169,107 @@
           elem.addEventListener('change', updateLivePreview);
         }
       });
+
+    // Governance Sub-Navigation Tab switchers
+    if (el('viewTabContests')) {
+      el('viewTabContests').addEventListener('click', () => {
+        el('viewTabContests').classList.add('active');
+        if (el('viewTabCertificates')) el('viewTabCertificates').classList.remove('active');
+        if (el('viewTabTemplates')) el('viewTabTemplates').classList.remove('active');
+        if (el('contestsSection')) el('contestsSection').style.display = 'block';
+        if (el('certificatesSection')) el('certificatesSection').style.display = 'none';
+      });
+    }
+
+    if (el('viewTabCertificates')) {
+      el('viewTabCertificates').addEventListener('click', async () => {
+        el('viewTabCertificates').classList.add('active');
+        if (el('viewTabContests')) el('viewTabContests').classList.remove('active');
+        if (el('viewTabTemplates')) el('viewTabTemplates').classList.remove('active');
+        if (el('contestsSection')) el('contestsSection').style.display = 'none';
+        if (el('certificatesSection')) el('certificatesSection').style.display = 'block';
+        await loadGlobalCertificates('all');
+      });
+    }
+
+    if (el('viewTabTemplates')) {
+      el('viewTabTemplates').addEventListener('click', () => {
+        openTemplateModal();
+      });
+    }
+
+    // Preview Selected Template from Contest Form Modal
+    if (el('btnPreviewContestTemplate')) {
+      el('btnPreviewContestTemplate').addEventListener('click', () => {
+        const selectedTplId = el('contestCertificateTemplate')?.value;
+        openTemplateModal();
+        if (selectedTplId) {
+          const tObj = currentTemplates.find((t) => t.id === selectedTplId);
+          if (tObj) selectTemplateForEditing(tObj);
+        }
+      });
+    }
+
+    // Global Certificates Filter Tabs
+    document.querySelectorAll('.filter-btn[data-cert-filter]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn[data-cert-filter]').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderGlobalCertificatesTable(btn.dataset.certFilter);
+      });
+    });
+
+    if (el('btnRefreshCertificates')) {
+      el('btnRefreshCertificates').addEventListener('click', () => loadGlobalCertificates(currentCertFilter));
+    }
+
+    // Global Certificates Table Delegation
+    const globalCertTbody = el('globalCertificatesTbody');
+    if (globalCertTbody) {
+      globalCertTbody.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        const certId = btn.dataset.id;
+
+        if (action === 'approve-cert') {
+          try {
+            await apiFetch(`/api/admin/coding-challenges/certificates/${certId}/approve`, { method: 'POST' });
+            alert('Certificate approved & issued to student successfully!');
+            await loadGlobalCertificates(currentCertFilter);
+            await loadDashboardStats();
+          } catch (err) {
+            alert(`Approval failed: ${err.message}`);
+          }
+        } else if (action === 'revoke-cert') {
+          const reason = prompt('Enter revoke reason for audit trail:');
+          if (reason !== null) {
+            try {
+              await apiFetch(`/api/admin/coding-challenges/certificates/${certId}/revoke`, {
+                method: 'POST',
+                body: { reason: reason || 'Administrative decision' }
+              });
+              alert('Certificate revoked successfully.');
+              await loadGlobalCertificates(currentCertFilter);
+              await loadDashboardStats();
+            } catch (err) {
+              alert(`Revoke failed: ${err.message}`);
+            }
+          }
+        } else if (action === 'reissue-cert') {
+          if (confirm('Reissue this certificate and restore active status for student download?')) {
+            try {
+              await apiFetch(`/api/admin/coding-challenges/certificates/${certId}/reissue`, { method: 'POST' });
+              alert('Certificate reissued successfully!');
+              await loadGlobalCertificates(currentCertFilter);
+              await loadDashboardStats();
+            } catch (err) {
+              alert(`Reissue failed: ${err.message}`);
+            }
+          }
+        }
+      });
+    }
 
     // Contest Action delegation
     const contestsTbody = el('contestsTbody');
@@ -995,12 +1285,14 @@
           if (contest) openContestModal(contest);
         } else if (action === 'manage-problems') {
           openProblemManagerModal(id);
+        } else if (action === 'validate-contest') {
+          openChecklistModal(id, false);
         } else if (action === 'view-results') {
           openResultsModal(id);
         } else if (action === 'duplicate-contest') {
           handleDuplicateContest(id);
         } else if (action === 'publish-contest') {
-          handleUpdateContestStatus(id, 'scheduled');
+          openChecklistModal(id, true);
         } else if (action === 'cancel-contest') {
           handleUpdateContestStatus(id, 'cancelled');
         } else if (action === 'delete-contest') {
@@ -1008,6 +1300,24 @@
         }
       });
     }
+
+    document.addEventListener('click', (e) => {
+      const toggle = e.target.closest('.co-admin-dropdown-toggle');
+      const openDropdowns = document.querySelectorAll('.co-admin-dropdown.open');
+      openDropdowns.forEach((d) => {
+        if (!toggle || d !== toggle.closest('.co-admin-dropdown')) {
+          d.classList.remove('open');
+        }
+      });
+      if (toggle) {
+        const dropdown = toggle.closest('.co-admin-dropdown');
+        if (dropdown) dropdown.classList.toggle('open');
+      }
+    });
+
+    // Checklist Modal Events
+    if (el('btnCloseChecklistModal')) el('btnCloseChecklistModal').addEventListener('click', closeChecklistModal);
+    if (el('btnCloseChecklistBtn')) el('btnCloseChecklistBtn').addEventListener('click', closeChecklistModal);
 
     // Problem Manager Events
     if (el('btnCloseProblemManagerModal')) el('btnCloseProblemManagerModal').addEventListener('click', closeProblemManagerModal);

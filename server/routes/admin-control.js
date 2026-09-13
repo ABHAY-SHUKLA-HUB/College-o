@@ -2,10 +2,22 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { pool } = require('../db/pool');
 const { requireAdmin } = require('../middleware/auth');
+const {
+  requirePermission,
+  writeAuditLog,
+  isLastSuperAdmin,
+  getUserPermissions,
+  redactSensitiveFields
+} = require('../middleware/rbac');
+const { STABLE_PERMISSIONS, DEFAULT_SYSTEM_ROLES } = require('../utils/rbacSchema');
 const { ensureUniversityCatalogSchema } = require('../utils/universities');
-const { readStudentExperienceConfig, normalizeLiveHubConfig } = require('./dashboard');
+const { readStudentExperienceConfig, normalizeLiveHubConfig, invalidateExperienceConfigCache } = require('./dashboard');
 const { invalidateUniversityCatalogCache } = require('./meta');
 const { publishRealtimeEvent, publishContentChanged } = require('../services/realtimeBus');
+
+const { readFeatureMatrix, updateFeatureStatus } = require('../middleware/featureToggle');
+const { ensureMembershipSchema } = require('../services/entitlementResolver');
+const { createUploadMiddleware, saveUploadedFile } = require('../services/uploadService');
 
 const router = express.Router();
 
@@ -297,8 +309,9 @@ function windowsOverlap(left, right) {
 function normalizeGoLiveSession(session, index) {
   const type = String(session?.type || '').toLowerCase() === 'lab' ? 'lab' : 'mentorship';
   const mentorAccessId = String(session?.mentorAccessId || session?.liveAccessId || session?.accessId || '').trim();
+  const mentorProfileKey = String(session?.mentorProfileKey || session?.mentorUid || session?.mentorEmail || session?.mentorUserId || '').trim();
   const inputStatus = String(session?.status || '').trim();
-  const status = normalizeGoLiveStatus(inputStatus === 'scheduled' && mentorAccessId ? 'ready' : inputStatus);
+  const status = normalizeGoLiveStatus(inputStatus === 'scheduled' && mentorAccessId && mentorProfileKey ? 'ready' : inputStatus);
 
   return {
     ...session,
@@ -306,7 +319,7 @@ function normalizeGoLiveSession(session, index) {
     type,
     mentorName: String(session?.mentorName || '').trim(),
     mentorAccessId,
-    mentorProfileKey: String(session?.mentorProfileKey || session?.mentorUid || session?.mentorEmail || session?.mentorUserId || '').trim(),
+    mentorProfileKey,
     status
   };
 }
@@ -773,45 +786,12 @@ async function ensureAdminControlSchema() {
   adminControlSchemaEnsured = true;
 }
 
-async function writeAuditLog(req, action, targetType, targetId, metadata = {}) {
-  const actor = await pool.query('SELECT admin_role FROM users WHERE id = $1', [req.session.userId]);
-  const actorRole = actor.rows[0]?.admin_role || 'super_admin';
-
-  await pool.query(
-    `INSERT INTO admin_audit_logs (actor_user_id, actor_role, action, target_type, target_id, metadata)
-     VALUES ($1, $2, $3, $4, $5, $6)` ,
-    [req.session.userId, actorRole, action, targetType || null, targetId ? String(targetId) : null, metadata]
-  );
-}
-
 async function getCurrentAdminContext(req) {
   const { rows } = await pool.query(
     'SELECT id, role, admin_role FROM users WHERE id = $1',
     [req.session.userId]
   );
   return rows[0] || null;
-}
-
-function requirePermission(permission) {
-  return async (req, res, next) => {
-    const admin = await getCurrentAdminContext(req);
-    if (!admin || admin.role !== 'admin') {
-      return res.status(403).json({ error: 'Admin role required' });
-    }
-
-    const effectiveRole = admin.admin_role || 'super_admin';
-    if (effectiveRole === 'super_admin') return next();
-
-    const rolePerm = await pool.query(
-      'SELECT permissions FROM admin_permissions WHERE admin_role = $1',
-      [effectiveRole]
-    );
-
-    const perms = rolePerm.rows[0]?.permissions || [];
-    if (perms.includes('*') || perms.includes(permission)) return next();
-
-    return res.status(403).json({ error: `Permission denied: ${permission}` });
-  };
 }
 
 function getContentConfig(type) {
@@ -829,16 +809,328 @@ router.use(async (_req, _res, next) => {
 });
 
 router.get('/me/permissions', async (req, res) => {
-  const admin = await getCurrentAdminContext(req);
-  if (!admin) return res.status(401).json({ error: 'Authentication required' });
-  const role = admin.admin_role || 'super_admin';
-  const permResult = await pool.query('SELECT permissions FROM admin_permissions WHERE admin_role = $1', [role]);
-  const permissions = permResult.rows[0]?.permissions || (role === 'super_admin' ? ['*'] : []);
-  res.json({ role, permissions });
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  const { role, permissions } = await getUserPermissions(req.session.userId);
+  const userRes = await pool.query('SELECT id, email, full_name, role, admin_role FROM users WHERE id = $1', [req.session.userId]);
+  const user = userRes.rows[0] || null;
+  res.json({ role, permissions, user });
+});
+
+// Roles & Permissions Governance
+router.get('/roles', requirePermission('manage_roles'), async (_req, res) => {
+  const rolesRes = await pool.query('SELECT * FROM roles ORDER BY created_at ASC');
+  const permMapRes = await pool.query('SELECT role_key, permission_key FROM role_permissions');
+
+  const permMap = {};
+  for (const row of permMapRes.rows) {
+    if (!permMap[row.role_key]) permMap[row.role_key] = [];
+    permMap[row.role_key].push(row.permission_key);
+  }
+
+  const roles = rolesRes.rows.map(r => ({
+    ...r,
+    permissions: permMap[r.key] || (r.key === 'super_admin' ? ['*'] : [])
+  }));
+
+  res.json({ roles });
+});
+
+router.get('/permissions', requirePermission('manage_roles'), async (_req, res) => {
+  const permsRes = await pool.query('SELECT * FROM permissions ORDER BY module ASC, key ASC');
+  res.json({ permissions: permsRes.rows });
+});
+
+router.post('/roles', requirePermission('manage_roles'), async (req, res) => {
+  const key = String(req.body.key || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+  const label = String(req.body.label || '').trim();
+  const description = String(req.body.description || '').trim();
+  const permissions = Array.isArray(req.body.permissions) ? req.body.permissions : [];
+
+  if (!key || key.length < 3) return res.status(400).json({ error: 'Role key must be at least 3 alphanumeric characters' });
+  if (!label) return res.status(400).json({ error: 'Role label is required' });
+
+  const existing = await pool.query('SELECT key FROM roles WHERE key = $1', [key]);
+  if (existing.rowCount > 0) return res.status(409).json({ error: 'Role key already exists' });
+
+  await pool.query(
+    'INSERT INTO roles (key, label, description, is_system) VALUES ($1, $2, $3, FALSE)',
+    [key, label, description]
+  );
+
+  for (const permKey of permissions) {
+    await pool.query(
+      'INSERT INTO role_permissions (role_key, permission_key) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [key, permKey]
+    );
+  }
+
+  await pool.query(
+    'INSERT INTO admin_permissions (admin_role, permissions) VALUES ($1, $2::jsonb) ON CONFLICT (admin_role) DO UPDATE SET permissions = EXCLUDED.permissions',
+    [key, JSON.stringify(permissions)]
+  );
+
+  await writeAuditLog(req, 'role.create', 'roles', key, null, { label, description, permissions });
+
+  res.json({ success: true, role: { key, label, description, is_system: false, permissions } });
+});
+
+router.put('/roles/:key', requirePermission('manage_roles'), async (req, res) => {
+  const roleKey = String(req.params.key || '').trim().toLowerCase();
+  const label = String(req.body.label || '').trim();
+  const description = String(req.body.description || '').trim();
+  const permissions = Array.isArray(req.body.permissions) ? req.body.permissions : [];
+
+  const existingRes = await pool.query('SELECT * FROM roles WHERE key = $1', [roleKey]);
+  if (existingRes.rowCount === 0) return res.status(404).json({ error: 'Role not found' });
+  const oldRole = existingRes.rows[0];
+
+  const oldPermsRes = await pool.query('SELECT permission_key FROM role_permissions WHERE role_key = $1', [roleKey]);
+  const oldPerms = oldPermsRes.rows.map(r => r.permission_key);
+
+  if (oldRole.is_system && roleKey === 'super_admin') {
+    if (!permissions.includes('*') && permissions.length < STABLE_PERMISSIONS.length) {
+      return res.status(400).json({ error: 'Cannot remove core permissions from Super Admin role.' });
+    }
+  }
+
+  await pool.query('UPDATE roles SET label = $1, description = $2 WHERE key = $3', [label || oldRole.label, description, roleKey]);
+
+  await pool.query('DELETE FROM role_permissions WHERE role_key = $1', [roleKey]);
+  for (const permKey of permissions) {
+    if (permKey !== '*') {
+      await pool.query('INSERT INTO role_permissions (role_key, permission_key) VALUES ($1, $2) ON CONFLICT DO NOTHING', [roleKey, permKey]);
+    }
+  }
+
+  await pool.query(
+    'INSERT INTO admin_permissions (admin_role, permissions) VALUES ($1, $2::jsonb) ON CONFLICT (admin_role) DO UPDATE SET permissions = EXCLUDED.permissions',
+    [roleKey, JSON.stringify(permissions)]
+  );
+
+  await writeAuditLog(req, 'role.update', 'roles', roleKey, { label: oldRole.label, permissions: oldPerms }, { label, description, permissions });
+
+  res.json({ success: true, message: 'Role updated successfully' });
+});
+
+router.post('/users/:id/role', requirePermission('manage_roles'), async (req, res) => {
+  const targetUserId = parseInt(req.params.id, 10);
+  const newRoleKey = String(req.body.role || req.body.role_key || '').trim().toLowerCase();
+
+  if (!targetUserId || !newRoleKey) return res.status(400).json({ error: 'Target user ID and role key are required' });
+
+  const roleCheck = await pool.query('SELECT key FROM roles WHERE key = $1', [newRoleKey]);
+  if (roleCheck.rowCount === 0) return res.status(404).json({ error: 'Role key not found' });
+
+  const userCheck = await pool.query('SELECT id, full_name, email, role, admin_role FROM users WHERE id = $1', [targetUserId]);
+  if (userCheck.rowCount === 0) return res.status(404).json({ error: 'User not found' });
+  const targetUser = userCheck.rows[0];
+
+  const currentActorId = req.session.userId;
+  const currentActorPermissions = await getUserPermissions(currentActorId);
+
+  // Anti-Self Escalation Safeguard: Non-super_admins cannot promote anyone or themselves to super_admin!
+  if (newRoleKey === 'super_admin' && currentActorPermissions.role !== 'super_admin') {
+    return res.status(403).json({ error: 'Only Super Administrators can assign the Super Admin role.', code: 'PRIVILEGE_ESCALATION_BLOCKED' });
+  }
+
+  // Last Super Admin Protection Safeguard
+  const oldRoleKey = targetUser.admin_role || targetUser.role;
+  if (oldRoleKey === 'super_admin' && newRoleKey !== 'super_admin') {
+    const isLast = await isLastSuperAdmin(targetUserId);
+    if (isLast) {
+      return res.status(400).json({
+        error: 'Cannot demote or change the role of the last active Super Admin account.',
+        code: 'LAST_SUPER_ADMIN_PROTECTED'
+      });
+    }
+  }
+
+  const primaryRole = ['super_admin', 'admin'].includes(newRoleKey) ? newRoleKey : 'admin';
+
+  await pool.query(
+    'UPDATE users SET role = $1, admin_role = $2 WHERE id = $3',
+    [primaryRole, newRoleKey, targetUserId]
+  );
+
+  await pool.query('DELETE FROM admin_user_roles WHERE user_id = $1', [targetUserId]);
+  await pool.query('INSERT INTO admin_user_roles (user_id, role_key) VALUES ($1, $2) ON CONFLICT DO NOTHING', [targetUserId, newRoleKey]);
+
+  await writeAuditLog(req, 'user.role_change', 'users', targetUserId, { role: oldRoleKey }, { role: newRoleKey });
+
+  res.json({
+    success: true,
+    message: `Role for ${targetUser.full_name || targetUser.email} updated to ${newRoleKey}`,
+    user: { id: targetUserId, role: primaryRole, admin_role: newRoleKey }
+  });
+});
+
+// Centralized Audit Logs API
+router.get('/audit-logs', requirePermission('view_audit_logs'), async (req, res) => {
+  const search = String(req.query.search || '').trim();
+  const actorId = toInt(req.query.actorId);
+  const action = String(req.query.action || '').trim();
+  const entityType = String(req.query.entityType || '').trim();
+  const dateFrom = String(req.query.dateFrom || '').trim();
+  const dateTo = String(req.query.dateTo || '').trim();
+
+  const page = Math.max(1, toInt(req.query.page, 1));
+  const limit = Math.min(Math.max(1, toInt(req.query.limit, 25)), 100);
+  const offset = (page - 1) * limit;
+
+  const clauses = [];
+  const params = [];
+
+  if (actorId) {
+    params.push(actorId);
+    clauses.push(`a.actor_user_id = $${params.length}`);
+  }
+  if (action) {
+    params.push(`%${action}%`);
+    clauses.push(`a.action ILIKE $${params.length}`);
+  }
+  if (entityType) {
+    params.push(entityType);
+    clauses.push(`a.entity_type = $${params.length}`);
+  }
+  if (search) {
+    params.push(`%${search}%`);
+    clauses.push(`(a.action ILIKE $${params.length} OR COALESCE(u.full_name, '') ILIKE $${params.length} OR COALESCE(u.email, '') ILIKE $${params.length} OR COALESCE(a.entity_id, '') ILIKE $${params.length})`);
+  }
+  if (dateFrom) {
+    params.push(dateFrom);
+    clauses.push(`a.created_at >= $${params.length}`);
+  }
+  if (dateTo) {
+    params.push(dateTo);
+    clauses.push(`a.created_at <= $${params.length}`);
+  }
+
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+
+  const countRes = await pool.query(
+    `SELECT COUNT(*)::int AS total FROM audit_logs a LEFT JOIN users u ON u.id = a.actor_user_id ${where}`,
+    params
+  );
+  const total = countRes.rows[0]?.total || 0;
+  const totalPages = Math.ceil(total / limit) || 1;
+
+  params.push(limit, offset);
+  const limitIdx = params.length - 1;
+  const offsetIdx = params.length;
+
+  const logsRes = await pool.query(
+    `SELECT a.id, a.actor_user_id, a.actor_role, a.action, a.entity_type, a.entity_id,
+            a.old_values, a.new_values, a.metadata, a.ip_address, a.user_agent, a.created_at,
+            u.full_name AS actor_name, u.email AS actor_email
+     FROM audit_logs a
+     LEFT JOIN users u ON u.id = a.actor_user_id
+     ${where}
+     ORDER BY a.created_at DESC
+     LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+    params
+  );
+
+  res.json({
+    logs: logsRes.rows,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages
+    }
+  });
+});
+
+// Settings & Feature Governance APIs
+router.get('/settings', requirePermission('manage_settings'), async (_req, res) => {
+  const { rows } = await pool.query('SELECT key, value_json, updated_at FROM platform_settings');
+  const settings = {};
+  for (const r of rows) {
+    settings[r.key] = redactSensitiveFields(r.value_json);
+  }
+  res.json({ settings });
+});
+
+router.put('/settings/:domain', requirePermission('manage_settings'), async (req, res) => {
+  const domain = String(req.params.domain || '').trim();
+  const valueJson = req.body.value || req.body;
+
+  if (!domain) return res.status(400).json({ error: 'Domain key required' });
+
+  const existing = await pool.query('SELECT value_json FROM platform_settings WHERE key = $1', [domain]);
+  const oldVal = existing.rows[0]?.value_json || null;
+
+  await pool.query(
+    `INSERT INTO platform_settings (key, value_json, updated_by, updated_at)
+     VALUES ($1, $2::jsonb, $3, CURRENT_TIMESTAMP)
+     ON CONFLICT (key) DO UPDATE
+     SET value_json = EXCLUDED.value_json, updated_by = EXCLUDED.updated_by, updated_at = CURRENT_TIMESTAMP`,
+    [domain, JSON.stringify(valueJson), req.session.userId]
+  );
+
+  await writeAuditLog(req, 'settings.update', 'platform_settings', domain, oldVal, valueJson);
+
+  res.json({ success: true, message: `Settings for ${domain} updated successfully.` });
+});
+
+router.get('/features', requirePermission('manage_features'), async (_req, res) => {
+  const { rows } = await pool.query("SELECT value_json FROM platform_settings WHERE key = 'feature_toggles' LIMIT 1");
+  const features = rows[0]?.value_json || {};
+  res.json({ success: true, features });
+});
+
+router.post('/features', requirePermission('manage_features'), async (req, res) => {
+  try {
+    const featureKey = String(req.body.featureKey || req.body.key || '').trim();
+    if (!featureKey) return res.status(400).json({ error: 'featureKey or key is required' });
+
+    const enabled = req.body.enabled !== undefined ? Boolean(req.body.enabled) : (req.body.status !== undefined ? Boolean(req.body.status) : (req.body.value !== undefined ? Boolean(req.body.value) : true));
+    const { visibility, access_mode, message } = req.body;
+
+    const INFRASTRUCTURE_TOGGLES = new Set(['authentication', 'authorization', 'csrf', 'security_middleware', 'database_connection']);
+    if (INFRASTRUCTURE_TOGGLES.has(featureKey.toLowerCase())) {
+      return res.status(400).json({ error: 'Cannot disable core infrastructure features.', code: 'INFRASTRUCTURE_PROTECTED' });
+    }
+
+    const existingRes = await pool.query("SELECT value_json FROM platform_settings WHERE key = 'feature_toggles'");
+    const currentToggles = existingRes.rows[0]?.value_json || {};
+    const oldState = currentToggles[featureKey] || null;
+
+    const updateResult = await updateFeatureStatus(featureKey, { enabled, visibility, access_mode, message }, req.session.userId);
+
+    await writeAuditLog(req, 'feature.toggle', 'feature_toggles', featureKey, { oldState }, { newState: updateResult });
+
+    return res.json({ success: true, featureKey, updated: updateResult });
+  } catch (err) {
+    return res.status(400).json({ error: err.message || 'Failed to update feature toggle' });
+  }
+});
+
+router.patch('/features/:key', requirePermission('manage_features'), async (req, res) => {
+  const featureKey = String(req.params.key || '').trim();
+  const { enabled, visibility, access_mode, message } = req.body;
+
+  const INFRASTRUCTURE_TOGGLES = new Set(['authentication', 'authorization', 'csrf', 'security_middleware', 'database_connection']);
+  if (INFRASTRUCTURE_TOGGLES.has(featureKey.toLowerCase())) {
+    return res.status(400).json({ error: 'Cannot disable core infrastructure features.', code: 'INFRASTRUCTURE_PROTECTED' });
+  }
+
+  const existingRes = await pool.query("SELECT value_json FROM platform_settings WHERE key = 'feature_toggles'");
+  const currentToggles = existingRes.rows[0]?.value_json || {};
+  const oldState = currentToggles[featureKey] || null;
+
+  const updateResult = await updateFeatureStatus(featureKey, { enabled, visibility, access_mode, message }, req.session.userId);
+
+  await writeAuditLog(req, 'feature.toggle', 'feature_toggles', featureKey, { oldState }, { newState: updateResult });
+
+  res.json({ success: true, featureKey, updated: updateResult });
 });
 
 // Student Management
-router.get('/students', requirePermission('students.view'), async (req, res) => {
+// Student Management System APIs
+router.get('/students', requirePermission(['view_students', 'students.view'], { mode: 'ANY' }), async (req, res) => {
   const search = String(req.query.search || '').trim();
   const membership = String(req.query.membership || '').trim().toLowerCase();
   const status = String(req.query.status || '').trim().toLowerCase();
@@ -847,6 +1139,22 @@ router.get('/students', requirePermission('students.view'), async (req, res) => 
   const branchId = toInt(req.query.branchId);
   const semesterId = toInt(req.query.semesterId);
   const includeDeleted = toBoolean(req.query.includeDeleted);
+
+  const page = Math.max(1, toInt(req.query.page, 1));
+  const limit = Math.min(Math.max(1, toInt(req.query.limit, 20)), 100);
+  const offset = (page - 1) * limit;
+
+  const sortBy = String(req.query.sortBy || 'created_at').toLowerCase();
+  const sortDir = String(req.query.sortDir || 'DESC').toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+  const validSortColumns = {
+    created_at: 'u.created_at',
+    signup_date: 'u.created_at',
+    name: 'u.full_name',
+    email: 'u.email',
+    last_login: 'u.last_login_at'
+  };
+  const sortCol = validSortColumns[sortBy] || 'u.created_at';
 
   const params = [];
   const clauses = ["u.role = 'student'"];
@@ -860,9 +1168,12 @@ router.get('/students', requirePermission('students.view'), async (req, res) => 
     clauses.push(`(u.full_name ILIKE $${params.length} OR u.email ILIKE $${params.length} OR COALESCE(u.uid, '') ILIKE $${params.length})`);
   }
 
-  if (membership) {
-    params.push(membership);
-    clauses.push(`LOWER(u.subscription_tier) = $${params.length}`);
+  if (membership === 'free') {
+    clauses.push("COALESCE(LOWER(u.subscription_tier), 'free') = 'free'");
+  } else if (membership === 'premium' || membership === 'active') {
+    clauses.push("LOWER(u.subscription_tier) = 'premium' AND (u.subscription_expiry IS NULL OR u.subscription_expiry > NOW())");
+  } else if (membership === 'expired') {
+    clauses.push("LOWER(u.subscription_tier) = 'premium' AND u.subscription_expiry <= NOW()");
   }
 
   if (status === 'blocked') clauses.push('u.is_blocked = TRUE');
@@ -891,118 +1202,182 @@ router.get('/students', requirePermission('students.view'), async (req, res) => 
 
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
 
+  const countResult = await pool.query(
+    `SELECT COUNT(DISTINCT u.id)::int AS total
+     FROM users u
+     LEFT JOIN user_profiles up ON up.user_id = u.id
+     ${where}`,
+    params
+  );
+  const total = countResult.rows[0]?.total || 0;
+  const totalPages = Math.ceil(total / limit) || 1;
+
+  params.push(limit);
+  const limitParamIdx = params.length;
+  params.push(offset);
+  const offsetParamIdx = params.length;
+
   const { rows } = await pool.query(
     `SELECT
       u.id, u.uid, u.full_name, u.email, u.role, u.subscription_tier, u.payment_status,
       u.subscription_started_at, u.subscription_expiry, u.last_login_at, u.created_at AS signup_date,
-      COALESCE(u.last_login_user_agent, (
-        SELECT ase.user_agent
-        FROM auth_security_events ase
-        WHERE ase.user_id = u.id AND ase.user_agent IS NOT NULL
-        ORDER BY ase.created_at DESC
-        LIMIT 1
-      )) AS device,
       u.is_suspended, u.is_blocked, u.deleted_at,
       up.category_id, up.branch_id, up.semester_id, up.college_id, up.course_id, up.year_id,
-      up.onboarding_completed, up.onboarding_step,
       ac.name AS category_name,
       ab.name AS branch_name,
       asr.label AS semester_label,
-      col.name AS college_name,
-      cou.name AS course_name,
-      yr.label AS year_label,
-      COUNT(qa.id)::int AS quizzes_attempted,
-      COALESCE(SUM(qa.xp_earned), 0)::int AS xp,
-      COALESCE(ROUND(AVG(qa.score_percent), 2), 0) AS avg_score
+      col.name AS college_name
      FROM users u
      LEFT JOIN user_profiles up ON up.user_id = u.id
      LEFT JOIN academic_categories ac ON ac.id = up.category_id
      LEFT JOIN academic_branches ab ON ab.id = up.branch_id
      LEFT JOIN academic_semesters asr ON asr.id = up.semester_id
      LEFT JOIN academic_colleges col ON col.id = up.college_id
-     LEFT JOIN academic_courses cou ON cou.id = up.course_id
-     LEFT JOIN academic_years yr ON yr.id = up.year_id
-     LEFT JOIN quiz_attempts qa ON qa.user_id = u.id
      ${where}
-     GROUP BY u.id, up.id, ac.name, ab.name, asr.label, col.name, cou.name, yr.label
-     ORDER BY u.created_at DESC
-     LIMIT 500`,
+     ORDER BY ${sortCol} ${sortDir}
+     LIMIT $${limitParamIdx} OFFSET $${offsetParamIdx}`,
     params
   );
 
-  res.json({ students: rows });
+  const statsResult = await pool.query(
+    `SELECT
+      COUNT(*)::int AS total,
+      COUNT(*) FILTER (WHERE is_blocked = FALSE AND is_suspended = FALSE AND deleted_at IS NULL)::int AS active,
+      COUNT(*) FILTER (WHERE is_suspended = TRUE OR is_blocked = TRUE)::int AS suspended,
+      COUNT(*) FILTER (WHERE subscription_tier = 'premium' AND (subscription_expiry IS NULL OR subscription_expiry > NOW()))::int AS premium
+     FROM users
+     WHERE role = 'student' ${includeDeleted ? '' : 'AND deleted_at IS NULL'}`
+  );
+
+  res.json({
+    students: rows,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages
+    },
+    stats: statsResult.rows[0] || { total: 0, active: 0, suspended: 0, premium: 0 }
+  });
 });
 
 router.get('/students/:id', requirePermission('students.view'), async (req, res) => {
   const studentId = toInt(req.params.id, -1);
   if (studentId < 1) return res.status(400).json({ error: 'Invalid student id' });
 
-  const [student, profile, payments, referrals, feedback] = await Promise.all([
-    pool.query(
+  try {
+    const safeQuery = async (queryText, params, fallback = []) => {
+      try {
+        const result = await pool.query(queryText, params);
+        return result.rows;
+      } catch (_err) {
+        return fallback;
+      }
+    };
+
+    const studentRows = await pool.query(
       `SELECT id, uid, full_name, email, role, subscription_tier, payment_status,
               subscription_started_at, subscription_expiry, last_login_at, created_at AS signup_date,
-              COALESCE(last_login_user_agent, (
-                SELECT ase.user_agent
-                FROM auth_security_events ase
-                WHERE ase.user_id = u.id AND ase.user_agent IS NOT NULL
-                ORDER BY ase.created_at DESC
-                LIMIT 1
-              )) AS device,
               is_suspended, is_blocked, deleted_at
        FROM users u
        WHERE id = $1`,
       [studentId]
-    ),
-    pool.query(
-      `SELECT up.*, ac.name AS category_name, ab.name AS branch_name, asr.label AS semester_label,
-              col.name AS college_name, cou.name AS course_name, yr.label AS year_label
-       FROM user_profiles up
-       LEFT JOIN academic_categories ac ON ac.id = up.category_id
-       LEFT JOIN academic_branches ab ON ab.id = up.branch_id
-       LEFT JOIN academic_semesters asr ON asr.id = up.semester_id
-       LEFT JOIN academic_colleges col ON col.id = up.college_id
-       LEFT JOIN academic_courses cou ON cou.id = up.course_id
-       LEFT JOIN academic_years yr ON yr.id = up.year_id
-       WHERE up.user_id = $1`,
-      [studentId]
-    ),
-    pool.query(
-      `SELECT id, payment_method, transaction_id, amount_inr, status, submitted_at, approved_at
-       FROM membership_payment_requests
-       WHERE user_id = $1
-       ORDER BY submitted_at DESC
-       LIMIT 20`,
-      [studentId]
-    ),
-    pool.query(
-      `SELECT id, code_used, status, is_blocked, reward_points, created_at
-       FROM referrals
-       WHERE referrer_user_id = $1 OR referred_user_id = $1
-       ORDER BY created_at DESC
-       LIMIT 20`,
-      [studentId]
-    ),
-    pool.query(
-      `SELECT id, rating, message, admin_reply, status, is_resolved, created_at
-       FROM feedback
-       WHERE user_id = $1
-       ORDER BY created_at DESC
-       LIMIT 20`,
-      [studentId]
-    )
-  ]);
+    );
 
-  if (!student.rows[0] || student.rows[0].role !== 'student') {
-    return res.status(404).json({ error: 'Student not found' });
+    if (!studentRows.rows[0] || studentRows.rows[0].role !== 'student') {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
+    const student = studentRows.rows[0];
+
+    const [
+      profiles,
+      payments,
+      quizzes,
+      mocks,
+      coding,
+      certificates,
+      auditHistory
+    ] = await Promise.all([
+      safeQuery(
+        `SELECT up.*, ac.name AS category_name, ab.name AS branch_name, asr.label AS semester_label,
+                col.name AS college_name, cou.name AS course_name, yr.label AS year_label
+         FROM user_profiles up
+         LEFT JOIN academic_categories ac ON ac.id = up.category_id
+         LEFT JOIN academic_branches ab ON ab.id = up.branch_id
+         LEFT JOIN academic_semesters asr ON asr.id = up.semester_id
+         LEFT JOIN academic_colleges col ON col.id = up.college_id
+         LEFT JOIN academic_courses cou ON cou.id = up.course_id
+         LEFT JOIN academic_years yr ON yr.id = up.year_id
+         WHERE up.user_id = $1`,
+        [studentId]
+      ),
+      safeQuery(
+        `SELECT id, payment_method, transaction_id, amount_inr, status, submitted_at, approved_at
+         FROM membership_payment_requests
+         WHERE user_id = $1
+         ORDER BY submitted_at DESC
+         LIMIT 20`,
+        [studentId]
+      ),
+      safeQuery(
+        `SELECT COUNT(*)::int AS attempts, COALESCE(ROUND(AVG(score_percent), 2), 0) AS avg_score
+         FROM quiz_attempts
+         WHERE user_id = $1`,
+        [studentId]
+      ),
+      safeQuery(
+        `SELECT COUNT(*)::int AS attempts, COALESCE(ROUND(AVG(accuracy_percent), 2), 0) AS avg_accuracy
+         FROM mock_test_attempts
+         WHERE user_id = $1`,
+        [studentId]
+      ),
+      safeQuery(
+        `SELECT
+          (SELECT COUNT(*)::int FROM coding_submissions WHERE user_id = $1) AS total_submissions,
+          (SELECT COUNT(DISTINCT problem_id)::int FROM coding_submissions WHERE user_id = $1 AND status = 'ACCEPTED') AS solved_problems`,
+        [studentId]
+      ),
+      safeQuery(
+        `SELECT id, COALESCE(verification_code, id::text) AS certificate_code, COALESCE(type, 'Certificate of Completion') AS title, COALESCE(status, 'active') AS status, COALESCE(issued_date, created_at) AS issued_at
+         FROM certificates
+         WHERE user_id = $1
+         ORDER BY created_at DESC`,
+        [studentId]
+      ),
+      safeQuery(
+        `SELECT id, actor_role, action, target_type, target_id, metadata, created_at
+         FROM admin_audit_logs
+         WHERE target_id = $1 OR metadata->>'userId' = $1
+         ORDER BY created_at DESC
+         LIMIT 30`,
+        [String(studentId)]
+      )
+    ]);
+
+    const { getEffectiveFeatureMatrix } = require('../middleware/featureToggle');
+    const effectiveFeatures = await getEffectiveFeatureMatrix({
+      userId: student.id,
+      role: student.role,
+      isPaidMember: student.subscription_tier === 'premium' && (!student.subscription_expiry || new Date(student.subscription_expiry) > new Date())
+    });
+
+    res.json({
+      student,
+      profile: profiles[0] || null,
+      payments,
+      academicActivity: {
+        quizzes: quizzes[0] || { attempts: 0, avg_score: 0 },
+        mockTests: mocks[0] || { attempts: 0, avg_accuracy: 0 }
+      },
+      codingActivity: coding[0] || { total_submissions: 0, solved_problems: 0 },
+      certificates,
+      auditHistory,
+      effectiveFeatures
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Failed to fetch student details' });
   }
-
-  res.json({
-    student: student.rows[0],
-    profile: profile.rows[0] || null,
-    payments: payments.rows,
-    referrals: referrals.rows,
-    feedback: feedback.rows
-  });
 });
 
 router.put('/students/:id', requirePermission('students.manage'), async (req, res) => {
@@ -1079,16 +1454,27 @@ router.post('/students/:id/reset-password', requirePermission('students.manage')
   }
 
   const hash = await bcrypt.hash(newPassword, 12);
-  await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2 AND role = \'student\'', [hash, studentId]);
+  await pool.query("UPDATE users SET password_hash = $1 WHERE id = $2 AND role = 'student'", [hash, studentId]);
+
+  // Invalidate any active session store entries for this student
+  try {
+    await pool.query(
+      `DELETE FROM session WHERE sess::text ILIKE $1`,
+      [`%\"userId\":${studentId}%`]
+    );
+  } catch (_e) {
+    // best-effort
+  }
 
   await writeAuditLog(req, 'student.reset_password', 'student', studentId);
   publishContentChanged('student', 'updated', studentId, { userId: studentId, kind: 'password_reset' });
   res.json({ message: 'Student password reset successfully' });
 });
 
-router.post('/students/:id/status', requirePermission('students.manage'), async (req, res) => {
+router.post('/students/:id/status', requirePermission(['manage_students', 'students.manage'], { mode: 'ANY' }), async (req, res) => {
   const studentId = toInt(req.params.id, -1);
-  const status = String(req.body.status || '').toLowerCase();
+  const rawInput = String(req.body.status || req.body.action || '').toLowerCase();
+  const status = rawInput === 'suspend' ? 'suspended' : (rawInput === 'block' ? 'blocked' : (['restore', 'unsuspend', 'un-suspend', 'unblock', 'un-block'].includes(rawInput) ? 'active' : rawInput));
   if (studentId < 1) return res.status(400).json({ error: 'Invalid student id' });
   if (!['active', 'suspended', 'blocked'].includes(status)) {
     return res.status(400).json({ error: 'status must be active, suspended, or blocked' });
@@ -1105,9 +1491,130 @@ router.post('/students/:id/status', requirePermission('students.manage'), async 
     [isSuspended, isBlocked, studentId]
   );
 
+  // When student becomes suspended or blocked, purge active backend session
+  if (isSuspended || isBlocked) {
+    try {
+      await pool.query(
+        `DELETE FROM session WHERE sess::text ILIKE $1`,
+        [`%\"userId\":${studentId}%`]
+      );
+    } catch (_e) {
+      // best-effort
+    }
+  }
+
   await writeAuditLog(req, 'student.status_change', 'student', studentId, { status });
   publishContentChanged('students', 'updated', studentId, { userId: studentId, status });
   res.json({ message: `Student status updated to ${status}` });
+});
+
+router.post('/students/:id/membership/grant', requirePermission('memberships.manage'), async (req, res) => {
+  const studentId = toInt(req.params.id, -1);
+  if (studentId < 1) return res.status(400).json({ error: 'Invalid student id' });
+
+  const tier = String(req.body.tier || 'premium').toLowerCase();
+  const durationDays = Math.max(1, toInt(req.body.durationDays, 30));
+  const reason = String(req.body.reason || 'Admin Granted Membership').trim();
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const expiryDate = new Date(Date.now() + (durationDays * 24 * 60 * 60 * 1000));
+    await client.query(
+      `UPDATE users
+       SET subscription_tier = $1,
+           payment_status = 'approved',
+           subscription_started_at = NOW(),
+           subscription_expiry = $2
+       WHERE id = $3 AND role = 'student'`,
+      [tier, expiryDate, studentId]
+    );
+
+    await writeAuditLog(req, 'student.membership.grant', 'student', studentId, {
+      tier,
+      durationDays,
+      expiryDate,
+      reason
+    });
+
+    await client.query('COMMIT');
+
+    publishContentChanged('membership', 'updated', studentId, { userId: studentId, tier, expiryDate });
+    res.json({ message: `Granted ${tier} membership for ${durationDays} days`, expiryDate });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: err.message || 'Failed to grant membership' });
+  } finally {
+    client.release();
+  }
+});
+
+router.post('/students/:id/membership/extend', requirePermission('memberships.manage'), async (req, res) => {
+  const studentId = toInt(req.params.id, -1);
+  if (studentId < 1) return res.status(400).json({ error: 'Invalid student id' });
+
+  const days = Math.max(1, toInt(req.body.days, 30));
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const currentResult = await client.query(
+      'SELECT subscription_expiry FROM users WHERE id = $1 AND role = \'student\'',
+      [studentId]
+    );
+    const currentExpiry = currentResult.rows[0]?.subscription_expiry
+      ? new Date(currentResult.rows[0].subscription_expiry)
+      : new Date();
+
+    const baseDate = currentExpiry > new Date() ? currentExpiry : new Date();
+    const newExpiry = new Date(baseDate.getTime() + (days * 24 * 60 * 60 * 1000));
+
+    await client.query(
+      `UPDATE users
+       SET subscription_tier = 'premium',
+           payment_status = 'approved',
+           subscription_expiry = $1
+       WHERE id = $2 AND role = 'student'`,
+      [newExpiry, studentId]
+    );
+
+    await writeAuditLog(req, 'student.membership.extend', 'student', studentId, {
+      daysExtended: days,
+      newExpiry
+    });
+
+    await client.query('COMMIT');
+
+    publishContentChanged('membership', 'updated', studentId, { userId: studentId, newExpiry });
+    res.json({ message: `Membership extended by ${days} days`, newExpiry });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: err.message || 'Failed to extend membership' });
+  } finally {
+    client.release();
+  }
+});
+
+router.post('/students/:id/membership/revoke', requirePermission('memberships.manage'), async (req, res) => {
+  const studentId = toInt(req.params.id, -1);
+  if (studentId < 1) return res.status(400).json({ error: 'Invalid student id' });
+
+  const reason = String(req.body.reason || 'Admin Revoked Membership').trim();
+
+  await pool.query(
+    `UPDATE users
+     SET subscription_tier = 'free',
+         payment_status = 'expired',
+         subscription_expiry = NOW()
+     WHERE id = $1 AND role = 'student'`,
+    [studentId]
+  );
+
+  await writeAuditLog(req, 'student.membership.revoke', 'student', studentId, { reason });
+  publishContentChanged('membership', 'updated', studentId, { userId: studentId, revoked: true });
+  res.json({ message: 'Student membership revoked successfully' });
 });
 
 router.put('/students/:id/membership', requirePermission('memberships.manage'), async (req, res) => {
@@ -1154,7 +1661,7 @@ router.post('/students/:id/restore', requirePermission('students.restore'), asyn
   if (studentId < 1) return res.status(400).json({ error: 'Invalid student id' });
 
   await pool.query(
-    'UPDATE users SET deleted_at = NULL, deleted_by = NULL WHERE id = $1 AND role = \'student\'',
+    "UPDATE users SET deleted_at = NULL, deleted_by = NULL WHERE id = $1 AND role = 'student'",
     [studentId]
   );
 
@@ -1171,13 +1678,13 @@ router.post('/students/bulk-action', requirePermission('students.manage'), async
 
   let query = null;
   if (action === 'suspend') {
-    query = 'UPDATE users SET is_suspended = TRUE, is_blocked = FALSE WHERE id = ANY($1::int[]) AND role = \'student\'';
+    query = "UPDATE users SET is_suspended = TRUE, is_blocked = FALSE WHERE id = ANY($1::int[]) AND role = 'student'";
   } else if (action === 'block') {
-    query = 'UPDATE users SET is_blocked = TRUE, is_suspended = FALSE WHERE id = ANY($1::int[]) AND role = \'student\'';
+    query = "UPDATE users SET is_blocked = TRUE, is_suspended = FALSE WHERE id = ANY($1::int[]) AND role = 'student'";
   } else if (action === 'activate') {
-    query = 'UPDATE users SET is_blocked = FALSE, is_suspended = FALSE WHERE id = ANY($1::int[]) AND role = \'student\'';
+    query = "UPDATE users SET is_blocked = FALSE, is_suspended = FALSE WHERE id = ANY($1::int[]) AND role = 'student'";
   } else if (action === 'delete') {
-    query = 'UPDATE users SET deleted_at = NOW(), deleted_by = $2 WHERE id = ANY($1::int[]) AND role = \'student\'';
+    query = "UPDATE users SET deleted_at = NOW(), deleted_by = $2 WHERE id = ANY($1::int[]) AND role = 'student'";
   } else {
     return res.status(400).json({ error: 'Unsupported bulk action' });
   }
@@ -2647,10 +3154,13 @@ router.post('/roadmaps/:id/milestones', requirePermission('roadmaps.manage'), as
 router.post('/roadmaps/:id/publish', requirePermission('roadmaps.manage'), async (req, res) => {
   const roadmapId = toInt(req.params.id, -1);
   if (roadmapId < 1) return res.status(400).json({ error: 'Invalid roadmap id' });
-  await pool.query('UPDATE roadmaps SET is_published = TRUE WHERE id = $1', [roadmapId]);
+  const result = await pool.query(
+    "UPDATE roadmaps SET status = 'published', is_published = TRUE, published_at = NOW(), updated_at = NOW() WHERE id = $1 RETURNING *",
+    [roadmapId]
+  );
   await writeAuditLog(req, 'roadmap.publish', 'roadmap', roadmapId);
   publishContentChanged('roadmaps', 'published', roadmapId);
-  res.json({ message: 'Roadmap published' });
+  res.json({ message: 'Roadmap published', roadmap: result.rows[0] });
 });
 
 router.post('/roadmaps/:id/hide', requirePermission('roadmaps.manage'), async (req, res) => {
@@ -3165,6 +3675,53 @@ router.get('/settings', requirePermission('settings.manage'), async (_req, res) 
   res.json({ settings, rows });
 });
 
+router.get('/feature-visibility', requirePermission('settings.manage'), async (_req, res) => {
+  try {
+    const matrix = await readFeatureMatrix();
+    res.json({ success: true, matrix });
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Failed to fetch feature visibility matrix' });
+  }
+});
+
+router.put('/feature-visibility', requirePermission('settings.manage'), async (req, res) => {
+  const { featureKey, status, is_visible, is_enabled, maintenance_mode, access_mode, maintenanceMessage, reason } = req.body || {};
+  if (!featureKey) {
+    return res.status(400).json({ error: 'featureKey is required' });
+  }
+
+  try {
+    const adminUser = await pool.query('SELECT email FROM users WHERE id = $1 LIMIT 1', [req.session.userId]);
+    const adminEmail = adminUser.rows[0]?.email || `User #${req.session.userId}`;
+
+    const result = await updateFeatureStatus(
+      featureKey,
+      { status, is_visible, is_enabled, maintenance_mode, access_mode, maintenanceMessage, reason },
+      req.session.userId,
+      adminEmail
+    );
+
+    if (typeof invalidateExperienceConfigCache === 'function') {
+      invalidateExperienceConfigCache();
+    }
+
+    await writeAuditLog(req, 'settings.feature_visibility.update', 'platform_settings', featureKey, {
+      previousStatus: result.previousState?.status,
+      newStatus: result.newState?.status,
+      maintenanceMessage: result.newState?.maintenanceMessage,
+      reason: reason || 'Admin manual toggle'
+    });
+
+    res.json({
+      success: true,
+      message: `Feature ${featureKey} status updated to ${status}`,
+      result
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message || 'Failed to update feature status' });
+  }
+});
+
 router.put('/settings', requirePermission('settings.manage'), async (req, res) => {
   const updates = req.body && typeof req.body === 'object' ? req.body : {};
   const keys = Object.keys(updates);
@@ -3303,8 +3860,40 @@ router.put('/membership-config', requirePermission('settings.manage'), async (re
   res.json({ message: 'Membership center configuration updated successfully', config: merged });
 });
 
+// Student Feature Control System APIs
+router.get('/feature-visibility', requireAdmin, async (_req, res) => {
+  try {
+    const matrix = await readFeatureMatrix();
+    res.json({ success: true, matrix });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to read feature matrix' });
+  }
+});
+
+router.put('/feature-visibility', requireAdmin, async (req, res) => {
+  try {
+    const { featureKey, status, is_visible, is_enabled, maintenance_mode, access_mode, maintenanceMessage, reason } = req.body;
+    if (!featureKey) return res.status(400).json({ error: 'featureKey is required' });
+
+    const result = await updateFeatureStatus(
+      featureKey,
+      { status, is_visible, is_enabled, maintenance_mode, access_mode, maintenanceMessage, reason },
+      req.session.userId,
+      req.session.email || req.session.username || 'admin'
+    );
+
+    if (typeof invalidateExperienceConfigCache === 'function') {
+      invalidateExperienceConfigCache();
+    }
+
+    res.json({ success: true, ...result });
+  } catch (error) {
+    res.status(400).json({ error: error.message || 'Failed to update feature status' });
+  }
+});
+
 // Audit Logs
-router.get('/audit-logs', requirePermission('reports.view'), async (req, res) => {
+router.get('/audit-logs', requireAdmin, async (req, res) => {
   const limit = Math.min(Math.max(toInt(req.query.limit, 50), 1), 500);
   const { rows } = await pool.query(
     `SELECT l.id, l.actor_user_id, u.full_name AS actor_name, l.actor_role, l.action,
@@ -3319,5 +3908,831 @@ router.get('/audit-logs', requirePermission('reports.view'), async (req, res) =>
   res.json({ logs: rows });
 });
 
+/* ============================================================
+ * PART 6: MEMBERSHIP PLAN & ENTITLEMENT MANAGEMENT ENDPOINTS
+ * ============================================================ */
+
+// GET /api/admin/control/memberships/plans - List all plans with subscriber counts and entitlements
+router.get('/memberships/plans', requireAdmin, async (_req, res) => {
+  try {
+    await ensureMembershipSchema();
+
+    const plansRes = await pool.query(`
+      SELECT 
+        p.id,
+        p.code,
+        p.name,
+        p.description,
+        p.price,
+        p.currency,
+        p.duration_value,
+        p.duration_unit,
+        p.status,
+        p.is_purchasable,
+        p.display_order,
+        p.display_benefits,
+        p.created_at,
+        p.updated_at,
+        COUNT(DISTINCT m.id)::int AS active_subscribers_count
+      FROM membership_plans p
+      LEFT JOIN memberships m ON m.plan_id = p.id AND m.status = 'ACTIVE'
+      GROUP BY p.id
+      ORDER BY p.display_order ASC, p.id ASC
+    `);
+
+    // Fetch entitlements per plan
+    const entRes = await pool.query(`
+      SELECT plan_id, feature_key, access_level 
+      FROM membership_plan_entitlements
+    `);
+
+    const entitlementsMap = {};
+    entRes.rows.forEach(r => {
+      if (!entitlementsMap[r.plan_id]) entitlementsMap[r.plan_id] = [];
+      entitlementsMap[r.plan_id].push(r.feature_key);
+    });
+
+    const plans = plansRes.rows.map(p => ({
+      ...p,
+      price: Number(p.price),
+      display_benefits: Array.isArray(p.display_benefits) ? p.display_benefits : (typeof p.display_benefits === 'string' ? JSON.parse(p.display_benefits) : []),
+      entitlements: entitlementsMap[p.id] || []
+    }));
+
+    res.json({ success: true, plans });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch membership plans', details: err.message });
+  }
+});
+
+// POST /api/admin/control/memberships/plans - Create new membership plan
+router.post('/memberships/plans', requireAdmin, async (req, res) => {
+  try {
+    await ensureMembershipSchema();
+    const {
+      code,
+      name,
+      description,
+      price,
+      currency = 'INR',
+      duration_value = 30,
+      duration_unit = 'DAYS',
+      status = 'ACTIVE',
+      is_purchasable = true,
+      display_order = 0,
+      display_benefits = [],
+      entitlements = []
+    } = req.body;
+
+    if (!code || !name) {
+      return res.status(400).json({ error: 'code and name are required' });
+    }
+
+    const cleanCode = String(code).trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    const numericPrice = Math.max(0, Number(price || 0));
+    const cleanDuration = Math.max(1, parseInt(duration_value, 10) || 30);
+    const validUnits = ['DAYS', 'MONTHS', 'YEARS'];
+    const cleanUnit = validUnits.includes(String(duration_unit).toUpperCase()) ? String(duration_unit).toUpperCase() : 'DAYS';
+    const validStatuses = ['DRAFT', 'ACTIVE', 'INACTIVE', 'ARCHIVED'];
+    const cleanStatus = validStatuses.includes(String(status).toUpperCase()) ? String(status).toUpperCase() : 'ACTIVE';
+
+    const insertRes = await pool.query(`
+      INSERT INTO membership_plans (
+        code, name, description, price, currency, duration_value, duration_unit, status, is_purchasable, display_order, display_benefits, created_by, updated_by
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12, $12)
+      RETURNING *
+    `, [
+      cleanCode,
+      String(name).trim(),
+      description ? String(description).trim() : '',
+      numericPrice,
+      String(currency).toUpperCase().slice(0, 10),
+      cleanDuration,
+      cleanUnit,
+      cleanStatus,
+      Boolean(is_purchasable),
+      parseInt(display_order, 10) || 0,
+      JSON.stringify(Array.isArray(display_benefits) ? display_benefits : []),
+      req.session.userId
+    ]);
+
+    const createdPlan = insertRes.rows[0];
+
+    // Save initial entitlements if provided
+    if (Array.isArray(entitlements) && entitlements.length > 0) {
+      for (const featKey of entitlements) {
+        await pool.query(`
+          INSERT INTO membership_plan_entitlements (plan_id, feature_key, access_level)
+          VALUES ($1, $2, 'enabled')
+          ON CONFLICT (plan_id, feature_key) DO NOTHING
+        `, [createdPlan.id, featKey]);
+      }
+    }
+
+    await writeAuditLog(req, 'membership_plan.create', 'membership_plans', createdPlan.id, {
+      code: createdPlan.code,
+      name: createdPlan.name,
+      price: createdPlan.price
+    });
+
+    res.json({ success: true, message: 'Membership plan created successfully', plan: createdPlan });
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(400).json({ error: 'A membership plan with this plan code already exists.' });
+    }
+    res.status(500).json({ error: 'Failed to create membership plan', details: err.message });
+  }
+});
+
+// PUT /api/admin/control/memberships/plans/:id - Update existing plan
+router.put('/memberships/plans/:id', requireAdmin, async (req, res) => {
+  try {
+    await ensureMembershipSchema();
+    const planId = parseInt(req.params.id, 10);
+    if (!planId) return res.status(400).json({ error: 'Invalid plan ID' });
+
+    const existingRes = await pool.query('SELECT * FROM membership_plans WHERE id = $1', [planId]);
+    if (existingRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Membership plan not found' });
+    }
+    const existing = existingRes.rows[0];
+
+    const {
+      name = existing.name,
+      description = existing.description,
+      price = existing.price,
+      currency = existing.currency,
+      duration_value = existing.duration_value,
+      duration_unit = existing.duration_unit,
+      status = existing.status,
+      is_purchasable = existing.is_purchasable,
+      display_order = existing.display_order,
+      display_benefits = existing.display_benefits
+    } = req.body;
+
+    const numericPrice = Math.max(0, Number(price));
+    const cleanDuration = Math.max(1, parseInt(duration_value, 10) || 30);
+    const validUnits = ['DAYS', 'MONTHS', 'YEARS'];
+    const cleanUnit = validUnits.includes(String(duration_unit).toUpperCase()) ? String(duration_unit).toUpperCase() : 'DAYS';
+    const validStatuses = ['DRAFT', 'ACTIVE', 'INACTIVE', 'ARCHIVED'];
+    const cleanStatus = validStatuses.includes(String(status).toUpperCase()) ? String(status).toUpperCase() : 'ACTIVE';
+
+    const updateRes = await pool.query(`
+      UPDATE membership_plans
+      SET 
+        name = $1,
+        description = $2,
+        price = $3,
+        currency = $4,
+        duration_value = $5,
+        duration_unit = $6,
+        status = $7,
+        is_purchasable = $8,
+        display_order = $9,
+        display_benefits = $10::jsonb,
+        updated_by = $11,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $12
+      RETURNING *
+    `, [
+      String(name).trim(),
+      String(description || '').trim(),
+      numericPrice,
+      String(currency).toUpperCase().slice(0, 10),
+      cleanDuration,
+      cleanUnit,
+      cleanStatus,
+      Boolean(is_purchasable),
+      parseInt(display_order, 10) || 0,
+      JSON.stringify(Array.isArray(display_benefits) ? display_benefits : []),
+      req.session.userId,
+      planId
+    ]);
+
+    const updatedPlan = updateRes.rows[0];
+
+    await writeAuditLog(req, 'membership_plan.update', 'membership_plans', planId, {
+      oldPrice: existing.price,
+      newPrice: updatedPlan.price,
+      oldStatus: existing.status,
+      newStatus: updatedPlan.status
+    });
+
+    res.json({ success: true, message: 'Membership plan updated successfully', plan: updatedPlan });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update membership plan', details: err.message });
+  }
+});
+
+// POST /api/admin/control/memberships/plans/:id/entitlements - Update plan entitlements
+router.post('/memberships/plans/:id/entitlements', requireAdmin, async (req, res) => {
+  try {
+    await ensureMembershipSchema();
+    const planId = parseInt(req.params.id, 10);
+    if (!planId) return res.status(400).json({ error: 'Invalid plan ID' });
+
+    const { entitlements = [] } = req.body;
+
+    // Delete existing entitlements
+    await pool.query('DELETE FROM membership_plan_entitlements WHERE plan_id = $1', [planId]);
+
+    // Insert new entitlements
+    if (Array.isArray(entitlements)) {
+      for (const featKey of entitlements) {
+        await pool.query(`
+          INSERT INTO membership_plan_entitlements (plan_id, feature_key, access_level)
+          VALUES ($1, $2, 'enabled')
+          ON CONFLICT (plan_id, feature_key) DO NOTHING
+        `, [planId, featKey]);
+      }
+    }
+
+    await writeAuditLog(req, 'membership_plan.entitlements_update', 'membership_plans', planId, {
+      entitlementsCount: entitlements.length,
+      entitlements
+    });
+
+    res.json({ success: true, message: 'Plan entitlements updated successfully', entitlements });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update plan entitlements', details: err.message });
+  }
+});
+
+// DELETE /api/admin/control/memberships/plans/:id - Archive or delete plan safely
+router.delete('/memberships/plans/:id', requireAdmin, async (req, res) => {
+  try {
+    await ensureMembershipSchema();
+    const planId = parseInt(req.params.id, 10);
+    if (!planId) return res.status(400).json({ error: 'Invalid plan ID' });
+
+    // Check for active subscribers or payments
+    const activeSubRes = await pool.query('SELECT COUNT(*)::int AS count FROM memberships WHERE plan_id = $1', [planId]);
+    const hasHistory = (activeSubRes.rows[0]?.count || 0) > 0;
+
+    if (hasHistory) {
+      // Soft-archive to preserve historical financial & activation records
+      await pool.query(`
+        UPDATE membership_plans 
+        SET status = 'ARCHIVED', is_purchasable = FALSE, updated_at = CURRENT_TIMESTAMP 
+        WHERE id = $1
+      `, [planId]);
+
+      await writeAuditLog(req, 'membership_plan.archive', 'membership_plans', planId, {
+        reason: 'Plan archived due to existing user subscription history'
+      });
+
+      return res.json({ success: true, message: 'Plan has subscription history and was archived safely.', archived: true });
+    }
+
+    // Unused plan can be safely deleted
+    await pool.query('DELETE FROM membership_plans WHERE id = $1', [planId]);
+    await writeAuditLog(req, 'membership_plan.delete', 'membership_plans', planId, {});
+
+    res.json({ success: true, message: 'Membership plan deleted permanently' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete membership plan', details: err.message });
+  }
+});
+
+// GET /api/admin/control/memberships/active - Paginated active student memberships
+router.get('/memberships/active', requireAdmin, async (req, res) => {
+  try {
+    await ensureMembershipSchema();
+    const page = Math.max(1, toInt(req.query.page, 1));
+    const limit = Math.min(Math.max(toInt(req.query.limit, 20), 1), 100);
+    const offset = (page - 1) * limit;
+
+    const countRes = await pool.query("SELECT COUNT(*)::int AS total FROM memberships WHERE status = 'ACTIVE'");
+    const total = countRes.rows[0]?.total || 0;
+
+    const { rows } = await pool.query(`
+      SELECT 
+        m.id,
+        m.student_id,
+        u.email AS student_email,
+        u.full_name AS student_name,
+        m.plan_id,
+        mp.code AS plan_code,
+        mp.name AS plan_name,
+        m.status,
+        m.started_at,
+        m.expires_at,
+        m.source,
+        m.price_at_activation
+      FROM memberships m
+      JOIN users u ON u.id = m.student_id
+      LEFT JOIN membership_plans mp ON mp.id = m.plan_id
+      WHERE m.status = 'ACTIVE'
+      ORDER BY m.started_at DESC
+      LIMIT $1 OFFSET $2
+    `, [limit, offset]);
+
+    res.json({
+      success: true,
+      activeMemberships: rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch active memberships', details: err.message });
+  }
+});
+
+/* ============================================================
+ * PART 7: PRODUCTION PAYMENTS + UPI + QR + MANUAL VERIFICATION SYSTEM
+ * ============================================================ */
+
+const paymentQrUpload = createUploadMiddleware({
+  maxFileSize: 5 * 1024 * 1024,
+  allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'],
+  allowedExtensions: ['.png', '.jpg', '.jpeg', '.webp'],
+  invalidTypeMessage: 'Only PNG, JPG, or WEBP image files are allowed for Payment QR Code.'
+});
+
+const DEFAULT_PAYMENT_SETTINGS = {
+  payment_enabled: true,
+  upi_id: 'shuklaabhayas0-1@okicici',
+  payee_name: 'College OS',
+  qr_image_url: '',
+  instructions: [
+    'Scan the QR code or copy the UPI ID.',
+    'Pay the exact membership plan amount shown.',
+    'Save transaction screenshot or receipt.',
+    'Enter correct UTR / Reference ID.',
+    'Submit payment for admin verification.'
+  ],
+  support_message: 'Membership activates automatically after admin approval.',
+  verification_required: true
+};
+
+async function getPaymentSettings() {
+  const { rows } = await pool.query(
+    "SELECT value_json FROM platform_settings WHERE key = 'payment_settings_config' LIMIT 1"
+  );
+
+  if (rows.length > 0 && rows[0].value_json && typeof rows[0].value_json === 'object') {
+    return { ...DEFAULT_PAYMENT_SETTINGS, ...rows[0].value_json };
+  }
+
+  return { ...DEFAULT_PAYMENT_SETTINGS };
+}
+
+// GET /api/admin/control/payments/settings - Fetch persistent payment configuration
+router.get('/payments/settings', requireAdmin, async (_req, res) => {
+  try {
+    const settings = await getPaymentSettings();
+    res.json({ success: true, settings });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch payment settings', details: err.message });
+  }
+});
+
+// PUT /api/admin/control/payments/settings - Update persistent payment configuration
+router.put('/payments/settings', requireAdmin, async (req, res) => {
+  try {
+    const current = await getPaymentSettings();
+    const {
+      payment_enabled = current.payment_enabled,
+      upi_id = current.upi_id,
+      payee_name = current.payee_name,
+      instructions = current.instructions,
+      support_message = current.support_message,
+      verification_required = current.verification_required
+    } = req.body;
+
+    const cleanUpiId = String(upi_id || '').trim();
+    if (!cleanUpiId) {
+      return res.status(400).json({ error: 'UPI ID is required' });
+    }
+
+    const updatedSettings = {
+      ...current,
+      payment_enabled: Boolean(payment_enabled),
+      upi_id: cleanUpiId,
+      payee_name: String(payee_name || 'College OS').trim(),
+      instructions: Array.isArray(instructions) ? instructions : (typeof instructions === 'string' ? instructions.split('\n').filter(Boolean) : current.instructions),
+      support_message: String(support_message || '').trim(),
+      verification_required: Boolean(verification_required),
+      updated_at: new Date().toISOString(),
+      updated_by: req.session.userId
+    };
+
+    await pool.query(
+      `INSERT INTO platform_settings (key, value_json, updated_by, updated_at)
+       VALUES ('payment_settings_config', $1::jsonb, $2, CURRENT_TIMESTAMP)
+       ON CONFLICT (key) DO UPDATE SET value_json = EXCLUDED.value_json, updated_by = EXCLUDED.updated_by, updated_at = CURRENT_TIMESTAMP`,
+      [JSON.stringify(updatedSettings), req.session.userId]
+    );
+
+    await writeAuditLog(req, 'payment_settings.update', 'platform_settings', 'payment_settings_config', {
+      payment_enabled: updatedSettings.payment_enabled,
+      upi_id: updatedSettings.upi_id,
+      payee_name: updatedSettings.payee_name
+    });
+
+    res.json({ success: true, message: 'Payment settings updated successfully', settings: updatedSettings });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update payment settings', details: err.message });
+  }
+});
+
+const handlePaymentQrUpload = (req, res, next) => {
+  if (req.is('multipart/form-data')) {
+    return paymentQrUpload.single('qrImage')(req, res, next);
+  }
+  return next();
+};
+
+// POST /api/admin/control/payments/settings/qr - Upload/replace payment QR image
+router.post('/payments/settings/qr', requireAdmin, handlePaymentQrUpload, async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'QR Code image file is required' });
+    }
+
+    const stored = await saveUploadedFile({
+      file: req.file,
+      folder: 'payment-settings/qr',
+      prefix: 'payment-qr',
+      userId: req.session.userId,
+      uploadedBy: req.session.userId,
+      entityType: 'payment_qr'
+    });
+
+    const current = await getPaymentSettings();
+    const updatedSettings = {
+      ...current,
+      qr_image_url: stored.url,
+      updated_at: new Date().toISOString(),
+      updated_by: req.session.userId
+    };
+
+    await pool.query(
+      `INSERT INTO platform_settings (key, value_json, updated_by, updated_at)
+       VALUES ('payment_settings_config', $1::jsonb, $2, CURRENT_TIMESTAMP)
+       ON CONFLICT (key) DO UPDATE SET value_json = EXCLUDED.value_json, updated_by = EXCLUDED.updated_by, updated_at = CURRENT_TIMESTAMP`,
+      [JSON.stringify(updatedSettings), req.session.userId]
+    );
+
+    await writeAuditLog(req, 'payment_settings.qr_update', 'platform_settings', 'payment_settings_config', {
+      qr_image_url: stored.url
+    });
+
+    res.json({ success: true, message: 'Payment QR image updated successfully', qr_image_url: stored.url, settings: updatedSettings });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to upload Payment QR image', details: err.message });
+  }
+});
+
+// GET /api/admin/control/payments/queue - Paginated pending verification queue with duplicate UTR detection
+router.get('/payments/queue', requireAdmin, async (req, res) => {
+  try {
+    const page = Math.max(1, toInt(req.query.page, 1));
+    const limit = Math.min(Math.max(toInt(req.query.limit, 20), 1), 100);
+    const offset = (page - 1) * limit;
+
+    const countRes = await pool.query("SELECT COUNT(*)::int AS total FROM membership_payment_requests WHERE status = 'pending'");
+    const total = countRes.rows[0]?.total || 0;
+
+    const { rows } = await pool.query(`
+      SELECT 
+        m.id,
+        m.user_id AS student_id,
+        u.email AS student_email,
+        u.full_name AS student_name,
+        m.plan_id,
+        m.amount_inr,
+        m.payment_method,
+        m.transaction_id AS utr_reference,
+        m.screenshot_url AS proof_url,
+        m.note,
+        m.status,
+        m.submitted_at,
+        (
+          SELECT COUNT(*)::int 
+          FROM membership_payment_requests dup 
+          WHERE UPPER(TRIM(dup.transaction_id)) = UPPER(TRIM(m.transaction_id)) 
+            AND dup.id != m.id
+        ) AS duplicate_utr_count
+      FROM membership_payment_requests m
+      JOIN users u ON u.id = m.user_id
+      WHERE m.status = 'pending'
+      ORDER BY m.submitted_at ASC
+      LIMIT $1 OFFSET $2
+    `, [limit, offset]);
+
+    const queue = rows.map(r => ({
+      ...r,
+      amount_inr: Number(r.amount_inr),
+      is_duplicate_utr: (r.duplicate_utr_count || 0) > 0
+    }));
+
+    res.json({
+      success: true,
+      pendingQueue: queue,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch pending payment queue', details: err.message });
+  }
+});
+
+// GET /api/admin/control/payments/transactions - Paginated historical payment transactions
+router.get('/payments/transactions', requireAdmin, async (req, res) => {
+  try {
+    const page = Math.max(1, toInt(req.query.page, 1));
+    const limit = Math.min(Math.max(toInt(req.query.limit, 20), 1), 100);
+    const offset = (page - 1) * limit;
+    const statusFilter = String(req.query.status || '').trim().toLowerCase();
+    const search = String(req.query.search || '').trim();
+
+    let whereConditions = [];
+    let queryParams = [];
+    let paramIdx = 1;
+
+    if (statusFilter && statusFilter !== 'all') {
+      whereConditions.push(`m.status = $${paramIdx++}`);
+      queryParams.push(statusFilter);
+    }
+
+    if (search) {
+      whereConditions.push(`(
+        u.email ILIKE $${paramIdx} 
+        OR u.full_name ILIKE $${paramIdx} 
+        OR m.transaction_id ILIKE $${paramIdx}
+      )`);
+      queryParams.push(`%${search}%`);
+      paramIdx++;
+    }
+
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
+    const countRes = await pool.query(`SELECT COUNT(*)::int AS total FROM membership_payment_requests m JOIN users u ON u.id = m.user_id ${whereClause}`, queryParams);
+    const total = countRes.rows[0]?.total || 0;
+
+    const query = `
+      SELECT 
+        m.id,
+        m.user_id AS student_id,
+        u.email AS student_email,
+        u.full_name AS student_name,
+        m.plan_id,
+        m.amount_inr,
+        m.payment_method,
+        m.transaction_id AS utr_reference,
+        m.screenshot_url AS proof_url,
+        m.note,
+        m.status,
+        m.rejection_reason,
+        m.submitted_at,
+        m.approved_at,
+        approver.full_name AS approved_by_name
+      FROM membership_payment_requests m
+      JOIN users u ON u.id = m.user_id
+      LEFT JOIN users approver ON approver.id = m.approved_by
+      ${whereClause}
+      ORDER BY m.submitted_at DESC
+      LIMIT $${paramIdx++} OFFSET $${paramIdx++}
+    `;
+
+    queryParams.push(limit, offset);
+    const { rows } = await pool.query(query, queryParams);
+
+    res.json({
+      success: true,
+      transactions: rows.map(r => ({ ...r, amount_inr: Number(r.amount_inr) })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch payment transactions', details: err.message });
+  }
+});
+
+// POST /api/admin/control/payments/:id/approve - Atomic approval transaction with Part 6 membership activation
+router.post('/payments/:id/approve', requirePermission('verify_payments'), async (req, res) => {
+  const paymentId = parseInt(req.params.id, 10);
+  if (!paymentId) return res.status(400).json({ error: 'Invalid payment ID' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Lock payment row & check status
+    const payRes = await client.query(
+      "SELECT * FROM membership_payment_requests WHERE id = $1 FOR UPDATE",
+      [paymentId]
+    );
+
+    if (payRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Payment request not found' });
+    }
+
+    const payment = payRes.rows[0];
+    if (payment.status === 'approved') {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'PAYMENT_ALREADY_PROCESSED', message: 'This payment has already been approved.' });
+    }
+
+    // 2. Fetch authoritative plan details from DB or snapshot
+    let planId = payment.plan_id;
+    let durationValue = 30;
+    let durationUnit = 'DAYS';
+    let planName = payment.plan_name_snapshot || 'Premium Membership';
+    let planPrice = Number(payment.amount_inr || 49);
+
+    if (planId) {
+      const planRes = await client.query("SELECT * FROM membership_plans WHERE id = $1", [planId]);
+      if (planRes.rows.length > 0) {
+        durationValue = planRes.rows[0].duration_value;
+        durationUnit = planRes.rows[0].duration_unit;
+        planName = planRes.rows[0].name;
+        planPrice = Number(planRes.rows[0].price);
+      }
+    } else {
+      const planRes = await client.query("SELECT * FROM membership_plans WHERE code = 'premium' LIMIT 1");
+      if (planRes.rows.length > 0) {
+        planId = planRes.rows[0].id;
+        durationValue = planRes.rows[0].duration_value;
+        durationUnit = planRes.rows[0].duration_unit;
+        planName = planRes.rows[0].name;
+        planPrice = Number(planRes.rows[0].price);
+      }
+    }
+
+    let intervalString = `${durationValue} days`;
+    if (durationUnit === 'MONTHS') intervalString = `${durationValue} months`;
+    if (durationUnit === 'YEARS') intervalString = `${durationValue} years`;
+
+    // 3. Deactivate old active membership for student
+    await client.query("UPDATE memberships SET status = 'EXPIRED', updated_at = CURRENT_TIMESTAMP WHERE student_id = $1 AND status = 'ACTIVE'", [payment.user_id]);
+
+    // 4. Create active membership in `memberships` table
+    const memRes = await client.query(`
+      INSERT INTO memberships (student_id, plan_id, status, started_at, expires_at, source, plan_name_at_activation, price_at_activation)
+      VALUES ($1, $2, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ($3::interval), 'PAYMENT', $4, $5)
+      RETURNING id, expires_at
+    `, [payment.user_id, planId, intervalString, planName, planPrice]);
+
+    const createdMembership = memRes.rows[0];
+
+    // 5. Update student user flags
+    await client.query(`
+      UPDATE users
+      SET subscription_tier = 'premium',
+          payment_status = 'approved',
+          subscription_started_at = CURRENT_TIMESTAMP,
+          subscription_expiry = $1
+      WHERE id = $2
+    `, [createdMembership.expires_at, payment.user_id]);
+
+    // 6. Update payment request status & link membership ID
+    await client.query(`
+      UPDATE membership_payment_requests
+      SET status = 'approved',
+          approved_at = CURRENT_TIMESTAMP,
+          approved_by = $1,
+          expiry_date = $2,
+          membership_id = $3,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $4
+    `, [req.session.userId, createdMembership.expires_at, createdMembership.id, paymentId]);
+
+    // 7. Write Audit Log
+    await client.query(`
+      INSERT INTO admin_audit_logs (actor_user_id, actor_role, action, target_type, target_id, metadata)
+      VALUES ($1, 'admin', 'payment.approve', 'membership_payment_requests', $2, $3::jsonb)
+    `, [
+      req.session.userId,
+      paymentId,
+      JSON.stringify({
+        studentId: payment.user_id,
+        amount: payment.amount_inr,
+        transactionId: payment.transaction_id,
+        membershipId: createdMembership.id
+      })
+    ]);
+
+    await client.query('COMMIT');
+
+    // Async notification (failsafe, outside transaction)
+    pool.query('INSERT INTO notifications (user_id, message, kind) VALUES ($1, $2, $3)', [
+      payment.user_id,
+      'Your payment has been approved! Your premium membership is now active.',
+      'payment_approved'
+    ]).catch(() => {});
+
+    res.json({
+      success: true,
+      message: 'Payment approved and membership activated atomically.',
+      paymentId,
+      membershipId: createdMembership.id,
+      expiresAt: createdMembership.expires_at
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: 'Failed to approve payment', details: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// POST /api/admin/control/payments/:id/reject - Reject pending payment with mandatory reason
+router.post('/payments/:id/reject', requirePermission('verify_payments'), async (req, res) => {
+  const paymentId = parseInt(req.params.id, 10);
+  const reason = String(req.body.reason || '').trim();
+
+  if (!paymentId) return res.status(400).json({ error: 'Invalid payment ID' });
+  if (!reason) return res.status(400).json({ error: 'Rejection reason is required' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const payRes = await client.query(
+      "SELECT * FROM membership_payment_requests WHERE id = $1 FOR UPDATE",
+      [paymentId]
+    );
+
+    if (payRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Payment request not found' });
+    }
+
+    const payment = payRes.rows[0];
+    if (payment.status === 'rejected') {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'PAYMENT_ALREADY_PROCESSED', message: 'This payment has already been rejected.' });
+    }
+
+    await client.query(`
+      UPDATE membership_payment_requests
+      SET status = 'rejected',
+          rejection_reason = $1,
+          approved_by = $2,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $3
+    `, [reason, req.session.userId, paymentId]);
+
+    await client.query(`
+      UPDATE users
+      SET payment_status = 'rejected'
+      WHERE id = $1 AND (subscription_tier IS NULL OR subscription_tier = 'free')
+    `, [payment.user_id]);
+
+    await client.query(`
+      INSERT INTO admin_audit_logs (actor_user_id, actor_role, action, target_type, target_id, metadata)
+      VALUES ($1, 'admin', 'payment.reject', 'membership_payment_requests', $2, $3::jsonb)
+    `, [
+      req.session.userId,
+      paymentId,
+      JSON.stringify({
+        studentId: payment.user_id,
+        reason,
+        transactionId: payment.transaction_id
+      })
+    ]);
+
+    await client.query('COMMIT');
+
+    // Async notification
+    pool.query('INSERT INTO notifications (user_id, message, kind) VALUES ($1, $2, $3)', [
+      payment.user_id,
+      `Your payment verification was not approved: ${reason}`,
+      'payment_rejected'
+    ]).catch(() => {});
+
+    res.json({
+      success: true,
+      message: 'Payment rejected successfully.',
+      paymentId,
+      reason
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: 'Failed to reject payment', details: err.message });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;
 module.exports.ensureAdminControlSchema = ensureAdminControlSchema;
+module.exports.getPaymentSettings = getPaymentSettings;
+
+

@@ -281,349 +281,6 @@ function bindAdminShortcut() {
   }, { passive: false });
 }
 
-function createMathCaptcha(targetPrefix) {
-  const a = Math.floor(Math.random() * 9) + 1;
-  const b = Math.floor(Math.random() * 9) + 1;
-  const question = `${a} + ${b} = ?`;
-  const answer = String(a + b);
-  const questionNode = byId(`${targetPrefix}CaptchaQuestion`);
-  const inputNode = byId(`${targetPrefix}CaptchaInput`);
-  if (questionNode) questionNode.textContent = question;
-  if (inputNode) inputNode.value = '';
-  return { question, answer };
-}
-
-
-const captchaState = {
-  login: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false, retryAttempted: false, retryCount: 0, loadFailed: false },
-  signup: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false, retryAttempted: false, retryCount: 0, loadFailed: false },
-  admin: { answer: '', serverChallenge: null, lastFetched: 0, challengePromise: null, requestId: 0, ready: false, retryAttempted: false, retryCount: 0, loadFailed: false }
-};
-
-const CAPTCHA_REQUEST_TIMEOUT_MS = 4000;
-const CAPTCHA_RETRY_DELAY_MS = 300;
-const CAPTCHA_MAX_AUTO_RETRIES = 2;
-
-const CAPTCHA_STORAGE_KEY = 'collegeOsCaptchaState';
-
-function hasCaptchaUi(scope) {
-  return Boolean(byId(`${scope}CaptchaQuestion`) || byId(`${scope}CaptchaInput`));
-}
-
-function readPersistedCaptcha(scope) {
-  if (typeof sessionStorage === 'undefined') return null;
-
-  try {
-    const raw = sessionStorage.getItem(CAPTCHA_STORAGE_KEY);
-    if (!raw) return null;
-
-    const stored = JSON.parse(raw);
-    const challenge = stored?.[scope];
-    if (!challenge || typeof challenge !== 'object') return null;
-    if (!challenge.expiresAt || Number(challenge.expiresAt) <= Date.now()) return null;
-
-    return challenge;
-  } catch {
-    return null;
-  }
-}
-
-function persistCaptcha(scope, challenge) {
-  if (typeof sessionStorage === 'undefined' || !challenge || typeof challenge !== 'object') return;
-
-  try {
-    const raw = sessionStorage.getItem(CAPTCHA_STORAGE_KEY);
-    const stored = raw ? JSON.parse(raw) : {};
-    stored[scope] = challenge;
-    sessionStorage.setItem(CAPTCHA_STORAGE_KEY, JSON.stringify(stored));
-  } catch {
-    // Ignore storage failures and fall back to in-memory state.
-  }
-}
-
-function resolveCaptchaContent(challenge) {
-  if (!challenge || typeof challenge !== 'object') return null;
-
-  const text = String(
-    challenge.question ||
-    challenge.challenge ||
-    challenge.challengeText ||
-    challenge.prompt ||
-    challenge.captchaText ||
-    ''
-  ).trim();
-
-  if (challenge.svg && String(challenge.svg).trim()) {
-    return { type: 'svg', value: String(challenge.svg) };
-  }
-
-  if (challenge.image && String(challenge.image).trim()) {
-    return { type: 'image', value: String(challenge.image) };
-  }
-
-  if (challenge.imageUrl && String(challenge.imageUrl).trim()) {
-    return { type: 'image', value: String(challenge.imageUrl) };
-  }
-
-  if (challenge.dataUrl && String(challenge.dataUrl).trim()) {
-    return { type: 'image', value: String(challenge.dataUrl) };
-  }
-
-  if (text) {
-    return { type: 'text', value: text };
-  }
-
-  return null;
-}
-
-function renderCaptchaContent(scope, challenge) {
-  const contentNode = byId(`${scope}CaptchaChallenge`);
-  const questionNode = byId(`${scope}CaptchaQuestion`);
-  const resolved = resolveCaptchaContent(challenge);
-
-  if (questionNode) {
-    if (challenge && resolved) {
-      const label = resolved.type === 'text' ? resolved.value : 'Captcha challenge';
-      questionNode.textContent = label;
-    } else {
-      questionNode.textContent = 'Captcha unavailable. Click refresh.';
-    }
-  }
-
-  if (!contentNode) return resolved;
-
-  contentNode.innerHTML = '';
-
-  if (!resolved) {
-    contentNode.textContent = '';
-    return null;
-  }
-
-  if (resolved.type === 'svg') {
-    contentNode.innerHTML = resolved.value;
-    return resolved;
-  }
-
-  if (resolved.type === 'image') {
-    const img = document.createElement('img');
-    img.alt = 'CAPTCHA challenge';
-    img.src = resolved.value;
-    img.loading = 'eager';
-    contentNode.appendChild(img);
-    return resolved;
-  }
-
-  contentNode.textContent = resolved.value;
-  return resolved;
-}
-
-function getCaptchaElements(scope) {
-  const box = byId(`${scope}CaptchaBox`);
-  const question = byId(`${scope}CaptchaQuestion`);
-  const input = byId(`${scope}CaptchaInput`);
-  const refreshButton = byId(`refresh${scope.charAt(0).toUpperCase()}${scope.slice(1)}Captcha`);
-  const status = byId(`${scope}CaptchaStatus`);
-  const submitButton = scope === 'login'
-    ? byId('loginSubmitBtn')
-    : scope === 'signup'
-      ? byId('signupSubmitBtn')
-      : byId('adminLoginForm')?.querySelector('button[type="submit"]');
-
-  return { box, question, input, refreshButton, status, submitButton };
-}
-
-function setCaptchaUiState(scope, { loading = false, message = '', error = false } = {}) {
-  const { box, input, refreshButton, status, submitButton } = getCaptchaElements(scope);
-  if (box) box.classList.toggle('is-loading', loading);
-  if (box) box.setAttribute('aria-busy', loading ? 'true' : 'false');
-  if (status) status.textContent = message && (loading || error) ? message : '';
-  if (input) input.disabled = loading || !captchaState[scope].ready;
-  if (refreshButton) refreshButton.disabled = false;
-  if (submitButton) submitButton.disabled = loading || !captchaState[scope].ready;
-}
-
-function setCaptchaReady(scope, ready, message = '', challenge = null) {
-  const content = challenge || captchaState[scope].serverChallenge;
-  const hasContent = Boolean(resolveCaptchaContent(content));
-  captchaState[scope].ready = Boolean(ready && hasContent);
-  if (!captchaState[scope].ready) {
-    captchaState[scope].answer = '';
-    captchaState[scope].serverChallenge = challenge || null;
-  }
-  if (captchaState[scope].ready) {
-    captchaState[scope].retryCount = 0;
-    captchaState[scope].retryAttempted = false;
-  }
-  renderCaptchaContent(scope, content);
-  setCaptchaUiState(scope, {
-    loading: false,
-    message: captchaState[scope].ready
-      ? (message || 'Captcha ready.')
-      : (message || 'Captcha could not load. Refresh captcha.'),
-    error: !captchaState[scope].ready
-  });
-}
-
-function isChallengeFresh(challenge, graceMs = 5000) {
-  if (!challenge) return false;
-  const expiresAt = Number(challenge.expiresAt || 0);
-  return Boolean(expiresAt && expiresAt > Date.now() + graceMs);
-}
-
-async function refreshCaptcha(scope, { force = false } = {}) {
-  if (!hasCaptchaUi(scope)) return null;
-
-  if (captchaState[scope].loadFailed && !force) {
-    setCaptchaReady(scope, false, 'Captcha failed to load. Click Refresh to try again.', null);
-    return null;
-  }
-
-  const now = Date.now();
-  const currentChallenge = captchaState[scope].serverChallenge;
-  const existingPromise = captchaState[scope].challengePromise;
-
-  if (existingPromise && !force) {
-    return existingPromise;
-  }
-
-  if (!force && currentChallenge) {
-    if (isChallengeFresh(currentChallenge, 15000)) {
-      setCaptchaReady(scope, true, 'Captcha ready.', currentChallenge);
-      return currentChallenge;
-    }
-  }
-
-  if (!force) {
-    const persistedChallenge = readPersistedCaptcha(scope);
-    if (persistedChallenge) {
-      captchaState[scope].serverChallenge = persistedChallenge;
-      captchaState[scope].lastFetched = Number(persistedChallenge.fetchedAt || now);
-      if (Number.isInteger(Number(persistedChallenge.a)) && Number.isInteger(Number(persistedChallenge.b))) {
-        captchaState[scope].answer = String(Number(persistedChallenge.a) + Number(persistedChallenge.b));
-      }
-      setCaptchaReady(scope, true, 'Captcha ready.', persistedChallenge);
-      return persistedChallenge;
-    }
-  }
-
-  if (currentChallenge && !force) {
-    // Use cached challenge
-    setCaptchaReady(scope, true, 'Captcha ready.', currentChallenge);
-    return currentChallenge;
-  }
-
-  const requestId = (captchaState[scope].requestId || 0) + 1;
-  captchaState[scope].requestId = requestId;
-  setCaptchaReady(scope, false, force ? 'Refreshing captcha...' : 'Preparing captcha...');
-
-  const fetchPromise = (async () => {
-    try {
-      if (window.CollegeOSApi?.getCaptchaChallenge) {
-        const apiCall = window.CollegeOSApi.getCaptchaChallenge(force ? { forceRefresh: true } : {});
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('CAPTCHA_TIMEOUT')), CAPTCHA_REQUEST_TIMEOUT_MS));
-        let payload;
-        try {
-          const result = await Promise.race([apiCall, timeoutPromise]);
-          payload = result;
-        } catch (err) {
-          if (!force && captchaState[scope].retryCount < CAPTCHA_MAX_AUTO_RETRIES) {
-            captchaState[scope].retryCount += 1;
-            setCaptchaReady(scope, false, 'Captcha is taking longer than expected. Retrying...', null);
-            await new Promise((resolve) => setTimeout(resolve, CAPTCHA_RETRY_DELAY_MS));
-            return refreshCaptcha(scope, { force: true });
-          }
-
-          captchaState[scope].serverChallenge = null;
-          captchaState[scope].loadFailed = true;
-          if (captchaState[scope].requestId === requestId) {
-            setCaptchaReady(scope, false, 'Captcha failed to load. Click Refresh Captcha to try again.', null);
-          }
-          return captchaState[scope].serverChallenge;
-        }
-
-        const challenge = payload?.captcha || payload || null;
-        if (captchaState[scope].requestId !== requestId) return captchaState[scope].serverChallenge;
-
-        captchaState[scope].serverChallenge = challenge;
-        captchaState[scope].lastFetched = Date.now();
-        if (challenge) {
-          persistCaptcha(scope, { ...challenge, fetchedAt: captchaState[scope].lastFetched });
-        }
-        if (Number.isInteger(Number(challenge?.a)) && Number.isInteger(Number(challenge?.b))) {
-          captchaState[scope].answer = String(Number(challenge.a) + Number(challenge.b));
-        }
-
-        const resolvedContent = resolveCaptchaContent(challenge);
-        if (!resolvedContent) {
-          captchaState[scope].loadFailed = true;
-          setCaptchaReady(scope, false, 'Captcha failed to load. Click Refresh Captcha to try again.', challenge);
-          return null;
-        }
-
-        captchaState[scope].loadFailed = false;
-        captchaState[scope].retryCount = 0;
-        captchaState[scope].retryAttempted = false;
-        setCaptchaReady(scope, true, 'Captcha ready.', challenge);
-      }
-    } catch (e) {
-      if (!force && captchaState[scope].retryCount < CAPTCHA_MAX_AUTO_RETRIES) {
-        captchaState[scope].retryCount += 1;
-        setCaptchaReady(scope, false, 'Captcha is taking longer than expected. Retrying...', null);
-        await new Promise((resolve) => setTimeout(resolve, CAPTCHA_RETRY_DELAY_MS));
-        return refreshCaptcha(scope, { force: true });
-      }
-
-      captchaState[scope].serverChallenge = null;
-      captchaState[scope].loadFailed = true;
-      if (captchaState[scope].requestId === requestId) {
-        setCaptchaReady(scope, false, 'Captcha failed to load. Click Refresh Captcha to try again.', null);
-      }
-    } finally {
-      if (captchaState[scope].requestId === requestId) {
-        captchaState[scope].challengePromise = null;
-      }
-    }
-    return captchaState[scope].serverChallenge;
-  })();
-
-  captchaState[scope].challengePromise = fetchPromise;
-  return fetchPromise;
-}
-
-function verifyCaptcha(scope) {
-  const input = String(byId(`${scope}CaptchaInput`)?.value || '').trim();
-  return input && input === captchaState[scope].answer;
-}
-
-function getCaptchaPayload(scope) {
-  const input = String(byId(`${scope}CaptchaInput`)?.value || '').trim();
-  const challenge = captchaState[scope]?.serverChallenge;
-  if (!challenge) return null;
-  return {
-    ...challenge,
-    answer: Number(input)
-  };
-}
-
-async function ensureCaptchaPayload(scope) {
-  let payload = getCaptchaPayload(scope);
-  if (payload) return payload;
-  if (captchaState[scope].loadFailed) {
-    throw new Error('Captcha failed to load. Click Refresh Captcha to try again.');
-  }
-  try {
-    await refreshCaptcha(scope);
-  } catch (err) {
-    // Propagate so caller can show a friendly message and avoid submitting without a server challenge
-    throw new Error('Captcha service is unavailable. Please refresh the captcha and try again.');
-  }
-  payload = getCaptchaPayload(scope);
-  if (!payload) {
-    throw new Error('Captcha could not load. Refresh Captcha.');
-  }
-  return payload;
-}
-
 const turnstileState = {
   login: {
     widgetId: null,
@@ -644,23 +301,28 @@ const turnstileState = {
     renderPromise: null,
     pendingResolve: null,
     pendingReject: null
+  },
+  admin: {
+    widgetId: null,
+    token: '',
+    ready: false,
+    bypass: false,
+    loadFailed: false,
+    renderPromise: null,
+    pendingResolve: null,
+    pendingReject: null
   }
 };
 
 const TURNSTILE_SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
 let turnstileScriptPromise = null;
 
-function isLocalDevHost() {
-  const hostname = String(window.location.hostname || '').toLowerCase();
-  return hostname === 'localhost' || hostname === '127.0.0.1';
-}
-
 function getTurnstileSiteKey() {
   return String(
     authExperienceState.turnstile?.siteKey
     || window.TURNSTILE_SITE_KEY
     || window.CollegeOSApiConfig?.turnstileSiteKey
-    || ''
+    || '0x4AAAAAADt9kXSTY-ogO-oz'
   ).trim();
 }
 
@@ -674,18 +336,6 @@ function getTurnstileStatusNode(scope) {
 
 function getTurnstileHiddenInput(scope) {
   return byId(`${scope}CaptchaInput`);
-}
-
-function getTurnstileSubmitButtons(scope) {
-  if (scope === 'login') {
-    return [byId('loginSubmitBtn'), byId('sendOtpBtn'), byId('verifyOtpBtn'), byId('resendOtpBtn'), byId('forgotPasswordBtn')].filter(Boolean);
-  }
-
-  if (scope === 'signup') {
-    return [byId('signupSubmitBtn')].filter(Boolean);
-  }
-
-  return [];
 }
 
 function syncTurnstileUiState(scope, { loading = false, message = '', error = false } = {}) {
@@ -708,10 +358,6 @@ function syncTurnstileUiState(scope, { loading = false, message = '', error = fa
     box.classList.toggle('is-loading', Boolean(loading));
     box.setAttribute('aria-busy', loading ? 'true' : 'false');
   }
-
-  getTurnstileSubmitButtons(scope).forEach((button) => {
-    button.disabled = Boolean(loading || (!state.ready && !state.loadFailed));
-  });
 }
 
 function setTurnstileToken(scope, token) {
@@ -754,22 +400,16 @@ async function loadTurnstileScript() {
   if (turnstileScriptPromise) return turnstileScriptPromise;
 
   turnstileScriptPromise = new Promise((resolve, reject) => {
-    let existingScript = document.querySelector('script[data-turnstile-client="true"]');
-    if (!existingScript) {
-      existingScript = document.querySelector('script[src*="challenges.cloudflare.com/turnstile/v0/api.js"]');
-      if (existingScript) {
-        existingScript.dataset.turnstileClient = 'true';
-      }
-    }
+    let existingScript = document.querySelector('script[data-turnstile-client="true"]')
+      || document.querySelector('script[src*="challenges.cloudflare.com/turnstile/v0/api.js"]');
 
     if (existingScript) {
+      existingScript.dataset.turnstileClient = 'true';
+      if (window.turnstile) return resolve(window.turnstile);
       const handleLoad = () => resolve(window.turnstile || null);
       const handleError = () => reject(new Error('Turnstile script failed to load'));
       existingScript.addEventListener('load', handleLoad, { once: true });
       existingScript.addEventListener('error', handleError, { once: true });
-      if (window.turnstile) {
-        resolve(window.turnstile);
-      }
       return;
     }
 
@@ -798,29 +438,7 @@ async function refreshTurnstile(scope, { force = false } = {}) {
 
   if (!state || !container) return null;
 
-  if (isLocalDevHost()) {
-    state.bypass = true;
-    setTurnstileToken(scope, '');
-    syncTurnstileUiState(scope, {
-      loading: false,
-      message: 'Security verification disabled for localhost development.',
-      error: false
-    });
-    return { turnstileToken: '', captchaToken: '', website: String(byId(`${scope}Website`)?.value || '') };
-  }
-
   if (!siteKey) {
-    if (isLocalDevHost()) {
-      state.bypass = true;
-      setTurnstileToken(scope, '');
-      syncTurnstileUiState(scope, {
-        loading: false,
-        message: 'Security check disabled in development.',
-        error: false
-      });
-      return { turnstileToken: '', captchaToken: '', website: String(byId(`${scope}Website`)?.value || '') };
-    }
-
     state.bypass = false;
     state.loadFailed = true;
     clearTurnstileToken(scope, 'Security check is not configured for this environment.');
@@ -832,11 +450,17 @@ async function refreshTurnstile(scope, { force = false } = {}) {
 
   state.bypass = false;
 
+  // If already rendered and not forcing a reset, return existing token or promise
+  if (state.widgetId !== null && !force) {
+    if (state.renderPromise) return state.renderPromise;
+    return state.token || '';
+  }
+
   try {
     await loadTurnstileScript();
   } catch (error) {
     state.loadFailed = true;
-    clearTurnstileToken(scope, 'Security check failed to load. Please try again.');
+    clearTurnstileToken(scope, 'Security verification could not load. Please retry.');
     error.code = 'TURNSTILE_UNAVAILABLE';
     state.lastError = error;
     throw error;
@@ -844,7 +468,7 @@ async function refreshTurnstile(scope, { force = false } = {}) {
 
   if (!window.turnstile) {
     state.loadFailed = true;
-    clearTurnstileToken(scope, 'Security check unavailable. Please try again.');
+    clearTurnstileToken(scope, 'Security check unavailable. Please retry.');
     const error = new Error('Turnstile is unavailable');
     error.code = 'TURNSTILE_UNAVAILABLE';
     state.lastError = error;
@@ -852,13 +476,21 @@ async function refreshTurnstile(scope, { force = false } = {}) {
   }
 
   if (state.widgetId !== null && force) {
+    state.token = '';
+    state.ready = false;
+    syncTurnstileUiState(scope, {
+      loading: true,
+      message: 'Resetting security check...',
+      error: false
+    });
+
     try {
       window.turnstile.reset(state.widgetId);
     } catch {
-      // ignore reset errors
+      state.loadFailed = true;
+      clearTurnstileToken(scope, 'Security check failed. Please reset it and try again.');
     }
-    state.token = '';
-    state.ready = false;
+    return state.token || '';
   }
 
   if (state.widgetId === null) {
@@ -882,32 +514,12 @@ async function refreshTurnstile(scope, { force = false } = {}) {
       },
       'error-callback': () => {
         state.loadFailed = true;
-        clearTurnstileToken(scope, 'Security check failed. Please reset it and try again.');
+        clearTurnstileToken(scope, 'Security verification failed to load. Please retry.');
       },
       'timeout-callback': () => {
         clearTurnstileToken(scope, 'Security check expired. Please verify again.');
       }
     });
-  } else if (force) {
-    state.renderPromise = new Promise((resolve, reject) => {
-      state.pendingResolve = resolve;
-      state.pendingReject = reject;
-    });
-
-    state.token = '';
-    state.ready = false;
-    syncTurnstileUiState(scope, {
-      loading: true,
-      message: 'Resetting security check...',
-      error: false
-    });
-
-    try {
-      window.turnstile.reset(state.widgetId);
-    } catch {
-      state.loadFailed = true;
-      clearTurnstileToken(scope, 'Security check failed. Please reset it and try again.');
-    }
   }
 
   syncTurnstileUiState(scope, {
@@ -924,31 +536,37 @@ async function refreshTurnstile(scope, { force = false } = {}) {
 }
 
 async function ensureTurnstilePayload(scope) {
+  const website = String(byId(`${scope}Website`)?.value || '');
+  const state = turnstileState[scope];
+
   if (hasTurnstileToken(scope)) {
+    const token = String(state?.token || '');
     return {
-      turnstileToken: String(turnstileState[scope].token || ''),
-      captchaToken: String(turnstileState[scope].token || ''),
-      website: String(byId(`${scope}Website`)?.value || '')
+      turnstileToken: token,
+      captchaToken: token,
+      website
     };
   }
 
-  if (turnstileState[scope]?.loadFailed) {
-    const error = turnstileState[scope].lastError || new Error('Security check is temporarily unavailable. Use Reset Security Check and try again.');
-    error.code = error.code || 'TURNSTILE_UNAVAILABLE';
-    throw error;
+  if (state?.loadFailed) {
+    throw new Error('Security verification failed to load. Click Reset Security Check to try again.');
   }
 
-  const token = await refreshTurnstile(scope, { force: false });
-  const resolvedToken = String(token || turnstileState[scope]?.token || '').trim();
-  if (!resolvedToken && !turnstileState[scope]?.bypass) {
-    throw new Error('Security verification failed. Please try again.');
+  try {
+    const token = await refreshTurnstile(scope, { force: false });
+    const resolvedToken = String(token || state?.token || '').trim();
+    if (resolvedToken || state?.bypass) {
+      return {
+        turnstileToken: resolvedToken,
+        captchaToken: resolvedToken,
+        website
+      };
+    }
+  } catch (_err) {
+    // ignore
   }
 
-  return {
-    turnstileToken: resolvedToken,
-    captchaToken: resolvedToken,
-    website: String(byId(`${scope}Website`)?.value || '')
-  };
+  throw new Error('Please complete the security check to continue.');
 }
 
 async function waitForSessionReady(timeoutMs = 5000, intervalMs = 300) {
@@ -1281,8 +899,8 @@ const authExperienceState = {
       'Privacy-first data handling'
     ],
     stats: {
-      value: '10k+',
-      label: 'active learners'
+      value: 'Active',
+      label: 'Learners Community'
     }
   },
   text: {
@@ -1313,8 +931,8 @@ const authExperienceState = {
     siteKey: ''
   },
   support: {
-    email: 'support@collegeos.in',
-    whatsapp: '+919000000000',
+    email: 'support@collegeo.in',
+    whatsapp: '',
     helpText: 'Share your issue and our team will help you quickly.'
   },
   legal: {
@@ -1632,16 +1250,16 @@ function applyAuthExperienceConfig() {
   renderBrandFeatures(branding.features || []);
   renderTrustPoints(branding.trustPoints || []);
 
-  setText('authStatValue', branding.stats?.value || '10k+');
-  setText('authStatLabel', branding.stats?.label || 'active learners');
+  setText('authStatValue', branding.stats?.value || 'Active');
+  setText('authStatLabel', branding.stats?.label || 'Learners Community');
   setText('loginTitle', text.loginTitle || 'Welcome back, build momentum');
   setText('loginDescription', text.loginDescription || 'Enter your secure workspace to continue your streak, plans, and career-focused study flow.');
   setText('signupTitle', text.signupTitle || 'Create your account');
   setText('signupDescription', text.signupDescription || 'Set up your profile in a few steps to unlock a branch-aware dashboard.');
 
   setText('supportHelpText', support.helpText || 'Share your issue and our team will help you quickly.');
-  setText('supportEmailChip', `Email: ${support.email || 'support@collegeos.in'}`);
-  setText('supportWhatsappChip', `WhatsApp: ${support.whatsapp || '+919000000000'}`);
+  setText('supportEmailChip', `Email: ${support.email || 'support@collegeo.in'}`);
+  setText('supportWhatsappChip', support.whatsapp ? `WhatsApp: ${support.whatsapp}` : 'Support SLA: 24 Hours');
   setText('legalTermsTitle', legal.termsTitle || 'Terms and Conditions');
   setText('legalTermsText', legal.termsText || 'By creating an account, you agree to use College OS responsibly, provide accurate profile information, and follow platform policies for fair usage.');
   setText('legalPrivacyTitle', legal.privacyTitle || 'Privacy Policy');
@@ -1938,7 +1556,7 @@ function bindSupportModal() {
         if (statusNode) statusNode.textContent = 'Issue submitted successfully. Support will contact you soon.';
         supportForm.reset();
       } catch (_error) {
-        const email = authExperienceState.support.email || 'support@collegeos.in';
+        const email = authExperienceState.support.email || 'support@collegeo.in';
         const whatsapp = authExperienceState.support.whatsapp || '';
         const fallback = `Could not submit directly. Email ${email}${whatsapp ? ` or WhatsApp ${whatsapp}` : ''}.`;
         if (statusNode) statusNode.textContent = fallback;
@@ -2239,7 +1857,7 @@ function openAcademicProfileSetup(prefill = {}) {
   modal.innerHTML = `
     <iframe 
       id="academicSetupIframe"
-      src="/academic-profile-setup.html"
+      src="/academic-onboarding"
       style="width: 100%; height: 100%; border: none; background: transparent;"
     ></iframe>
   `;
@@ -3116,18 +2734,53 @@ function hydrateAuthErrorFromQuery() {
   }
 }
 
+function preloadSecurityVerification() {
+  const scopes = ['login', 'signup'];
+  for (const scope of scopes) {
+    if (getTurnstileContainer(scope)) {
+      void refreshTurnstile(scope);
+    }
+  }
+}
+
+function bindCaptchaResetButtons() {
+  ['login', 'signup'].forEach((scope) => {
+    const btn = byId(`refresh${scope.charAt(0).toUpperCase()}${scope.slice(1)}Captcha`);
+    if (!btn || btn.dataset.boundReset === '1') return;
+    btn.dataset.boundReset = '1';
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `<i class="fa-solid fa-rotate-right fa-spin"></i> <span>Resetting...</span>`;
+      try {
+        await refreshTurnstile(scope, { force: true });
+      } catch (_err) {
+        syncTurnstileUiState(scope, {
+          loading: false,
+          message: 'Security verification could not load. Please retry.',
+          error: true
+        });
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const pathname = String(window.location.pathname || '').toLowerCase();
   const isAdminPath = pathname.startsWith('/admin') || pathname.includes('admin-login.html');
 
+  // Fast immediate parallel preload of security check
+  void preloadSecurityVerification();
+  bindCaptchaResetButtons();
+
   // Always load config but skip full student auth initialization on admin pages
   const authConfigPromise = loadAuthExperienceConfig();
   if (isAdminPath) {
-    // Minimal admin-only initialization: prepare captcha utilities and admin shortcut.
     bindAdminShortcut();
-    // Prepare admin captcha widget but do not initialize student auth UI
-    setCaptchaReady('admin', false, 'Preparing secure CAPTCHA...', null);
-    void refreshCaptcha('admin');
     return;
   }
   initAuthEntranceMotion();
@@ -3152,10 +2805,10 @@ document.addEventListener('DOMContentLoaded', () => {
   hydrateAuthErrorFromQuery();
 
   authConfigPromise.then(() => {
-    void refreshTurnstile('login', { force: true });
-    void refreshTurnstile('signup', { force: true });
+    void refreshTurnstile('login');
+    void refreshTurnstile('signup');
   }).catch(() => {
-    // The config loader applies safe defaults and the refresh shows a recoverable error.
+    // The config loader applies safe defaults.
   });
 
   if (window.CollegeOSApi?.startHealthPing) {

@@ -689,7 +689,14 @@ router.post('/:id/moderate', async (req, res, next) => {
         actorAdminId: req.session.userId
       });
 
-      return res.json({ message: `Contribution ${action.replace('_', ' ')} action completed` });
+      return res.json({
+        message: `Contribution ${action.replace('_', ' ')} action completed`,
+        contribution: {
+          id,
+          is_hidden: action === 'hide' ? true : (action === 'unhide' ? false : row.is_hidden),
+          status: action === 'hide' ? 'hidden' : row.status
+        }
+      });
     }
 
     let nextStatus = 'pending';
@@ -827,6 +834,17 @@ router.post('/:id/moderate', async (req, res, next) => {
 
     res.json({
       message: `Contribution marked as ${nextStatus}`,
+      contribution: {
+        id,
+        status: nextStatus,
+        pointsAwarded: computedPoints,
+        qualityScore,
+        usefulnessScore,
+        qualityFlags,
+        moderation_reason: reason,
+        moderationReason: reason,
+        isPremium: isPremium === null ? row.is_premium : isPremium
+      },
       moderation: {
         id,
         status: nextStatus,
@@ -834,6 +852,8 @@ router.post('/:id/moderate', async (req, res, next) => {
         qualityScore,
         usefulnessScore,
         qualityFlags,
+        moderation_reason: reason,
+        moderationReason: reason,
         isPremium: isPremium === null ? row.is_premium : isPremium
       }
     });
@@ -843,6 +863,38 @@ router.post('/:id/moderate', async (req, res, next) => {
   } finally {
     client.release();
   }
+});
+
+// Explicit action alias endpoints
+router.post('/:id/approve', async (req, res, next) => {
+  req.body.action = 'approve';
+  next();
+}, (req, res, next) => {
+  // Delegate to /:id/moderate logic
+  const handleModerate = router.stack.find((layer) => layer.route && layer.route.path === '/:id/moderate')?.route?.stack[0]?.handle;
+  if (handleModerate) return handleModerate(req, res, next);
+  next();
+});
+
+router.post('/:id/reject', async (req, res, next) => {
+  req.body.action = 'reject';
+  const handleModerate = router.stack.find((layer) => layer.route && layer.route.path === '/:id/moderate')?.route?.stack[0]?.handle;
+  if (handleModerate) return handleModerate(req, res, next);
+  next();
+});
+
+router.post('/:id/hide', async (req, res, next) => {
+  req.body.action = 'hide';
+  const handleModerate = router.stack.find((layer) => layer.route && layer.route.path === '/:id/moderate')?.route?.stack[0]?.handle;
+  if (handleModerate) return handleModerate(req, res, next);
+  next();
+});
+
+router.post('/:id/restore', async (req, res, next) => {
+  req.body.action = 'unhide';
+  const handleModerate = router.stack.find((layer) => layer.route && layer.route.path === '/:id/moderate')?.route?.stack[0]?.handle;
+  if (handleModerate) return handleModerate(req, res, next);
+  next();
 });
 
 router.post('/contributors/:userId/control', async (req, res, next) => {

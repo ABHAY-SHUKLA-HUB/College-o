@@ -1,8 +1,10 @@
 const express = require('express');
 const { pool } = require('../db/pool');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { requireFeatureEnabled } = require('../middleware/featureToggle');
 const { createUploadMiddleware, saveUploadedFile } = require('../services/uploadService');
 const { deleteUploadedFileById } = require('../services/supabaseStorage');
+const { sanitizeText } = require('../utils/communitySanitizer');
 
 const router = express.Router();
 
@@ -32,7 +34,7 @@ function isEditable(row) {
   return !row.admin_reply && (status === 'Submitted');
 }
 
-router.post('/upload-screenshot', requireAuth, upload.single('screenshot'), async (req, res) => {
+router.post('/upload-screenshot', requireAuth, requireFeatureEnabled('student_experience'), upload.single('screenshot'), async (req, res) => {
   await ensureFeedbackSchema();
   if (!req.file) return res.status(400).json({ error: 'Screenshot file is required' });
 
@@ -54,22 +56,25 @@ router.post('/upload-screenshot', requireAuth, upload.single('screenshot'), asyn
   }
 });
 
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuth, requireFeatureEnabled('student_experience'), async (req, res) => {
   await ensureFeedbackSchema();
   const { rating, message, screenshotUrl, category, isAnonymous } = req.body;
   if (!rating || !message) return res.status(400).json({ error: 'rating and message are required' });
+
+  const safeMessage = sanitizeText(message, 5000);
+  const safeCategory = sanitizeText(category || 'General Feedback', 60);
 
   const { rows } = await pool.query(
     `INSERT INTO feedback (user_id, rating, message, screenshot_url, category, status, is_anonymous, updated_at)
      VALUES ($1, $2, $3, $4, $5, 'Submitted', $6, NOW())
      RETURNING id, rating, message, screenshot_url, category, status, is_anonymous, admin_reply, created_at, updated_at`,
-    [req.session.userId, rating, message, screenshotUrl || null, category || 'General Feedback', Boolean(isAnonymous)]
+    [req.session.userId, Number(rating), safeMessage, screenshotUrl || null, safeCategory, Boolean(isAnonymous)]
   );
 
   res.status(201).json({ feedback: rows[0] });
 });
 
-router.get('/mine', requireAuth, async (req, res) => {
+router.get('/mine', requireAuth, requireFeatureEnabled('student_experience'), async (req, res) => {
   await ensureFeedbackSchema();
   const filter = String(req.query.filter || 'all').toLowerCase();
   const params = [req.session.userId];
@@ -103,7 +108,7 @@ router.get('/mine', requireAuth, async (req, res) => {
   res.json({ feedback: rows });
 });
 
-router.get('/stats', requireAuth, async (req, res) => {
+router.get('/stats', requireAuth, requireFeatureEnabled('student_experience'), async (req, res) => {
   await ensureFeedbackSchema();
   const { rows } = await pool.query(
     `SELECT
@@ -118,7 +123,25 @@ router.get('/stats', requireAuth, async (req, res) => {
   res.json({ stats: rows[0] });
 });
 
-router.put('/:id', requireAuth, async (req, res) => {
+router.get('/:id', requireAuth, requireFeatureEnabled('student_experience'), async (req, res) => {
+  await ensureFeedbackSchema();
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid feedback id' });
+
+  const isAdmin = req.session.role === 'admin' || req.session.role === 'super_admin';
+  const { rows } = await pool.query(
+    `SELECT f.*, u.full_name as student_name, u.email as student_email
+     FROM feedback f
+     JOIN users u ON u.id = f.user_id
+     WHERE f.id = $1 AND ($2 = TRUE OR f.user_id = $3)`,
+    [id, isAdmin, req.session.userId]
+  );
+
+  if (!rows[0]) return res.status(404).json({ error: 'Feedback not found' });
+  res.json({ feedback: rows[0] });
+});
+
+router.put('/:id', requireAuth, requireFeatureEnabled('student_experience'), async (req, res) => {
   await ensureFeedbackSchema();
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid feedback id' });
@@ -136,6 +159,9 @@ router.put('/:id', requireAuth, async (req, res) => {
   const { rating, message, screenshotUrl, category, isAnonymous } = req.body;
   if (!rating || !message) return res.status(400).json({ error: 'rating and message are required' });
 
+  const safeMessage = sanitizeText(message, 5000);
+  const safeCategory = sanitizeText(category || 'General Feedback', 60);
+
   const { rows } = await pool.query(
     `UPDATE feedback
      SET rating = $3,
@@ -146,19 +172,19 @@ router.put('/:id', requireAuth, async (req, res) => {
          updated_at = NOW()
      WHERE id = $1 AND user_id = $2
      RETURNING id, rating, message, screenshot_url, category, status, is_anonymous, admin_reply, created_at, updated_at`,
-    [id, req.session.userId, rating, message, screenshotUrl || null, category || 'General Feedback', Boolean(isAnonymous)]
+    [id, req.session.userId, Number(rating), safeMessage, screenshotUrl || null, safeCategory, Boolean(isAnonymous)]
   );
 
   res.json({ feedback: rows[0], message: 'Feedback updated successfully' });
 });
 
-router.delete('/:id', requireAuth, async (req, res) => {
+router.delete('/:id', requireAuth, requireFeatureEnabled('student_experience'), async (req, res) => {
   await ensureFeedbackSchema();
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid feedback id' });
 
   const current = await pool.query(
-    `SELECT id, status, admin_reply
+    `SELECT id, status, admin_reply, screenshot_url
      FROM feedback
      WHERE id = $1 AND user_id = $2`,
     [id, req.session.userId]
@@ -171,6 +197,82 @@ router.delete('/:id', requireAuth, async (req, res) => {
   const fileMatch = String(row.screenshot_url || '').match(/\/api\/files\/(\d+)/);
   if (fileMatch) await deleteUploadedFileById(fileMatch[1]);
   res.json({ message: 'Feedback deleted successfully' });
+});
+
+// Admin Feedback Routes
+router.get('/admin/all', requireAdmin, async (req, res) => {
+  await ensureFeedbackSchema();
+  const status = String(req.query.status || 'all').toLowerCase();
+  const search = String(req.query.search || '').trim();
+
+  const params = [];
+  const where = [];
+
+  if (status !== 'all') {
+    params.push(status);
+    where.push(`LOWER(f.status) = $${params.length}`);
+  }
+
+  if (search) {
+    params.push(`%${search}%`);
+    where.push(`(u.full_name ILIKE $${params.length} OR u.email ILIKE $${params.length} OR f.message ILIKE $${params.length})`);
+  }
+
+  const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+  const { rows } = await pool.query(
+    `SELECT f.id, f.rating, f.message, f.screenshot_url, f.category, f.status, f.admin_reply, f.is_anonymous, f.created_at, f.updated_at,
+            u.id as student_id, u.full_name as student_name, u.email as student_email
+     FROM feedback f
+     JOIN users u ON u.id = f.user_id
+     ${whereClause}
+     ORDER BY f.created_at DESC
+     LIMIT 100`,
+    params
+  );
+
+  res.json({ feedback: rows });
+});
+
+router.post('/admin/:id/reply', requireAdmin, async (req, res) => {
+  await ensureFeedbackSchema();
+  const id = Number(req.params.id);
+  const { reply } = req.body;
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid feedback id' });
+  if (!reply || !String(reply).trim()) return res.status(400).json({ error: 'Reply text required' });
+
+  const safeReply = sanitizeText(reply, 5000);
+  const { rows } = await pool.query(
+    `UPDATE feedback
+     SET admin_reply = $1, status = 'Replied', updated_at = NOW()
+     WHERE id = $2
+     RETURNING *`,
+    [safeReply, id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Feedback not found' });
+  res.json({ message: 'Reply sent successfully', feedback: rows[0] });
+});
+
+router.patch('/admin/:id/status', requireAdmin, async (req, res) => {
+  await ensureFeedbackSchema();
+  const id = Number(req.params.id);
+  const { status } = req.body;
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid feedback id' });
+
+  const validStatuses = ['Submitted', 'Under Review', 'Replied', 'Resolved', 'Closed'];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
+
+  const { rows } = await pool.query(
+    `UPDATE feedback
+     SET status = $1, updated_at = NOW()
+     WHERE id = $2
+     RETURNING *`,
+    [status, id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Feedback not found' });
+  res.json({ message: 'Status updated successfully', feedback: rows[0] });
 });
 
 module.exports = router;

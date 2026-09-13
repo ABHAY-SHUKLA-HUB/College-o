@@ -8,7 +8,10 @@ const {
 } = require('../services/aiOpsService');
 const { generateAiToolResponse } = require('../ai/services/gatewayService');
 
+const { requireFeatureEnabled } = require('../middleware/featureToggle');
+
 const router = express.Router();
+router.use(requireFeatureEnabled('ai_tools'));
 
 let schemaReady = false;
 
@@ -432,6 +435,11 @@ async function ensureCareerSchema() {
       category_id INTEGER REFERENCES academic_categories(id),
       branch_id INTEGER REFERENCES academic_branches(id),
       semester_id INTEGER REFERENCES academic_semesters(id),
+      college_id INTEGER REFERENCES universities(id),
+      course_id INTEGER REFERENCES academic_categories(id),
+      year_id INTEGER REFERENCES academic_semesters(id),
+      is_common BOOLEAN DEFAULT TRUE,
+      college_name VARCHAR(255),
       benefits JSONB NOT NULL DEFAULT '[]'::jsonb,
       prompt_template TEXT,
       created_by INTEGER REFERENCES users(id),
@@ -439,6 +447,42 @@ async function ensureCareerSchema() {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       deleted_at TIMESTAMP
     )
+  `);
+
+  // Additive Column Migrations (Idempotent)
+  await pool.query(`
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS tool_key VARCHAR(120);
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS title VARCHAR(180);
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS tagline TEXT;
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS icon_name VARCHAR(80) DEFAULT 'fa-wand-magic-sparkles';
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS accent_color VARCHAR(20) DEFAULT '#2563eb';
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS access_type VARCHAR(20) DEFAULT 'free';
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'published';
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS is_enabled BOOLEAN DEFAULT TRUE;
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS is_visible BOOLEAN DEFAULT TRUE;
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT FALSE;
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0;
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS category_id INTEGER REFERENCES academic_categories(id);
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS branch_id INTEGER REFERENCES academic_branches(id);
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS semester_id INTEGER REFERENCES academic_semesters(id);
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS college_id INTEGER REFERENCES universities(id);
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS course_id INTEGER REFERENCES academic_categories(id);
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS year_id INTEGER REFERENCES academic_semesters(id);
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS is_common BOOLEAN DEFAULT TRUE;
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS college_name VARCHAR(255);
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS benefits JSONB DEFAULT '[]'::jsonb;
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS prompt_template TEXT;
+    ALTER TABLE ai_tools_catalog ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
+
+    UPDATE ai_tools_catalog SET tool_key = COALESCE(tool_key, 'tool-' || id) WHERE tool_key IS NULL;
+    UPDATE ai_tools_catalog SET title = COALESCE(title, 'AI Tool') WHERE title IS NULL;
+    UPDATE ai_tools_catalog SET access_type = COALESCE(access_type, 'free') WHERE access_type IS NULL;
+
+    ALTER TABLE career_roadmaps ADD COLUMN IF NOT EXISTS college_id INTEGER REFERENCES universities(id);
+    ALTER TABLE career_roadmaps ADD COLUMN IF NOT EXISTS course_id INTEGER REFERENCES academic_categories(id);
+    ALTER TABLE career_roadmaps ADD COLUMN IF NOT EXISTS year_id INTEGER REFERENCES academic_semesters(id);
+    ALTER TABLE career_roadmaps ADD COLUMN IF NOT EXISTS is_common BOOLEAN DEFAULT TRUE;
+    ALTER TABLE career_roadmaps ADD COLUMN IF NOT EXISTS college_name VARCHAR(255);
   `);
 
   const roadmapCount = await pool.query('SELECT COUNT(*)::int AS count FROM career_roadmaps WHERE deleted_at IS NULL');

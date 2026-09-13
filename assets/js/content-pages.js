@@ -37,6 +37,52 @@ async function loadPaperColleges() {
   }
 }
 
+window.openProtectedPaperViewer = function(paperId, encodedTitle) {
+  const title = decodeURIComponent(encodedTitle || 'Question Paper');
+  const modal = document.getElementById('pdfViewerModal');
+  const titleEl = document.getElementById('pdfViewerTitle');
+  const iframe = document.getElementById('pdfViewerFrame');
+
+  if (titleEl) titleEl.textContent = title;
+  if (iframe) {
+    iframe.src = `/api/academics/content/papers/${paperId}/view#toolbar=0&navpanes=0&scrollbar=1`;
+  }
+  if (modal) {
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+};
+
+window.closeProtectedPaperViewer = function() {
+  const modal = document.getElementById('pdfViewerModal');
+  const iframe = document.getElementById('pdfViewerFrame');
+  if (iframe) iframe.src = 'about:blank';
+  if (modal) {
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+};
+
+document.getElementById('closePdfViewerBtn')?.addEventListener('click', window.closeProtectedPaperViewer);
+
+window.addEventListener('contextmenu', (e) => {
+  const modal = document.getElementById('pdfViewerModal');
+  if (modal && modal.style.display === 'flex') {
+    e.preventDefault();
+  }
+});
+
+window.addEventListener('keydown', (e) => {
+  const modal = document.getElementById('pdfViewerModal');
+  if (modal && modal.style.display === 'flex') {
+    if (e.key === 'Escape') window.closeProtectedPaperViewer();
+    if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'p' || e.key === 'S' || e.key === 'P')) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }
+});
+
 function renderPapersFeed(papers) {
   const feed = document.getElementById('papersFeed');
   if (!feed) return;
@@ -48,19 +94,28 @@ function renderPapersFeed(papers) {
 
   feed.innerHTML = papers
     .map((p) => {
-      const openAction = p.paper_url ? `<a class="btn secondary" href="${p.paper_url}" target="_blank" rel="noopener">Open Paper PDF</a>` : '<span class="pill">No file link yet</span>';
+      const safeTitle = encodeURIComponent(`${p.subject || ''} ${p.exam_name || 'Paper'}`);
+      const openAction = p.paper_url
+        ? `<button class="btn primary sm" onclick="openProtectedPaperViewer('${p.id}', '${safeTitle}')"><i class="fa-solid fa-book-open"></i> Read Paper</button>`
+        : '<span class="pill">No file link yet</span>';
+
+      const categoryBadge = p.category_name ? `<span class="pill" style="background:#e0f2fe; color:#0369a1;"><i class="fa-solid fa-layer-group"></i> ${p.category_name}</span>` : '';
+      const branchBadge = p.branch_name ? `<span class="pill" style="background:#f1f5f9; color:#334155;"><i class="fa-solid fa-graduation-cap"></i> ${p.branch_name}</span>` : (p.is_common ? '<span class="pill" style="background:#e0f2fe; color:#0284c7;">Common</span>' : '');
+      const semBadge = p.semester_label ? `<span class="pill" style="background:#f1f5f9; color:#475569;"><i class="fa-solid fa-calendar"></i> ${p.semester_label}</span>` : '';
+
       return `
         <article class="resource-card">
-          <h3>${p.exam_name}</h3>
-          <div class="resource-meta">
-            <span class="pill">${p.subject}</span>
+          <h3 style="margin-bottom:6px;">${p.subject || ''} — ${p.exam_name}</h3>
+          <div class="resource-meta" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;">
             <span class="pill">Year ${p.year}</span>
+            ${categoryBadge}
+            ${branchBadge}
+            ${semBadge}
             <span class="pill">${p.college_name || 'All Colleges'}</span>
           </div>
           <div class="actions">
             ${openAction}
-            <a class="btn secondary" href="${p.summary_note_url || 'notes-library.html'}">Summary Notes</a>
-            <button class="btn primary" type="button">Revision Checklist</button>
+            <a class="btn secondary sm" href="${p.summary_note_url || 'notes-library.html'}"><i class="fa-solid fa-file-lines"></i> Summary Notes</a>
           </div>
         </article>
       `;

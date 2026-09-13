@@ -289,8 +289,105 @@ async function ensureSupportSchema() {
   `);
 
   await pool.query(`
-    CREATE INDEX IF NOT EXISTS idx_support_admin_actions_actor
-    ON support_admin_actions(actor_user_id, created_at DESC)
+    CREATE TABLE IF NOT EXISTS support_tickets (
+      id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+      ticket_number VARCHAR(50) UNIQUE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      category_id INTEGER REFERENCES academic_categories(id),
+      category VARCHAR(80) DEFAULT 'General',
+      subject VARCHAR(250),
+      description TEXT,
+      status VARCHAR(30) DEFAULT 'OPEN',
+      priority VARCHAR(20) DEFAULT 'NORMAL',
+      assigned_admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      resolved_at TIMESTAMP,
+      closed_at TIMESTAMP,
+      resolved_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      resolution_summary TEXT,
+      entity_type VARCHAR(50),
+      entity_id INTEGER,
+      last_activity_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await pool.query(`
+    ALTER TABLE support_tickets
+      ADD COLUMN IF NOT EXISTS ticket_number VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS category_id INTEGER REFERENCES academic_categories(id),
+      ADD COLUMN IF NOT EXISTS category VARCHAR(80) DEFAULT 'General',
+      ADD COLUMN IF NOT EXISTS subject VARCHAR(250),
+      ADD COLUMN IF NOT EXISTS description TEXT,
+      ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'OPEN',
+      ADD COLUMN IF NOT EXISTS priority VARCHAR(20) DEFAULT 'NORMAL',
+      ADD COLUMN IF NOT EXISTS assigned_admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS closed_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS resolved_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS resolution_summary TEXT,
+      ADD COLUMN IF NOT EXISTS entity_type VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS entity_id INTEGER,
+      ADD COLUMN IF NOT EXISTS last_activity_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+    ALTER TABLE support_tickets ALTER COLUMN issue_type DROP NOT NULL;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS support_messages (
+      id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+      ticket_id INTEGER NOT NULL REFERENCES support_tickets(id) ON DELETE CASCADE,
+      sender_type VARCHAR(20) NOT NULL,
+      sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      message TEXT NOT NULL,
+      visibility VARCHAR(20) DEFAULT 'PUBLIC',
+      attachment_urls JSONB DEFAULT '[]'::jsonb,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS support_internal_notes (
+      id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+      ticket_id INTEGER NOT NULL REFERENCES support_tickets(id) ON DELETE CASCADE,
+      admin_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      note TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type VARCHAR(50) DEFAULT 'SYSTEM',
+      kind VARCHAR(50),
+      title VARCHAR(200),
+      message TEXT NOT NULL,
+      entity_type VARCHAR(50),
+      entity_id INTEGER,
+      is_read BOOLEAN DEFAULT FALSE,
+      read_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      deleted_at TIMESTAMP
+    )
+  `);
+
+  await pool.query(`
+    ALTER TABLE notifications
+      ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'SYSTEM',
+      ADD COLUMN IF NOT EXISTS entity_type VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS entity_id INTEGER,
+      ADD COLUMN IF NOT EXISTS read_at TIMESTAMP;
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_support_tickets_user ON support_tickets (user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets (status, last_activity_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_support_tickets_assigned ON support_tickets (assigned_admin_id, status);
+    CREATE INDEX IF NOT EXISTS idx_support_messages_ticket ON support_messages (ticket_id, created_at ASC);
+    CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications (user_id, is_read, created_at DESC);
   `);
 
   supportSchemaReady = true;

@@ -20,9 +20,14 @@ const DEFAULT_TEMPLATE_CONFIG = {
   sponsor_name: '',
   association_label: 'In Association With',
   association_name: '',
+  tech_partner_label: 'Technology Partner',
+  tech_partner_name: '',
+  organized_by_label: 'Organized by',
+  organized_by_name: 'College OS',
   logos: {
     main_logo: { enabled: true, url: '/assets/images/logo.png', alt: 'College OS' },
     partner_logo: { enabled: false, url: '', alt: 'Partner Logo' },
+    sponsor_logo: { enabled: false, url: '', alt: 'Sponsor Logo' },
     signature_logo: { enabled: true, url: '/assets/images/signature.png', title: 'Authorized Signatory', name: 'Dean of Academics' }
   },
   styling: {
@@ -52,16 +57,18 @@ function renderPlaceholders(templateStr, vars = {}) {
   if (!templateStr) return '';
   let result = String(templateStr);
   const replacements = {
-    '{{student_name}}': sanitizeText(vars.student_name || 'Sample Student'),
-    '{{position}}': sanitizeText(vars.position || '1st'),
+    '{{student_name}}': sanitizeText(vars.student_name || 'Abhay Shukla'),
+    '{{position}}': sanitizeText(vars.position || '1st Position'),
     '{{rank}}': String(vars.rank || 1),
-    '{{contest_name}}': sanitizeText(vars.contest_name || 'Coding Challenge #1'),
+    '{{contest_name}}': sanitizeText(vars.contest_name || 'Weekly Coding Challenge'),
     '{{contest_date}}': sanitizeText(vars.contest_date || new Date().toLocaleDateString()),
     '{{issue_date}}': sanitizeText(vars.issue_date || new Date().toLocaleDateString()),
-    '{{certificate_id}}': sanitizeText(vars.certificate_id || 'CO-CODE-PREVIEW-0001'),
+    '{{certificate_id}}': sanitizeText(vars.certificate_id || 'SAMPLE-CO-CODE-0001'),
     '{{organization_name}}': sanitizeText(vars.organization_name || 'College OS'),
     '{{partner_name}}': sanitizeText(vars.partner_name || ''),
     '{{sponsor_name}}': sanitizeText(vars.sponsor_name || ''),
+    '{{association_name}}': sanitizeText(vars.association_name || ''),
+    '{{tech_partner_name}}': sanitizeText(vars.tech_partner_name || ''),
     '{{powered_by_name}}': sanitizeText(vars.powered_by_name || vars.partner_name || ''),
     '{{organizer_name}}': sanitizeText(vars.organizer_name || 'College OS')
   };
@@ -278,16 +285,40 @@ async function finalizeContest(contestId, adminId) {
        LIMIT 3`,
       [contestId]
     );
-    const topLeaders = lRes.rows;
+    let topLeaders = lRes.rows;
+
+    if (topLeaders.length === 0) {
+      const subRes = await client.query(
+        `SELECT sub.student_id,
+                COALESCE(u.full_name, u.email, 'Student #' || sub.student_id) as full_name,
+                u.email,
+                SUM(best.max_prob_score)::integer as total_score,
+                COUNT(CASE WHEN best.has_accepted THEN 1 END)::integer as problems_solved,
+                0 as penalty_time
+         FROM (
+           SELECT DISTINCT student_id FROM coding_submissions WHERE contest_id = $1
+         ) sub
+         JOIN users u ON u.id = sub.student_id
+         JOIN (
+           SELECT contest_id, problem_id, student_id,
+                  MAX(score) as max_prob_score,
+                  BOOL_OR(status = 'accepted') as has_accepted
+           FROM coding_submissions
+           WHERE contest_id = $1
+           GROUP BY contest_id, problem_id, student_id
+         ) best ON best.student_id = sub.student_id AND best.contest_id = $1
+         GROUP BY sub.student_id, u.full_name, u.email
+         ORDER BY total_score DESC, problems_solved DESC
+         LIMIT 3`,
+        [contestId]
+      );
+      topLeaders = subRes.rows;
+    }
 
     // 3. Award Season Leaderboard Points (Idempotent)
-    // Points: Rank 1 = 100, Rank 2 = 75, Rank 3 = 60
     const pointTable = [100, 75, 60];
     for (let i = 0; i < topLeaders.length; i++) {
       const student = topLeaders[i];
-      const pts = pointTable[i] || 0;
-
-      // Update participant record with official final rank
       await client.query(
         `UPDATE coding_participants
          SET status = 'completed'
@@ -348,7 +379,7 @@ async function finalizeContest(contestId, adminId) {
       if (existingCert.rows.length > 0) {
         certRes = await client.query(
           `UPDATE coding_certificates
-           SET rank = $1, position_text = $2, template_id = $3, template_version_id = $4, configuration_snapshot = $5, status = $6, updated_at = NOW()
+           SET rank = $1, position_text = $2, template_id = $3, template_version_id = $4, configuration_snapshot = $5, status = $6
            WHERE contest_id = $7 AND student_id = $8
            RETURNING *`,
           [
@@ -441,6 +472,28 @@ async function revokeCertificate(certificateId, adminId, reason) {
 }
 
 /**
+ * Reissue Certificate
+ */
+async function reissueCertificate(certificateId, adminId, newPositionText = null) {
+  const { rows } = await pool.query(
+    `UPDATE coding_certificates
+     SET status = 'approved',
+         approved_by = $1,
+         approved_at = NOW(),
+         issued_at = NOW(),
+         position_text = COALESCE($2, position_text),
+         revoked_at = NULL,
+         revoked_by = NULL,
+         revoke_reason = NULL
+     WHERE id = $3
+     RETURNING *`,
+    [adminId, newPositionText, certificateId]
+  );
+  if (rows.length === 0) throw new Error('Certificate not found');
+  return rows[0];
+}
+
+/**
  * Public Verification Service
  */
 async function getPublicVerification(verificationToken) {
@@ -474,6 +527,10 @@ async function getPublicVerification(verificationToken) {
     partner_label: config.partner_label || 'Powered by',
     sponsor_name: config.sponsor_name || '',
     sponsor_label: config.sponsor_label || 'Sponsored by',
+    association_name: config.association_name || '',
+    association_label: config.association_label || 'In Association With',
+    tech_partner_name: config.tech_partner_name || '',
+    tech_partner_label: config.tech_partner_label || 'Technology Partner',
     revoked_reason: cert.status === 'revoked' ? cert.revoke_reason : undefined,
     verified_at: new Date().toISOString()
   };
@@ -504,7 +561,6 @@ async function getOverallSeasonLeaderboard() {
   `;
   const { rows } = await pool.query(query);
 
-  // Assign overall season ranks
   return rows.map((row, idx) => ({
     overall_rank: idx + 1,
     student_id: row.student_id,
@@ -547,7 +603,7 @@ async function generateCertificatePDF(certData) {
 
   // Draw Background Border
   doc.setLineWidth(2);
-  doc.setDrawColor(212, 175, 55); // Gold default border
+  doc.setDrawColor(212, 175, 55);
   doc.rect(10, 10, width - 20, height - 20);
 
   doc.setLineWidth(0.5);
@@ -556,7 +612,7 @@ async function generateCertificatePDF(certData) {
   // Header Title
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(26);
-  doc.setTextColor(30, 41, 59); // Slate dark
+  doc.setTextColor(30, 41, 59);
   doc.text(config.title || 'CERTIFICATE OF ACHIEVEMENT', width / 2, 35, { align: 'center' });
 
   // Subtitle
@@ -566,7 +622,7 @@ async function generateCertificatePDF(certData) {
   doc.text(config.subtitle || 'This is proudly presented to', width / 2, 48, { align: 'center' });
 
   // Student Name
-  const studentName = certData.student_name || 'Sample Student';
+  const studentName = certData.student_name || 'Abhay Shukla';
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(24);
   doc.setTextColor(15, 23, 42);
@@ -578,7 +634,7 @@ async function generateCertificatePDF(certData) {
   doc.line(width / 2 - 40, 68, width / 2 + 40, 68);
 
   // Achievement Body
-  const contestName = certData.contest_name || 'Coding Challenge #1';
+  const contestName = certData.contest_name || 'Weekly Coding Challenge';
   const posText = certData.position_text || rankLabel;
   const contestDate = certData.contest_date || new Date().toLocaleDateString();
 
@@ -590,10 +646,12 @@ async function generateCertificatePDF(certData) {
     contest_name: contestName,
     contest_date: contestDate,
     issue_date: certData.issue_date || new Date().toLocaleDateString(),
-    certificate_id: certData.certificate_number || 'CO-CODE-PREVIEW-0001',
+    certificate_id: certData.certificate_number || 'SAMPLE-CO-CODE-0001',
     organization_name: config.organization_name || 'College OS',
     partner_name: config.partner_name || '',
     sponsor_name: config.sponsor_name || '',
+    association_name: config.association_name || '',
+    tech_partner_name: config.tech_partner_name || '',
     powered_by_name: config.partner_name || '',
     organizer_name: config.organizer_name || 'College OS'
   });
@@ -603,14 +661,20 @@ async function generateCertificatePDF(certData) {
   doc.setTextColor(51, 65, 85);
   doc.text(bodyText, width / 2, 85, { align: 'center', maxWidth: 220 });
 
-  // Sponsor / Powered By Branding (If configured)
+  // Branding Blocks (Partner, Sponsor, Association, Tech Partner)
   let currY = 110;
-  if (config.partner_name) {
+  const brandingParts = [];
+  if (config.partner_name) brandingParts.push(`${config.partner_label || 'Powered by'}: ${config.partner_name}`);
+  if (config.sponsor_name) brandingParts.push(`${config.sponsor_label || 'Sponsored by'}: ${config.sponsor_name}`);
+  if (config.association_name) brandingParts.push(`${config.association_label || 'In Association With'}: ${config.association_name}`);
+  if (config.tech_partner_name) brandingParts.push(`${config.tech_partner_label || 'Technology Partner'}: ${config.tech_partner_name}`);
+
+  if (brandingParts.length > 0) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(100, 116, 139);
-    doc.text(`${config.partner_label || 'Powered by'} ${config.partner_name}`, width / 2, currY, { align: 'center' });
-    currY += 10;
+    doc.text(brandingParts.join('  |  '), width / 2, currY, { align: 'center', maxWidth: 240 });
+    currY += 12;
   }
 
   // QR Code Verification
@@ -628,24 +692,81 @@ async function generateCertificatePDF(certData) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(148, 163, 184);
-  const certNum = certData.certificate_number || 'CO-CODE-PREVIEW-0001';
+  const certNum = certData.certificate_number || 'SAMPLE-CO-CODE-0001';
   doc.text(`Certificate ID: ${certNum}`, 20, height - 20);
   doc.text(`Issued: ${certData.issue_date || new Date().toLocaleDateString()}`, 20, height - 15);
   doc.text(config.footer || 'College OS Verified Academic Credential', width - 20, height - 20, { align: 'right' });
 
-  // Sample Watermark
+  // Sample / Status Watermark
   if (isSample || certData.status === 'pending_review' || certData.status === 'pending_approval') {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(60);
+    doc.setFontSize(55);
     doc.setTextColor(220, 220, 220);
-    doc.text(isSample ? 'SAMPLE / PREVIEW' : 'PENDING APPROVAL', width / 2, height / 2, {
+    const watermarkText = isSample ? 'SAMPLE / PREVIEW' : certData.status === 'pending_review' ? 'PENDING INTEGRITY REVIEW' : 'PENDING APPROVAL';
+    doc.text(watermarkText, width / 2, height / 2, {
       align: 'center',
       angle: 25
     });
   }
 
-  // Return PDF ArrayBuffer / Buffer
   return Buffer.from(doc.output('arraybuffer'));
+}
+
+/**
+ * Generate Admin Certificate Preview (Renders PDF buffer & placeholder metadata for live preview)
+ */
+async function generateCertificatePreview({ templateId, contestId, studentName, rank = 1, positionText, customConfig }) {
+  let config = customConfig || null;
+  if (!config && templateId) {
+    const tpl = await getTemplateById(templateId);
+    config = tpl?.active_version?.configuration || null;
+  }
+  if (!config) config = DEFAULT_TEMPLATE_CONFIG;
+
+  let contestName = 'Sample Coding Grand Championship';
+  let contestDate = new Date().toLocaleDateString();
+
+  if (contestId) {
+    const { rows } = await pool.query('SELECT title, start_time FROM coding_contests WHERE id = $1', [contestId]);
+    if (rows.length > 0) {
+      contestName = rows[0].title;
+      if (rows[0].start_time) contestDate = new Date(rows[0].start_time).toLocaleDateString();
+    }
+  }
+
+  const sampleName = studentName || 'Abhay Shukla';
+  const posText = positionText || (rank === 1 ? '1st Position' : rank === 2 ? '2nd Position' : rank === 3 ? '3rd Position' : `${rank}th Position`);
+
+  const sampleCertData = {
+    is_sample: true,
+    student_name: sampleName,
+    contest_name: contestName,
+    contest_date: contestDate,
+    position_text: posText,
+    rank: Number(rank) || 1,
+    certificate_number: 'PREVIEW-CO-CODE-0001',
+    verification_token: 'PREVIEW_TOKEN_SAMPLE',
+    issue_date: new Date().toLocaleDateString(),
+    configuration_snapshot: config
+  };
+
+  const pdfBuffer = await generateCertificatePDF(sampleCertData);
+
+  const renderedTitle = renderPlaceholders(config.title || 'CERTIFICATE OF ACHIEVEMENT', sampleCertData);
+  const renderedSubtitle = renderPlaceholders(config.subtitle || 'This is proudly presented to', sampleCertData);
+  const renderedBody = renderPlaceholders(config.body || 'for securing {{position}} Position in {{contest_name}} held on {{contest_date}}.', sampleCertData);
+
+  return {
+    pdfBuffer,
+    certData: sampleCertData,
+    renderedText: {
+      title: renderedTitle,
+      subtitle: renderedSubtitle,
+      studentName: sampleName,
+      body: renderedBody,
+      footer: config.footer || 'College OS Verified Academic Credential'
+    }
+  };
 }
 
 module.exports = {
@@ -661,7 +782,9 @@ module.exports = {
   finalizeContest,
   approveCertificate,
   revokeCertificate,
+  reissueCertificate,
   getPublicVerification,
   getOverallSeasonLeaderboard,
-  generateCertificatePDF
+  generateCertificatePDF,
+  generateCertificatePreview
 };

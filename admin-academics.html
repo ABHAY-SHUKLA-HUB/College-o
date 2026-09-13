@@ -3,68 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Academic Content Management - College OS Admin</title>
+  <title>Student Contributions & Academic Management - College OS Admin</title>
   <script src="assets/js/theme-init.js"></script>
   <link rel="stylesheet" href="assets/css/styles.css" />
   <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
-  <style>
-
-    .contrib-lane-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin: 14px 0 18px;
-    }
-
-    .contrib-lane-btn {
-      border: 1px solid #d4dcf2;
-      background: #f7f9ff;
-      color: #32436b;
-      padding: 8px 12px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .contrib-lane-btn.active {
-      background: #667eea;
-      color: #fff;
-      border-color: #667eea;
-      box-shadow: 0 4px 10px rgba(102, 126, 234, 0.28);
-    }
-
-    .inline-hint {
-      margin: 0;
-      color: #617089;
-      font-size: 13px;
-    }
-
-    @media (max-width: 1024px) {
-      .admin-container {
-        grid-template-columns: 1fr;
-      }
-
-      .admin-sidebar {
-        position: static;
-      }
-    }
-
-    @media (max-width: 768px) {
-      .admin-content {
-        padding: 0;
-      }
-
-      .filter-bar {
-        flex-direction: column;
-      }
-
-      .form-control {
-        min-width: auto;
-      }
-    }
-  </style>
 </head>
 <body class="admin-portal">
   <div class="co-admin-shell">
@@ -73,163 +15,559 @@
         <span class="co-admin-brand-mark"><i class="fa-solid fa-shield-halved"></i></span>
         <div>
           <h1>College OS Admin</h1>
-          <p>Unified command center for academics, governance, and platform operations.</p>
+          <p>Academic operations, learner management, content publishing, and platform oversight in one workspace.</p>
         </div>
       </div>
+
+      <div class="co-admin-sidebar-nav-container">
       <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Admin Navigation</p>
+        <p class="co-admin-nav-label">Overview</p>
         <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-dashboard.html"><i class="fa-solid fa-chart-pie"></i><span>Overview</span></a>
-          <a class="co-admin-nav-link" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control System</span></a>
-          <a class="co-admin-nav-link active" href="admin-academics.html#contributions"><i class="fa-solid fa-upload"></i><span>Contribution Control</span></a>
-          <a class="co-admin-nav-link" href="admin-support-governance.html"><i class="fa-solid fa-shield-halved"></i><span>Support Governance</span></a>
-          <a class="co-admin-nav-link" href="admin-notes.html"><i class="fa-solid fa-file-lines"></i><span>Notes</span></a>
-          <a class="co-admin-nav-link" href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i><span>Papers</span></a>
-          <a class="co-admin-nav-link" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i><span>Materials</span></a>
-          <a class="co-admin-nav-link" href="admin-quizzes.html"><i class="fa-solid fa-clipboard-question"></i><span>Quizzes</span></a>
-          <a class="co-admin-nav-link" href="admin-certificates.html"><i class="fa-solid fa-graduation-cap"></i><span>Certificates</span></a>
-          <a class="co-admin-nav-link" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Roadmaps</span></a>
-          <a class="co-admin-nav-link" href="admin-mock-tests.html"><i class="fa-solid fa-flask-vial"></i><span>Mock Test Studio</span></a>
-          <a class="co-admin-nav-link" href="admin-ai-tools.html"><i class="fa-solid fa-sparkles"></i><span>AI Tools</span></a>
-          <a class="co-admin-nav-link" href="admin-campus-feed.html"><i class="fa-solid fa-newspaper"></i><span>Campus Feed</span></a>
+          <a class="co-admin-nav-link" href="admin-dashboard.html"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a>
+          <a class="co-admin-nav-link" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control Center</span></a>
         </nav>
       </section>
+
+      <section class="co-admin-nav-section">
+        <p class="co-admin-nav-label">Academic Content</p>
+        <nav class="co-admin-nav">
+          <a class="co-admin-nav-link" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i><span>Study Materials</span></a>
+          <a class="co-admin-nav-link" href="admin-notes.html"><i class="fa-solid fa-file-lines"></i><span>Notes Library</span></a>
+          <a class="co-admin-nav-link" href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i><span>Previous Papers</span></a>
+          <a class="co-admin-nav-link" href="admin-quizzes.html"><i class="fa-solid fa-clipboard-question"></i><span>Quizzes</span></a>
+          <a class="co-admin-nav-link" href="admin-mock-tests.html"><i class="fa-solid fa-flask-vial"></i><span>Mock Test Studio</span></a>
+          <a class="co-admin-nav-link" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Study Roadmaps</span></a>
+          <a class="co-admin-nav-link" href="admin-academics.html"><i class="fa-solid fa-graduation-cap"></i><span>Academic Structure</span></a>
+        </nav>
+      </section>
+
+      <section class="co-admin-nav-section">
+        <p class="co-admin-nav-label">Student Management</p>
+        <nav class="co-admin-nav">
+          <a class="co-admin-nav-link" href="admin-control.html#students-management"><i class="fa-solid fa-user-graduate"></i><span>Students</span></a>
+          <a class="co-admin-nav-link" href="admin-control.html#membership-management"><i class="fa-solid fa-id-card"></i><span>Memberships & Payments</span></a>
+          <a class="co-admin-nav-link" href="admin-academics.html#contributions"><i class="fa-solid fa-upload"></i><span>Student Contributions</span></a>
+          <a class="co-admin-nav-link" href="admin-certificates.html"><i class="fa-solid fa-certificate"></i><span>Certificates</span></a>
+        </nav>
+      </section>
+
+      <section class="co-admin-nav-section">
+        <p class="co-admin-nav-label">Coding Challenges</p>
+        <nav class="co-admin-nav">
+          <a class="co-admin-nav-link" href="admin-coding-challenges.html"><i class="fa-solid fa-code"></i><span>Coding Governance</span></a>
+        </nav>
+      </section>
+
+      <section class="co-admin-nav-section">
+        <p class="co-admin-nav-label">Community & Support</p>
+        <nav class="co-admin-nav">
+          <a class="co-admin-nav-link" href="admin-support-governance.html"><i class="fa-solid fa-headset"></i><span>Support Governance</span></a>
+          <a class="co-admin-nav-link" href="admin-campus-feed.html"><i class="fa-solid fa-newspaper"></i><span>Campus Feed</span></a>
+          <a class="co-admin-nav-link" href="admin-ai-tools.html"><i class="fa-solid fa-sparkles"></i><span>AI Tools Studio</span></a>
+        </nav>
+      </section>
+
+      <section class="co-admin-nav-section">
+        <p class="co-admin-nav-label">System</p>
+        <nav class="co-admin-nav">
+          <a class="co-admin-nav-link" href="admin-control.html#system-settings"><i class="fa-solid fa-gear"></i><span>Settings & Feature Toggles</span></a>
+          <a class="co-admin-nav-link" href="admin-control.html#audit-logs"><i class="fa-solid fa-list-check"></i><span>Audit & Activity Logs</span></a>
+        </nav>
+      </section>
+      </div>
+
+      <div class="co-admin-side-card">
+        <strong>Admin Workspace</strong>
+        <p>Use this dashboard to manage student operations, academic content, premium adoption, and platform quality without breaking workflow.</p>
+      </div>
     </aside>
 
-    <main class="co-admin-main">
+    <div class="co-admin-workspace">
       <header class="co-admin-topbar">
         <div class="co-admin-topbar-title">
-          <h2>Academic Content Management</h2>
-          <p>Structured moderation workspace for student contributions with clean notes/papers pipelines and contribution analytics.</p>
+          <h2>Academic Structure & Student Enrolments Management</h2>
+          <p>Complete oversight of student college enrolments, university catalog CRUD, department courses, session batches, and contributions moderation.</p>
         </div>
         <div class="co-admin-topbar-actions">
           <a class="co-admin-chip" href="admin-dashboard.html"><i class="fa-solid fa-arrow-left"></i><span>Back to Dashboard</span></a>
-          <a class="co-admin-chip" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control System</span></a>
-          <a class="co-admin-chip" href="admin-login.html"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+          <a class="co-admin-chip" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control Center</span></a>
         </div>
       </header>
 
-      <div class="admin-header">
-        <h1>Student Contributions Moderation Dashboard</h1>
-        <p>Unified in-page moderation system for student notes and student question papers with structured pipelines and contribution analytics.</p>
-      </div>
+      <div class="co-admin-breadcrumbs" id="adminBreadcrumb"></div>
 
-      <section id="contributions-section" class="menu-section" style="display:block;">
-        <div class="content-section">
-          <h2>Student Contributions Moderation</h2>
-          <p class="inline-hint">Structured moderation dashboard with independent pipelines for Student Notes and Student Question Papers.</p>
+      <main class="co-admin-main">
 
-          <div id="contributionOverview" class="stats-grid" style="margin-bottom: 20px;"></div>
-          <div id="contributionInsights" class="message" style="background:#f9f9ff; color:#333; margin-bottom:20px;"></div>
-
-          <div class="contrib-lane-bar" id="contributionDomainTabs" style="margin-bottom: 16px;">
-            <button type="button" class="contrib-lane-btn active" data-target="notesPipelinePanel">Student Notes</button>
-            <button type="button" class="contrib-lane-btn" data-target="papersPipelinePanel">Student Papers</button>
+          <!-- Workspace Level Tabs -->
+          <div class="co-admin-filter-toolbar" id="academicWorkspaceTabs" style="margin-bottom: 20px; background: #0f172a; padding: 8px; border-radius: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn secondary btn-sm active" data-workspace-panel="enrolmentsPanel"><i class="fa-solid fa-user-graduate"></i> Student Enrolments Oversight</button>
+            <button type="button" class="btn secondary btn-sm" data-workspace-panel="universitiesPanel"><i class="fa-solid fa-building-columns"></i> Universities &amp; Colleges</button>
+            <button type="button" class="btn secondary btn-sm" data-workspace-panel="coursesPanel"><i class="fa-solid fa-book"></i> Departments &amp; Courses</button>
+            <button type="button" class="btn secondary btn-sm" data-workspace-panel="batchesPanel"><i class="fa-solid fa-layer-group"></i> Academic Batches</button>
+            <button type="button" class="btn secondary btn-sm" data-workspace-panel="contributionsPanel"><i class="fa-solid fa-upload"></i> Student Contributions</button>
           </div>
 
-          <div class="filter-bar" style="margin-top:12px;">
-            <label><input type="checkbox" id="contribSelectAll" /> Select all visible rows</label>
-            <button class="btn-primary" id="bulkApproveBtn" data-bulk-action="approve">Bulk Approve</button>
-            <button class="btn-primary" id="bulkRejectBtn" data-bulk-action="reject">Bulk Reject</button>
-            <button class="btn-primary" id="bulkFeatureBtn" data-bulk-action="feature">Bulk Feature</button>
-            <button class="btn-primary" id="bulkArchiveBtn" data-bulk-action="archive">Bulk Archive</button>
-          </div>
-
-          <div id="notesPipelinePanel" class="content-section" style="padding:18px; margin-top:18px;">
-            <h3>Student Notes Pipeline</h3>
-            <p class="inline-hint">Independent queue for notes moderation with dedicated status lanes and risk review.</p>
-
-            <div class="contrib-lane-bar" id="contributionLaneTabsNotes">
-              <button type="button" class="contrib-lane-btn active" data-domain="notes" data-lane="pending">Pending</button>
-              <button type="button" class="contrib-lane-btn" data-domain="notes" data-lane="approved">Approved</button>
-              <button type="button" class="contrib-lane-btn" data-domain="notes" data-lane="rejected">Rejected</button>
-              <button type="button" class="contrib-lane-btn" data-domain="notes" data-lane="needs_correction">Needs Correction</button>
-              <button type="button" class="contrib-lane-btn" data-domain="notes" data-lane="risk">Risk</button>
+          <!-- PANEL 1: STUDENT ENROLMENTS OVERSIGHT -->
+          <div id="enrolmentsPanel" class="academic-workspace-panel">
+            <div class="co-admin-section-head" style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <h3>Enroled Student Directory</h3>
+                <p>Inspect who has enrolled in which university, department, course, and batch. Reassign profile if student selected wrong college.</p>
+              </div>
+              <div>
+                <button type="button" class="btn primary btn-sm" id="refreshEnrolmentsBtn"><i class="fa-solid fa-rotate"></i> Refresh Enrolments</button>
+              </div>
             </div>
 
-            <div class="filter-bar">
-              <div class="form-control"><label>Status</label><select id="contributionStatusFilterNotes"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="needs_correction">Needs Correction</option><option value="all">All</option></select></div>
-              <div class="form-control"><label>Subject</label><input id="contributionSubjectFilterNotes" placeholder="Subject" /></div>
-              <div class="form-control"><label>Semester</label><input id="contributionSemesterFilterNotes" placeholder="Semester" /></div>
-              <div class="form-control"><label>Branch</label><input id="contributionBranchFilterNotes" placeholder="Branch" /></div>
-              <div class="form-control"><label>Uploader</label><input id="contributionUploaderFilterNotes" placeholder="Name or email" /></div>
-              <div class="form-control"><label>Risk</label><select id="contributionRiskFilterNotes"><option value="">All</option><option value="duplicate">Duplicate Risk</option><option value="quality">Quality Risk</option></select></div>
-              <button class="btn-primary" style="margin-top: 22px;" id="applyNotesFiltersBtn">Apply</button>
+            <div class="co-admin-filter-toolbar" style="margin-top: 14px; margin-bottom: 14px;">
+              <input id="enrolmentSearch" placeholder="Search student name, email..." style="flex: 1; min-width: 200px;" />
+              <select id="enrolmentUniFilter" style="max-width: 220px;"><option value="">All Universities / Colleges</option></select>
+              <select id="enrolmentStatusFilter" style="max-width: 160px;">
+                <option value="complete">Completed Profile</option>
+                <option value="incomplete">Incomplete / Pending</option>
+                <option value="all">All Students</option>
+              </select>
+              <button class="btn primary btn-sm" id="applyEnrolmentFiltersBtn"><i class="fa-solid fa-filter"></i> Apply</button>
             </div>
 
-            <div class="table-container">
-              <table>
+            <div class="co-admin-table-wrap" style="max-height: 480px; overflow-y: auto;">
+              <table class="co-admin-data-table">
                 <thead>
                   <tr>
-                    <th>Select</th>
-                    <th>Title</th>
-                    <th>Uploader</th>
-                    <th>College</th>
-                    <th>Academic Scope</th>
+                    <th>Student</th>
+                    <th>University / Campus</th>
+                    <th>Department &amp; Course</th>
+                    <th>Academic Batch</th>
+                    <th>Enroled Date</th>
                     <th>Status</th>
-                    <th>Risk/Flags</th>
-                    <th>Points</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
-                <tbody id="contributionsNotesTableBody">
-                  <tr><td colspan="9" class="loading">Loading student notes contributions...</td></tr>
+                <tbody id="enrolmentsTableBody">
+                  <tr><td colspan="7" class="co-admin-table-empty"><i class="fa-solid fa-spinner fa-spin"></i> Loading enroled students...</td></tr>
                 </tbody>
               </table>
             </div>
           </div>
 
-          <div id="papersPipelinePanel" class="content-section" style="padding:18px; margin-top:18px; display:none;">
-            <h3>Student Question Papers Pipeline</h3>
-            <p class="inline-hint">Independent queue for question-paper moderation with dedicated status lanes and risk review.</p>
-
-            <div class="contrib-lane-bar" id="contributionLaneTabsPapers">
-              <button type="button" class="contrib-lane-btn active" data-domain="papers" data-lane="pending">Pending</button>
-              <button type="button" class="contrib-lane-btn" data-domain="papers" data-lane="approved">Approved</button>
-              <button type="button" class="contrib-lane-btn" data-domain="papers" data-lane="rejected">Rejected</button>
-              <button type="button" class="contrib-lane-btn" data-domain="papers" data-lane="needs_correction">Needs Correction</button>
-              <button type="button" class="contrib-lane-btn" data-domain="papers" data-lane="risk">Risk</button>
+          <!-- PANEL 2: UNIVERSITIES & COLLEGES CRUD -->
+          <div id="universitiesPanel" class="academic-workspace-panel" style="display: none;">
+            <div class="co-admin-section-head" style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <h3>Universities &amp; Colleges Catalog</h3>
+                <p>Manage active universities (e.g. Chandigarh University Punjab &amp; Chandigarh University UP). Students will only see ACTIVE options during onboarding.</p>
+              </div>
+              <button type="button" class="btn primary btn-sm" id="btnAddUniversity"><i class="fa-solid fa-plus"></i> Add University</button>
             </div>
 
-            <div class="filter-bar">
-              <div class="form-control"><label>Status</label><select id="contributionStatusFilterPapers"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="needs_correction">Needs Correction</option><option value="all">All</option></select></div>
-              <div class="form-control"><label>Subject</label><input id="contributionSubjectFilterPapers" placeholder="Subject" /></div>
-              <div class="form-control"><label>Semester</label><input id="contributionSemesterFilterPapers" placeholder="Semester" /></div>
-              <div class="form-control"><label>Branch</label><input id="contributionBranchFilterPapers" placeholder="Branch" /></div>
-              <div class="form-control"><label>Uploader</label><input id="contributionUploaderFilterPapers" placeholder="Name or email" /></div>
-              <div class="form-control"><label>Risk</label><select id="contributionRiskFilterPapers"><option value="">All</option><option value="duplicate">Duplicate Risk</option><option value="quality">Quality Risk</option></select></div>
-              <button class="btn-primary" style="margin-top: 22px;" id="applyPapersFiltersBtn">Apply</button>
+            <div class="co-admin-filter-toolbar" style="margin-top: 14px; margin-bottom: 14px;">
+              <input id="uniSearch" placeholder="Search university name, code, city..." style="flex: 1; min-width: 200px;" />
+              <select id="uniStatusFilter" style="max-width: 140px;">
+                <option value="ALL">All Status</option>
+                <option value="ACTIVE" selected>Active Only</option>
+                <option value="INACTIVE">Inactive Only</option>
+              </select>
             </div>
 
-            <div class="table-container">
-              <table>
+            <div class="co-admin-table-wrap" style="max-height: 480px; overflow-y: auto;">
+              <table class="co-admin-data-table">
                 <thead>
                   <tr>
-                    <th>Select</th>
-                    <th>Title</th>
-                    <th>Uploader</th>
-                    <th>College</th>
-                    <th>Academic Scope</th>
+                    <th>Code</th>
+                    <th>University Name</th>
+                    <th>State / City</th>
+                    <th>Campus</th>
+                    <th>Courses</th>
+                    <th>Students</th>
                     <th>Status</th>
-                    <th>Risk/Flags</th>
-                    <th>Points</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
-                <tbody id="contributionsPapersTableBody">
-                  <tr><td colspan="9" class="loading">Loading student papers contributions...</td></tr>
+                <tbody id="universitiesTableBody">
+                  <tr><td colspan="8" class="co-admin-table-empty"><i class="fa-solid fa-spinner fa-spin"></i> Loading universities...</td></tr>
                 </tbody>
               </table>
             </div>
+          </div>
+
+          <!-- PANEL 3: DEPARTMENTS & COURSES CRUD -->
+          <div id="coursesPanel" class="academic-workspace-panel" style="display: none;">
+            <div class="co-admin-section-head" style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <h3>Departments &amp; Courses Catalog</h3>
+                <p>Manage degree courses (e.g. B.Tech CSE, B.Tech IT, BCA, MCA, BBA, MBA) mapped to departments &amp; universities.</p>
+              </div>
+              <button type="button" class="btn primary btn-sm" id="btnAddCourse"><i class="fa-solid fa-plus"></i> Add Course</button>
+            </div>
+
+            <div class="co-admin-filter-toolbar" style="margin-top: 14px; margin-bottom: 14px;">
+              <select id="courseUniFilter" style="max-width: 240px;"><option value="">All Universities</option></select>
+              <input id="courseSearch" placeholder="Search course name, code, department..." style="flex: 1; min-width: 180px;" />
+              <select id="courseStatusFilter" style="max-width: 140px;">
+                <option value="ALL">All Status</option>
+                <option value="ACTIVE" selected>Active Only</option>
+                <option value="INACTIVE">Inactive Only</option>
+              </select>
+            </div>
+
+            <div class="co-admin-table-wrap" style="max-height: 480px; overflow-y: auto;">
+              <table class="co-admin-data-table">
+                <thead>
+                  <tr>
+                    <th>University</th>
+                    <th>Department</th>
+                    <th>Course Code &amp; Name</th>
+                    <th>Degree</th>
+                    <th>Duration</th>
+                    <th>Students</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="coursesTableBody">
+                  <tr><td colspan="8" class="co-admin-table-empty"><i class="fa-solid fa-spinner fa-spin"></i> Loading courses...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- PANEL 4: ACADEMIC BATCHES CRUD -->
+          <div id="batchesPanel" class="academic-workspace-panel" style="display: none;">
+            <div class="co-admin-section-head" style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <h3>Academic Session Batches</h3>
+                <p>Manage session batches (e.g. 2026-2030, 2025-2029) mapped to university courses.</p>
+              </div>
+              <button type="button" class="btn primary btn-sm" id="btnAddBatch"><i class="fa-solid fa-plus"></i> Add Batch</button>
+            </div>
+
+            <div class="co-admin-filter-toolbar" style="margin-top: 14px; margin-bottom: 14px;">
+              <select id="batchUniFilter" style="max-width: 220px;"><option value="">All Universities</option></select>
+              <select id="batchCourseFilter" style="max-width: 220px;"><option value="">All Courses</option></select>
+              <input id="batchSearch" placeholder="Search batch name..." style="flex: 1; min-width: 160px;" />
+            </div>
+
+            <div class="co-admin-table-wrap" style="max-height: 480px; overflow-y: auto;">
+              <table class="co-admin-data-table">
+                <thead>
+                  <tr>
+                    <th>University</th>
+                    <th>Course</th>
+                    <th>Batch Name</th>
+                    <th>Session Years</th>
+                    <th>Students</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="batchesTableBody">
+                  <tr><td colspan="7" class="co-admin-table-empty"><i class="fa-solid fa-spinner fa-spin"></i> Loading batches...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- PANEL 5: STUDENT CONTRIBUTIONS MODERATION -->
+          <div id="contributionsPanel" class="academic-workspace-panel" style="display: none;">
+            <div id="contributionInsights" style="padding: 12px 16px; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; margin-bottom: 20px; font-size: 0.88rem; color: #334155;"></div>
+
+            <div class="co-admin-filter-toolbar" id="contributionDomainTabs">
+              <button type="button" class="btn secondary btn-sm active" data-target="notesPipelinePanel"><i class="fa-solid fa-file-lines"></i> Student Notes</button>
+              <button type="button" class="btn secondary btn-sm" data-target="papersPipelinePanel"><i class="fa-solid fa-file-pdf"></i> Student Question Papers</button>
+            </div>
+
+            <div class="co-admin-bulk-bar">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <label style="display:flex;align-items:center;gap:8px;font-size:0.88rem;cursor:pointer;"><input type="checkbox" id="contribSelectAll" /> Select All Visible Rows</label>
+              </div>
+              <div class="co-admin-bulk-actions">
+                <button class="btn primary btn-sm" id="bulkApproveBtn" data-bulk-action="approve"><i class="fa-solid fa-circle-check"></i> Bulk Approve</button>
+                <button class="btn danger btn-sm" id="bulkRejectBtn" data-bulk-action="reject"><i class="fa-solid fa-circle-xmark"></i> Bulk Reject</button>
+                <button class="btn secondary btn-sm" id="bulkFeatureBtn" data-bulk-action="feature"><i class="fa-solid fa-star"></i> Bulk Feature</button>
+                <button class="btn secondary btn-sm" id="bulkArchiveBtn" data-bulk-action="archive"><i class="fa-solid fa-box-archive"></i> Bulk Archive</button>
+              </div>
+            </div>
+
+            <div id="notesPipelinePanel" style="margin-top: 18px;">
+              <div class="co-admin-section-head">
+                <h3>Student Notes Pipeline</h3>
+                <p>Dedicated queue for notes moderation with status lanes and risk checks.</p>
+              </div>
+
+              <div class="co-admin-chip-row" id="contributionLaneTabsNotes" style="margin-bottom: 14px;">
+                <button type="button" class="btn secondary btn-sm active" data-domain="notes" data-lane="pending">Pending</button>
+                <button type="button" class="btn secondary btn-sm" data-domain="notes" data-lane="approved">Approved</button>
+                <button type="button" class="btn secondary btn-sm" data-domain="notes" data-lane="rejected">Rejected</button>
+                <button type="button" class="btn secondary btn-sm" data-domain="notes" data-lane="needs_correction">Needs Correction</button>
+                <button type="button" class="btn secondary btn-sm" data-domain="notes" data-lane="risk">Risk</button>
+              </div>
+
+              <div class="co-admin-filter-toolbar">
+                <select id="contributionStatusFilterNotes" style="max-width: 130px;"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="needs_correction">Needs Correction</option><option value="all">All Status</option></select>
+                <input id="contributionSubjectFilterNotes" placeholder="Subject..." style="max-width: 140px;" />
+                <input id="contributionSemesterFilterNotes" placeholder="Semester..." style="max-width: 120px;" />
+                <input id="contributionBranchFilterNotes" placeholder="Branch..." style="max-width: 120px;" />
+                <input id="contributionUploaderFilterNotes" placeholder="Uploader name/email..." style="flex: 1; min-width: 160px;" />
+                <select id="contributionRiskFilterNotes" style="max-width: 140px;"><option value="">All Risk</option><option value="duplicate">Duplicate Risk</option><option value="quality">Quality Risk</option></select>
+                <button class="btn primary btn-sm" id="applyNotesFiltersBtn"><i class="fa-solid fa-filter"></i> Apply</button>
+              </div>
+
+              <div class="co-admin-table-wrap">
+                <table class="co-admin-data-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 40px;">Select</th>
+                      <th>Title</th>
+                      <th>Uploader</th>
+                      <th>College</th>
+                      <th>Academic Scope</th>
+                      <th>Status</th>
+                      <th>Risk/Flags</th>
+                      <th>Points</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="contributionsNotesTableBody">
+                    <tr><td colspan="9" class="co-admin-table-empty"><i class="fa-solid fa-spinner fa-spin"></i> Loading student notes contributions...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div id="papersPipelinePanel" style="margin-top: 18px; display: none;">
+              <div class="co-admin-section-head">
+                <h3>Student Question Papers Pipeline</h3>
+                <p>Dedicated queue for question papers moderation with status lanes and risk checks.</p>
+              </div>
+
+              <div class="co-admin-chip-row" id="contributionLaneTabsPapers" style="margin-bottom: 14px;">
+                <button type="button" class="btn secondary btn-sm active" data-domain="papers" data-lane="pending">Pending</button>
+                <button type="button" class="btn secondary btn-sm" data-domain="papers" data-lane="approved">Approved</button>
+                <button type="button" class="btn secondary btn-sm" data-domain="papers" data-lane="rejected">Rejected</button>
+                <button type="button" class="btn secondary btn-sm" data-domain="papers" data-lane="needs_correction">Needs Correction</button>
+                <button type="button" class="btn secondary btn-sm" data-domain="papers" data-lane="risk">Risk</button>
+              </div>
+
+              <div class="co-admin-filter-toolbar">
+                <select id="contributionStatusFilterPapers" style="max-width: 130px;"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="needs_correction">Needs Correction</option><option value="all">All Status</option></select>
+                <input id="contributionSubjectFilterPapers" placeholder="Subject..." style="max-width: 140px;" />
+                <input id="contributionSemesterFilterPapers" placeholder="Semester..." style="max-width: 120px;" />
+                <input id="contributionBranchFilterPapers" placeholder="Branch..." style="max-width: 120px;" />
+                <input id="contributionUploaderFilterPapers" placeholder="Uploader name/email..." style="flex: 1; min-width: 160px;" />
+                <select id="contributionRiskFilterPapers" style="max-width: 140px;"><option value="">All Risk</option><option value="duplicate">Duplicate Risk</option><option value="quality">Quality Risk</option></select>
+                <button class="btn primary btn-sm" id="applyPapersFiltersBtn"><i class="fa-solid fa-filter"></i> Apply</button>
+              </div>
+
+              <div class="co-admin-table-wrap">
+                <table class="co-admin-data-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 40px;">Select</th>
+                      <th>Title</th>
+                      <th>Uploader</th>
+                      <th>College</th>
+                      <th>Academic Scope</th>
+                      <th>Status</th>
+                      <th>Risk/Flags</th>
+                      <th>Points</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="contributionsPapersTableBody">
+                    <tr><td colspan="9" class="co-admin-table-empty"><i class="fa-solid fa-spinner fa-spin"></i> Loading student papers contributions...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Reassign Student Modal -->
+  <div id="reassignStudentModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: #1e293b; color: #f8fafc; width: 100%; max-width: 500px; padding: 24px; border-radius: 16px; border: 1px solid #334155;">
+      <h3 style="margin-bottom: 8px;">Reassign Student Academic Profile</h3>
+      <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 16px;">Reassign student to another University, Course, and Session Batch.</p>
+      <form id="reassignStudentForm" style="display: flex; flex-direction: column; gap: 14px;">
+        <input type="hidden" id="reassignStudentId" />
+        <div>
+          <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1; font-weight: 600;">Student Name</label>
+          <input id="reassignStudentName" type="text" readonly style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;" />
+        </div>
+        <div>
+          <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1; font-weight: 600;">University / College</label>
+          <select id="reassignUniSelect" required style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;"></select>
+        </div>
+        <div>
+          <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1; font-weight: 600;">Course / Degree</label>
+          <select id="reassignCourseSelect" required style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;"></select>
+        </div>
+        <div>
+          <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1; font-weight: 600;">Academic Batch</label>
+          <select id="reassignBatchSelect" required style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;"></select>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px;">
+          <button type="button" class="btn secondary btn-sm" onclick="document.getElementById('reassignStudentModal').style.display='none'">Cancel</button>
+          <button type="submit" class="btn primary btn-sm">Save Profile Reassignment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- University Modal -->
+  <div id="adminUniModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: #1e293b; color: #f8fafc; width: 100%; max-width: 480px; padding: 24px; border-radius: 16px; border: 1px solid #334155;">
+      <h3 id="adminUniModalTitle" style="margin-bottom: 14px;">Add University / College</h3>
+      <form id="adminUniForm" style="display: flex; flex-direction: column; gap: 12px;">
+        <input type="hidden" id="adminUniId" />
+        <div>
+          <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1;">University Name</label>
+          <input id="adminUniName" required placeholder="e.g. Chandigarh University Punjab" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;" />
+        </div>
+        <div>
+          <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1;">Stable Code</label>
+          <input id="adminUniCode" required placeholder="e.g. CU_PUNJAB" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;" />
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <div style="flex:1;">
+            <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1;">State</label>
+            <input id="adminUniState" placeholder="e.g. Punjab" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;" />
+          </div>
+          <div style="flex:1;">
+            <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1;">City</label>
+            <input id="adminUniCity" placeholder="e.g. Mohali" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;" />
           </div>
         </div>
-      </section>
+        <div>
+          <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1;">Campus</label>
+          <input id="adminUniCampus" placeholder="e.g. Gharuan Campus" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;" />
+        </div>
+        <div>
+          <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1;">Status</label>
+          <select id="adminUniStatus" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;">
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="INACTIVE">INACTIVE</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px;">
+          <button type="button" class="btn secondary btn-sm" onclick="document.getElementById('adminUniModal').style.display='none'">Cancel</button>
+          <button type="submit" class="btn primary btn-sm">Save University</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Course Modal -->
+  <div id="adminCourseModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: #1e293b; color: #f8fafc; width: 100%; max-width: 480px; padding: 24px; border-radius: 16px; border: 1px solid #334155;">
+      <h3 id="adminCourseModalTitle" style="margin-bottom: 14px;">Add Department Course</h3>
+      <form id="adminCourseForm" style="display: flex; flex-direction: column; gap: 12px;">
+        <input type="hidden" id="adminCourseId" />
+        <div>
+          <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1;">University</label>
+          <select id="adminCourseUniSelect" required style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;"></select>
+        </div>
+        <div>
+          <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1;">Department Name</label>
+          <input id="adminCourseDept" placeholder="e.g. Department of Computer Science & Engineering" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;" />
+        </div>
+        <div>
+          <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1;">Course Name</label>
+          <input id="adminCourseName" required placeholder="e.g. B.Tech Computer Science & Engineering" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;" />
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <div style="flex:1;">
+            <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1;">Course Code</label>
+            <input id="adminCourseCode" required placeholder="e.g. BTECH_CSE" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;" />
+          </div>
+          <div style="flex:1;">
+            <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1;">Degree Type</label>
+            <input id="adminCourseDegree" placeholder="e.g. B.Tech" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;" />
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <div style="flex:1;">
+            <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1;">Duration (Years)</label>
+            <input id="adminCourseDuration" type="number" min="1" max="6" value="4" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;" />
+          </div>
+          <div style="flex:1;">
+            <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1;">Status</label>
+            <select id="adminCourseStatus" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;">
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="INACTIVE">INACTIVE</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px;">
+          <button type="button" class="btn secondary btn-sm" onclick="document.getElementById('adminCourseModal').style.display='none'">Cancel</button>
+          <button type="submit" class="btn primary btn-sm">Save Course</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Batch Modal -->
+  <div id="adminBatchModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: #1e293b; color: #f8fafc; width: 100%; max-width: 480px; padding: 24px; border-radius: 16px; border: 1px solid #334155;">
+      <h3 id="adminBatchModalTitle" style="margin-bottom: 14px;">Add Academic Batch</h3>
+      <form id="adminBatchForm" style="display: flex; flex-direction: column; gap: 12px;">
+        <input type="hidden" id="adminBatchId" />
+        <div>
+          <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1;">University</label>
+          <select id="adminBatchUniSelect" required style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;"></select>
+        </div>
+        <div>
+          <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1;">Course</label>
+          <select id="adminBatchCourseSelect" required style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;"></select>
+        </div>
+        <div>
+          <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1;">Batch Name</label>
+          <input id="adminBatchName" required placeholder="e.g. 2026-2030" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;" />
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <div style="flex:1;">
+            <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1;">Start Year</label>
+            <input id="adminBatchStartYear" type="number" min="2020" max="2035" value="2026" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;" />
+          </div>
+          <div style="flex:1;">
+            <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1;">End Year</label>
+            <input id="adminBatchEndYear" type="number" min="2020" max="2040" value="2030" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;" />
+          </div>
+        </div>
+        <div>
+          <label style="font-size: 0.8rem; text-transform: uppercase; color: #cbd5e1;">Status</label>
+          <select id="adminBatchStatus" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff;">
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="INACTIVE">INACTIVE</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px;">
+          <button type="button" class="btn secondary btn-sm" onclick="document.getElementById('adminBatchModal').style.display='none'">Cancel</button>
+          <button type="submit" class="btn primary btn-sm">Save Batch</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Contribution Detail Drawer -->
+  <div class="co-admin-drawer" id="contribDetailDrawer">
+    <div class="co-admin-drawer-header">
+      <div class="co-admin-drawer-title">
+        <h3 id="drawerContribTitle">Contribution Detail &amp; Moderation</h3>
+        <p id="drawerContribSubtitle">Inspect preview, academic metadata, contributor status, risk signals, and execute moderation actions.</p>
+      </div>
+      <button class="co-admin-drawer-close" data-drawer-close><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="co-admin-drawer-body" id="drawerContribContent">
+      <div class="co-admin-skeleton" style="height: 140px; margin-bottom: 14px;"></div>
+      <div class="co-admin-skeleton" style="height: 200px;"></div>
     </div>
   </div>
 
   <script src="assets/js/api.js"></script>
+  <script src="assets/js/admin-module-registry.js?v=20260701-1"></script>
   <script src="assets/js/admin-academics.js"></script>
   <script src="assets/js/admin-responsive.js?v=20260701-1"></script>
 </body>
 </html>
-

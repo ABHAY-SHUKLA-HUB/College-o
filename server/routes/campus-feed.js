@@ -20,8 +20,10 @@ const {
   assertCreatorCanPost
 } = require('../services/campusFeedService');
 const { subscribeRealtime, publishRealtimeEvent } = require('../services/realtimeBus');
+const { requireFeatureEnabled } = require('../middleware/featureToggle');
 
 const router = express.Router();
+router.use(requireFeatureEnabled('campus_feed'));
 
 const mediaUpload = createUploadMiddleware({
   maxFileSize: 25 * 1024 * 1024,
@@ -477,6 +479,33 @@ router.get('/posts/mine', requireAuth, async (req, res) => {
   return res.json({ submissions: rows });
 });
 
+router.get('/posts/:id', requireAuth, async (req, res) => {
+  await ensureCampusFeedSchema();
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid post id' });
+
+  const context = await resolveViewerContext(req.session.userId);
+  const isAdmin = req.session.role === 'admin' || req.session.role === 'super_admin';
+
+  const { rows } = await pool.query(
+    `SELECT p.*, u.full_name AS author_name, u.email AS author_email
+     FROM student_feed_posts p
+     JOIN users u ON u.id = p.user_id
+     WHERE p.id = $1 AND p.college_id = $2`,
+    [id, context.collegeId]
+  );
+
+  const post = rows[0];
+  if (!post) return res.status(404).json({ error: 'Post not found' });
+
+  // Direct draft/pending/rejected/hidden URL guard
+  if (post.moderation_status !== 'approved' && !isAdmin && Number(post.user_id) !== Number(req.session.userId)) {
+    return res.status(404).json({ error: 'Post not found' });
+  }
+
+  return res.json({ post });
+});
+
 router.get('/creator/:userId', requireAuth, async (req, res) => {
   await ensureCampusFeedSchema();
   const creatorUserId = Number(req.params.userId);
@@ -559,7 +588,7 @@ router.post('/posts', requireAuth, mediaUpload.single('media'), async (req, res)
     return res.status(400).json({ error: 'title, description and valid postType are required' });
   }
 
-  if (postType === 'official') {
+  if (postType === 'official' || category === 'official') {
     return res.status(403).json({ error: 'Students cannot publish official category posts' });
   }
 

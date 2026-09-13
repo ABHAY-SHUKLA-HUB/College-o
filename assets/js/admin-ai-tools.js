@@ -558,8 +558,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       isFeatured: safeText(data.get('isFeatured')) === 'true',
       sortOrder: Number(data.get('sortOrder') || 0),
       categoryId: data.get('categoryId') ? Number(data.get('categoryId')) : null,
+      collegeId: data.get('collegeId') ? Number(data.get('collegeId')) : null,
+      courseId: data.get('courseId') ? Number(data.get('courseId')) : null,
       branchId: data.get('branchId') ? Number(data.get('branchId')) : null,
+      yearId: data.get('yearId') ? Number(data.get('yearId')) : null,
       semesterId: data.get('semesterId') ? Number(data.get('semesterId')) : null,
+      isCommon: data.get('isCommon') === 'true',
       benefits: safeText(data.get('benefits')).split(/,|\n|;/).map((item) => item.trim()).filter(Boolean),
       promptTemplate: safeText(data.get('promptTemplate'))
     };

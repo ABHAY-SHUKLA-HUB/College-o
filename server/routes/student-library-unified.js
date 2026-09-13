@@ -12,35 +12,26 @@ const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
+const { applyAcademicScopeToQuery, resolveStudentAcademicScope } = require('../utils/academic-scope');
+
 function toPositiveInt(value) {
   const num = Number(value);
   return Number.isInteger(num) && num > 0 ? num : null;
 }
 
 function addScopedAcademicClause({ clauses, params, alias, scope }) {
-  if (scope.branchId) {
-    params.push(scope.branchId);
-    clauses.push(`(${alias}.branch_id = $${params.length} OR ${alias}.branch_id IS NULL)`);
-  }
+  if (!scope || scope.isAdmin) return;
 
-  if (scope.semesterId) {
-    params.push(scope.semesterId);
-    clauses.push(`(${alias}.semester_id = $${params.length} OR ${alias}.semester_id IS NULL)`);
-  }
-
-  if (scope.collegeId) {
-    params.push(scope.collegeId);
-    clauses.push(`(${alias}.college_id = $${params.length} OR ${alias}.college_id IS NULL)`);
-  }
-
-  if (scope.courseId) {
-    params.push(scope.courseId);
-    clauses.push(`(${alias}.course_id = $${params.length} OR ${alias}.course_id IS NULL)`);
-  }
-
-  if (scope.yearId) {
-    params.push(scope.yearId);
-    clauses.push(`(${alias}.year_id = $${params.length} OR ${alias}.year_id IS NULL)`);
+  if (scope.studentScope && scope.studentScope.profileComplete) {
+    const { sqlClause, params: scopeParams } = applyAcademicScopeToQuery(scope.studentScope, {
+      alias,
+      startIndex: params.length + 1,
+      legacySupport: true
+    });
+    params.push(...scopeParams);
+    clauses.push(sqlClause);
+  } else {
+    clauses.push('1 = 0');
   }
 }
 
@@ -49,59 +40,32 @@ async function resolveAcademicScope(req, res) {
   const role = String(req.session?.role || '').toLowerCase();
   const isAdmin = role === 'admin' || role === 'super_admin';
 
-  const profileResult = await pool.query(
-    `SELECT category_id, branch_id, semester_id, college_id, course_id, year_id
-     FROM user_profiles
-     WHERE user_id = $1
-     LIMIT 1`,
-    [userId]
-  );
-
-  const profile = profileResult.rows[0] || {};
-  const profileBranchId = toPositiveInt(profile.branch_id);
-  const profileSemesterId = toPositiveInt(profile.semester_id);
-  const profileCategoryId = toPositiveInt(profile.category_id);
-  const profileCollegeId = toPositiveInt(profile.college_id);
-  const profileCourseId = toPositiveInt(profile.course_id);
-  const profileYearId = toPositiveInt(profile.year_id);
-
-  const requestedBranchId = toPositiveInt(req.query.branch || req.query.branchId);
-  const requestedSemesterId = toPositiveInt(req.query.semester || req.query.semesterId);
+  const canonicalScope = await resolveStudentAcademicScope(userId);
 
   if (!isAdmin) {
-    if (!profileBranchId) {
-      res.status(409).json({ error: 'Complete academic onboarding to access scoped library content.' });
-      return null;
-    }
-
-    if (requestedBranchId && requestedBranchId !== profileBranchId) {
-      res.status(403).json({ error: 'You can only access content for your branch/course scope.' });
-      return null;
-    }
-
-    if (requestedSemesterId && profileSemesterId && requestedSemesterId !== profileSemesterId) {
-      res.status(403).json({ error: 'You can only access content for your semester scope.' });
+    if (!canonicalScope || !canonicalScope.profileComplete) {
+      res.status(403).json({
+        error: 'ACADEMIC_PROFILE_REQUIRED',
+        code: 'ACADEMIC_PROFILE_REQUIRED',
+        message: 'Mandatory academic setup is required before accessing scoped library content.'
+      });
       return null;
     }
 
     return {
-      categoryId: profileCategoryId,
-      branchId: profileBranchId,
-      semesterId: profileSemesterId || requestedSemesterId || null,
-      collegeId: profileCollegeId || null,
-      courseId: profileCourseId || null,
-      yearId: profileYearId || null,
+      studentScope: canonicalScope,
+      universityId: canonicalScope.universityId,
+      courseId: canonicalScope.courseId,
+      batchId: canonicalScope.batchId,
       isAdmin: false
     };
   }
 
   return {
-    categoryId: profileCategoryId,
-    branchId: requestedBranchId || profileBranchId || null,
-    semesterId: requestedSemesterId || profileSemesterId || null,
-    collegeId: profileCollegeId || null,
-    courseId: profileCourseId || null,
-    yearId: profileYearId || null,
+    studentScope: canonicalScope || { profileComplete: true },
+    universityId: canonicalScope?.universityId || null,
+    courseId: canonicalScope?.courseId || null,
+    batchId: canonicalScope?.batchId || null,
     isAdmin: true
   };
 }
@@ -123,7 +87,9 @@ router.get('/library/unified/notes', requireAuth, async (req, res) => {
     const { search, subject, difficulty } = req.query;
     const params = [];
     const clauses = [
-      "(n.source_type = 'admin_upload' OR (n.source_type = 'student_contribution' AND n.approval_status IN ('approved', 'published')))"
+      "(n.source_type = 'admin_upload' OR (n.source_type = 'student_contribution' AND n.approval_status IN ('approved', 'published')))",
+      "n.deleted_at IS NULL",
+      "COALESCE(n.status, 'published') = 'published'"
     ];
 
     addScopedAcademicClause({ clauses, params, alias: 'n', scope });
@@ -198,7 +164,9 @@ router.get('/library/unified/papers', requireAuth, async (req, res) => {
     const { exam, year, subject, search } = req.query;
     const params = [];
     const clauses = [
-      "(pp.source_type = 'admin_upload' OR (pp.source_type = 'student_contribution' AND pp.approval_status IN ('approved', 'published')))"
+      "(pp.source_type = 'admin_upload' OR (pp.source_type = 'student_contribution' AND pp.approval_status IN ('approved', 'published')))",
+      "pp.deleted_at IS NULL",
+      "COALESCE(pp.status, 'published') = 'published'"
     ];
 
     addScopedAcademicClause({ clauses, params, alias: 'pp', scope });
@@ -402,6 +370,11 @@ router.get('/library/unified/search', requireAuth, async (req, res) => {
     const searchPattern = `%${searchTerm}%`;
     let allResults = [];
 
+    const { applyAcademicScopeToQuery } = require('../utils/academic-scope');
+    const scopeNotes = applyAcademicScopeToQuery(scope.studentScope, { alias: 'n', startIndex: 3, legacySupport: true });
+    const scopePapers = applyAcademicScopeToQuery(scope.studentScope, { alias: 'pp', startIndex: 3, legacySupport: true });
+    const scopeMaterials = applyAcademicScopeToQuery(scope.studentScope, { alias: 'm', startIndex: 3, legacySupport: true });
+
     // Search notes
     if (!contentType || contentType === 'notes') {
       const notesResult = await pool.query(
@@ -410,13 +383,12 @@ router.get('/library/unified/search', requireAuth, async (req, res) => {
          FROM notes n
          LEFT JOIN users u ON u.id = n.created_by
          WHERE (n.source_type = 'admin_upload' OR (n.source_type = 'student_contribution' AND n.approval_status IN ('approved', 'published')))
-         AND ($3::int IS NULL OR n.branch_id = $3 OR n.branch_id IS NULL)
-         AND ($4::int IS NULL OR n.semester_id = $4 OR n.semester_id IS NULL)
+         AND ${scopeNotes.sqlClause}
          AND (LOWER(n.subject) LIKE LOWER($1) OR LOWER(n.chapter) LIKE LOWER($1))
          ORDER BY CASE WHEN n.source_type = 'admin_upload' THEN 1 ELSE 2 END,
                   n.created_at DESC
          LIMIT $2`,
-        [searchPattern, resultLimit, scope.branchId, scope.semesterId]
+        [searchPattern, resultLimit, ...scopeNotes.params]
       );
       allResults = allResults.concat(notesResult.rows);
     }
@@ -429,13 +401,12 @@ router.get('/library/unified/search', requireAuth, async (req, res) => {
          FROM previous_papers pp
          LEFT JOIN users u ON u.id = COALESCE(pp.uploaded_by, pp.contributor_id)
          WHERE (pp.source_type = 'admin_upload' OR (pp.source_type = 'student_contribution' AND pp.approval_status IN ('approved', 'published')))
-         AND ($3::int IS NULL OR pp.branch_id = $3 OR pp.branch_id IS NULL)
-         AND ($4::int IS NULL OR pp.semester_id = $4 OR pp.semester_id IS NULL)
+         AND ${scopePapers.sqlClause}
          AND (LOWER(pp.exam_name) LIKE LOWER($1) OR LOWER(pp.subject) LIKE LOWER($1))
          ORDER BY CASE WHEN pp.source_type = 'admin_upload' THEN 1 ELSE 2 END,
                   pp.year DESC
          LIMIT $2`,
-        [searchPattern, resultLimit, scope.branchId, scope.semesterId]
+        [searchPattern, resultLimit, ...scopePapers.params]
       );
       allResults = allResults.concat(papersResult.rows);
     }
@@ -448,13 +419,12 @@ router.get('/library/unified/search', requireAuth, async (req, res) => {
          FROM materials m
          LEFT JOIN users u ON u.id = m.uploaded_by
          WHERE (m.source_type = 'admin_upload' OR (m.source_type = 'student_contribution' AND m.approval_status IN ('approved', 'published')))
-         AND ($3::int IS NULL OR m.branch_id = $3 OR m.branch_id IS NULL)
-         AND ($4::int IS NULL OR m.semester_id = $4 OR m.semester_id IS NULL)
+         AND ${scopeMaterials.sqlClause}
          AND (LOWER(m.title) LIKE LOWER($1) OR LOWER(m.subject) LIKE LOWER($1))
          ORDER BY CASE WHEN m.source_type = 'admin_upload' THEN 1 ELSE 2 END,
                   m.created_at DESC
          LIMIT $2`,
-        [searchPattern, resultLimit, scope.branchId, scope.semesterId]
+        [searchPattern, resultLimit, ...scopeMaterials.params]
       );
       allResults = allResults.concat(materialsResult.rows);
     }

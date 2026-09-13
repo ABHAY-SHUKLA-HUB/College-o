@@ -14,88 +14,76 @@ async function checkPremiumAccess(userId) {
   return Boolean(membership?.isAdmin || membership?.premiumActive);
 }
 
-router.get('/', requireAuth, async (req, res) => {
-  if (!(await checkPremiumAccess(req.session.userId))) {
-    return res.status(403).json({ error: 'Upgrade to Premium (Rs.49/month) to access notes.', code: 'UPGRADE_REQUIRED' });
-  }
+const { resolveStudentAcademicScope, applyAcademicScopeToQuery } = require('../utils/academic-scope');
 
+router.get('/', requireAuth, async (req, res) => {
   const userId = req.session.userId;
-  const subject = req.query.subject;
-  const search = req.query.search;
-  const college = req.query.college;
-  const format = req.query.format;
-  const branchId = req.query.branchId; // Optional: filter by specific branch
-  const semesterId = req.query.semesterId; // Optional: filter by specific semester
-  
-  // Get user's academic profile
-  const userProfile = await pool.query(
-    `SELECT branch_id, semester_id, category_id, college_id, course_id, year_id FROM user_profiles WHERE user_id = $1`,
-    [userId]
-  );
-  
-  const userBranchId = branchId || (userProfile.rows[0]?.branch_id);
-  const userSemesterId = semesterId || (userProfile.rows[0]?.semester_id);
-  const userCollegeId = userProfile.rows[0]?.college_id;
-  const userCourseId = userProfile.rows[0]?.course_id;
-  const userYearId = userProfile.rows[0]?.year_id;
+  const role = String(req.session.role || '').toLowerCase();
+  const isAdmin = role === 'admin' || role === 'super_admin';
+  const isPremium = await checkPremiumAccess(userId);
+
+  const { subject, search, college, format, categoryId, branchId, semesterId } = req.query;
   const sourceTypeExpression = noteSourceTypeExpression('n', 'creator');
 
   const params = [];
-  const clauses = [];
+  const clauses = [
+    `n.status = 'published'`,
+    `n.deleted_at IS NULL`,
+    `n.resolved_source_type = 'admin_upload'`
+  ];
 
-  // Filter by branch (student only sees their branch + common content)
-  if (userBranchId) {
-    params.push(userBranchId);
-    clauses.push(`(branch_id = $${params.length} OR is_common = TRUE OR branch_id IS NULL)`);
-  } else {
-    // If no branch assigned yet, only show common content
-    clauses.push(`(is_common = TRUE OR branch_id IS NULL)`);
+  if (!isAdmin) {
+    const studentScope = await resolveStudentAcademicScope(userId);
+    if (!studentScope || !studentScope.profileComplete) {
+      return res.status(403).json({
+        error: 'ACADEMIC_PROFILE_REQUIRED',
+        message: 'Please complete your academic profile setup before accessing notes.'
+      });
+    }
+
+    const { sqlClause, params: scopeParams } = applyAcademicScopeToQuery(studentScope, {
+      alias: 'n',
+      startIndex: params.length + 1,
+      legacySupport: true
+    });
+    params.push(...scopeParams);
+    clauses.push(sqlClause);
   }
 
-  // Filter by semester if user has one
-  if (userSemesterId) {
-    params.push(userSemesterId);
-    clauses.push(`(semester_id = $${params.length} OR semester_id IS NULL)`);
+  if (categoryId) {
+    params.push(Number(categoryId));
+    clauses.push(`n.category_id = $${params.length}`);
   }
 
-  if (userCollegeId) {
-    params.push(userCollegeId);
-    clauses.push(`(college_id = $${params.length} OR college_id IS NULL)`);
+  if (branchId) {
+    params.push(Number(branchId));
+    clauses.push(`(n.branch_id = $${params.length} OR n.is_common = TRUE)`);
   }
 
-  if (userCourseId) {
-    params.push(userCourseId);
-    clauses.push(`(course_id = $${params.length} OR course_id IS NULL)`);
-  }
-
-  if (userYearId) {
-    params.push(userYearId);
-    clauses.push(`(year_id = $${params.length} OR year_id IS NULL)`);
+  if (semesterId) {
+    params.push(Number(semesterId));
+    clauses.push(`(n.semester_id = $${params.length} OR n.semester_id IS NULL)`);
   }
 
   if (subject) {
     params.push(subject);
-    clauses.push(`(subject = $${params.length} OR academic_subject = $${params.length})`);
+    clauses.push(`(n.subject ILIKE $${params.length} OR n.academic_subject ILIKE $${params.length})`);
   }
 
   if (search) {
     params.push(`%${search}%`);
-    clauses.push(`(chapter ILIKE $${params.length} OR content ILIKE $${params.length} OR subject ILIKE $${params.length})`);
+    clauses.push(`(n.chapter ILIKE $${params.length} OR n.content ILIKE $${params.length} OR n.subject ILIKE $${params.length})`);
   }
 
   if (college) {
     params.push(college);
-    clauses.push(`(college_name = $${params.length} OR college_name IS NULL)`);
+    clauses.push(`(n.college_name = $${params.length} OR n.college_name IS NULL)`);
   }
 
   if (format) {
     params.push(format);
-    clauses.push(`format_type = $${params.length}`);
+    clauses.push(`n.format_type = $${params.length}`);
   }
-
-  // Only show published content
-  clauses.push(`status = 'published'`);
-  clauses.push(`resolved_source_type = 'admin_upload'`);
 
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
   const { rows } = await pool.query(
@@ -104,14 +92,22 @@ router.get('/', requireAuth, async (req, res) => {
        FROM notes n
        LEFT JOIN users creator ON creator.id = n.created_by
      )
-     SELECT id, subject, chapter, content, user_notes, bookmarks, difficulty, format_type, created_by, college_name, pdf_url, branch_id, semester_id, is_common, created_at
-     FROM scoped_notes n ${where}
-     ORDER BY created_at DESC
+     SELECT
+       n.id, n.subject, n.chapter, n.content, n.user_notes, n.bookmarks, n.difficulty,
+       n.format_type, n.created_by, n.college_name, n.pdf_url, n.branch_id, n.semester_id,
+       n.category_id, n.access_type, n.is_common, n.created_at,
+       ac.name AS category_name, ab.name AS branch_name, asem.label AS semester_label
+     FROM scoped_notes n
+     LEFT JOIN academic_categories ac ON ac.id = n.category_id
+     LEFT JOIN academic_branches ab ON ab.id = n.branch_id
+     LEFT JOIN academic_semesters asem ON asem.id = n.semester_id
+     ${where}
+     ORDER BY n.created_at DESC
      LIMIT 200`,
     params
   );
 
-  res.json({ notes: rows });
+  res.json({ notes: rows, isPremium });
 });
 
 router.get('/mine', requireAuth, async (req, res) => {

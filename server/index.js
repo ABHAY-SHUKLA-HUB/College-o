@@ -4,6 +4,7 @@ if (String(process.env.NODE_ENV || '').toLowerCase() !== 'production') {
 
 const path = require('path');
 const crypto = require('crypto');
+// Academic Identity & Structure Admin Control System - Part 2
 const express = require('express');
 const compression = require('compression');
 const session = require('express-session');
@@ -54,6 +55,10 @@ const supportModerationRoutes = require('./routes/support-moderation');
 const adminSupportGovernanceRoutes = require('./routes/admin-support-governance');
 const academicsContentMgmtRoutes = require('./routes/academics-content-management');
 const studentLibraryUnifiedRoutes = require('./routes/student-library-unified');
+const adminAcademicControlRoutes = require('./routes/admin-academic-control');
+const adminAssessmentControlRoutes = require('./routes/admin-assessment-control');
+const academicFileDeliveryRoutes = require('./routes/academic-file-delivery');
+const canonicalSupportRoutes = require('./routes/canonical-support');
 const { initMailerTransporter } = require('./utils/mailer');
 const { createSignedSupabaseUrl, validateSupabaseStorageConfiguration } = require('./services/supabaseStorage');
 // Socket / realtime integration
@@ -79,7 +84,7 @@ const {
 } = require('./middleware/logging');
 const jwt = require('jsonwebtoken');
 const { requireAuth, requireAdmin } = require('./middleware/auth');
-const { requireRole, requireStudent, requireSupport, requireSuperAdmin, auditAction } = require('./middleware/rbac');
+const { requireRole, requireStudent, requireSupport, requireSuperAdmin, auditAction, getUserPermissions } = require('./middleware/rbac');
 const { validateLoginRequest, validateSignupRequest, rejectUnexpectedFields } = require('./middleware/inputValidation');
 const { rateLimitLogin, rateLimitOTP, rateLimitPasswordReset } = require('./middleware/rateLimitAdvanced');
 const { logSecurityEvent, logLoginAttempt, logUnauthorizedAccess } = require('./middleware/auditLog');
@@ -160,7 +165,12 @@ const ONBOARDING_PUBLIC_API_PATHS = [
   '/api/academics/subjects',
   '/api/academics/onboarding/config',
   '/api/academics/onboarding/complete',
-  '/api/academics/profile'
+  '/api/academics/profile',
+  '/api/student/academic-options/universities',
+  '/api/student/academic-options/courses',
+  '/api/student/academic-options/batches',
+  '/api/student/academic-profile/status',
+  '/api/student/academic-profile'
 ];
 
 const CLEAN_PAGE_ROUTES = new Map([
@@ -310,7 +320,15 @@ sessionOptions.store = new PgSession({
  */
 
 // 1. Request ID middleware - must be early for request tracing
+app.disable('x-powered-by');
 app.use(requestIdMiddleware);
+
+// RFC 9116 security.txt route
+app.get('/.well-known/security.txt', (req, res) => {
+  res.type('text/plain').send(
+    `Contact: mailto:security@collegeo.in\nContact: mailto:support@collegeo.in\nExpires: 2027-12-31T23:59:59.000Z\nPreferred-Languages: en\nCanonical: https://collegeo.in/.well-known/security.txt\nPolicy: https://collegeo.in/privacy\n`
+  );
+});
 
 // 2. Helmet - sets critical HTTP security headers
 //    CSP, HSTS, X-XSS-Protection, etc.
@@ -347,6 +365,8 @@ app.use(helmet({
       connectSrc: [
         "'self'",
         PROD_BACKEND_ORIGIN,
+        'https://*.supabase.co',
+        'wss://*.supabase.co',
         `https://${jitsiDomain}`,
         'https://meet.jit.si',
         'https://download.agora.io',
@@ -487,58 +507,7 @@ app.get('/my-tickets', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'my-tickets.html'));
 });
 
-app.get('/api/auth/captcha/challenge', (req, res) => {
-  const startedAt = Date.now();
-  const requestId = crypto.randomBytes(8).toString('hex');
 
-  console.info('[auth:captcha] request received', {
-    requestId,
-    ip: req.ip || 'unknown',
-    path: req.path,
-    origin: req.headers.origin || '',
-    userAgent: req.headers['user-agent'] || ''
-  });
-
-  try {
-    const challengeBuilder = authRoutes.buildCaptchaChallenge;
-    const challenge = typeof challengeBuilder === 'function'
-      ? challengeBuilder(req)
-      : null;
-
-    if (!challenge) {
-      throw new Error('Captcha challenge builder unavailable');
-    }
-
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.json({
-      ok: true,
-      captchaId: challenge.id,
-      captcha: challenge,
-      question: challenge.question,
-      challenge: challenge.challengeText,
-      challengeText: challenge.challengeText,
-      prompt: challenge.prompt,
-      captchaText: challenge.captchaText,
-      expiresAt: challenge.expiresAt,
-      expiresInSeconds: 300
-    });
-
-    console.info('[auth:captcha] captcha generated', {
-      requestId,
-      responseTimeMs: Date.now() - startedAt,
-      captchaId: challenge.id
-    });
-  } catch (error) {
-    console.warn('[auth:captcha] captcha failed', {
-      requestId,
-      responseTimeMs: Date.now() - startedAt,
-      reason: error?.message || String(error)
-    });
-    res.status(500).json({ ok: false, error: 'Captcha generation failed' });
-  }
-});
 
 // 7. Session middleware
 app.use(session(sessionOptions));
@@ -623,33 +592,123 @@ app.use((req, res, next) => {
   return next();
 });
 
-// Admin page protection: serve admin HTML only when admin session exists.
-// Register AFTER session and csrf initialization so requireAdmin can access req.session.
-const adminPages = [
-  '/admin-login.html', '/admin-login',
-  '/admin-dashboard.html', '/admin-dashboard', '/admin-dashboard-mgmt',
-  '/admin-control.html', '/admin-control',
-  '/admin-academics.html',
-  '/admin-materials.html', '/admin-notes.html', '/admin-certificates.html',
-  '/admin-mock-tests.html', '/admin-quizzes.html', '/admin-papers.html',
-  '/admin-roadmaps.html', '/admin-campus-feed.html', '/admin-ai-tools.html',
-  '/admin-support-governance.html',
-  '/admin-coding-challenges.html', '/admin-coding-challenges'
+// Admin page protection: serve admin HTML only when admin session exists and user has required permission.
+app.get(['/admin-login.html', '/admin-login'], (_req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+  res.sendFile(path.join(__dirname, '..', 'admin-login.html'));
+});
+
+async function protectAdminRoute(req, res, next) {
+  try {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    if (!req.session || !req.session.userId) {
+      return res.redirect(302, '/admin-login');
+    }
+
+    const { role, permissions, isInactive } = await getUserPermissions(req.session.userId);
+    if (isInactive) {
+      return res.redirect(302, '/admin-login?error=account_suspended');
+    }
+
+    if (!role || !['admin', 'super_admin', 'content_manager', 'support_agent', 'moderator'].includes(role)) {
+      return res.status(403).send('Access Denied: Admin role required.');
+    }
+
+    const pathKey = req.path.toLowerCase();
+    const subModulePermissions = {
+      '/admin/payments': ['verify_payments', 'manage_memberships'],
+      '/admin/roles': ['manage_roles'],
+      '/admin/settings': ['manage_settings'],
+      '/admin/audit-logs': ['view_audit_logs'],
+      '/admin/features': ['manage_features'],
+      '/admin/students': ['view_students'],
+      '/admin/coding': ['manage_coding'],
+      '/admin/academics': ['manage_academic_content'],
+      '/admin/support': ['manage_support']
+    };
+
+    const requiredPerms = subModulePermissions[pathKey];
+    if (requiredPerms && role !== 'super_admin' && !permissions.includes('*')) {
+      const hasPerm = requiredPerms.some(p => permissions.includes(p));
+      if (!hasPerm) {
+        return res.status(403).send(`Access Denied: You lack the required permission (${requiredPerms.join(' or ')}) to access this module.`);
+      }
+    }
+
+    return next();
+  } catch (err) {
+    return res.redirect(302, '/admin-login');
+  }
+}
+
+// Standalone Admin HTML Page Routes
+const standaloneAdminPages = {
+  '/admin-dashboard': 'admin-dashboard.html',
+  '/admin-dashboard.html': 'admin-dashboard.html',
+  '/admin-dashboard-mgmt': 'admin-dashboard-mgmt.html',
+  '/admin-dashboard-mgmt.html': 'admin-dashboard-mgmt.html',
+  '/admin-academics': 'admin-academics.html',
+  '/admin-academics.html': 'admin-academics.html',
+  '/admin-materials': 'admin-materials.html',
+  '/admin-materials.html': 'admin-materials.html',
+  '/admin-notes': 'admin-notes.html',
+  '/admin-notes.html': 'admin-notes.html',
+  '/admin-papers': 'admin-papers.html',
+  '/admin-papers.html': 'admin-papers.html',
+  '/admin-quizzes': 'admin-quizzes.html',
+  '/admin-quizzes.html': 'admin-quizzes.html',
+  '/admin-mock-tests': 'admin-mock-tests.html',
+  '/admin-mock-tests.html': 'admin-mock-tests.html',
+  '/admin-roadmaps': 'admin-roadmaps.html',
+  '/admin-roadmaps.html': 'admin-roadmaps.html',
+  '/admin-certificates': 'admin-certificates.html',
+  '/admin-certificates.html': 'admin-certificates.html',
+  '/admin-coding-challenges': 'admin-coding-challenges.html',
+  '/admin-coding-challenges.html': 'admin-coding-challenges.html',
+  '/admin-support-governance': 'admin-support-governance.html',
+  '/admin-support-governance.html': 'admin-support-governance.html',
+  '/admin-campus-feed': 'admin-campus-feed.html',
+  '/admin-campus-feed.html': 'admin-campus-feed.html',
+  '/admin-ai-tools': 'admin-ai-tools.html',
+  '/admin-ai-tools.html': 'admin-ai-tools.html'
+};
+
+Object.entries(standaloneAdminPages).forEach(([routePath, htmlFile]) => {
+  app.get(routePath, protectAdminRoute, (_req, res) => {
+    return res.sendFile(path.join(__dirname, '..', htmlFile));
+  });
+});
+
+// Admin root navigation
+app.get(['/admin', '/admin/'], protectAdminRoute, (_req, res) => {
+  return res.redirect(302, '/admin/dashboard');
+});
+
+// Dashboard clean route
+app.get('/admin/dashboard', protectAdminRoute, (_req, res) => {
+  return res.sendFile(path.join(__dirname, '..', 'admin-dashboard.html'));
+});
+
+// Control Center SPA clean routes
+const controlCenterSpaRoutes = [
+  '/admin-control', '/admin-control.html',
+  '/admin/students', '/admin/memberships', '/admin/payments',
+  '/admin/academic-structure', '/admin/content', '/admin/branches',
+  '/admin/onboarding', '/admin/notifications', '/admin/moderation',
+  '/admin/referrals', '/admin/roles', '/admin/settings', '/admin/features',
+  '/admin/coding', '/admin/experience', '/admin/live-sessions',
+  '/admin/audit-logs', '/admin/company', '/admin/analytics', '/admin/support'
 ];
 
-adminPages.forEach((p) => {
-  app.get(p, (req, res, next) => {
-    // Allow admin login page to be public
-    if (p === '/admin-login.html' || p === '/admin-login') return res.sendFile(path.join(__dirname, '..', 'admin-login.html'));
-    // All other admin pages need an admin session; redirect to admin login if not authenticated
-    return requireAdmin(req, res, (err) => {
-      if (err) return res.redirect('/admin-login');
-      // Serve mapped file if present in CLEAN_PAGE_ROUTES
-      const key = req.path.toLowerCase();
-      const file = CLEAN_PAGE_ROUTES.get(key) || key.replace(/^\//, '');
-      return res.sendFile(path.join(__dirname, '..', file));
-    });
+controlCenterSpaRoutes.forEach((route) => {
+  app.get(route, protectAdminRoute, (_req, res) => {
+    return res.sendFile(path.join(__dirname, '..', 'admin-control.html'));
   });
+});
+
+// Unknown Admin Route 404 Handler
+app.get('/admin/*', protectAdminRoute, (_req, res) => {
+  return res.status(404).sendFile(path.join(__dirname, '..', 'admin-control.html'));
 });
 
 
@@ -657,6 +716,7 @@ app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/meta', metaRoutes);
 app.use('/api/academics', academicsRoutes);
+app.use('/api/student', require('./routes/student-academic'));
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/intelligence', intelligenceRoutes);
 app.use('/api/quizzes', quizRoutes);
@@ -676,8 +736,13 @@ app.use('/api/content', contentRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/live-sessions', liveSessionRoutes);
-app.use('/api/coding-challenges', require('./routes/coding-challenges'));
-app.use('/api/admin/coding-challenges', require('./routes/coding-challenges-admin'));
+const codingChallengesRouter = require('./routes/coding-challenges');
+const codingChallengesAdminRouter = require('./routes/coding-challenges-admin');
+app.use('/api/coding-challenges', codingChallengesRouter);
+app.use('/api/coding', codingChallengesRouter);
+app.use('/api/admin/coding-challenges', codingChallengesAdminRouter);
+app.use('/api/admin/coding', codingChallengesAdminRouter);
+app.use('/api/admin/control/coding', codingChallengesAdminRouter);
 app.use('/api/admin/ai-ops', adminAiOpsRoutes);
 app.use('/api/admin-ai-ops', adminAiOpsRoutes);
 app.use('/api/admin', adminRoutes);
@@ -690,12 +755,17 @@ app.use('/api/campus-feed', campusFeedRoutes);
 app.use('/api/admin/campus-feed', adminCampusFeedRoutes);
 app.use('/api/contributions', contributionRoutes);
 app.use('/api/admin/contributions', contributionAdminRoutes);
-app.use('/api/support', supportHubRoutes);
-app.use('/api/support', supportAnswersRoutes);
-app.use('/api/support', supportModerationRoutes);
+app.use('/api/support', canonicalSupportRoutes);
+app.use('/api', canonicalSupportRoutes);
 app.use('/api/admin/support-governance', adminSupportGovernanceRoutes);
 app.use('/api', academicsContentMgmtRoutes);
 app.use('/api', studentLibraryUnifiedRoutes);
+const adminAcademicStructureRouter = require('./routes/admin-academic-structure');
+app.use('/api/admin/academic-structure', adminAcademicStructureRouter);
+app.use('/api/admin/control/academic-structure', adminAcademicStructureRouter);
+app.use('/api/admin/control', adminAcademicControlRoutes);
+app.use('/api/admin/control', adminAssessmentControlRoutes);
+app.use('/api', academicFileDeliveryRoutes);
 
 // Safe notifications stream endpoint (fallback for missing SSE or polling)
 app.get('/api/notifications/stream', (req, res) => {
@@ -895,7 +965,15 @@ app.use(async (req, res, next) => {
 
   const pathKey = req.path.toLowerCase();
   if (pathKey === '/academic-onboarding' || pathKey === '/academic-onboarding.html') {
-    return res.redirect(302, '/dashboard');
+    if (!req.session || !req.session.userId) {
+      return res.redirect(302, '/login');
+    }
+    const { isStudentAcademicProfileComplete } = require('./utils/academic-scope');
+    const isComplete = await isStudentAcademicProfileComplete(req.session.userId);
+    if (isComplete) {
+      return res.redirect(302, '/dashboard');
+    }
+    return res.sendFile(path.join(__dirname, '..', 'academic-onboarding.html'));
   }
 
   if (/\.html$/i.test(pathKey)) {
@@ -914,6 +992,14 @@ app.use(async (req, res, next) => {
       if (!req.session || !req.session.userId) {
         return res.redirect(302, '/login');
       }
+      const role = String(req.session.role || req.session.user?.role || '').toLowerCase();
+      if (role === 'student' || role === '') {
+        const { isStudentAcademicProfileComplete } = require('./utils/academic-scope');
+        const isComplete = await isStudentAcademicProfileComplete(req.session.userId);
+        if (!isComplete) {
+          return res.redirect(302, '/academic-onboarding');
+        }
+      }
     }
 
     return res.redirect(301, CLEAN_PAGE_ROUTES.has(cleanPath) ? cleanPath : cleanPath || '/');
@@ -930,10 +1016,18 @@ app.use(async (req, res, next) => {
       return res.redirect(302, '/dashboard');
     }
 
-    // For protected clean routes enforce auth before serving the HTML
+    // For protected clean routes enforce auth & academic profile setup before serving HTML
     if (PROTECTED_PAGE_PATHS && PROTECTED_PAGE_PATHS.has(pathKey)) {
       if (!req.session || !req.session.userId) {
         return res.redirect(302, '/login');
+      }
+      const role = String(req.session.role || req.session.user?.role || '').toLowerCase();
+      if (role === 'student' || role === '') {
+        const { isStudentAcademicProfileComplete } = require('./utils/academic-scope');
+        const isComplete = await isStudentAcademicProfileComplete(req.session.userId);
+        if (!isComplete) {
+          return res.redirect(302, '/academic-onboarding');
+        }
       }
     }
 
@@ -1058,6 +1152,9 @@ async function startServer() {
     migrationPath: academicMigration?.migrationPath || '(unknown)',
     statementsApplied: academicMigration?.statementsApplied ?? 0
   });
+
+  const { initializeAcademicIdentitySchema } = require('./db/migrations/academic-identity');
+  await initializeAcademicIdentitySchema().catch(err => console.warn('[Startup] Academic identity migration warning:', err.message));
 
   const codingMigration = await initializeCodingChallengesSchema();
   console.info('[Startup] Coding challenges migration complete', codingMigration);

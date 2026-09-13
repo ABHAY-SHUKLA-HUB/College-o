@@ -115,8 +115,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function selectedStudentLabel() {
     if (issueMode.value === 'all') return 'All Eligible Students';
+    if (state.selectedStudentIds.size === 0) return 'No Student Selected (Preview Mode)';
     const rows = state.studentSearchResults.filter((s) => state.selectedStudentIds.has(Number(s.id)));
-    if (rows.length === 0) return `${state.selectedStudentIds.size} selected student(s)`;
+    if (rows.length === 0) return `${state.selectedStudentIds.size} Selected Student(s)`;
     if (rows.length === 1) return rows[0].full_name;
     return `${rows[0].full_name} +${rows.length - 1} more`;
   }
@@ -139,11 +140,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const certId = byId('certificateRefId').value.trim() || generateRefId();
     byId('certificateRefId').value = certId;
 
+    const certType = byId('certificateType').value.trim() || 'Course Completion';
+    const previewTitleText = certType.toLowerCase().includes('certificate') ? certType : `${certType} Certificate`;
+
     byId('previewOrg').textContent = byId('organizationName').value.trim() || 'College OS Academy';
-    byId('previewTitle').textContent = `${byId('certificateType').value.trim() || 'Certificate'} Certificate`;
+    byId('previewTitle').textContent = previewTitleText;
     byId('previewStudentName').textContent = selectedStudentLabel();
     byId('previewAchievement').textContent = byId('achievementName').value.trim() || 'Achievement / Course';
-    byId('previewType').textContent = byId('certificateType').value.trim() || 'Course Completion';
+    byId('previewType').textContent = certType;
     byId('previewScore').textContent = byId('scoreRank').value.trim() || 'N/A';
     byId('previewDate').textContent = byId('issueDate').value || '-';
     byId('previewId').textContent = certId;

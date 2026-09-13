@@ -7,6 +7,9 @@ const rateStore = new Map();
 
 function createRateLimiter({ windowMs = 60000, maxRequests = 10, actionName = 'request' }) {
   return function rateLimiterMiddleware(req, res, next) {
+    if (process.env.NODE_ENV === 'development') {
+      return next();
+    }
     const userId = req.session && req.session.userId ? `user_${req.session.userId}` : `ip_${req.ip || req.socket.remoteAddress}`;
     const key = `${actionName}:${userId}`;
 

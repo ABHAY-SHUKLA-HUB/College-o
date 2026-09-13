@@ -48,17 +48,20 @@
     return `<button class="${esc(className)}" data-thread-action="${esc(action)}">${esc(label)}</button>`;
   }
 
+  const threadCache = new Map();
+
   function renderThreads() {
     const tbody = document.getElementById('threadRows');
     if (!tbody) return;
 
     if (!state.threads.length) {
-      tbody.innerHTML = '<tr><td colspan="5">No threads matched the current filters.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="co-admin-table-empty">No support tickets matched the current filters.</td></tr>';
       return;
     }
 
     tbody.innerHTML = state.threads
       .map((t) => {
+        threadCache.set(Number(t.id), t);
         const attachmentCount = Array.isArray(t.attachment_urls) ? t.attachment_urls.length : 0;
         const imageCount = Array.isArray(t.image_urls) ? t.image_urls.length : 0;
         const helperNames = Array.isArray(t.helper_names) ? t.helper_names.filter(Boolean).join(', ') : '';
@@ -71,9 +74,7 @@
           t.flagged_attachment_risk && '<span class="gov-chip">attachment risk</span>',
           t.is_locked && '<span class="gov-chip">locked</span>',
           t.is_hidden && '<span class="gov-chip">hidden</span>',
-          t.is_removed && '<span class="gov-chip">removed</span>',
-          t.is_priority && '<span class="gov-chip">priority</span>',
-          t.is_featured && '<span class="gov-chip">featured</span>'
+          t.is_removed && '<span class="gov-chip">removed</span>'
         ]
           .filter(Boolean)
           .join('');
@@ -92,25 +93,28 @@
             </td>
             <td>
               ${signals || '<span class="gov-chip">clean</span>'}
-              <div>Answers: ${esc(t.answer_count || 0)} | Flagged answers: ${esc(t.flagged_answers || 0)}</div>
-              <div>Meet: ${t.meet_link ? 'yes' : 'no'} | Files: ${attachmentCount} | Images: ${imageCount}</div>
+              <div>Answers: ${esc(t.answer_count || 0)} | Files: ${attachmentCount}</div>
             </td>
             <td>
               <div><strong>${esc(t.requester_name || 'Requester')}</strong></div>
-              <div>${esc(t.requester_email || '')}</div>
-              <div>Helpers: ${esc(helperNames || 'None')}</div>
+              <div class="muted">${esc(t.requester_email || '')}</div>
+              <div class="muted">Helpers: ${esc(helperNames || 'None')}</div>
             </td>
             <td>
-              <div class="gov-actions">
-                ${makeThreadActionButton('Hide', 'hide')}
-                ${makeThreadActionButton('Unhide', 'unhide')}
-                ${makeThreadActionButton('Remove', 'remove', 'danger')}
-                ${makeThreadActionButton('Restore', 'restore')}
-                ${makeThreadActionButton('Lock', 'lock_thread', 'warn')}
-                ${makeThreadActionButton('Unlock', 'unlock_thread')}
-                ${makeThreadActionButton('Priority', 'mark_priority', 'warn')}
-                ${makeThreadActionButton('Feature', 'feature')}
-                ${makeThreadActionButton('Reopen', 'reopen')}
+              <div style="display:flex; align-items:center; gap:6px;">
+                <button class="btn primary btn-sm" data-thread-action="open-ticket-drawer"><i class="fa-solid fa-eye"></i> Detail</button>
+                <div class="co-admin-dropdown">
+                  <button class="btn secondary btn-sm co-admin-dropdown-toggle" type="button"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                  <div class="co-admin-dropdown-menu align-right">
+                    <button class="co-admin-dropdown-item" data-thread-action="reopen"><i class="fa-solid fa-rotate-left text-info"></i> Reopen</button>
+                    <button class="co-admin-dropdown-item" data-thread-action="${t.is_locked ? 'unlock_thread' : 'lock_thread'}"><i class="fa-solid fa-lock text-warn"></i> ${t.is_locked ? 'Unlock' : 'Lock'}</button>
+                    <button class="co-admin-dropdown-item" data-thread-action="${t.is_hidden ? 'unhide' : 'hide'}"><i class="fa-solid fa-eye-slash"></i> ${t.is_hidden ? 'Unhide' : 'Hide'}</button>
+                    <button class="co-admin-dropdown-item danger" data-thread-action="${t.is_removed ? 'restore' : 'remove'}"><i class="fa-solid fa-trash"></i> ${t.is_removed ? 'Restore' : 'Remove'}</button>
+                    <div class="co-admin-dropdown-divider"></div>
+                    <button class="co-admin-dropdown-item" data-thread-action="mark_priority"><i class="fa-solid fa-flag text-warn"></i> Priority</button>
+                    <button class="co-admin-dropdown-item" data-thread-action="feature"><i class="fa-solid fa-star"></i> Feature</button>
+                  </div>
+                </div>
               </div>
             </td>
           </tr>
@@ -123,6 +127,12 @@
         const action = event.currentTarget.getAttribute('data-thread-action');
         const row = event.currentTarget.closest('tr');
         const requestId = Number(row?.getAttribute('data-thread-id') || 0);
+
+        if (action === 'open-ticket-drawer') {
+          openSupportTicketDrawer(requestId);
+          return;
+        }
+
         const notes = window.prompt(`Optional note for action: ${action}`, '') || '';
         const reason = ['mark_priority', 'mark_abuse', 'mark_spam'].includes(action)
           ? window.prompt('Reason for this governance action', '') || ''
@@ -139,6 +149,80 @@
       });
     });
   }
+
+  async function openSupportTicketDrawer(id) {
+    const thread = threadCache.get(Number(id));
+    if (!thread) {
+      alert('Thread data not loaded in cache.');
+      return;
+    }
+
+    const subjectNode = document.getElementById('drawerTicketSubject');
+    const subNode = document.getElementById('drawerTicketSub');
+    if (subjectNode) subjectNode.textContent = thread.title || `Ticket #${id}`;
+    if (subNode) subNode.textContent = `Category: ${thread.request_category || 'General'} • Filed by ${thread.requester_name || 'Student'} (${thread.requester_email || ''})`;
+
+    const bodyNode = document.getElementById('drawerTicketContent');
+    if (!bodyNode) return;
+
+    bodyNode.innerHTML = `
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:14px; border-radius:10px; margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong style="color:#0f172a; font-size:0.95rem;">${esc(thread.title)}</strong>
+          <span class="gov-chip">${esc(thread.status || 'open')}</span>
+        </div>
+        <p style="margin:0 0 10px; font-size:0.88rem; color:#334155; line-height:1.5;">${esc(thread.description)}</p>
+        <div style="font-size:0.8rem; color:#64748b; display:flex; gap:14px; flex-wrap:wrap;">
+          <span><strong>College:</strong> ${esc(thread.college_name || 'N/A')}</span>
+          <span><strong>Subject:</strong> ${esc(thread.subject || 'General')}</span>
+          <span><strong>Urgency:</strong> ${esc(thread.urgency_level || 'normal')}</span>
+          <span><strong>Meet Link:</strong> ${thread.meet_link ? `<a href="${esc(thread.meet_link)}" target="_blank">${esc(thread.meet_link)}</a>` : 'None'}</span>
+        </div>
+      </div>
+
+      <div style="background:#fff; border:1px solid #e2e8f0; padding:14px; border-radius:10px; margin-bottom:16px;">
+        <h4 style="margin:0 0 10px; font-size:0.9rem; color:#0f172a;"><i class="fa-solid fa-user-check"></i> Verified Contributor / Requester Context</h4>
+        <div style="font-size:0.85rem; color:#334155;">
+          <div><strong>Student Name:</strong> ${esc(thread.requester_name || 'Requester')}</div>
+          <div><strong>Verified Email:</strong> ${esc(thread.requester_email || 'N/A')}</div>
+          <div><strong>Assigned Helpers:</strong> ${esc(Array.isArray(thread.helper_names) ? thread.helper_names.join(', ') : 'None')}</div>
+        </div>
+      </div>
+
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:14px; border-radius:10px; margin-bottom:16px;">
+        <h4 style="margin:0 0 10px; font-size:0.9rem; color:#0f172a;"><i class="fa-solid fa-gavel"></i> Administrative Action & Internal Notes</h4>
+        <div style="margin-bottom:10px;">
+          <label style="font-weight:600; font-size:0.82rem; display:block; margin-bottom:4px;">Internal Note / Guidance</label>
+          <textarea id="drawerTicketNoteText" class="co-admin-input" rows="2" placeholder="Internal admin note for audit record..."></textarea>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn primary btn-sm" onclick="window.handleDrawerTicketAction(${thread.id}, 'reopen')"><i class="fa-solid fa-rotate-left"></i> Reopen Ticket</button>
+          <button class="btn secondary btn-sm" onclick="window.handleDrawerTicketAction(${thread.id}, 'lock_thread')"><i class="fa-solid fa-lock"></i> Lock Thread</button>
+          <button class="btn warn btn-sm" onclick="window.handleDrawerTicketAction(${thread.id}, 'hide')"><i class="fa-solid fa-eye-slash"></i> Hide Thread</button>
+          <button class="btn danger btn-sm" onclick="window.handleDrawerTicketAction(${thread.id}, 'remove')"><i class="fa-solid fa-trash"></i> Remove Thread</button>
+        </div>
+      </div>
+    `;
+
+    if (window.CollegeAdminDrawer) {
+      window.CollegeAdminDrawer.open('supportTicketDrawer');
+    }
+  }
+
+  window.handleDrawerTicketAction = async function(requestId, action) {
+    const noteNode = document.getElementById('drawerTicketNoteText');
+    const notes = noteNode ? noteNode.value.trim() : '';
+    try {
+      await window.CollegeOSApi.adminSupportThreadAction(requestId, { action, notes, reason: notes });
+      if (window.CollegeAdminDrawer) {
+        window.CollegeAdminDrawer.close('supportTicketDrawer');
+      }
+      await loadThreads();
+      await loadDashboard();
+    } catch (err) {
+      alert(err.message || 'Ticket action failed.');
+    }
+  };
 
   async function loadDashboard() {
     const data = await window.CollegeOSApi.adminSupportGovernanceDashboard();
@@ -212,6 +296,15 @@
       .join('');
   }
 
+  function notify(message, type = 'info') {
+    if (window.CollegeOSToast && typeof window.CollegeOSToast.show === 'function') {
+      window.CollegeOSToast.show(message, type);
+    } else {
+      console.log(`[AdminSupportGovernance] ${type.toUpperCase()}: ${message}`);
+      alert(message);
+    }
+  }
+
   function bindForms() {
     const featureForm = document.getElementById('featureConfigForm');
     featureForm?.addEventListener('submit', async (event) => {
@@ -228,9 +321,9 @@
       };
       try {
         await window.CollegeOSApi.adminSupportGovernanceUpdateConfig(payload);
-        alert('Support feature controls saved');
+        notify('Support feature controls saved successfully', 'success');
       } catch (error) {
-        alert(error.message || 'Failed to save controls');
+        notify(error.message || 'Failed to save controls', 'error');
       }
     });
 
@@ -245,12 +338,12 @@
       };
       try {
         await window.CollegeOSApi.adminSupportRewardAdjust(payload);
-        alert('Reward adjustment applied');
+        notify('Reward adjustment applied successfully', 'success');
         rewardForm.reset();
         await loadDashboard();
         await loadAudit();
       } catch (error) {
-        alert(error.message || 'Failed to adjust rewards');
+        notify(error.message || 'Failed to adjust rewards', 'error');
       }
     });
 
@@ -266,16 +359,16 @@
         suspensionReason: document.getElementById('trustSuspendReason').value.trim()
       };
       if (!helperId) {
-        alert('Helper user ID is required');
+        notify('Helper user ID is required', 'error');
         return;
       }
       try {
         await window.CollegeOSApi.adminSupportHelperTrust(helperId, payload);
-        alert('Helper trust control updated');
+        notify('Helper trust control updated successfully', 'success');
         await loadDashboard();
         await loadAudit();
       } catch (error) {
-        alert(error.message || 'Failed to update helper trust controls');
+        notify(error.message || 'Failed to update helper trust controls', 'error');
       }
     });
 
@@ -283,7 +376,7 @@
       try {
         await loadThreads();
       } catch (error) {
-        alert(error.message || 'Failed to load moderation queue');
+        notify(error.message || 'Failed to load moderation queue', 'error');
       }
     });
   }
@@ -302,7 +395,7 @@
         loadAudit()
       ]);
     } catch (error) {
-      alert(error.message || 'Failed to load support governance dashboard');
+      notify(error.message || 'Failed to load support governance dashboard', 'error');
     }
   }
 

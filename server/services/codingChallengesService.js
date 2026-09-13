@@ -162,6 +162,13 @@ async function getContestStats() {
 
   const participantsResult = await pool.query('SELECT COUNT(DISTINCT student_id)::integer as count FROM coding_participants');
   const submissionsResult = await pool.query('SELECT COUNT(*)::integer as count FROM coding_submissions');
+  const pendingIntegrityResult = await pool.query(
+    "SELECT COUNT(*)::integer as count FROM coding_similarity_results WHERE review_status = 'pending'"
+  ).catch(() => ({ rows: [{ count: 0 }] }));
+  const pendingCertificatesResult = await pool.query(
+    "SELECT COUNT(*)::integer as count FROM coding_certificates WHERE status = 'pending_approval'"
+  ).catch(() => ({ rows: [{ count: 0 }] }));
+
   const recentActivityResult = await pool.query(
     `SELECT s.id, s.submitted_at, s.status, s.language, c.title as contest_title, u.email as student_email
      FROM coding_submissions s
@@ -179,6 +186,8 @@ async function getContestStats() {
     cancelled_contests: cancelled,
     total_participants: participantsResult.rows[0]?.count || 0,
     total_submissions: submissionsResult.rows[0]?.count || 0,
+    pending_integrity_reviews: pendingIntegrityResult.rows[0]?.count || 0,
+    pending_certificates: pendingCertificatesResult.rows[0]?.count || 0,
     recent_activity: recentActivityResult.rows
   };
 }
@@ -455,14 +464,16 @@ async function deleteContest(contestId) {
  * Update contest status (Publish, Cancel, Reopen).
  */
 async function updateContestStatus(contestId, newStatus, adminId) {
+  let targetStatus = String(newStatus || '').toLowerCase();
+  if (targetStatus === 'published') targetStatus = 'live';
   const allowed = ['draft', 'scheduled', 'live', 'completed', 'cancelled'];
-  if (!allowed.includes(newStatus)) {
+  if (!allowed.includes(targetStatus)) {
     throw new Error(`Invalid contest status: ${newStatus}`);
   }
 
   const { rows } = await pool.query(
     `UPDATE coding_contests SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *`,
-    [newStatus, contestId]
+    [targetStatus, contestId]
   );
   if (!rows.length) throw new Error('Contest not found');
   return {
@@ -722,6 +733,122 @@ async function bulkImportTestCases(problemId, rawInput) {
   } finally {
     client.release();
   }
+}
+
+/**
+ * Validate test cases for a problem (checks empty outputs, missing samples, hidden cases count).
+ */
+async function validateProblemTestCases(problemId) {
+  const { rows: testCases } = await pool.query(
+    'SELECT id, input_data, expected_output, is_hidden, weight FROM coding_test_cases WHERE problem_id = $1 ORDER BY is_hidden ASC, id ASC',
+    [problemId]
+  );
+  const { rows: examples } = await pool.query(
+    'SELECT id, sample_input, sample_output FROM coding_problem_examples WHERE problem_id = $1 ORDER BY id ASC',
+    [problemId]
+  );
+
+  const errors = [];
+  const warnings = [];
+
+  if (testCases.length === 0 && examples.length === 0) {
+    errors.push('No test cases or sample examples found for this problem.');
+  }
+
+  let sampleCount = examples.length;
+  let hiddenCount = 0;
+
+  testCases.forEach((tc, idx) => {
+    if (tc.is_hidden) {
+      hiddenCount++;
+    } else {
+      sampleCount++;
+    }
+
+    if (tc.expected_output === null || tc.expected_output === undefined || String(tc.expected_output).trim() === '') {
+      errors.push(`Test Case #${idx + 1} (ID: ${tc.id}) has empty expected output.`);
+    }
+    if (tc.input_data === null || tc.input_data === undefined) {
+      warnings.push(`Test Case #${idx + 1} (ID: ${tc.id}) has null input data.`);
+    }
+    if (tc.weight !== undefined && (isNaN(Number(tc.weight)) || Number(tc.weight) < 0)) {
+      warnings.push(`Test Case #${idx + 1} (ID: ${tc.id}) has invalid weight.`);
+    }
+  });
+
+  if (sampleCount === 0) {
+    warnings.push('No public sample test cases found. Students will have no sample cases to test against.');
+  }
+  if (hiddenCount === 0) {
+    warnings.push('No hidden test cases found. All test cases are public sample cases.');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    totalTestCases: testCases.length + examples.length,
+    sampleCasesCount: sampleCount,
+    hiddenCasesCount: hiddenCount,
+    errors,
+    warnings
+  };
+}
+
+/**
+ * Pre-publish Checklist Validation for a Contest.
+ */
+async function validateContestPrePublish(contestId) {
+  const contest = await getContestById(contestId);
+  if (!contest) throw new Error('Contest not found');
+
+  const errors = [];
+  const warnings = [];
+
+  if (!contest.title || !String(contest.title).trim()) {
+    errors.push('Contest title is required');
+  }
+
+  if (!contest.start_time || !contest.end_time) {
+    errors.push('Start time and end time are required');
+  } else if (new Date(contest.end_time) <= new Date(contest.start_time)) {
+    errors.push('End time must be after start time');
+  }
+
+  if (!Array.isArray(contest.allowed_languages) || contest.allowed_languages.length === 0) {
+    errors.push('At least one supported programming language must be selected');
+  }
+
+  const { rows: problems } = await pool.query(
+    'SELECT id, title, max_score FROM coding_problems WHERE contest_id = $1 ORDER BY order_index ASC',
+    [contestId]
+  );
+
+  if (problems.length === 0) {
+    errors.push('Contest must contain at least 1 problem before publishing');
+  } else {
+    for (const prob of problems) {
+      if (!prob.max_score || Number(prob.max_score) <= 0) {
+        warnings.push(`Problem "${prob.title}" has a max score of 0`);
+      }
+      const tcVal = await validateProblemTestCases(prob.id);
+      if (!tcVal.isValid) {
+        errors.push(`Problem "${prob.title}": ${tcVal.errors.join('; ')}`);
+      } else if (tcVal.warnings.length > 0) {
+        warnings.push(`Problem "${prob.title}": ${tcVal.warnings.join('; ')}`);
+      }
+    }
+  }
+
+  if (contest.certificate_enabled && !contest.certificate_template_id) {
+    warnings.push('Certificates are enabled but no certificate template is assigned');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings,
+    contestTitle: contest.title,
+    problemCount: problems.length
+  };
 }
 
 /**
@@ -1301,6 +1428,22 @@ async function submitStudentSolution(problemId, { language, code }, studentId) {
 
 
 /**
+ * Register a student for a contest (or auto-register on submission/entry).
+ */
+async function registerStudentForContest(contestId, studentId) {
+  if (!contestId || !studentId) throw new Error('contest_id and student_id are required');
+
+  const { rows } = await pool.query(
+    `INSERT INTO coding_participants (contest_id, student_id, joined_at, status)
+     VALUES ($1, $2, CURRENT_TIMESTAMP, 'active')
+     ON CONFLICT (contest_id, student_id) DO UPDATE SET status = 'active'
+     RETURNING *`,
+    [contestId, studentId]
+  );
+  return rows[0];
+}
+
+/**
  * Calculate & fetch Contest Leaderboard with visibility checks and privacy formatting.
  */
 async function calculateContestLeaderboard(contestId, studentId) {
@@ -1317,13 +1460,17 @@ async function calculateContestLeaderboard(contestId, studentId) {
   }
 
   const { rows: aggRows } = await pool.query(
-    `SELECT pt.student_id,
-            COALESCE(u.full_name, u.email, 'Student #' || pt.student_id) as display_name,
+    `SELECT u.id as student_id,
+            COALESCE(u.full_name, u.email, 'Student #' || u.id) as display_name,
             u.email,
             SUM(best.max_prob_score)::integer as total_score,
             COUNT(CASE WHEN best.has_accepted THEN 1 END)::integer as problems_solved,
             COALESCE(SUM(best.penalty_mins), 0)::integer as penalty_time
-     FROM coding_participants pt
+     FROM (
+       SELECT DISTINCT student_id FROM coding_submissions WHERE contest_id = $1
+       UNION
+       SELECT student_id FROM coding_participants WHERE contest_id = $1 AND (status IS NULL OR status != 'disqualified')
+     ) pt
      JOIN users u ON u.id = pt.student_id
      JOIN (
        SELECT contest_id, problem_id, student_id,
@@ -1333,9 +1480,8 @@ async function calculateContestLeaderboard(contestId, studentId) {
        FROM coding_submissions
        WHERE contest_id = $1
        GROUP BY contest_id, problem_id, student_id
-     ) best ON best.student_id = pt.student_id AND best.contest_id = pt.contest_id
-     WHERE pt.contest_id = $1 AND (pt.status IS NULL OR pt.status != 'disqualified')
-     GROUP BY pt.student_id, u.full_name, u.email
+     ) best ON best.student_id = pt.student_id AND best.contest_id = $1
+     GROUP BY u.id, u.full_name, u.email
      ORDER BY total_score DESC, problems_solved DESC, penalty_time ASC`,
     [contestId]
   );
@@ -1491,6 +1637,176 @@ async function recordIntegrityEvent({ contestId, problemId, studentId, eventType
   return { ok: true, event: rows[0] };
 }
 
+/**
+ * Validate test cases for a single problem.
+ */
+async function validateProblemTestCases(problemId) {
+  const { rows: testCases } = await pool.query(
+    `SELECT id, is_hidden, weight, input_data, expected_output FROM coding_test_cases WHERE problem_id = $1 ORDER BY id ASC`,
+    [problemId]
+  );
+  const { rows: examples } = await pool.query(
+    `SELECT id FROM coding_problem_examples WHERE problem_id = $1`,
+    [problemId]
+  );
+
+  const errors = [];
+  const warnings = [];
+
+  const totalCases = testCases.length + examples.length;
+  if (totalCases === 0) {
+    errors.push('Problem must have at least one test case or public example');
+  }
+
+  const hiddenCases = testCases.filter((tc) => tc.is_hidden === true);
+  if (testCases.length > 0 && hiddenCases.length === 0) {
+    warnings.push('Problem has test cases but zero hidden test cases for authoritative evaluation');
+  }
+
+  for (const tc of testCases) {
+    if (tc.expected_output === null || tc.expected_output === undefined) {
+      errors.push(`Test case ID ${tc.id} is missing expected output`);
+    }
+  }
+
+  const valid = errors.length === 0;
+  return {
+    valid,
+    problem_id: problemId,
+    total_test_cases: testCases.length,
+    public_cases: testCases.filter((tc) => !tc.is_hidden).length + examples.length,
+    hidden_cases: hiddenCases.length,
+    errors,
+    warnings
+  };
+}
+
+/**
+ * Validate complete contest pre-publish checklist.
+ */
+async function validateContestPrePublish(contestId) {
+  const contest = await getContestById(contestId);
+  if (!contest) throw new Error('Contest not found');
+
+  const { rows: problems } = await pool.query(
+    `SELECT id, title, max_score FROM coding_problems WHERE contest_id = $1 ORDER BY order_index ASC`,
+    [contestId]
+  );
+
+  const errors = [];
+  const warnings = [];
+
+  if (!contest.title || !contest.title.trim()) {
+    errors.push('Contest title is required');
+  }
+
+  if (problems.length === 0) {
+    errors.push('Contest must contain at least one problem before publishing');
+  }
+
+  const problemValidations = [];
+  for (const prob of problems) {
+    const val = await validateProblemTestCases(prob.id);
+    problemValidations.push(val);
+    if (!val.valid) {
+      errors.push(`Problem "${prob.title}" has test case validation errors: ${val.errors.join('; ')}`);
+    }
+  }
+
+  const valid = errors.length === 0;
+  return {
+    valid,
+    contest_id: contestId,
+    contest_title: contest.title,
+    problems_count: problems.length,
+    problem_validations: problemValidations,
+    errors,
+    warnings
+  };
+}
+
+/**
+ * Fetch server-paginated submissions list for Admin portal.
+ */
+async function getAdminSubmissions({ contestId, problemId, studentId, status, language, limit = 50, offset = 0 } = {}) {
+  const clauses = [];
+  const params = [];
+
+  if (contestId) {
+    params.push(contestId);
+    clauses.push(`sub.contest_id = $${params.length}`);
+  }
+  if (problemId) {
+    params.push(problemId);
+    clauses.push(`sub.problem_id = $${params.length}`);
+  }
+  if (studentId) {
+    params.push(studentId);
+    clauses.push(`sub.student_id = $${params.length}`);
+  }
+  if (status) {
+    params.push(String(status).toLowerCase());
+    clauses.push(`sub.status = $${params.length}`);
+  }
+  if (language) {
+    params.push(String(language).toLowerCase());
+    clauses.push(`sub.language = $${params.length}`);
+  }
+
+  const whereStr = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+
+  const countRes = await pool.query(
+    `SELECT COUNT(*)::int as total FROM coding_submissions sub ${whereStr}`,
+    params
+  );
+  const total = Number(countRes.rows[0]?.total || 0);
+
+  params.push(Math.max(1, Math.min(Number(limit) || 50, 100)));
+  const limitIdx = params.length;
+  params.push(Math.max(0, Number(offset) || 0));
+  const offsetIdx = params.length;
+
+  const { rows } = await pool.query(
+    `SELECT sub.id, sub.contest_id, sub.problem_id, sub.student_id, sub.language, sub.status,
+            sub.score, sub.execution_time, sub.memory_used, sub.submitted_at, sub.is_best_submission,
+            p.title as problem_title, p.max_score as problem_max_score,
+            c.title as contest_title,
+            u.full_name as student_name, u.email as student_email
+     FROM coding_submissions sub
+     JOIN coding_problems p ON p.id = sub.problem_id
+     JOIN coding_contests c ON c.id = sub.contest_id
+     JOIN users u ON u.id = sub.student_id
+     ${whereStr}
+     ORDER BY sub.submitted_at DESC
+     LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+    params
+  );
+
+  return { total, limit: Number(limit), offset: Number(offset), submissions: rows };
+}
+
+/**
+ * Fetch detailed single submission view for Admin inspection.
+ */
+async function getAdminSubmissionById(submissionId) {
+  const { rows } = await pool.query(
+    `SELECT sub.id, sub.contest_id, sub.problem_id, sub.student_id, sub.language, sub.source_code,
+            sub.status, sub.score, sub.execution_time, sub.memory_used, sub.submitted_at, sub.is_best_submission,
+            p.title as problem_title, p.statement as problem_statement, p.max_score as problem_max_score,
+            c.title as contest_title,
+            u.full_name as student_name, u.email as student_email
+     FROM coding_submissions sub
+     JOIN coding_problems p ON p.id = sub.problem_id
+     JOIN coding_contests c ON c.id = sub.contest_id
+     JOIN users u ON u.id = sub.student_id
+     WHERE sub.id = $1
+     LIMIT 1`,
+    [submissionId]
+  );
+  if (!rows.length) return null;
+  return rows[0];
+}
+
 module.exports = {
   SUPPORTED_LANGUAGES,
   getCodingModuleSettings,
@@ -1527,7 +1843,11 @@ module.exports = {
   disqualifyParticipant,
   executeCodeWithJudge0,
   getStudentIntegritySummary,
-  runSafeDataRetentionCleanup
+  runSafeDataRetentionCleanup,
+  validateProblemTestCases,
+  validateContestPrePublish,
+  getAdminSubmissions,
+  getAdminSubmissionById
 };
 
 

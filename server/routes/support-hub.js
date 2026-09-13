@@ -13,8 +13,10 @@ const {
   isUserSupportSuspended
 } = require('../utils/supportGovernance');
 const { assertValidUploadBuffer, saveUploadedFile } = require('../services/uploadService');
+const { requireFeatureEnabled } = require('../middleware/featureToggle');
 
 const router = express.Router();
+router.use(requireFeatureEnabled('support'));
 
 const upload = multer({
   storage: multer.memoryStorage(),

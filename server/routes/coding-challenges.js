@@ -20,8 +20,33 @@ const {
   recordIntegrityEvent
 } = require('../services/codingChallengesService');
 
-// All student coding APIs require a valid server-side session
-router.use(requireAuth);
+const { requireFeatureEnabled } = require('../middleware/featureToggle');
+
+// All student coding APIs require a valid server-side session, enabled feature module & completed academic profile
+router.use(requireAuth, requireFeatureEnabled('coding_challenges'), requireStudentAcademicScope);
+
+/**
+ * Middleware: Verify student has completed mandatory academic setup.
+ */
+async function requireStudentAcademicScope(req, res, next) {
+  const role = req.session?.role || '';
+  if (role === 'admin' || role === 'super_admin') {
+    return next();
+  }
+
+  const { resolveStudentAcademicScope } = require('../utils/academic-scope');
+  const scope = await resolveStudentAcademicScope(req.session.userId);
+  if (!scope || !scope.profileComplete) {
+    return res.status(403).json({
+      error: 'ACADEMIC_PROFILE_REQUIRED',
+      code: 'ACADEMIC_PROFILE_REQUIRED',
+      message: 'Mandatory academic onboarding setup is required before accessing coding challenges.'
+    });
+  }
+
+  req.studentAcademicScope = scope;
+  next();
+}
 
 /**
  * Middleware: Verify coding challenges module is enabled for student access.

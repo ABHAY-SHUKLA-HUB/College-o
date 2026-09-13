@@ -23,74 +23,71 @@ function daysBetween(isoDate) {
 async function ensureSchema() {
   if (schemaReady) return;
 
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS learner_events (
-      id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      event_type VARCHAR(100) NOT NULL,
-      source VARCHAR(80) DEFAULT 'web',
-      event_payload JSONB NOT NULL DEFAULT '{}'::jsonb,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS ai_usage_events (
-      id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      tool_key VARCHAR(120) NOT NULL,
-      intent VARCHAR(80),
-      tokens_used INTEGER DEFAULT 0,
-      duration_ms INTEGER DEFAULT 0,
-      success BOOLEAN DEFAULT TRUE,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS learner_state_snapshots (
-      user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-      snapshot_json JSONB NOT NULL,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS next_action_log (
-      id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      action_key VARCHAR(120) NOT NULL,
-      action_payload JSONB NOT NULL DEFAULT '{}'::jsonb,
-      score NUMERIC(8,4) DEFAULT 0,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS mission_progress (
-      id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      mission_key VARCHAR(120) NOT NULL,
-      progress NUMERIC(8,2) NOT NULL DEFAULT 0,
-      target NUMERIC(8,2) NOT NULL DEFAULT 1,
-      status VARCHAR(30) NOT NULL DEFAULT 'active',
-      reward_json JSONB DEFAULT '{}'::jsonb,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE (user_id, mission_key, status)
-    )
-  `);
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS growth_shares (
-      id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      share_type VARCHAR(80) NOT NULL,
-      share_channel VARCHAR(80),
-      metadata JSONB DEFAULT '{}'::jsonb,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+  await Promise.all([
+    pool.query(`
+      CREATE TABLE IF NOT EXISTS learner_events (
+        id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        event_type VARCHAR(100) NOT NULL,
+        source VARCHAR(80) DEFAULT 'web',
+        event_payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `),
+    pool.query(`
+      CREATE TABLE IF NOT EXISTS ai_usage_events (
+        id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        tool_key VARCHAR(120) NOT NULL,
+        intent VARCHAR(80),
+        tokens_used INTEGER DEFAULT 0,
+        duration_ms INTEGER DEFAULT 0,
+        success BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `),
+    pool.query(`
+      CREATE TABLE IF NOT EXISTS learner_state_snapshots (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        snapshot_json JSONB NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `),
+    pool.query(`
+      CREATE TABLE IF NOT EXISTS next_action_log (
+        id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        action_key VARCHAR(120) NOT NULL,
+        action_payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+        score NUMERIC(8,4) DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `),
+    pool.query(`
+      CREATE TABLE IF NOT EXISTS mission_progress (
+        id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        mission_key VARCHAR(120) NOT NULL,
+        progress NUMERIC(8,2) NOT NULL DEFAULT 0,
+        target NUMERIC(8,2) NOT NULL DEFAULT 1,
+        status VARCHAR(30) NOT NULL DEFAULT 'active',
+        reward_json JSONB DEFAULT '{}'::jsonb,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (user_id, mission_key, status)
+      )
+    `),
+    pool.query(`
+      CREATE TABLE IF NOT EXISTS growth_shares (
+        id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        share_type VARCHAR(80) NOT NULL,
+        share_channel VARCHAR(80),
+        metadata JSONB DEFAULT '{}'::jsonb,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+  ]);
 
   schemaReady = true;
 }
@@ -509,7 +506,7 @@ async function buildLearnerBrainPayload(userId, options = {}) {
     studyPlan
   };
 
-  await Promise.all([persistSnapshot(userId, payload), logNextAction(userId, nextAction)]);
+  Promise.all([persistSnapshot(userId, payload), logNextAction(userId, nextAction)]).catch(() => {});
 
   return payload;
 }

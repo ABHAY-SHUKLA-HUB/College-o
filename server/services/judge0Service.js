@@ -213,8 +213,16 @@ function simulateCodeOutput(code, input) {
   return String(input || '').trim();
 }
 
+const SUPPORTED_LANGUAGES = Object.values(JUDGE0_LANGUAGES).map((lang) => ({
+  key: lang.id,
+  name: lang.name,
+  extension: lang.extension,
+  enabled: true
+}));
+
 module.exports = {
   JUDGE0_LANGUAGES,
+  SUPPORTED_LANGUAGES,
   EXECUTION_LIMITS,
   executeCodeWithJudge0,
   sanitizeOutput

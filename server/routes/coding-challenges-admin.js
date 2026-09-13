@@ -29,7 +29,11 @@ const {
   updateTestCase,
   deleteTestCase,
   bulkImportTestCases,
-  getContestResults
+  getContestResults,
+  validateProblemTestCases,
+  validateContestPrePublish,
+  getAdminSubmissions,
+  getAdminSubmissionById
 } = require('../services/codingChallengesService');
 
 // All admin coding APIs require a valid server-side admin session
@@ -40,7 +44,10 @@ router.use(requireAdmin);
  * Returns supported programming languages configuration.
  */
 router.get('/languages', (_req, res) => {
-  res.json({ languages: SUPPORTED_LANGUAGES });
+  const languagesList = Array.isArray(SUPPORTED_LANGUAGES)
+    ? SUPPORTED_LANGUAGES
+    : Object.values(SUPPORTED_LANGUAGES || {});
+  res.json({ languages: languagesList });
 });
 
 /**
@@ -175,12 +182,52 @@ router.delete('/contests/:id', async (req, res) => {
 });
 
 /**
+ * GET /api/admin/coding-challenges/contests/:id/validate
+ * Run Pre-Publish Checklist validation for a contest.
+ */
+router.get('/contests/:id/validate', async (req, res) => {
+  try {
+    const validation = await validateContestPrePublish(req.params.id);
+    res.json({ validation });
+  } catch (error) {
+    console.error('[Admin Coding API] Error validating contest:', error.message || error);
+    res.status(500).json({ error: 'Failed to validate contest pre-publish checklist' });
+  }
+});
+
+/**
+ * GET /api/admin/coding-challenges/problems/:id/validate-test-cases
+ * Run test cases validation for a problem.
+ */
+router.get('/problems/:id/validate-test-cases', async (req, res) => {
+  try {
+    const validation = await validateProblemTestCases(req.params.id);
+    res.json({ validation });
+  } catch (error) {
+    console.error('[Admin Coding API] Error validating problem test cases:', error.message || error);
+    res.status(500).json({ error: 'Failed to validate problem test cases' });
+  }
+});
+
+/**
  * PATCH /api/admin/coding-challenges/contests/:id/status
  * Publish, cancel, or reopen contest.
  */
 router.patch('/contests/:id/status', async (req, res) => {
   try {
     const { status } = req.body || {};
+    
+    // Enforce pre-publish checklist validation before publishing or scheduling
+    if (['published', 'scheduled', 'live'].includes(String(status).toLowerCase())) {
+      const validation = await validateContestPrePublish(req.params.id);
+      if (!validation.valid) {
+        return res.status(400).json({
+          error: 'Contest pre-publish checklist failed. Please fix all critical errors before publishing.',
+          validation
+        });
+      }
+    }
+
     const updated = await updateContestStatus(req.params.id, status, req.session.userId);
     res.json({ message: `Contest status changed to ${status}`, contest: updated });
   } catch (error) {
@@ -345,6 +392,36 @@ router.delete('/test-cases/:id', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/admin/coding-challenges/submissions
+ * Fetch server-paginated list of submissions across all contests/students.
+ */
+router.get('/submissions', async (req, res) => {
+  try {
+    const { contestId, problemId, studentId, status, language, limit, offset } = req.query || {};
+    const result = await getAdminSubmissions({ contestId, problemId, studentId, status, language, limit, offset });
+    res.json(result);
+  } catch (error) {
+    console.error('[Admin Coding API] Error fetching submissions:', error.message || error);
+    res.status(500).json({ error: 'Failed to fetch coding submissions' });
+  }
+});
+
+/**
+ * GET /api/admin/coding-challenges/submissions/:id
+ * Fetch detailed view of a single submission (including source code and contest details).
+ */
+router.get('/submissions/:id', async (req, res) => {
+  try {
+    const submission = await getAdminSubmissionById(req.params.id);
+    if (!submission) return res.status(404).json({ error: 'Submission not found' });
+    res.json({ submission });
+  } catch (error) {
+    console.error('[Admin Coding API] Error fetching submission details:', error.message || error);
+    res.status(500).json({ error: 'Failed to fetch submission details' });
+  }
+});
+
 const { disqualifyParticipant } = require('../services/codingChallengesService');
 const { analyzeContestSimilarity, getContestSimilarityResults, updateSimilarityStatus } = require('../services/codeSimilarityService');
 const { getStudentIntegritySummary, getContestIntegrityOverview } = require('../services/integrityAssessmentService');
@@ -357,7 +434,9 @@ const {
   finalizeContest,
   approveCertificate,
   revokeCertificate,
-  generateCertificatePDF
+  reissueCertificate,
+  generateCertificatePDF,
+  generateCertificatePreview
 } = require('../services/certificateService');
 const { createUploadMiddleware, saveUploadedFile } = require('../services/uploadService');
 
@@ -524,32 +603,50 @@ router.post('/templates/:id/duplicate', async (req, res) => {
 });
 
 /**
+ * POST /api/admin/coding-challenges/certificates/preview
  * POST /api/admin/coding-challenges/templates/preview
- * Generate sample/test certificate PDF preview.
+ * POST /api/admin/coding-challenges/templates/:id/preview
+ * Generate sample/test certificate preview (PDF buffer or JSON metadata with rendered placeholders).
  */
-router.post('/templates/preview', async (req, res) => {
+const handleCertificatePreview = async (req, res) => {
   try {
-    const sampleCert = {
-      student_name: req.body.sample_student_name || 'Alex Morgan',
-      rank: req.body.sample_rank || 1,
-      position_text: req.body.sample_position_text || '1st Position',
-      contest_name: req.body.sample_contest_name || 'Weekly Coding Challenge #1',
-      contest_date: new Date().toLocaleDateString(),
-      issue_date: new Date().toLocaleDateString(),
-      certificate_number: 'CO-CODE-SAMPLE-0001',
-      verification_token: 'SAMPLE_VERIFICATION_TOKEN',
-      configuration: req.body.configuration,
-      is_sample: true
-    };
-    const pdfBuffer = await generateCertificatePDF(sampleCert);
+    const templateId = req.params.id || req.body.template_id;
+    const contestId = req.body.contest_id;
+    const studentName = req.body.sample_student_name || req.body.student_name || 'Abhay Shukla';
+    const rank = req.body.sample_rank || req.body.rank || 1;
+    const positionText = req.body.sample_position_text || req.body.position_text;
+    const customConfig = req.body.configuration || req.body.customConfig;
+    const format = String(req.query.format || req.body.format || 'pdf').toLowerCase();
+
+    const preview = await generateCertificatePreview({
+      templateId,
+      contestId,
+      studentName,
+      rank,
+      positionText,
+      customConfig
+    });
+
+    if (format === 'json') {
+      return res.json({
+        ok: true,
+        certData: preview.certData,
+        renderedText: preview.renderedText
+      });
+    }
+
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'inline; filename="sample-certificate.pdf"');
-    res.send(pdfBuffer);
+    res.setHeader('Content-Disposition', 'inline; filename="certificate-preview.pdf"');
+    res.send(preview.pdfBuffer);
   } catch (error) {
     console.error('[Admin Coding API] Error generating certificate preview:', error.message || error);
-    res.status(500).json({ error: 'Failed to generate certificate preview PDF' });
+    res.status(500).json({ error: error.message || 'Failed to generate certificate preview' });
   }
-});
+};
+
+router.post('/certificates/preview', handleCertificatePreview);
+router.post('/templates/preview', handleCertificatePreview);
+router.post('/templates/:id/preview', handleCertificatePreview);
 
 /**
  * POST /api/admin/coding-challenges/branding/upload
@@ -666,6 +763,49 @@ router.get('/certificates/:id/pdf', async (req, res) => {
   } catch (error) {
     console.error('[Admin Coding API] Error generating certificate PDF:', error.message || error);
     res.status(500).json({ error: 'Failed to generate certificate PDF' });
+  }
+});
+
+/**
+ * GET /api/admin/coding-challenges/certificates
+ * Get all certificates across contests with optional status filter.
+ */
+router.get('/certificates', async (req, res) => {
+  try {
+    const { pool } = require('../db/pool');
+    let query = `
+      SELECT c.*, u.full_name as student_name, u.email as student_email, ct.title as contest_name
+      FROM coding_certificates c
+      JOIN users u ON u.id = c.student_id
+      JOIN coding_contests ct ON ct.id = c.contest_id
+    `;
+    const params = [];
+    if (req.query.status) {
+      query += ` WHERE c.status = $1`;
+      params.push(req.query.status);
+    }
+    query += ` ORDER BY c.created_at DESC`;
+    const { rows } = await pool.query(query, params);
+    res.json({ certificates: rows });
+  } catch (error) {
+    console.error('[Admin Coding API] Error fetching all certificates:', error.message || error);
+    res.status(500).json({ error: 'Failed to fetch certificates' });
+  }
+});
+
+/**
+ * POST /api/admin/coding-challenges/certificates/:id/reissue
+ * Reissue a revoked or pending certificate.
+ */
+router.post('/certificates/:id/reissue', async (req, res) => {
+  try {
+    const { position_text } = req.body || {};
+    const adminId = req.session.userId;
+    const certificate = await reissueCertificate(req.params.id, adminId, position_text);
+    res.json({ message: 'Certificate reissued successfully', certificate });
+  } catch (error) {
+    console.error('[Admin Coding API] Error reissuing certificate:', error.message || error);
+    res.status(400).json({ error: error.message || 'Failed to reissue certificate' });
   }
 });
 

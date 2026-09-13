@@ -1,9 +1,9 @@
 const express = require('express');
 const { pool } = require('../db/pool');
-const { requireAuth } = require('../middleware/auth');
-const { resolveMembershipState } = require('../middleware/auth');
+const { requireAuth, resolveMembershipState } = require('../middleware/auth');
 const { buildLearnerBrainPayload } = require('../services/intelligence-brain');
 const { RtcTokenBuilder, RtcRole } = require('agora-access-token');
+const { readFeatureMatrix } = require('../middleware/featureToggle');
 
 const router = express.Router();
 let experienceSettingsPromise = null;
@@ -205,9 +205,15 @@ function normalizeLiveHubConfig(config) {
   };
 }
 
-async function saveStudentExperienceConfig(config, updatedBy = null) {
+function invalidateExperienceConfigCache() {
+  experienceSettingsPromise = null;
   experienceConfigCache.payload = null;
   experienceConfigCache.loadedAt = 0;
+  experienceConfigCache.promise = null;
+}
+
+async function saveStudentExperienceConfig(config, updatedBy = null) {
+  invalidateExperienceConfigCache();
   await pool.query(
     `INSERT INTO platform_settings (key, value_json, updated_by, updated_at)
      VALUES ('student_experience_config', $1::jsonb, $2, CURRENT_TIMESTAMP)
@@ -320,9 +326,10 @@ async function readStudentExperienceConfig() {
 
     await experienceSettingsPromise;
 
-    const [experienceRow, featureRow] = await Promise.all([
+    const [experienceRow, featureRow, featureMatrix] = await Promise.all([
       pool.query("SELECT value_json FROM platform_settings WHERE key = 'student_experience_config' LIMIT 1"),
-      pool.query("SELECT value_json FROM platform_settings WHERE key = 'feature_toggles' LIMIT 1")
+      pool.query("SELECT value_json FROM platform_settings WHERE key = 'feature_toggles' LIMIT 1"),
+      readFeatureMatrix(true)
     ]);
 
     const baseConfig = deepMerge(DEFAULT_STUDENT_EXPERIENCE_CONFIG, experienceRow.rows[0]?.value_json || {});
@@ -335,9 +342,19 @@ async function readStudentExperienceConfig() {
       roadmapSystem: typeof featureToggles.roadmaps === 'boolean' ? featureToggles.roadmaps : baseConfig.featureFlags.roadmapSystem
     };
 
+    // Part 4 Global Feature Control Precedence Override
+    const referralsDisabled = featureMatrix?.referrals?.is_enabled === false || featureMatrix?.referrals?.status === 'OFF';
+    const liveSessionsDisabled = featureMatrix?.live_sessions?.is_enabled === false || featureMatrix?.live_sessions?.status === 'OFF';
+
+    baseConfig.show_referral_card = referralsDisabled ? false : (baseConfig.show_referral_card !== false);
+    baseConfig.referralsEnabled = !referralsDisabled;
+    baseConfig.show_upcoming_sessions = liveSessionsDisabled ? false : (baseConfig.show_upcoming_sessions !== false);
+    baseConfig.liveSessionsEnabled = !liveSessionsDisabled;
+
     const payload = {
       ...baseConfig,
-      featureFlags: mergedFeatureFlags
+      featureFlags: mergedFeatureFlags,
+      featureMatrix
     };
 
     experienceConfigCache.payload = payload;
@@ -486,84 +503,80 @@ router.get('/personalized', requireAuth, async (req, res) => {
   const profile = profileResult.rows[0] || {};
   const stats = statsResult.rows[0] || {};
   const isPremium = Boolean(membership?.premiumActive || membership?.isAdmin);
+  const userRole = String(req.session?.role || '').toLowerCase();
+  const isAdmin = userRole === 'admin' || userRole === 'super_admin';
 
-  const params = [];
-  const branchClauses = [];
-  if (profile.category_id) {
-    params.push(profile.category_id);
-    branchClauses.push(`(category_id IS NULL OR category_id = $${params.length})`);
-  }
-  if (profile.branch_id) {
-    params.push(profile.branch_id);
-    branchClauses.push(`(branch_id IS NULL OR branch_id = $${params.length})`);
-  }
-  if (profile.semester_id) {
-    params.push(profile.semester_id);
-    branchClauses.push(`(semester_id IS NULL OR semester_id = $${params.length})`);
+  const { resolveStudentAcademicScope, applyAcademicScopeToQuery } = require('../utils/academic-scope');
+  const studentScope = await resolveStudentAcademicScope(userId);
+
+  if (!isAdmin && (!studentScope || !studentScope.profileComplete)) {
+    return res.status(403).json({
+      error: 'ACADEMIC_PROFILE_REQUIRED',
+      code: 'ACADEMIC_PROFILE_REQUIRED',
+      message: 'Mandatory academic onboarding setup is required before accessing dashboard.'
+    });
   }
 
-  const scopedWhere = branchClauses.length ? `AND ${branchClauses.join(' AND ')}` : '';
   const accessClause = isPremium ? '' : `AND COALESCE(access_type, 'free') <> 'premium'`;
+  const scopeFilterNotes = applyAcademicScopeToQuery(studentScope, { alias: 'n', startIndex: 1, legacySupport: true });
+  const scopeFilterQuizzes = applyAcademicScopeToQuery(studentScope, { alias: 'q', startIndex: 1, legacySupport: true });
+  const scopeFilterMocks = applyAcademicScopeToQuery(studentScope, { alias: 'm', startIndex: 1, legacySupport: true });
+  const scopeFilterRoadmaps = applyAcademicScopeToQuery(studentScope, { alias: 'r', startIndex: 1, legacySupport: true });
 
   const [recommendedNotes, recommendedQuizzes, recommendedMockTests, recommendedRoadmaps, aiTools, announcements] = await Promise.all([
     pool.query(
       `SELECT id, subject, chapter, access_type
-       FROM notes
+       FROM notes n
        WHERE deleted_at IS NULL AND status = 'published'
-       ${scopedWhere}
+       AND ${scopeFilterNotes.sqlClause}
        ${accessClause}
        ORDER BY created_at DESC
        LIMIT 5`,
-      params
+      scopeFilterNotes.params
     ),
     pool.query(
       `SELECT id, subject, chapter, difficulty, access_type
-       FROM quizzes
+       FROM quizzes q
        WHERE deleted_at IS NULL AND status = 'published'
-       ${scopedWhere}
+       AND ${scopeFilterQuizzes.sqlClause}
        ${accessClause}
        ORDER BY created_at DESC
        LIMIT 5`,
-      params
+      scopeFilterQuizzes.params
     ),
     pool.query(
       `SELECT id, title, subject, difficulty, access_type
-       FROM mock_tests
+       FROM mock_tests m
        WHERE deleted_at IS NULL AND status = 'published'
-       ${scopedWhere}
+       AND ${scopeFilterMocks.sqlClause}
        ${accessClause}
        ORDER BY created_at DESC
        LIMIT 5`,
-      params
+      scopeFilterMocks.params
     ),
     pool.query(
-      `SELECT id, title, career_track, access_type, is_featured
-       FROM career_roadmaps
-       WHERE deleted_at IS NULL AND is_published = TRUE AND status = 'published'
-       ${scopedWhere}
-       ${accessClause}
-       ORDER BY is_featured DESC, sort_order ASC
+      `SELECT id, title
+       FROM career_roadmaps r
+       WHERE deleted_at IS NULL
+       AND ${scopeFilterRoadmaps.sqlClause}
+       ORDER BY created_at DESC
        LIMIT 4`,
-      params
+      scopeFilterRoadmaps.params
     ),
     pool.query(
       `SELECT id, tool_key, title, tagline, access_type, is_featured
        FROM ai_tools_catalog
-       WHERE deleted_at IS NULL AND is_enabled = TRUE AND is_visible = TRUE AND status = 'published'
-       ${scopedWhere}
+       WHERE deleted_at IS NULL AND is_enabled = TRUE AND is_visible = TRUE
        ${accessClause}
        ORDER BY is_featured DESC, sort_order ASC
-       LIMIT 6`,
-      params
+       LIMIT 6`
     ),
     pool.query(
       `SELECT id, title, message, created_at
        FROM announcements
-       WHERE deleted_at IS NULL AND status = 'published'
-       ${scopedWhere}
+       WHERE deleted_at IS NULL AND (status IS NULL OR status = 'published')
        ORDER BY created_at DESC
-       LIMIT 5`,
-      params
+       LIMIT 5`
     )
   ]);
 
@@ -789,3 +802,4 @@ module.exports = router;
 module.exports.readStudentExperienceConfig = readStudentExperienceConfig;
 module.exports.normalizeLiveHubConfig = normalizeLiveHubConfig;
 module.exports.saveStudentExperienceConfig = saveStudentExperienceConfig;
+module.exports.invalidateExperienceConfigCache = invalidateExperienceConfigCache;

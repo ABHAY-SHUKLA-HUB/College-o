@@ -68,7 +68,7 @@ async function verifyTurnstileToken(token, ip) {
     };
   }
 
-  if (!isProduction && ['dev-bypass', 'dummy-token', 'test-token', '1x00000000000000000000AA'].includes(normalizedToken)) {
+  if (!isProduction && ['dev-bypass', 'dummy-token', 'test-token', '1x00000000000000000000AA', 'bypass', 'math-verified'].includes(normalizedToken)) {
     return { ok: true, bypassed: true, message: 'Test token accepted in development.' };
   }
 

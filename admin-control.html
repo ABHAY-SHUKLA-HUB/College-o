@@ -9,343 +9,6 @@
   <script src="assets/js/theme-init.js"></script>
   <link rel="stylesheet" href="assets/css/styles.css" />
   <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
-  <style>
-    .admin-control-grid {
-      display: grid;
-      grid-template-columns: 280px 1fr;
-      gap: 20px;
-      min-height: 100vh;
-    }
-
-    .control-side {
-      background: var(--surface-1, #0f172a);
-      border-radius: 16px;
-      padding: 16px;
-      position: sticky;
-      top: 16px;
-      height: calc(100vh - 32px);
-      overflow: auto;
-    }
-
-    .control-main {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .control-tab {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      width: 100%;
-      border: 0;
-      padding: 10px 12px;
-      border-radius: 10px;
-      background: transparent;
-      color: #cbd5e1;
-      cursor: pointer;
-      text-align: left;
-      margin-bottom: 6px;
-    }
-
-    .control-tab.active {
-      background: #2f6fed;
-      color: #fff;
-    }
-
-    .control-panel {
-      background: var(--surface-0, #ffffff);
-      border-radius: 16px;
-      padding: 18px;
-      border: 1px solid var(--border-color, #dbe4ef);
-      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-      display: none;
-    }
-
-    .control-panel.active {
-      display: block;
-    }
-
-    .control-title {
-      margin: 0 0 6px;
-      font-size: 20px;
-      color: var(--text-primary, #0f172a);
-    }
-
-    .control-subtitle {
-      margin: 0 0 14px;
-      color: var(--text-secondary, #475569);
-      font-size: 14px;
-    }
-
-    .control-filters {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(120px, 1fr));
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-
-    .control-filters input,
-    .control-filters select,
-    .control-filters textarea {
-      width: 100%;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      padding: 9px 10px;
-      font-size: 14px;
-      font-family: inherit;
-      background: #fff;
-    }
-
-    .control-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin: 10px 0 12px;
-    }
-
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(140px, 1fr));
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-
-    .kpi-card {
-      border: 1px solid #dbe4ef;
-      border-radius: 10px;
-      padding: 12px;
-      background: #fff;
-    }
-
-    .kpi-label {
-      color: #64748b;
-      font-size: 12px;
-      margin-bottom: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .kpi-value {
-      font-size: 22px;
-      font-weight: 700;
-      color: #0f172a;
-    }
-
-    .status-badge {
-      display: inline-block;
-      border-radius: 999px;
-      padding: 3px 8px;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: capitalize;
-      border: 1px solid transparent;
-    }
-
-    .status-badge.ok { background: #dcfce7; color: #166534; border-color: #86efac; }
-    .status-badge.warn { background: #fff7ed; color: #9a3412; border-color: #fdba74; }
-    .status-badge.info { background: #eff6ff; color: #1d4ed8; border-color: #93c5fd; }
-
-    .mono {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 12px;
-    }
-
-    .experience-block {
-      border: 1px solid #dbe4ef;
-      border-radius: 12px;
-      padding: 12px;
-      background: #f8fbff;
-      margin-top: 10px;
-    }
-
-    .experience-block h4 {
-      margin: 0 0 8px;
-      font-size: 15px;
-      color: #0f172a;
-    }
-
-    .live-hub-admin-list {
-      display: grid;
-      gap: 12px;
-    }
-
-    .live-hub-admin-card {
-      display: grid;
-      gap: 12px;
-      padding: 14px;
-      border-radius: 16px;
-      border: 1px solid rgba(148, 163, 184, 0.22);
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 255, 0.94));
-      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
-    }
-
-    .live-hub-admin-grid {
-      display: grid;
-      gap: 12px;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .live-hub-admin-grid .full {
-      grid-column: 1 / -1;
-    }
-
-    .live-hub-admin-card label {
-      display: block;
-      margin-bottom: 6px;
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: #51627a;
-    }
-
-    .live-hub-admin-card input,
-    .live-hub-admin-card select,
-    .live-hub-admin-card textarea {
-      width: 100%;
-    }
-
-    .live-hub-admin-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .live-hub-admin-type {
-      border-radius: 999px;
-      padding: 4px 10px;
-      font-size: 12px;
-      font-weight: 700;
-      color: #2f6fed;
-      background: rgba(47, 111, 237, 0.1);
-      border: 1px solid rgba(47, 111, 237, 0.22);
-    }
-
-    .live-hub-admin-status {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      border-radius: 999px;
-      padding: 4px 11px;
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 0.02em;
-      border: 1px solid transparent;
-    }
-
-    .live-hub-admin-status .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: currentColor;
-      display: inline-block;
-    }
-
-    .live-hub-admin-status.scheduled {
-      color: #64748b;
-      background: #f1f5f9;
-      border-color: #dbe4ef;
-    }
-
-    .live-hub-admin-status.live {
-      color: #166534;
-      background: #dcfce7;
-      border-color: #86efac;
-    }
-
-    .live-hub-admin-status.live .dot {
-      animation: livePulse 1.5s ease-out infinite;
-    }
-
-    .live-hub-admin-status.ended {
-      color: #475569;
-      background: #f8fafc;
-      border-color: #cbd5e1;
-    }
-
-    .live-hub-admin-inline-actions {
-      display: grid;
-      grid-template-columns: minmax(160px, 1fr) auto auto;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .live-hub-admin-inline-actions .btn {
-      white-space: nowrap;
-    }
-
-    .drag-list {
-      margin: 0;
-      padding: 0;
-      list-style: none;
-      display: grid;
-      gap: 6px;
-    }
-
-    .drag-item {
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      background: #fff;
-      padding: 8px 10px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      cursor: move;
-      font-size: 13px;
-    }
-
-    .drag-item.dragging {
-      opacity: 0.55;
-      border-color: #2f6fed;
-      box-shadow: 0 8px 18px rgba(47, 111, 237, 0.2);
-    }
-
-    .toggle-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(140px, 1fr));
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    .toggle-item {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      border: 1px solid #dbe4ef;
-      border-radius: 8px;
-      padding: 8px;
-      background: #fff;
-      font-size: 13px;
-    }
-
-    @media (max-width: 1100px) {
-      .admin-control-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .control-side {
-        position: static;
-        height: auto;
-      }
-
-      .control-filters {
-        grid-template-columns: repeat(2, minmax(120px, 1fr));
-      }
-
-      .kpi-grid {
-        grid-template-columns: repeat(2, minmax(120px, 1fr));
-      }
-
-      .toggle-grid {
-        grid-template-columns: repeat(2, minmax(120px, 1fr));
-      }
-
-      .live-hub-admin-inline-actions {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
 </head>
 <body class="admin-portal">
   <div class="co-admin-shell">
@@ -357,28 +20,71 @@
           <p>Full platform control with role-aware governance and audit-safe operations.</p>
         </div>
       </div>
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Admin Navigation</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-dashboard.html"><i class="fa-solid fa-chart-pie"></i><span>Overview</span></a>
-          <a class="co-admin-nav-link active" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control System</span></a>
-          <a class="co-admin-nav-link" href="admin-control.html#live-session-control"><i class="fa-solid fa-tower-broadcast"></i><span>Live Session Control</span></a>
-          <a class="co-admin-nav-link" href="admin-academics.html#contributions"><i class="fa-solid fa-upload"></i><span>Contribution Control</span></a>
-          <a class="co-admin-nav-link" href="admin-support-governance.html"><i class="fa-solid fa-shield-halved"></i><span>Support Governance</span></a>
-          <a class="co-admin-nav-link" href="admin-notes.html"><i class="fa-solid fa-file-lines"></i><span>Notes</span></a>
-          <a class="co-admin-nav-link" href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i><span>Papers</span></a>
-          <a class="co-admin-nav-link" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i><span>Materials</span></a>
-          <a class="co-admin-nav-link" href="admin-quizzes.html"><i class="fa-solid fa-clipboard-question"></i><span>Quizzes</span></a>
-          <a class="co-admin-nav-link" href="admin-certificates.html"><i class="fa-solid fa-graduation-cap"></i><span>Certificates</span></a>
-          <a class="co-admin-nav-link" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Roadmaps</span></a>
-          <a class="co-admin-nav-link" href="admin-mock-tests.html"><i class="fa-solid fa-flask-vial"></i><span>Mock Test Studio</span></a>
-          <a class="co-admin-nav-link" href="admin-ai-tools.html"><i class="fa-solid fa-sparkles"></i><span>AI Tools</span></a>
-          <a class="co-admin-nav-link" href="admin-campus-feed.html"><i class="fa-solid fa-newspaper"></i><span>Campus Feed</span></a>
-        </nav>
-      </section>
+
+      <div class="co-admin-sidebar-nav-container">
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">Overview</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-dashboard.html"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a>
+            <a class="co-admin-nav-link active" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control Center</span></a>
+          </nav>
+        </section>
+
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">Academic Content</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i><span>Study Materials</span></a>
+            <a class="co-admin-nav-link" href="admin-notes.html"><i class="fa-solid fa-file-lines"></i><span>Notes Library</span></a>
+            <a class="co-admin-nav-link" href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i><span>Previous Papers</span></a>
+            <a class="co-admin-nav-link" href="admin-quizzes.html"><i class="fa-solid fa-clipboard-question"></i><span>Quizzes</span></a>
+            <a class="co-admin-nav-link" href="admin-mock-tests.html"><i class="fa-solid fa-flask-vial"></i><span>Mock Test Studio</span></a>
+            <a class="co-admin-nav-link" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Study Roadmaps</span></a>
+            <a class="co-admin-nav-link" href="admin-academics.html"><i class="fa-solid fa-graduation-cap"></i><span>Academic Structure</span></a>
+          </nav>
+        </section>
+
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">Student Management</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-control.html#students-management"><i class="fa-solid fa-user-graduate"></i><span>Students</span></a>
+            <a class="co-admin-nav-link" href="admin-control.html#membership-management"><i class="fa-solid fa-id-card"></i><span>Memberships & Payments</span></a>
+            <a class="co-admin-nav-link" href="admin-academics.html#contributions"><i class="fa-solid fa-upload"></i><span>Student Contributions</span></a>
+            <a class="co-admin-nav-link" href="admin-certificates.html"><i class="fa-solid fa-certificate"></i><span>Certificates</span></a>
+          </nav>
+        </section>
+
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">Coding Challenges</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-coding-challenges.html"><i class="fa-solid fa-code"></i><span>Coding Governance</span></a>
+          </nav>
+        </section>
+
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">Community & Support</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-support-governance.html"><i class="fa-solid fa-headset"></i><span>Support Governance</span></a>
+            <a class="co-admin-nav-link" href="admin-campus-feed.html"><i class="fa-solid fa-newspaper"></i><span>Campus Feed</span></a>
+            <a class="co-admin-nav-link" href="admin-ai-tools.html"><i class="fa-solid fa-sparkles"></i><span>AI Tools Studio</span></a>
+          </nav>
+        </section>
+
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">System</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-control.html#system-settings"><i class="fa-solid fa-gear"></i><span>Settings & Feature Toggles</span></a>
+            <a class="co-admin-nav-link" href="admin-control.html#audit-logs"><i class="fa-solid fa-list-check"></i><span>Audit & Activity Logs</span></a>
+          </nav>
+        </section>
+      </div>
+
+      <div class="co-admin-side-card">
+        <strong>College OS Admin</strong>
+        <p>Full platform control with role-aware governance and audit-safe operations.</p>
+      </div>
     </aside>
 
-    <main class="co-admin-main">
+    <div class="co-admin-workspace">
       <header class="co-admin-topbar">
         <div class="co-admin-topbar-title">
           <h2>Full Admin Control System</h2>
@@ -390,31 +96,41 @@
         </div>
       </header>
 
-      <div class="admin-control-grid">
-        <section class="control-side">
-          <button class="control-tab active" data-panel="panel-analytics"><i class="fa-solid fa-chart-line"></i> Analytics</button>
-          <button class="control-tab" data-panel="panel-students"><i class="fa-solid fa-users-gear"></i> Student Management</button>
-          <button class="control-tab" data-panel="panel-payments"><i class="fa-solid fa-wallet"></i> Membership & Payments</button>
-          <button class="control-tab" data-panel="panel-content"><i class="fa-solid fa-box-archive"></i> Content Bulk Actions</button>
-          <button class="control-tab" data-panel="panel-academic-structure"><i class="fa-solid fa-graduation-cap"></i> Academic Structure</button>
-          <button class="control-tab" data-panel="panel-onboarding"><i class="fa-solid fa-compass-drafting"></i> Onboarding Personalization</button>
-          <button class="control-tab" data-panel="panel-mocktests"><i class="fa-solid fa-flask-vial"></i> Mock Tests</button>
-          <button class="control-tab" data-panel="panel-roadmaps"><i class="fa-solid fa-route"></i> Roadmap Management</button>
-          <button class="control-tab" data-panel="panel-notify"><i class="fa-solid fa-bell"></i> Notifications & Announcements</button>
-          <button class="control-tab" data-panel="panel-moderation"><i class="fa-solid fa-gavel"></i> Forum & Feedback Moderation</button>
-          <button class="control-tab" data-panel="panel-referrals"><i class="fa-solid fa-user-group"></i> Referrals & Rewards</button>
-          <button class="control-tab" data-panel="panel-roles"><i class="fa-solid fa-user-shield"></i> Roles & Permissions</button>
-          <button class="control-tab" data-panel="panel-settings"><i class="fa-solid fa-sliders"></i> Platform Settings</button>
-          <button class="control-tab" data-panel="panel-coding"><i class="fa-solid fa-code"></i> Coding Challenges</button>
-          <button class="control-tab" data-panel="panel-experience"><i class="fa-solid fa-wand-magic-sparkles"></i> Experience Settings</button>
-          <button class="control-tab" data-panel="panel-live-sessions"><i class="fa-solid fa-tower-broadcast"></i> Live Session Control</button>
-          <button class="control-tab" data-panel="panel-audit"><i class="fa-solid fa-scroll"></i> Audit Logs</button>
-          <button class="control-tab" data-panel="panel-company"><i class="fa-solid fa-building"></i> Company &amp; Support</button>
-          <p id="controlPermissionInfo" class="muted" style="margin-top:10px;"></p>
-        </section>
+      <div class="co-admin-breadcrumbs" id="adminBreadcrumb"></div>
 
-        <section class="control-main">
-          <article id="panel-analytics" class="control-panel active">
+      <main class="co-admin-main">
+
+      <nav class="co-admin-subnav-bar" id="controlSubnavBar" aria-label="Control Center Navigation">
+        <div class="co-admin-active-route-badge">
+          <i class="fa-solid fa-layer-group"></i>
+          <span>Active Module: <strong id="activeRouteBreadcrumbText">Student Management</strong></span>
+        </div>
+        <div class="co-admin-quick-switch">
+          <label for="quickModuleSelect" class="muted" style="font-size: 0.8rem; margin: 0;">Quick Switch:</label>
+          <select id="quickModuleSelect" class="co-admin-select-sm">
+            <option value="#analytics">Analytics Dashboard</option>
+            <option value="#students-management">Student Management</option>
+            <option value="#membership-management">Memberships & Payments</option>
+            <option value="#academic-structure">Academic Structure</option>
+            <option value="#content-governance">Bulk Content</option>
+            <option value="#mock-tests">Mock Tests</option>
+            <option value="#roadmaps">Roadmaps</option>
+            <option value="#onboarding">Onboarding Config</option>
+            <option value="#system-settings">Settings & Feature Toggles</option>
+            <option value="#audit-logs">Audit Logs</option>
+            <option value="#roles-permissions">Roles & Permissions</option>
+            <option value="#coding-challenges">Coding Governance</option>
+            <option value="#live-sessions">Live Sessions</option>
+            <option value="#moderation">Forum & Feedback</option>
+            <option value="#referrals">Referrals</option>
+            <option value="#experience">Student Experience</option>
+            <option value="#company">Company & Support</option>
+          </select>
+        </div>
+      </nav>
+
+      <div class="admin-control-main-wrap">
+          <article id="panel-analytics" class="control-panel" hidden>
             <h3 class="control-title">Analytics Dashboard</h3>
             <p class="control-subtitle">Comprehensive platform KPI board with revenue, branch, activity, roadmap, referral, and support metrics.</p>
             <div class="control-actions"><button class="btn primary" id="refreshAnalyticsBtn"><i class="fa-solid fa-rotate"></i> Refresh Analytics</button></div>
@@ -427,64 +143,327 @@
             </div>
           </article>
 
-          <article id="panel-students" class="control-panel">
-            <h3 class="control-title">Student Management</h3>
-            <p class="control-subtitle">Search, profile inspection, edit academic mapping, reset passwords, suspend/block, delete/restore, and membership override.</p>
-            <div class="control-filters">
-              <input id="studentSearchInput" placeholder="Search by name, email, UID" />
-              <select id="studentMembershipFilter"><option value="">All memberships</option><option value="free">Free</option><option value="premium">Premium</option></select>
-              <select id="studentStatusFilter"><option value="">All statuses</option><option value="active">Active</option><option value="suspended">Suspended</option><option value="blocked">Blocked</option></select>
-              <select id="studentBulkAction"><option value="">Bulk action</option><option value="activate">Activate</option><option value="suspend">Suspend</option><option value="block">Block</option><option value="delete">Soft Delete</option></select>
+          <article id="panel-students" class="control-panel" hidden>
+            <div class="co-admin-section-head">
+              <div>
+                <h3 class="control-title">Student Management</h3>
+                <p class="control-subtitle">Search student directory, inspect profile details, manage academic scope mapping, suspend or restore access, and execute role-safe password resets.</p>
+              </div>
+              <button class="btn secondary btn-sm" id="loadStudentsBtn" type="button"><i class="fa-solid fa-rotate"></i> Refresh List</button>
             </div>
-            <div class="control-actions">
-              <button class="btn primary" id="loadStudentsBtn"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
-              <button class="btn secondary" id="bulkStudentsBtn"><i class="fa-solid fa-layer-group"></i> Run Bulk Action</button>
-              <button class="btn warn" id="showDeletedStudentsBtn"><i class="fa-solid fa-recycle"></i> Show Deleted</button>
+
+            <div class="co-admin-stats" id="studentStatsGrid" style="margin-bottom: 16px;">
+              <article class="co-admin-stat">
+                <div class="co-admin-stat-top">
+                  <div>
+                    <div class="co-admin-stat-label">Total Students</div>
+                    <h3 class="co-admin-stat-value" id="kpiTotalStudents">0</h3>
+                  </div>
+                  <span class="co-admin-icon-badge"><i class="fa-solid fa-users"></i></span>
+                </div>
+              </article>
+              <article class="co-admin-stat">
+                <div class="co-admin-stat-top">
+                  <div>
+                    <div class="co-admin-stat-label">Active Students</div>
+                    <h3 class="co-admin-stat-value" id="kpiActiveStudents">0</h3>
+                  </div>
+                  <span class="co-admin-icon-badge ok"><i class="fa-solid fa-user-check"></i></span>
+                </div>
+              </article>
+              <article class="co-admin-stat">
+                <div class="co-admin-stat-top">
+                  <div>
+                    <div class="co-admin-stat-label">Suspended / Blocked</div>
+                    <h3 class="co-admin-stat-value" id="kpiSuspendedStudents">0</h3>
+                  </div>
+                  <span class="co-admin-icon-badge danger"><i class="fa-solid fa-user-slash"></i></span>
+                </div>
+              </article>
+              <article class="co-admin-stat">
+                <div class="co-admin-stat-top">
+                  <div>
+                    <div class="co-admin-stat-label">Recently Joined</div>
+                    <h3 class="co-admin-stat-value" id="kpiRecentStudents">0</h3>
+                  </div>
+                  <span class="co-admin-icon-badge"><i class="fa-solid fa-user-plus"></i></span>
+                </div>
+              </article>
             </div>
+
+            <div class="co-admin-filter-toolbar">
+              <input id="studentSearchInput" placeholder="Search by name, email, UID..." style="flex: 1.5; min-width: 200px;" />
+              <select id="studentStatusFilter" style="max-width: 130px;">
+                <option value="">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="suspended">Suspended</option>
+                <option value="blocked">Blocked</option>
+              </select>
+              <select id="studentMembershipFilter" style="max-width: 150px;">
+                <option value="">All Memberships</option>
+                <option value="free">Free</option>
+                <option value="premium">Active Membership</option>
+                <option value="expired">Expired</option>
+              </select>
+              <select id="studentCollegeFilter" style="max-width: 140px;"><option value="">All Colleges</option></select>
+              <select id="studentBranchFilter" style="max-width: 130px;"><option value="">All Branches</option></select>
+              <select id="studentSemesterFilter" style="max-width: 130px;"><option value="">All Semesters</option></select>
+              <select id="studentSortBySelect" style="max-width: 130px;">
+                <option value="created_at">Sort: Joined</option>
+                <option value="name">Sort: Name</option>
+                <option value="email">Sort: Email</option>
+                <option value="last_login">Sort: Active</option>
+              </select>
+              <select id="studentSortDirSelect" style="max-width: 90px;">
+                <option value="DESC">DESC</option>
+                <option value="ASC">ASC</option>
+              </select>
+              <select id="studentPerPageSelect" style="max-width: 90px;">
+                <option value="20">20 / page</option>
+                <option value="25">25 / page</option>
+                <option value="50">50 / page</option>
+                <option value="100">100 / page</option>
+              </select>
+              <select id="studentBulkAction" style="max-width: 130px;">
+                <option value="">Bulk action</option>
+                <option value="activate">Activate</option>
+                <option value="suspend">Suspend</option>
+                <option value="block">Block</option>
+              </select>
+              <button class="btn secondary btn-sm" id="bulkStudentsBtn" type="button"><i class="fa-solid fa-layer-group"></i> Bulk</button>
+              <button class="btn secondary btn-sm" id="resetStudentsFilterBtn" type="button"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+            </div>
+
             <div class="co-admin-table-wrap">
               <table class="co-admin-data-table">
                 <thead>
                   <tr>
-                    <th><input type="checkbox" id="studentsSelectAll" /></th>
-                    <th>Student</th>
-                    <th>Academic</th>
+                    <th style="width:36px;"><input type="checkbox" id="studentsSelectAll" /></th>
+                    <th>Student Details</th>
+                    <th>Academic Scope</th>
+                    <th>Account Status</th>
                     <th>Membership</th>
-                    <th>XP</th>
-                    <th>Dates</th>
-                    <th>Device</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th>Joined Date</th>
+                    <th>Last Active</th>
+                    <th style="text-align:right;">Actions</th>
                   </tr>
                 </thead>
-                <tbody id="studentsTableBody"><tr><td colspan="9" class="co-admin-table-empty">Loading students...</td></tr></tbody>
+                <tbody id="studentsTableBody"><tr><td colspan="8" class="co-admin-table-empty">Loading student records...</td></tr></tbody>
               </table>
+            </div>
+
+            <div class="co-admin-pagination-bar" id="studentPaginationBar" style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding:10px 14px; background:var(--surface-0,#fff); border:1px solid var(--border-color,#e2e8f0); border-radius:10px;">
+              <span id="studentPaginationInfo" style="font-size:0.85rem; color:var(--text-secondary,#64748b);">Showing 0 of 0 students</span>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <button class="btn secondary btn-sm" id="studentPrevPageBtn" type="button" disabled><i class="fa-solid fa-chevron-left"></i> Previous</button>
+                <span id="studentPageIndicator" style="font-size:0.85rem; font-weight:600; padding:0 8px;">Page 1</span>
+                <button class="btn secondary btn-sm" id="studentNextPageBtn" type="button" disabled>Next <i class="fa-solid fa-chevron-right"></i></button>
+              </div>
             </div>
           </article>
 
-          <article id="panel-payments" class="control-panel">
-            <h3 class="control-title">Membership & Payment Management</h3>
-            <p class="control-subtitle">Verify payment queue, execute bulk status updates, auto-deactivate expired subscriptions, and monitor premium revenue.</p>
-            <div class="control-filters">
-              <select id="paymentStatusFilter"><option value="all">All</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select>
-              <select id="paymentBulkStatus"><option value="">Bulk status</option><option value="approved">Approve</option><option value="rejected">Reject</option><option value="pending">Mark Pending</option></select>
-              <input id="paymentIdsInput" placeholder="Payment IDs (comma separated)" />
-              <input id="paymentReasonInput" placeholder="Optional reason" />
+          <!-- MEMBERSHIP PLAN MANAGEMENT PANEL (PART 6) -->
+          <article id="panel-memberships" class="control-panel" hidden>
+            <div class="co-admin-section-head">
+              <div>
+                <h3 class="control-title">Membership Plan & Entitlement System</h3>
+                <p class="control-subtitle">Manage membership plans, pricing, durations, purchase rules, display benefits, and feature access entitlements.</p>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button class="btn primary btn-sm" id="openCreatePlanModalBtn" type="button"><i class="fa-solid fa-plus"></i> Create New Plan</button>
+                <button class="btn secondary btn-sm" id="loadMembershipPlansBtn" type="button"><i class="fa-solid fa-rotate"></i> Refresh Plans</button>
+              </div>
             </div>
-            <div class="control-actions">
-              <button class="btn primary" id="loadPaymentsBtn">Load Payments</button>
-              <button class="btn secondary" id="bulkPaymentsBtn">Bulk Update Status</button>
-              <button class="btn warn" id="expireMembershipsBtn">Deactivate Expired</button>
+
+            <!-- Tabs for Membership Views -->
+            <div style="display:flex; gap:10px; margin-bottom:16px; border-bottom:1px solid var(--border-color,#e2e8f0); padding-bottom:8px;">
+              <button class="btn secondary btn-sm active" id="subtabPlansBtn" type="button" style="font-weight:600;"><i class="fa-solid fa-cubes"></i> Membership Plans</button>
+              <button class="btn secondary btn-sm" id="subtabActiveMembershipsBtn" type="button"><i class="fa-solid fa-users-check"></i> Active Subscriptions</button>
+              <button class="btn secondary btn-sm" id="subtabMembershipHistoryBtn" type="button"><i class="fa-solid fa-clock-rotate-left"></i> Subscription History</button>
             </div>
-            <div class="kpi-grid" id="paymentSummaryKpis"></div>
-            <div class="co-admin-table-wrap">
-              <table class="co-admin-data-table">
-                <thead><tr><th>ID</th><th>Student</th><th>Transaction</th><th>Status</th><th>Screenshot</th><th>Submitted</th><th>Action</th></tr></thead>
-                <tbody id="paymentsTableBody"><tr><td colspan="7" class="co-admin-table-empty">Loading payments...</td></tr></tbody>
-              </table>
+
+            <!-- View 1: Plans Grid / Table -->
+            <div id="membershipPlansView">
+              <div class="co-admin-table-wrap">
+                <table class="co-admin-data-table">
+                  <thead>
+                    <tr>
+                      <th>Plan Code / Name</th>
+                      <th>Price & Duration</th>
+                      <th>Status</th>
+                      <th>Purchasable</th>
+                      <th>Active Members</th>
+                      <th>Entitlements</th>
+                      <th style="text-align:right;">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="membershipPlansTableBody"><tr><td colspan="7" class="co-admin-table-empty">Loading membership plans...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- View 2: Active Subscriptions View -->
+            <div id="activeMembershipsView" style="display:none;">
+              <div class="co-admin-table-wrap">
+                <table class="co-admin-data-table">
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Plan</th>
+                      <th>Source</th>
+                      <th>Started Date</th>
+                      <th>Expiry Date</th>
+                      <th>Price at Activation</th>
+                    </tr>
+                  </thead>
+                  <tbody id="activeMembershipsTableBody"><tr><td colspan="6" class="co-admin-table-empty">Loading active student subscriptions...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- View 3: Subscription History View -->
+            <div id="membershipHistoryView" style="display:none;">
+              <div class="co-admin-table-wrap">
+                <table class="co-admin-data-table">
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Plan</th>
+                      <th>Status</th>
+                      <th>Source</th>
+                      <th>Started / Ended Date</th>
+                      <th>Historical Price</th>
+                    </tr>
+                  </thead>
+                  <tbody id="membershipHistoryTableBody"><tr><td colspan="6" class="co-admin-table-empty">Loading historical subscriptions...</td></tr></tbody>
+                </table>
+              </div>
             </div>
           </article>
 
-          <article id="panel-content" class="control-panel">
+          <article id="panel-payments" class="control-panel" hidden>
+            <div class="co-admin-section-head">
+              <div>
+                <h3 class="control-title">Payments, UPI & Verification Governance</h3>
+                <p class="control-subtitle">Verify pending payment requests, configure authoritative UPI ID / QR code / student instructions, and review transaction history.</p>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button class="btn secondary btn-sm" id="loadPaymentsQueueBtn" type="button"><i class="fa-solid fa-rotate"></i> Refresh Queue</button>
+              </div>
+            </div>
+
+            <!-- Tabs for Payments Module -->
+            <div style="display:flex; gap:10px; margin-bottom:16px; border-bottom:1px solid var(--border-color,#e2e8f0); padding-bottom:8px;">
+              <button class="btn secondary btn-sm active" id="payTabQueueBtn" type="button" style="font-weight:600;"><i class="fa-solid fa-receipt"></i> Pending Verification Queue</button>
+              <button class="btn secondary btn-sm" id="payTabTransactionsBtn" type="button"><i class="fa-solid fa-clock-rotate-left"></i> Transaction History</button>
+              <button class="btn secondary btn-sm" id="payTabSettingsBtn" type="button"><i class="fa-solid fa-qrcode"></i> Payment Settings (UPI / QR)</button>
+            </div>
+
+            <!-- View 1: Pending Verification Queue -->
+            <div id="paymentQueueView">
+              <div class="co-admin-table-wrap">
+                <table class="co-admin-data-table">
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Plan & Amount</th>
+                      <th>UTR / Reference ID</th>
+                      <th>Proof Screenshot</th>
+                      <th>Submitted Date</th>
+                      <th style="text-align:right;">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="paymentQueueTableBody"><tr><td colspan="6" class="co-admin-table-empty">Loading pending verification requests...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- View 2: Transaction History -->
+            <div id="paymentTransactionsView" style="display:none;">
+              <div class="co-admin-filter-toolbar" style="margin-bottom:12px;">
+                <input id="payTxSearchInput" placeholder="Search by student email, name, or UTR..." style="flex:1; min-width:180px;" />
+                <select id="payTxStatusFilter" style="max-width:140px;">
+                  <option value="all">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+                <button class="btn secondary btn-sm" id="payTxResetBtn" type="button"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+              </div>
+              <div class="co-admin-table-wrap">
+                <table class="co-admin-data-table">
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Amount</th>
+                      <th>UTR Reference</th>
+                      <th>Status</th>
+                      <th>Submitted Date</th>
+                      <th>Reviewed Date / By</th>
+                    </tr>
+                  </thead>
+                  <tbody id="paymentTransactionsTableBody"><tr><td colspan="6" class="co-admin-table-empty">Loading payment transaction history...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- View 3: Payment Settings Form -->
+            <div id="paymentSettingsView" style="display:none;">
+              <div style="background:var(--surface-0,#fff); border:1px solid var(--border-color,#e2e8f0); border-radius:10px; padding:20px; max-width:720px;">
+                <h4 style="margin:0 0 4px 0;">Configure Payment Collection Settings</h4>
+                <p style="font-size:0.85rem; color:#64748b; margin-bottom:16px;">Configure authoritative UPI ID, QR code image, and student payment instructions. Changes reflect immediately on Student Portal.</p>
+                <form id="paymentSettingsForm" style="display:flex; flex-direction:column; gap:16px;">
+                  <div style="display:flex; align-items:center; gap:10px; background:#f8fafc; padding:10px 14px; border-radius:8px; border:1px solid #e2e8f0;">
+                    <input type="checkbox" id="psPaymentEnabled" checked style="width:18px; height:18px; cursor:pointer;" />
+                    <div>
+                      <label for="psPaymentEnabled" style="font-weight:600; font-size:0.9rem; cursor:pointer;">Accepting Payment Submissions (ON/OFF)</label>
+                      <div style="font-size:0.75rem; color:#64748b;">Unchecking this disables new student payment submissions globally.</div>
+                    </div>
+                  </div>
+
+                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px;">
+                    <div>
+                      <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">UPI ID</label>
+                      <input id="psUpiId" type="text" placeholder="shuklaabhayas0-1@okicici" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;" />
+                    </div>
+                    <div>
+                      <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">Payee Name</label>
+                      <input id="psPayeeName" type="text" placeholder="College OS" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">Payment Instructions (1 per line)</label>
+                    <textarea id="psInstructions" rows="4" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-family:inherit;"></textarea>
+                  </div>
+
+                  <div>
+                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">Support Note Message</label>
+                    <input id="psSupportMessage" type="text" placeholder="Membership activates automatically after admin approval." style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;" />
+                  </div>
+
+                  <div style="border-top:1px solid #e2e8f0; padding-top:14px; margin-top:4px;">
+                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:6px;">Payment QR Code Image</label>
+                    <div style="display:flex; gap:16px; align-items:center;">
+                      <div id="psQrPreviewBox" style="width:100px; height:100px; border:1px dashed #cbd5e1; border-radius:8px; display:flex; align-items:center; justify-content:center; background:#f8fafc; overflow:hidden;">
+                        <span style="font-size:0.75rem; color:#94a3b8;">No QR</span>
+                      </div>
+                      <div>
+                        <input type="file" id="psQrFileInput" accept="image/png,image/jpeg,image/jpg,image/webp" style="margin-bottom:8px; font-size:0.85rem;" />
+                        <button class="btn secondary btn-sm" id="uploadQrBtn" type="button"><i class="fa-solid fa-upload"></i> Upload & Replace QR</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+                    <button class="btn primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Save Payment Settings</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </article>
+
+          <article id="panel-content" class="control-panel" hidden>
             <h3 class="control-title">Content Management Bulk Control</h3>
             <p class="control-subtitle">Bulk publish, unpublish, soft delete, and restore across notes, materials, papers, quizzes, mock tests, roadmaps, certificates, notifications, and announcements.</p>
             <div class="control-filters">
@@ -496,7 +475,7 @@
             <div class="kpi-grid" id="contentOverviewKpis"></div>
           </article>
 
-          <article id="panel-branches" class="control-panel">
+          <article id="panel-branches" class="control-panel" hidden>
             <h3 class="control-title">Branch and Course Management</h3>
             <p class="control-subtitle">Create, edit, delete branches and assign resources/tests/roadmaps/AI tools to branch-specific audiences.</p>
             <div class="control-filters">
@@ -539,38 +518,254 @@
             </div>
           </article>
 
-          <article id="panel-universities" class="control-panel">
-            <h3 class="control-title">University Management</h3>
-            <p class="control-subtitle">Manage searchable university catalog used in student signup with featured order, availability controls, and custom entry support.</p>
-            <div class="control-filters">
-              <input id="uniSearchInput" placeholder="Search universities" />
-              <input id="uniIdInput" type="number" placeholder="University ID (for update/delete)" />
-              <input id="uniNameInput" placeholder="University name" />
-              <input id="uniPriorityInput" type="number" placeholder="Priority rank" />
-              <input id="uniCampusInput" placeholder="Campus (optional)" />
-              <input id="uniCityInput" placeholder="City (optional)" />
-              <input id="uniStateInput" placeholder="State (optional)" />
-              <input id="uniCountryCodeInput" placeholder="Country code" value="IN" />
-              <select id="uniFeaturedSelect"><option value="true">Featured</option><option value="false">Not featured</option></select>
-              <select id="uniEnabledSelect"><option value="true">Enabled</option><option value="false">Disabled</option></select>
-              <input id="uniOrderedIdsInput" placeholder="Ordered IDs (comma separated, optional)" />
+          <!-- ACADEMIC STRUCTURE MANAGEMENT PANEL (PART 2) -->
+          <article id="panel-academic-structure" class="control-panel" hidden>
+            <div class="co-admin-section-head">
+              <div>
+                <h3 class="control-title">Academic Structure & Student Scope Governance</h3>
+                <p class="control-subtitle">Manage canonical Universities, Courses/Programs, Batches, Student Academic Assignments, and Onboarding Availability.</p>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button class="btn secondary btn-sm" id="loadAcademicStructureOverviewBtn" type="button"><i class="fa-solid fa-rotate"></i> Refresh Overview</button>
+              </div>
             </div>
-            <div class="control-actions">
-              <button class="btn primary" id="loadUniversitiesBtn">Load Universities</button>
-              <button class="btn secondary" id="createUniversityBtn">Add University</button>
-              <button class="btn secondary" id="updateUniversityBtn">Update University</button>
-              <button class="btn warn" id="reorderUniversitiesBtn">Save Reorder</button>
-              <button class="btn danger" id="deleteUniversityBtn">Delete University</button>
+
+            <!-- Health Warning Banner -->
+            <div id="academicHealthBannerContainer" style="margin-bottom: 16px;"></div>
+
+            <!-- KPI Stats Bar -->
+            <div class="co-admin-stats" id="academicStatsGrid" style="margin-bottom: 16px;">
+              <article class="co-admin-stat">
+                <div class="co-admin-stat-top">
+                  <div>
+                    <div class="co-admin-stat-label">Active Universities</div>
+                    <h3 class="co-admin-stat-value" id="kpiActiveUniversities">0</h3>
+                  </div>
+                  <span class="co-admin-icon-badge ok"><i class="fa-solid fa-building-columns"></i></span>
+                </div>
+              </article>
+              <article class="co-admin-stat">
+                <div class="co-admin-stat-top">
+                  <div>
+                    <div class="co-admin-stat-label">Active Courses</div>
+                    <h3 class="co-admin-stat-value" id="kpiActiveCourses">0</h3>
+                  </div>
+                  <span class="co-admin-icon-badge"><i class="fa-solid fa-book-bookmark"></i></span>
+                </div>
+              </article>
+              <article class="co-admin-stat">
+                <div class="co-admin-stat-top">
+                  <div>
+                    <div class="co-admin-stat-label">Active Batches</div>
+                    <h3 class="co-admin-stat-value" id="kpiActiveBatches">0</h3>
+                  </div>
+                  <span class="co-admin-icon-badge"><i class="fa-solid fa-calendar-days"></i></span>
+                </div>
+              </article>
+              <article class="co-admin-stat">
+                <div class="co-admin-stat-top">
+                  <div>
+                    <div class="co-admin-stat-label">Students Configured</div>
+                    <h3 class="co-admin-stat-value" id="kpiStudentsConfigured">0</h3>
+                  </div>
+                  <span class="co-admin-icon-badge ok"><i class="fa-solid fa-user-check"></i></span>
+                </div>
+              </article>
             </div>
-            <div class="co-admin-table-wrap">
-              <table class="co-admin-data-table">
-                <thead><tr><th>ID</th><th>University</th><th>Location</th><th>Featured</th><th>Status</th><th>Priority</th><th>Users</th></tr></thead>
-                <tbody id="universitiesTableBody"><tr><td colspan="7" class="co-admin-table-empty">No universities loaded.</td></tr></tbody>
-              </table>
+
+            <!-- Subtabs for Academic Structure -->
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; border-bottom:1px solid var(--border-color,#e2e8f0); padding-bottom:8px;">
+              <button class="btn secondary btn-sm active" id="asTabOverviewBtn" type="button" style="font-weight:600;"><i class="fa-solid fa-gauge-high"></i> Overview & Preview</button>
+              <button class="btn secondary btn-sm" id="asTabUniversitiesBtn" type="button"><i class="fa-solid fa-building-columns"></i> Universities</button>
+              <button class="btn secondary btn-sm" id="asTabCoursesBtn" type="button"><i class="fa-solid fa-book-open-reader"></i> Courses / Programs</button>
+              <button class="btn secondary btn-sm" id="asTabBatchesBtn" type="button"><i class="fa-solid fa-layer-group"></i> Batches</button>
+              <button class="btn secondary btn-sm" id="asTabAssignmentsBtn" type="button"><i class="fa-solid fa-user-gear"></i> Student Assignments</button>
+            </div>
+
+            <!-- VIEW 1: OVERVIEW & ONBOARDING PREVIEW -->
+            <div id="asViewOverview">
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                <div style="background:var(--surface-0,#fff); border:1px solid var(--border-color,#e2e8f0); border-radius:10px; padding:18px;">
+                  <h4 style="margin:0 0 6px 0;"><i class="fa-solid fa-compass-drafting"></i> Student Onboarding Options Preview</h4>
+                  <p style="font-size:0.82rem; color:#64748b; margin-bottom:12px;">Live preview of active Universities, Courses, and Batches available to students during signup onboarding.</p>
+                  <div id="asOnboardingPreviewTree" style="max-height:380px; overflow-y:auto; padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; font-size:0.85rem;">
+                    <div style="color:#94a3b8; text-align:center; padding:20px;">Loading onboarding preview...</div>
+                  </div>
+                </div>
+
+                <div style="background:var(--surface-0,#fff); border:1px solid var(--border-color,#e2e8f0); border-radius:10px; padding:18px;">
+                  <h4 style="margin:0 0 6px 0;"><i class="fa-solid fa-shield-heart"></i> Academic Setup Policy & Guidance</h4>
+                  <ul style="font-size:0.83rem; color:#334155; line-height:1.6; padding-left:18px; margin:0;">
+                    <li><strong>Backend Authority:</strong> Student options are served dynamically from PostgreSQL tables without hardcoded frontend dropdowns.</li>
+                    <li><strong>Dependent Selection:</strong> Students choose University first -> Courses under University -> Batches under Course.</li>
+                    <li><strong>No Destructive Deletes:</strong> Universities, Courses, or Batches with active student references cannot be hard-deleted. Use <code>ARCHIVED</code> or <code>INACTIVE</code>.</li>
+                    <li><strong>Admin Reassignment:</strong> Profile reassignments require a valid audit reason and update student access on their next request.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <!-- VIEW 2: UNIVERSITIES MANAGEMENT -->
+            <div id="asViewUniversities" style="display:none;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:10px; flex-wrap:wrap;">
+                <div style="display:flex; gap:10px; flex:1; min-width:260px;">
+                  <input id="asUniSearchInput" placeholder="Search university name, code, state..." style="flex:1; padding:7px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;" />
+                  <select id="asUniStatusFilter" style="max-width:130px; padding:7px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+                    <option value="ALL">All Statuses</option>
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="INACTIVE">INACTIVE</option>
+                    <option value="ARCHIVED">ARCHIVED</option>
+                  </select>
+                </div>
+                <button class="btn primary btn-sm" id="openAddUniModalBtn" type="button"><i class="fa-solid fa-plus"></i> Add University</button>
+              </div>
+
+              <div class="co-admin-table-wrap">
+                <table class="co-admin-data-table">
+                  <thead>
+                    <tr>
+                      <th>Code</th>
+                      <th>University Name</th>
+                      <th>Location / Campus</th>
+                      <th>Status</th>
+                      <th>Display Order</th>
+                      <th>Courses</th>
+                      <th>Students</th>
+                      <th style="text-align:right;">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="asUniversitiesTableBody">
+                    <tr><td colspan="8" class="co-admin-table-empty">Loading universities...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- VIEW 3: COURSES MANAGEMENT -->
+            <div id="asViewCourses" style="display:none;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:10px; flex-wrap:wrap;">
+                <div style="display:flex; gap:10px; flex:1; min-width:280px; flex-wrap:wrap;">
+                  <select id="asCourseUniFilter" style="max-width:220px; padding:7px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+                    <option value="">All Universities</option>
+                  </select>
+                  <input id="asCourseSearchInput" placeholder="Search course name, code..." style="flex:1; min-width:160px; padding:7px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;" />
+                  <select id="asCourseStatusFilter" style="max-width:130px; padding:7px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+                    <option value="ALL">All Statuses</option>
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="INACTIVE">INACTIVE</option>
+                    <option value="ARCHIVED">ARCHIVED</option>
+                  </select>
+                </div>
+                <button class="btn primary btn-sm" id="openAddCourseModalBtn" type="button"><i class="fa-solid fa-plus"></i> Add Course</button>
+              </div>
+
+              <div class="co-admin-table-wrap">
+                <table class="co-admin-data-table">
+                  <thead>
+                    <tr>
+                      <th>University</th>
+                      <th>Code</th>
+                      <th>Course Name</th>
+                      <th>Degree / Duration</th>
+                      <th>Status</th>
+                      <th>Batches</th>
+                      <th>Students</th>
+                      <th style="text-align:right;">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="asCoursesTableBody">
+                    <tr><td colspan="8" class="co-admin-table-empty">Loading courses...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- VIEW 4: BATCHES MANAGEMENT -->
+            <div id="asViewBatches" style="display:none;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:10px; flex-wrap:wrap;">
+                <div style="display:flex; gap:10px; flex:1; min-width:280px; flex-wrap:wrap;">
+                  <select id="asBatchUniFilter" style="max-width:200px; padding:7px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+                    <option value="">All Universities</option>
+                  </select>
+                  <select id="asBatchCourseFilter" style="max-width:200px; padding:7px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;" disabled>
+                    <option value="">Select University First</option>
+                  </select>
+                  <input id="asBatchSearchInput" placeholder="Search batch name..." style="flex:1; min-width:140px; padding:7px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;" />
+                  <select id="asBatchStatusFilter" style="max-width:130px; padding:7px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+                    <option value="ALL">All Statuses</option>
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="INACTIVE">INACTIVE</option>
+                    <option value="ARCHIVED">ARCHIVED</option>
+                  </select>
+                </div>
+                <button class="btn primary btn-sm" id="openAddBatchModalBtn" type="button"><i class="fa-solid fa-plus"></i> Add Batch</button>
+              </div>
+
+              <div class="co-admin-table-wrap">
+                <table class="co-admin-data-table">
+                  <thead>
+                    <tr>
+                      <th>Batch Name</th>
+                      <th>University</th>
+                      <th>Course</th>
+                      <th>Session Years</th>
+                      <th>Status</th>
+                      <th>Students</th>
+                      <th style="text-align:right;">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="asBatchesTableBody">
+                    <tr><td colspan="7" class="co-admin-table-empty">Loading batches...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- VIEW 5: STUDENT ASSIGNMENTS -->
+            <div id="asViewAssignments" style="display:none;">
+              <div class="co-admin-filter-toolbar" style="margin-bottom:12px;">
+                <input id="asAssignSearchInput" placeholder="Search student name, email, ID..." style="flex:1.5; min-width:200px;" />
+                <select id="asAssignStatusFilter" style="max-width:150px;">
+                  <option value="all">All Profile Statuses</option>
+                  <option value="complete">Complete Profile</option>
+                  <option value="incomplete">Incomplete Setup</option>
+                </select>
+                <select id="asAssignUniFilter" style="max-width:160px;"><option value="">All Universities</option></select>
+                <select id="asAssignCourseFilter" style="max-width:160px;" disabled><option value="">All Courses</option></select>
+                <button class="btn secondary btn-sm" id="asAssignResetBtn" type="button"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+              </div>
+
+              <div class="co-admin-table-wrap">
+                <table class="co-admin-data-table">
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Setup Status</th>
+                      <th>University</th>
+                      <th>Course</th>
+                      <th>Batch</th>
+                      <th>Completed Date</th>
+                      <th style="text-align:right;">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="asAssignmentsTableBody">
+                    <tr><td colspan="7" class="co-admin-table-empty">Loading student assignments...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="co-admin-pagination-bar" id="asAssignPaginationBar" style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding:10px 14px; background:var(--surface-0,#fff); border:1px solid var(--border-color,#e2e8f0); border-radius:10px;">
+                <span id="asAssignPaginationInfo" style="font-size:0.85rem; color:var(--text-secondary,#64748b);">Showing 0 of 0 students</span>
+                <div style="display:flex; gap:8px; align-items:center;">
+                  <button class="btn secondary btn-sm" id="asAssignPrevPageBtn" type="button" disabled><i class="fa-solid fa-chevron-left"></i> Previous</button>
+                  <span id="asAssignPageIndicator" style="font-size:0.85rem; font-weight:600; padding:0 8px;">Page 1</span>
+                  <button class="btn secondary btn-sm" id="asAssignNextPageBtn" type="button" disabled>Next <i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+              </div>
             </div>
           </article>
 
-          <article id="panel-onboarding" class="control-panel">
+          <article id="panel-onboarding" class="control-panel" hidden>
             <h3 class="control-title">Onboarding and Recommendation Logic</h3>
             <p class="control-subtitle">Control onboarding wizard enablement, edit option catalogs, and define branch/membership recommendation rules.</p>
 
@@ -618,7 +813,7 @@
             </div>
           </article>
 
-          <article id="panel-mocktests" class="control-panel">
+          <article id="panel-mocktests" class="control-panel" hidden>
             <h3 class="control-title">Mock Test Management</h3>
             <p class="control-subtitle">Create, edit, soft-delete/restore, publish workflows, and branch-aware assignment for mock tests.</p>
             <div class="control-filters">
@@ -644,7 +839,7 @@
             </div>
           </article>
 
-          <article id="panel-roadmaps" class="control-panel">
+          <article id="panel-roadmaps" class="control-panel" hidden>
             <h3 class="control-title">Roadmap Management</h3>
             <p class="control-subtitle">Create and sequence branch-wise roadmaps, update milestones, publish or hide roadmap modules, and jump into the dedicated AI tools workspace when you need product-level AI control.</p>
             <div class="control-filters">
@@ -668,7 +863,7 @@
             </div>
           </article>
 
-          <article id="panel-notify" class="control-panel">
+          <article id="panel-notify" class="control-panel" hidden>
             <h3 class="control-title">Notifications and Announcements</h3>
             <p class="control-subtitle">Send targeted notifications (all or branch/course specific), membership reminders, and announcement management.</p>
             <div class="control-filters">
@@ -693,7 +888,7 @@
             </div>
           </article>
 
-          <article id="panel-moderation" class="control-panel">
+          <article id="panel-moderation" class="control-panel" hidden>
             <h3 class="control-title">Forum and Feedback Moderation</h3>
             <p class="control-subtitle">Moderate forum discussions, hide/delete abusive threads, reply to feedback, and resolve support issues.</p>
             <div class="control-actions">
@@ -714,7 +909,7 @@
             </div>
           </article>
 
-          <article id="panel-referrals" class="control-panel">
+          <article id="panel-referrals" class="control-panel" hidden>
             <h3 class="control-title">Referral and Reward Management</h3>
             <p class="control-subtitle">Track referral history, identify top referrers, assign rewards, and block invalid referrals.</p>
             <div class="control-filters">
@@ -741,7 +936,7 @@
             </div>
           </article>
 
-          <article id="panel-roles" class="control-panel">
+          <article id="panel-roles" class="control-panel" hidden>
             <h3 class="control-title">Roles and Permissions</h3>
             <p class="control-subtitle">Configure Super Admin, Content Admin, Payment Admin, and Support Admin role assignments and permission sets.</p>
             <div class="control-filters">
@@ -763,7 +958,7 @@
             </div>
           </article>
 
-          <article id="panel-settings" class="control-panel">
+          <article id="panel-settings" class="control-panel" hidden>
             <h3 class="control-title">System Settings</h3>
             <p class="control-subtitle">Manage global branding, feature toggles, pricing, maintenance mode, defaults, and system notices.</p>
             <div class="control-filters">
@@ -778,6 +973,19 @@
             <div class="control-actions">
               <button class="btn primary" id="saveSettingsBtn">Save System Settings</button>
               <button class="btn secondary" id="loadSettingsBtn">Load System Settings</button>
+            </div>
+
+            <div class="experience-block" style="margin-top:20px; border:1px solid var(--border-color, #dbe4ef); border-radius:14px; padding:18px; background:var(--surface-0, #fff);">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+                <div>
+                  <h4 style="margin:0; font-size:17px; color:var(--text-primary, #0f172a);"><i class="fa-solid fa-toggle-on" style="color:#2563eb;"></i> Centralized Feature Visibility & Availability</h4>
+                  <p class="control-subtitle" style="margin:4px 0 0;">Server-side feature controls for Student Portal modules. Turning OFF hides navigation & blocks student APIs without deleting data.</p>
+                </div>
+                <button class="btn secondary" type="button" id="refreshFeatureMatrixBtn"><i class="fa-solid fa-arrows-rotate"></i> Refresh Status</button>
+              </div>
+              <div id="featureVisibilityMatrixGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:12px; margin-top:12px;">
+                <p class="muted">Loading feature visibility matrix...</p>
+              </div>
             </div>
 
             <div class="experience-block">
@@ -830,7 +1038,7 @@
             </div>
           </article>
 
-          <article id="panel-coding" class="control-panel">
+          <article id="panel-coding" class="control-panel" hidden>
             <h3 class="control-title">Coding Challenges Command Center</h3>
             <p class="control-subtitle">Manage weekly algorithmic contests, problem statements, test cases, and student leaderboard metrics.</p>
             <div class="control-actions" style="margin-bottom: 16px;">
@@ -874,7 +1082,7 @@
             </div>
           </article>
 
-          <article id="panel-experience" class="control-panel">
+          <article id="panel-experience" class="control-panel" hidden>
             <h3 class="control-title">Experience Studio</h3>
             <p class="control-subtitle">Shape membership, onboarding, home page, auth screen, dashboard layout, and gamification behavior.</p>
 
@@ -1007,7 +1215,7 @@
             </div>
           </article>
 
-          <article id="panel-live-sessions" class="control-panel">
+          <article id="panel-live-sessions" class="control-panel" hidden>
             <h3 class="control-title" id="liveSessionControlTitle">Live Session Control</h3>
             <p class="control-subtitle">Dedicated command center for creating, configuring, and controlling mentorship/lab live sessions.</p>
             <div class="experience-block" id="liveSessionControlBlock">
@@ -1051,7 +1259,7 @@
             </div>
           </article>
 
-          <article id="panel-audit" class="control-panel">
+          <article id="panel-audit" class="control-panel" hidden>
             <h3 class="control-title">Audit Logs</h3>
             <p class="control-subtitle">Track critical admin actions including student deletion, payment approvals, content deletion, role changes, and settings updates.</p>
             <div class="control-filters">
@@ -1067,7 +1275,7 @@
           </article>
 
           <!-- Company & Support Panel -->
-          <article id="panel-company" class="control-panel">
+          <article id="panel-company" class="control-panel" hidden>
             <h3 class="control-title">Company &amp; Support Management</h3>
             <p class="control-subtitle">Edit About Us, Contact Us, Help Center FAQs, and manage student support tickets — all from here.</p>
 
@@ -1120,8 +1328,8 @@
               <div style="margin-bottom:14px;"><label>SLA Note</label><input id="contactSlaEdit" placeholder="Most tickets resolved within 4–24 hours." /></div>
               <h5 style="margin:16px 0 10px;">Channels</h5>
               <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-                <div><label>Email</label><input id="contactEmailEdit" placeholder="support@collegeos.in" /></div>
-                <div><label>WhatsApp Number (with country code)</label><input id="contactWhatsappEdit" placeholder="+919000000000" /></div>
+                <div><label>Email</label><input id="contactEmailEdit" placeholder="support@collegeo.in" /></div>
+                <div><label>WhatsApp Number (optional, with country code)</label><input id="contactWhatsappEdit" placeholder="+919876543210" /></div>
               </div>
               <div style="margin-bottom:14px;"><label>Form Categories (comma-separated)</label><input id="contactCategoriesEdit" placeholder="General Query, Technical Bug, Billing &amp; Payment, Feature Request" /></div>
               <div class="control-actions">
@@ -1230,7 +1438,7 @@
           </article>
 
           <!-- Academic Structure Management Panel -->
-          <article id="panel-academic-structure" class="control-panel">
+          <article id="panel-academic-structure" class="control-panel" hidden>
             <h3 class="control-title">Academic Structure Management</h3>
             <p class="control-subtitle">Manage colleges, courses, branches, academic years, and semesters. Students will see only active options during onboarding.</p>
             
@@ -1365,15 +1573,33 @@
                     <tr><td colspan="5" style="text-align: center; padding: 40px; color: #999;">Loading...</td></tr>
                   </tbody>
                 </table>
-              </div>
+          <!-- 404 Not Found Panel -->
+          <article id="panel-not-found" class="control-panel" hidden>
+            <div class="co-admin-empty-state" style="padding: 48px 24px; text-align: center;">
+              <i class="fa-solid fa-compass" style="font-size: 3rem; color: #64748b; margin-bottom: 16px;"></i>
+              <h3 style="font-size: 1.5rem; margin-bottom: 8px;">404 — Admin Page Not Found</h3>
+              <p style="color: #64748b; max-width: 480px; margin: 0 auto 20px;">The requested admin module or page route does not exist or has been moved.</p>
+              <a href="admin-control.html#analytics" class="btn primary"><i class="fa-solid fa-chart-pie"></i> Go to Admin Control Dashboard</a>
+            </div>
+          </article>
+
+          <!-- 403 Access Denied Panel -->
+          <article id="panel-access-denied" class="control-panel" hidden>
+            <div class="co-admin-empty-state" style="padding: 48px 24px; text-align: center;">
+              <i class="fa-solid fa-lock" style="font-size: 3rem; color: #e11d48; margin-bottom: 16px;"></i>
+              <h3 style="font-size: 1.5rem; margin-bottom: 8px;">403 — Access Denied</h3>
+              <p id="accessDeniedMessage" style="color: #64748b; max-width: 520px; margin: 0 auto 20px;">You do not have the required permissions to access this admin module.</p>
+              <a href="admin-control.html#analytics" class="btn primary"><i class="fa-solid fa-arrow-left"></i> Return to Dashboard</a>
             </div>
           </article>
         </section>
       </div>
     </main>
+    </div>
   </div>
 
   <script src="assets/js/api.js?v=20260701-2"></script>
+  <script src="assets/js/admin-module-registry.js?v=20260701-1"></script>
   <script src="assets/js/admin-control.js?v=20260701-2"></script>
   <script src="assets/js/admin-company-support.js?v=20260701-2"></script>
   <script src="assets/js/admin-academic-control.js?v=20260701-2"></script>
@@ -1431,5 +1657,370 @@
     </div>
   </div>
 
+  <!-- Membership Plan Create/Edit Modal -->
+  <div id="planFormModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 24px; max-width: 580px; width: 90%; max-height: 90vh; overflow-y: auto;">
+      <h3 id="planModalTitle" style="margin: 0 0 8px 0;">Create Membership Plan</h3>
+      <p style="font-size:0.85rem; color:#64748b; margin-bottom:16px;">Configure authoritative plan pricing, duration, and status. Price/duration changes apply to future purchases only.</p>
+      <form id="planForm" style="display: flex; flex-direction: column; gap: 14px;">
+        <input type="hidden" id="planFormId" value="" />
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+          <div>
+            <label style="font-size:0.85rem; font-weight:600;">Plan Code</label>
+            <input id="planFormCode" type="text" placeholder="e.g. premium_monthly" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;" />
+          </div>
+          <div>
+            <label style="font-size:0.85rem; font-weight:600;">Plan Name</label>
+            <input id="planFormName" type="text" placeholder="e.g. Premium Monthly" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;" />
+          </div>
+        </div>
+        <div>
+          <label style="font-size:0.85rem; font-weight:600;">Student-facing Description</label>
+          <textarea id="planFormDescription" rows="2" placeholder="Brief plan summary for student portal" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-family:inherit;"></textarea>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px;">
+          <div>
+            <label style="font-size:0.85rem; font-weight:600;">Price (INR)</label>
+            <input id="planFormPrice" type="number" step="0.01" min="0" placeholder="49.00" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;" />
+          </div>
+          <div>
+            <label style="font-size:0.85rem; font-weight:600;">Duration Value</label>
+            <input id="planFormDurationValue" type="number" min="1" placeholder="30" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;" />
+          </div>
+          <div>
+            <label style="font-size:0.85rem; font-weight:600;">Duration Unit</label>
+            <select id="planFormDurationUnit" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+              <option value="DAYS">DAYS</option>
+              <option value="MONTHS">MONTHS</option>
+              <option value="YEARS">YEARS</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px;">
+          <div>
+            <label style="font-size:0.85rem; font-weight:600;">Status</label>
+            <select id="planFormStatus" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="DRAFT">DRAFT</option>
+              <option value="INACTIVE">INACTIVE</option>
+              <option value="ARCHIVED">ARCHIVED</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.85rem; font-weight:600;">Display Order</label>
+            <input id="planFormDisplayOrder" type="number" min="0" placeholder="0" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;" />
+          </div>
+          <div style="display:flex; align-items:center; padding-top:20px;">
+            <label style="font-size:0.85rem; font-weight:600; cursor:pointer;">
+              <input id="planFormPurchasable" type="checkbox" checked /> Purchasable
+            </label>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:0.85rem; font-weight:600;">Display Benefits (1 per line)</label>
+          <textarea id="planFormBenefits" rows="3" placeholder="Unlimited notes & downloads&#10;All AI tools enabled&#10;Unlimited mock tests" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-family:inherit;"></textarea>
+        </div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px;">
+          <button type="button" class="btn secondary" id="closePlanModalBtn">Cancel</button>
+          <button type="submit" class="btn primary">Save Plan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Plan Feature Entitlements Modal -->
+  <div id="planEntitlementsModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 24px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
+      <h3 id="entitlementsModalTitle" style="margin: 0 0 8px 0;">Configure Feature Entitlements</h3>
+      <p style="font-size:0.85rem; color:#64748b; margin-bottom:16px;">Select which Student Portal capabilities are unlocked by this plan when feature access is set to MEMBERSHIP_REQUIRED.</p>
+      <form id="entitlementsForm">
+        <input type="hidden" id="entitlementsPlanId" value="" />
+        <div id="entitlementsCheckboxesList" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; max-height:360px; overflow-y:auto; padding:8px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:16px;">
+          <!-- Dynamically populated from STUDENT_FEATURE_REGISTRY -->
+        </div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <button type="button" class="btn secondary" id="closeEntitlementsModalBtn">Cancel</button>
+          <button type="submit" class="btn primary">Save Entitlements</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Payment Review & Approval Modal -->
+  <div id="paymentReviewModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 24px; max-width: 550px; width: 90%; max-height: 90vh; overflow-y: auto;">
+      <h3 style="margin: 0 0 4px 0;">Review Payment Verification</h3>
+      <p style="font-size:0.85rem; color:#64748b; margin-bottom:16px;">Inspect UTR reference and payment proof evidence before executing atomic approval or rejection.</p>
+      
+      <div id="payReviewContent" style="display:flex; flex-direction:column; gap:12px;">
+        <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0; font-size:0.85rem;">
+          <div><strong>Student:</strong> <span id="prStudent"></span></div>
+          <div><strong>Amount:</strong> <span id="prAmount" style="color:#047857; font-weight:700;"></span></div>
+          <div><strong>UTR Reference:</strong> <code id="prUtr" style="background:#e2e8f0; padding:2px 6px; border-radius:4px;"></code></div>
+          <div id="prDuplicateWarn" style="display:none; color:#b91c1c; font-weight:700; margin-top:4px;"><i class="fa-solid fa-triangle-exclamation"></i> Warning: Duplicate UTR detected across submissions!</div>
+        </div>
+
+        <div style="text-align:center;">
+          <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:6px;">Payment Proof Evidence</label>
+          <div id="prProofContainer" style="max-height:260px; overflow:auto; border:1px solid #cbd5e1; border-radius:8px; padding:8px; background:#f1f5f9;">
+            <span style="font-size:0.85rem; color:#64748b;">No screenshot uploaded</span>
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">Rejection Reason (Required if rejecting)</label>
+          <input id="prRejectReasonInput" placeholder="e.g. Incorrect UTR / Amount mismatch / Unable to verify" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;" />
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px;">
+        <button type="button" class="btn secondary" id="closePayReviewModalBtn">Cancel</button>
+        <button type="button" class="btn danger" id="rejectPayBtn"><i class="fa-solid fa-xmark"></i> Reject Payment</button>
+        <button type="button" class="btn primary" id="approvePayBtn"><i class="fa-solid fa-check"></i> Approve & Activate Membership</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Student Detail Drawer -->
+  <div class="co-admin-drawer" id="studentDetailDrawer">
+    <div class="co-admin-drawer-header">
+      <div class="co-admin-drawer-title">
+        <h3 id="drawerStudentName">Student Profile & Membership</h3>
+        <p id="drawerStudentSub">Inspect profile summary, payment timeline, and execute administrative status updates.</p>
+      </div>
+      <button class="co-admin-drawer-close" data-drawer-close><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="co-admin-drawer-body" id="drawerStudentContent">
+      <div class="co-admin-skeleton" style="height: 140px; margin-bottom: 14px;"></div>
+      <div class="co-admin-skeleton" style="height: 200px;"></div>
+    </div>
+  </div>
+
+  <!-- Student Academic Reassignment Modal -->
+  <div id="studentReassignModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 24px; max-width: 580px; width: 90%; max-height: 90vh; overflow-y: auto;">
+      <h3 style="margin: 0 0 4px 0;">Reassign Student Academic Identity</h3>
+      <p style="font-size:0.85rem; color:#64748b; margin-bottom:16px;">Modify student university, course, and batch assignment. This will re-scope student content access.</p>
+      
+      <form id="reassignStudentForm" style="display: flex; flex-direction: column; gap: 14px;">
+        <input type="hidden" id="reassignStudentId" value="" />
+        
+        <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0; font-size:0.85rem;">
+          <div><strong>Student:</strong> <span id="reassignStudentNameEmail"></span></div>
+          <div style="margin-top:4px;"><strong>Current Scope:</strong> <span id="reassignCurrentScope" style="color:#d97706; font-weight:600;">Not assigned</span></div>
+        </div>
+
+        <div>
+          <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">1. University</label>
+          <select id="reassignUniversitySelect" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+            <option value="">Select University...</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">2. Course / Program</label>
+          <select id="reassignCourseSelect" required disabled style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+            <option value="">Select Course...</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">3. Batch / Academic Session</label>
+          <select id="reassignBatchSelect" required disabled style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+            <option value="">Select Batch...</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">Reason for Reassignment (Required)</label>
+          <input id="reassignReasonInput" placeholder="e.g. Campus transfer / Course correction / Admin update" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;" />
+        </div>
+
+        <div style="background:#fffbebf0; border:1px solid #fde68a; color:#92400e; padding:10px 12px; border-radius:8px; font-size:0.8rem; display:flex; gap:8px; align-items:center;">
+          <i class="fa-solid fa-triangle-exclamation" style="font-size:1rem;"></i>
+          <span>Reassigning will change this student's resource scope, study materials, notes, and exam eligibility on their next page navigation.</span>
+        </div>
+
+        <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px;">
+          <button type="button" class="btn secondary" id="closeReassignModalBtn">Cancel</button>
+          <button type="submit" class="btn primary" id="confirmReassignBtn"><i class="fa-solid fa-check-double"></i> Confirm & Reassign Profile</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- University Add/Edit Modal -->
+  <div id="asUniModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 24px; max-width: 520px; width: 90%; max-height: 90vh; overflow-y: auto;">
+      <h3 id="asUniModalTitle" style="margin: 0 0 4px 0;">Add University</h3>
+      <p style="font-size:0.85rem; color:#64748b; margin-bottom:16px;">Configure university name, stable code, and status.</p>
+      
+      <form id="asUniForm" style="display: flex; flex-direction: column; gap: 12px;">
+        <input type="hidden" id="asUniId" value="" />
+        
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+          <div>
+            <label style="font-size:0.85rem; font-weight:600;">Code *</label>
+            <input id="asUniCode" type="text" placeholder="CU_UP" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;" />
+          </div>
+          <div>
+            <label style="font-size:0.85rem; font-weight:600;">Short Name</label>
+            <input id="asUniShortName" type="text" placeholder="CU UP" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;" />
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size:0.85rem; font-weight:600;">Full Name *</label>
+          <input id="asUniName" type="text" placeholder="Chandigarh University Uttar Pradesh" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;" />
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
+          <div>
+            <label style="font-size:0.85rem; font-weight:600;">Status</label>
+            <select id="asUniStatus" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="INACTIVE">INACTIVE</option>
+              <option value="ARCHIVED">ARCHIVED</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.85rem; font-weight:600;">Display Order</label>
+            <input id="asUniDisplayOrder" type="number" value="0" min="0" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;" />
+          </div>
+          <div>
+            <label style="font-size:0.85rem; font-weight:600;">Priority Rank</label>
+            <input id="asUniPriorityRank" type="number" value="1" min="1" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;" />
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px;">
+          <button type="button" class="btn secondary" id="closeAsUniModalBtn">Cancel</button>
+          <button type="submit" class="btn primary">Save University</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Course Add/Edit Modal -->
+  <div id="asCourseModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 24px; max-width: 520px; width: 90%; max-height: 90vh; overflow-y: auto;">
+      <h3 id="asCourseModalTitle" style="margin: 0 0 4px 0;">Add Course</h3>
+      <p style="font-size:0.85rem; color:#64748b; margin-bottom:16px;">Configure program course under a university.</p>
+      
+      <form id="asCourseForm" style="display: flex; flex-direction: column; gap: 12px;">
+        <input type="hidden" id="asCourseId" value="" />
+
+        <div>
+          <label style="font-size:0.85rem; font-weight:600;">University *</label>
+          <select id="asCourseUniSelect" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+            <option value="">Select University...</option>
+          </select>
+        </div>
+        
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+          <div>
+            <label style="font-size:0.85rem; font-weight:600;">Course Code *</label>
+            <input id="asCourseCode" type="text" placeholder="BTECH_CSE" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;" />
+          </div>
+          <div>
+            <label style="font-size:0.85rem; font-weight:600;">Degree Type</label>
+            <input id="asCourseDegreeType" type="text" placeholder="B.Tech" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;" />
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size:0.85rem; font-weight:600;">Course Name *</label>
+          <input id="asCourseName" type="text" placeholder="B.Tech Computer Science & Engineering" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;" />
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
+          <div>
+            <label style="font-size:0.85rem; font-weight:600;">Duration (Years)</label>
+            <input id="asCourseDuration" type="number" value="4" min="1" max="6" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;" />
+          </div>
+          <div>
+            <label style="font-size:0.85rem; font-weight:600;">Status</label>
+            <select id="asCourseStatus" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="INACTIVE">INACTIVE</option>
+              <option value="ARCHIVED">ARCHIVED</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.85rem; font-weight:600;">Display Order</label>
+            <input id="asCourseDisplayOrder" type="number" value="0" min="0" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;" />
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px;">
+          <button type="button" class="btn secondary" id="closeAsCourseModalBtn">Cancel</button>
+          <button type="submit" class="btn primary">Save Course</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Batch Add/Edit Modal -->
+  <div id="asBatchModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 24px; max-width: 520px; width: 90%; max-height: 90vh; overflow-y: auto;">
+      <h3 id="asBatchModalTitle" style="margin: 0 0 4px 0;">Add Batch</h3>
+      <p style="font-size:0.85rem; color:#64748b; margin-bottom:16px;">Configure academic session batch for a university course.</p>
+      
+      <form id="asBatchForm" style="display: flex; flex-direction: column; gap: 12px;">
+        <input type="hidden" id="asBatchId" value="" />
+
+        <div>
+          <label style="font-size:0.85rem; font-weight:600;">University *</label>
+          <select id="asBatchUniSelect" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+            <option value="">Select University...</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-size:0.85rem; font-weight:600;">Course / Program *</label>
+          <select id="asBatchCourseSelect" required disabled style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+            <option value="">Select University First</option>
+          </select>
+        </div>
+        
+        <div>
+          <label style="font-size:0.85rem; font-weight:600;">Batch Name *</label>
+          <input id="asBatchName" type="text" placeholder="2026-2030" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;" />
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+          <div>
+            <label style="font-size:0.85rem; font-weight:600;">Start Year</label>
+            <input id="asBatchStartYear" type="number" value="2026" min="2000" max="2100" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;" />
+          </div>
+          <div>
+            <label style="font-size:0.85rem; font-weight:600;">End Year</label>
+            <input id="asBatchEndYear" type="number" value="2030" min="2000" max="2100" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;" />
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+          <div>
+            <label style="font-size:0.85rem; font-weight:600;">Status</label>
+            <select id="asBatchStatus" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="INACTIVE">INACTIVE</option>
+              <option value="ARCHIVED">ARCHIVED</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.85rem; font-weight:600;">Display Order</label>
+            <input id="asBatchDisplayOrder" type="number" value="0" min="0" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;" />
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px;">
+          <button type="button" class="btn secondary" id="closeAsBatchModalBtn">Cancel</button>
+          <button type="submit" class="btn primary">Save Batch</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </body>
 </html>
+

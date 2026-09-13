@@ -4,7 +4,7 @@
   "description": "College OS full-stack app",
   "main": "server/index.js",
   "scripts": {
-    "build": "echo Static site build complete",
+    "build": "node scripts/build-vercel.js",
     "dev": "node --watch server/index.js",
     "dev:all": "powershell -ExecutionPolicy Bypass -File ./start-all.ps1",
     "start": "node server/index.js",

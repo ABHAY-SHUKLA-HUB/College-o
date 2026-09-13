@@ -1,53 +1,62 @@
 {
+  "framework": null,
+  "outputDirectory": ".",
   "cleanUrls": true,
-  "rewrites": [
+  "routes": [
     {
-      "source": "/.well-known/security.txt",
-      "destination": "/public/.well-known/security.txt"
+      "src": "/.well-known/security.txt",
+      "dest": "/public/.well-known/security.txt"
     },
     {
-      "source": "/favicon.ico",
-      "destination": "https://college-o.onrender.com/favicon.ico"
+      "src": "/favicon.ico",
+      "dest": "https://college-o.onrender.com/favicon.ico"
     },
     {
-      "source": "/uploads/:path*",
-      "destination": "https://college-o.onrender.com/uploads/:path*"
+      "src": "/uploads/(.*)",
+      "dest": "https://college-o.onrender.com/uploads/$1"
     },
     {
-      "source": "/api/:path*",
-      "destination": "https://college-o.onrender.com/api/:path*"
+      "src": "/api/(.*)",
+      "dest": "https://college-o.onrender.com/api/$1"
     },
     {
-      "source": "/contact",
-      "destination": "/contact-us.html"
+      "src": "/contact",
+      "dest": "/contact-us.html"
     },
     {
-      "source": "/forms",
-      "destination": "/create-support-request.html"
+      "src": "/forms",
+      "dest": "/create-support-request.html"
     },
     {
-      "source": "/leaderboard",
-      "destination": "/leaderboards.html"
+      "src": "/leaderboard",
+      "dest": "/leaderboards.html"
     },
     {
-      "source": "/membership",
-      "destination": "/pricing.html"
+      "src": "/membership",
+      "dest": "/pricing.html"
     },
     {
-      "source": "/mock-test",
-      "destination": "/mock-tests.html"
+      "src": "/mock-test",
+      "dest": "/mock-tests.html"
     },
     {
-      "source": "/notes",
-      "destination": "/notes-library.html"
+      "src": "/notes",
+      "dest": "/notes-library.html"
     },
     {
-      "source": "/roadmap",
-      "destination": "/study-roadmap.html"
+      "src": "/roadmap",
+      "dest": "/study-roadmap.html"
     },
     {
-      "source": "/contribute",
-      "destination": "/academic-contribution-hub.html"
+      "src": "/contribute",
+      "dest": "/academic-contribution-hub.html"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ],
   "headers": [

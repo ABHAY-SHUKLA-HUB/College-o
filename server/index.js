@@ -14,6 +14,7 @@ const { ensureDatabaseBootstrap } = require('./db/bootstrap');
 const { initializeAcademicStructure } = require('./db/academic-migration');
 const { initializeCodingChallengesSchema } = require('./db/coding-challenges-migration');
 const { getCodingModuleSettings } = require('./services/codingChallengesService');
+const { getClientIp } = require('./utils/clientIp');
 
 const authRoutes = require('./routes/auth');
 const metaRoutes = require('./routes/meta');
@@ -94,8 +95,8 @@ const host = process.env.HOST || '0.0.0.0';
 
 const app = express();
 
-// Render sits behind a proxy; trust the first hop so req.ip and secure cookies are correct.
-app.set('trust proxy', 1);
+// Multi-hop edge proxy (Vercel edge -> Render reverse proxy); trust proxy chain for accurate client IP
+app.set('trust proxy', true);
 
 function parseOrigins(input) {
   return String(input || '')
@@ -237,7 +238,8 @@ const CLEAN_PAGE_ROUTES = new Map([
 
 function getRateLimitKey(req) {
   if (req.user?.id) return `user:${req.user.id}`;
-  return `ip:${req.ip || 'unknown'}`;
+  if (req.session?.userId) return `user:${req.session.userId}`;
+  return `ip:${getClientIp(req)}`;
 }
 
 function isPublicReadRoute(req) {
@@ -584,7 +586,7 @@ const generalRateLimiter = process.env.NODE_ENV === 'development'
     })
   : rateLimit({
       windowMs: 15 * 60 * 1000,  // 15 minutes
-      maxRequests: 300,
+      maxRequests: 1500, // Generous per-client-IP quota (avoids false-positive 429 across multi-tab browsing)
       keyGenerator: getRateLimitKey,
       skipSuccessfulRequests: false,
       skipFailedRequests: false

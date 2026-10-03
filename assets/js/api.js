@@ -723,7 +723,7 @@ async function request(path, options = {}) {
           };
         }
       }
-      const message = payload?.error || `Request failed (${interceptedResponse.response.status})`;
+      const message = payload?.message || payload?.error || (interceptedResponse.response.status === 429 ? 'Too many requests. Please wait a moment and try again.' : `Request failed (${interceptedResponse.response.status})`);
       const error = new Error(message);
       error.status = interceptedResponse.response.status;
       error.code = payload?.code;

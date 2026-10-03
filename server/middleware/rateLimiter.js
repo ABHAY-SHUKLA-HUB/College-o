@@ -5,6 +5,7 @@
  */
 
 const { RateLimitError } = require('./errorHandler');
+const { getClientIp } = require('../utils/clientIp');
 
 class RateLimiter {
   constructor(options = {}) {
@@ -145,23 +146,23 @@ function rateLimit(options = {}) {
  * Pre-configured rate limiters for different endpoints
  */
 const rateLimiters = {
-  // General API - 100 requests per minute per user
-  general: (req) => `user:${req.user?.id || req.ip}`,
+  // General API - per real client IP or authenticated user
+  general: (req) => `user:${req.user?.id || getClientIp(req)}`,
 
-  // Auth endpoints - stricter limits
-  auth: (req) => `auth:${req.ip}`,
+  // Auth endpoints - per real client IP
+  auth: (req) => `auth:${getClientIp(req)}`,
 
   // Upload endpoint - per-user limit
-  upload: (req) => `upload:${req.user?.id}`,
+  upload: (req) => `upload:${req.user?.id || getClientIp(req)}`,
 
   // Search - per-IP limit
-  search: (req) => `search:${req.ip}`,
+  search: (req) => `search:${getClientIp(req)}`,
 
   // Comments - per-user limit
-  comment: (req) => `comment:${req.user?.id}`,
+  comment: (req) => `comment:${req.user?.id || getClientIp(req)}`,
 
   // Admin endpoints - per-admin limit
-  admin: (req) => `admin:${req.user?.id}`
+  admin: (req) => `admin:${req.user?.id || getClientIp(req)}`
 };
 
 /**

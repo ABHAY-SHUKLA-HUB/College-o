@@ -1941,13 +1941,12 @@ function bindEmailLogin() {
       const message = getAuthApiErrorMessage(error, 'Login failed');
       if (/security/i.test(message)) {
         setAuthMessages('login', 'Security check could not load. Reset it and try again.');
-      } else if (/too many failed attempts/i.test(message)) {
+      } else if (error?.status === 429 || /too many/i.test(message) || /rate limit/i.test(message)) {
+        const retryAfter = error?.retryAfter || error?.payload?.retryAfter;
+        const cooldownText = retryAfter ? `Please wait ${retryAfter} seconds and try again.` : 'Please wait a few minutes and try again.';
         const otpInput = byId('mobileNumber');
         if (otpInput) otpInput.value = email;
-        if (typeof window.__collegeOsSetLoginMethod === 'function') {
-          window.__collegeOsSetLoginMethod('otp');
-        }
-        setAuthMessages('login', 'Password login is temporarily locked. Use OTP Login to continue, or wait 15 minutes and try again.');
+        setAuthMessages('login', `Too many login attempts. ${cooldownText} You can also use OTP Login to sign in instantly.`);
       } else {
         setAuthMessages('login', message);
       }

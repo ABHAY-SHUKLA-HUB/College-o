@@ -11,6 +11,7 @@ const { deleteUploadedFileById } = require('../services/supabaseStorage');
 const { getOtpTestEmail, sendSystemEmail } = require('../utils/mailer');
 const { publishRealtimeEvent, publishContentChanged } = require('../services/realtimeBus');
 const { extractTurnstileToken, verifyTurnstileToken } = require('../utils/turnstile');
+const { getClientIp } = require('../utils/clientIp');
 
 const router = express.Router();
 
@@ -22,8 +23,7 @@ const ADMIN_LOGIN_LOCK_MS = 20 * 60 * 1000;
 const CAPTCHA_SECRET = process.env.AUTH_CAPTCHA_SECRET || process.env.SESSION_SECRET || 'dev-captcha-secret';
 
 function getRequesterIp(req) {
-  const xff = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  return xff || req.ip || 'unknown';
+  return getClientIp(req);
 }
 
 function enforceAdminRateLimit(req, res) {

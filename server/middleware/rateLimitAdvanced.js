@@ -1,4 +1,5 @@
 const { pool } = require('../db/pool');
+const { getClientIp } = require('../utils/clientIp');
 
 /**
  * Advanced rate limiting and brute force protection
@@ -12,7 +13,7 @@ const IN_MEMORY_STORE = new Map(); // Fallback in-memory store
  */
 function getRateLimitKey(req, prefix = 'global') {
   const userId = req.session?.userId;
-  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  const ip = getClientIp(req);
   if (userId) {
     return `${prefix}:user:${userId}`;
   }

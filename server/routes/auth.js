@@ -8,6 +8,7 @@ const { ensureUniversityCatalogSchema } = require('../utils/universities');
 const { sendSystemEmail } = require('../utils/mailer');
 const { buildOtpEmail, buildPasswordResetEmail } = require('../utils/emailTemplates');
 const { extractTurnstileToken, verifyTurnstileToken } = require('../utils/turnstile');
+const { getClientIp } = require('../utils/clientIp');
 
 const router = express.Router();
 let authSchemaEnsured = false;
@@ -76,7 +77,7 @@ async function revokeUserSessionsByUserId(userId, debugContext) {
 }
 
 function getRequesterIp(req) {
-  return req.ip || String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
+  return getClientIp(req);
 }
 
 function setCacheHeaders(res, value) {
@@ -92,12 +93,14 @@ function setCacheHeaders(res, value) {
 function sendRateLimitedResponse(res, retryAfterSeconds, message) {
   const retryAfter = Math.max(1, Math.ceil(Number(retryAfterSeconds || 0)));
   res.setHeader('Retry-After', String(retryAfter));
-  console.warn('[RATE_LIMIT_RESPONSE]', { retryAfter, message });
+  const msg = message || `Too many requests. Please wait ${retryAfter} seconds and try again.`;
+  console.warn('[RATE_LIMIT_RESPONSE]', { retryAfter, message: msg });
   return res.status(429).json({
     success: false,
     ok: false,
     code: 'RATE_LIMITED',
-    message: message || `Too many requests. Please wait ${retryAfter} seconds.`,
+    error: msg,
+    message: msg,
     retryAfter
   });
 }
@@ -1256,8 +1259,8 @@ router.post('/google', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
-  const rateBlocked = enforceRateLimit(req, res, 'auth:login', 25, 15 * 60 * 1000);
-  if (rateBlocked) return;
+  const ipRateBlocked = enforceRateLimit(req, res, 'auth:login_ip', 120, 15 * 60 * 1000);
+  if (ipRateBlocked) return;
 
   const securityOk = await requirePublicSecurityCheck(req, res);
   if (!securityOk) return;
@@ -1269,6 +1272,9 @@ router.post('/login', async (req, res) => {
   }
 
   const normalizedEmail = normalizeEmail(email);
+  const emailRateBlocked = enforceRateLimit(req, res, `auth:login_email:${normalizedEmail}`, 15, 15 * 60 * 1000);
+  if (emailRateBlocked) return;
+
   const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [normalizedEmail]);
   if (!rows[0]) {
     await wait(LOGIN_FAILURE_DELAY_MS);
@@ -1325,6 +1331,9 @@ router.post('/login', async (req, res) => {
      WHERE id = $1`,
     [user.id, String(req.headers['user-agent'] || '').slice(0, 1024) || null]
   );
+
+  // Clear per-email failed rate limit on successful authentication
+  RATE_LIMIT_STATE.delete(`auth:login_email:${normalizedEmail}`);
 
   req.session.regenerate((sessionError) => {
     if (sessionError) {

@@ -350,12 +350,15 @@ img {
   z-index: 1050;
   opacity: 0;
   visibility: hidden;
+  pointer-events: none;
+  overflow: hidden;
   transition: all 0.3s ease;
 }
 
 .co-mobile-drawer.open {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
 }
 
 .co-drawer-content {

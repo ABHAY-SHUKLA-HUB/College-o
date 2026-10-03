@@ -9,15 +9,15 @@
   }
 
   function goToCreateRequest() {
-    window.location.href = 'create-support-request.html';
+    window.open('create-support-request.html', '_blank');
   }
 
   function goToDashboard() {
-    window.location.href = '/support-dashboard';
+    window.open('/support-dashboard', '_blank');
   }
 
   function goToRequest(id) {
-    window.location.href = `support-request-detail.html?id=${id}`;
+    window.open(`support-request-detail.html?id=${id}`, '_blank');
   }
 
   async function loadRequests() {

@@ -176,6 +176,13 @@ const ONBOARDING_PUBLIC_API_PATHS = [
 const CLEAN_PAGE_ROUTES = new Map([
   ['/login', 'login.html'],
   ['/signup', 'signup.html'],
+  ['/about-us', 'about-us.html'],
+  ['/contact-us', 'contact-us.html'],
+  ['/help-center', 'help-center.html'],
+  ['/pricing', 'pricing.html'],
+  ['/membership', 'pricing.html'],
+  ['/referrals', 'referrals.html'],
+  ['/feedback', 'feedback.html'],
   ['/academic-onboarding', 'academic-onboarding.html'],
   ['/dashboard', 'dashboard.html'],
   ['/study', 'study.html'],
@@ -193,25 +200,25 @@ const CLEAN_PAGE_ROUTES = new Map([
   ['/certificates', 'certificates.html'],
   ['/leaderboard', 'leaderboards.html'],
   ['/campus-feed', 'college-feed.html'],
-  ['/contribute', 'academic-contribution-hub.html']
-  ,['/coding-challenges', 'coding-challenges.html']
-  ,['/reset-password', 'reset-password.html']
-  ,['/admin-login', 'admin-login.html']
-  ,['/admin-dashboard', 'admin-dashboard.html']
-  ,['/admin-dashboard-mgmt', 'admin-dashboard-mgmt.html']
-  ,['/admin-control', 'admin-control.html']
-  ,['/admin-academics', 'admin-academics.html']
-  ,['/admin-materials', 'admin-materials.html']
-  ,['/admin-notes', 'admin-notes.html']
-  ,['/admin-certificates', 'admin-certificates.html']
-  ,['/admin-mock-tests', 'admin-mock-tests.html']
-  ,['/admin-quizzes', 'admin-quizzes.html']
-  ,['/admin-papers', 'admin-papers.html']
-  ,['/admin-roadmaps', 'admin-roadmaps.html']
-  ,['/admin-campus-feed', 'admin-campus-feed.html']
-  ,['/admin-ai-tools', 'admin-ai-tools.html']
-  ,['/admin-support-governance', 'admin-support-governance.html']
-  ,['/certificate-verify', 'certificate-verify.html']
+  ['/contribute', 'academic-contribution-hub.html'],
+  ['/coding-challenges', 'coding-challenges.html'],
+  ['/reset-password', 'reset-password.html'],
+  ['/admin-login', 'admin-login.html'],
+  ['/admin-dashboard', 'admin-dashboard.html'],
+  ['/admin-dashboard-mgmt', 'admin-dashboard-mgmt.html'],
+  ['/admin-control', 'admin-control.html'],
+  ['/admin-academics', 'admin-academics.html'],
+  ['/admin-materials', 'admin-materials.html'],
+  ['/admin-notes', 'admin-notes.html'],
+  ['/admin-certificates', 'admin-certificates.html'],
+  ['/admin-mock-tests', 'admin-mock-tests.html'],
+  ['/admin-quizzes', 'admin-quizzes.html'],
+  ['/admin-papers', 'admin-papers.html'],
+  ['/admin-roadmaps', 'admin-roadmaps.html'],
+  ['/admin-campus-feed', 'admin-campus-feed.html'],
+  ['/admin-ai-tools', 'admin-ai-tools.html'],
+  ['/admin-support-governance', 'admin-support-governance.html'],
+  ['/certificate-verify', 'certificate-verify.html']
 ]);
 
 function getRateLimitKey(req) {
@@ -379,6 +386,7 @@ app.use(helmet({
       manifestSrc: ["'self'"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
+      frameAncestors: ["'self'"],
       ...(isProduction ? { upgradeInsecureRequests: [] } : {})
     }
   },
@@ -387,8 +395,7 @@ app.use(helmet({
     includeSubDomains: true,
     preload: true
   } : false,
-  // Disable frameguard (X-Frame-Options) because it conflicts with modern CSP frame-src
-  frameguard: false,
+  frameguard: { action: 'sameorigin' },
   noSniff: true,
   xssFilter: true,
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
@@ -824,6 +831,7 @@ const PAGE_ROUTES = new Map([
 // Protected pages set (clean paths & HTML files)
 const PROTECTED_PAGE_PATHS = new Set([
   '/dashboard', '/dashboard.html',
+  '/academic-onboarding', '/academic-onboarding.html',
   '/study', '/study.html', '/materials-library', '/materials-library.html', '/previous-papers', '/previous-papers.html',
   '/notes', '/notes.html', '/notes-library', '/notes-library.html', '/notes-library-enhanced', '/notes-library-enhanced.html', '/my-notes', '/my-notes.html', '/note-editor', '/note-editor.html',
   '/mock-test', '/mock-tests', '/mock-tests.html', '/mock-test-attempt', '/mock-test-attempt.html', '/mock-test-results', '/mock-test-results.html',
@@ -841,18 +849,13 @@ const PROTECTED_PAGE_PATHS = new Set([
   '/certificates', '/certificates.html',
   '/badges', '/badges.html',
   '/leaderboards', '/leaderboards.html',
-  '/referrals', '/referrals.html',
-  '/feedback', '/feedback.html',
   '/daily-challenges', '/daily-challenges.html',
-  '/top-helpers', '/top-helpers.html',
-  '/my-tickets', '/my-tickets.html',
-  '/membership',
   '/coding-challenges', '/coding-challenges.html'
 ]);
 
 // Routes that have been removed or consolidated; users should be redirected
 const REMOVED_ROUTE_PATHS = new Set([
-  '/home', '/homepage', '/contact-us', '/contactus', '/about-us', '/help-center', '/my-tickets', '/leaderboard', '/certificate', '/referrals', '/feedback', '/support-dashboard'
+  '/home', '/homepage', '/my-tickets', '/contactus'
 ]);
 
 // Strictly protect the live-hub page: require an authenticated session or a valid join token

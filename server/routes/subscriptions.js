@@ -454,5 +454,241 @@ router.post('/payment-request', requireAuth, handlePaymentScreenshotUpload, asyn
   }
 });
 
+// GET /api/subscriptions/config - Public payment gateway & UPI config
+router.get('/config', async (_req, res) => {
+  try {
+    const config = await getMembershipCenterConfig();
+    const razorpayKeyId = process.env.RAZORPAY_KEY_ID || null;
+    const automatedAvailable = Boolean(razorpayKeyId && process.env.RAZORPAY_KEY_SECRET);
+
+    res.json({
+      success: true,
+      plans: config.plans,
+      featureAccess: config.featureAccess,
+      upi: config.payment,
+      gateway: {
+        automatedAvailable,
+        provider: automatedAvailable ? 'razorpay' : null,
+        keyId: razorpayKeyId
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to load subscription configuration' });
+  }
+});
+
+// POST /api/subscriptions/create-order - Create automated payment order
+router.post('/create-order', requireAuth, async (req, res) => {
+  try {
+    const razorpayKeyId = process.env.RAZORPAY_KEY_ID;
+    const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
+
+    if (!razorpayKeyId || !razorpayKeySecret) {
+      return res.status(503).json({
+        success: false,
+        gatewayAvailable: false,
+        error: 'Automated payment gateway credentials are not configured. Please use the manual UPI payment option.'
+      });
+    }
+
+    const config = await getMembershipCenterConfig();
+    const amountInr = Number(config?.plans?.premium?.priceInr || 49);
+    const amountPaise = amountInr * 100;
+    const receipt = `rcpt_${req.session.userId}_${Date.now()}`;
+
+    // Create order via Razorpay API
+    const authHeader = 'Basic ' + Buffer.from(`${razorpayKeyId}:${razorpayKeySecret}`).toString('base64');
+    const orderPayload = JSON.stringify({
+      amount: amountPaise,
+      currency: 'INR',
+      receipt,
+      notes: { userId: String(req.session.userId) }
+    });
+
+    const https = require('https');
+    const orderPromise = new Promise((resolve, reject) => {
+      const apiReq = https.request({
+        hostname: 'api.razorpay.com',
+        port: 443,
+        path: '/v1/orders',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authHeader,
+          'Content-Length': Buffer.byteLength(orderPayload)
+        }
+      }, (apiRes) => {
+        let body = '';
+        apiRes.on('data', chunk => body += chunk);
+        apiRes.on('end', () => {
+          try {
+            const data = JSON.parse(body);
+            if (apiRes.statusCode >= 200 && apiRes.statusCode < 300) {
+              resolve(data);
+            } else {
+              reject(new Error(data.error?.description || 'Razorpay order creation failed'));
+            }
+          } catch (e) {
+            reject(e);
+          }
+        });
+      });
+      apiReq.on('error', reject);
+      apiReq.write(orderPayload);
+      apiReq.end();
+    });
+
+    const order = await orderPromise;
+    res.json({
+      success: true,
+      gatewayAvailable: true,
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      keyId: razorpayKeyId
+    });
+  } catch (error) {
+    console.error('[Payment Gateway Error]', error.message);
+    res.status(500).json({ success: false, error: error.message || 'Order creation failed' });
+  }
+});
+
+// POST /api/subscriptions/verify-payment - Verify payment signature and activate subscription
+router.post('/verify-payment', requireAuth, async (req, res) => {
+  const crypto = require('crypto');
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    return res.status(400).json({ success: false, error: 'Missing payment verification parameters' });
+  }
+
+  const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
+  if (!razorpayKeySecret) {
+    return res.status(503).json({ success: false, error: 'Payment gateway secret not configured' });
+  }
+
+  const generatedSignature = crypto
+    .createHmac('sha256', razorpayKeySecret)
+    .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+    .digest('hex');
+
+  if (generatedSignature !== razorpay_signature) {
+    console.warn('[Payment Signature Mismatch]', { userId: req.session.userId, orderId: razorpay_order_id });
+    return res.status(400).json({ success: false, error: 'Invalid payment signature' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const now = new Date();
+    const expiry = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    await client.query(
+      `UPDATE users
+       SET subscription_tier = 'premium',
+           payment_status = 'active',
+           subscription_started_at = $1,
+           subscription_expiry = $2
+       WHERE id = $3`,
+      [now, expiry, req.session.userId]
+    );
+
+    await client.query(
+      `INSERT INTO payment_events
+       (user_id, event_type, payload, created_at)
+       VALUES ($1, 'razorpay.payment.verified', $2::jsonb, NOW())`,
+      [req.session.userId, JSON.stringify({ orderId: razorpay_order_id, paymentId: razorpay_payment_id })]
+    );
+
+    await client.query(
+      'INSERT INTO notifications (user_id, message, kind) VALUES ($1, $2, $3)',
+      [req.session.userId, 'Your Premium Subscription has been activated for 30 days!', 'subscription_activated']
+    );
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: 'Payment verified successfully. Premium subscription activated!',
+      subscription: {
+        tier: 'premium',
+        status: 'active',
+        expiryDate: expiry.toISOString()
+      }
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('[Subscription Activation Error]', err.message);
+    res.status(500).json({ success: false, error: 'Failed to activate subscription' });
+  } finally {
+    client.release();
+  }
+});
+
+// POST /api/subscriptions/webhook - Handle automated payment webhooks
+router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const crypto = require('crypto');
+  const webhookSecret = process.env.SUBSCRIPTION_WEBHOOK_SECRET || process.env.RAZORPAY_WEBHOOK_SECRET;
+
+  if (!webhookSecret) {
+    return res.status(500).send('Webhook secret unconfigured');
+  }
+
+  const signature = req.headers['x-razorpay-signature'] || req.headers['stripe-signature'];
+  if (!signature) {
+    return res.status(400).send('Missing webhook signature');
+  }
+
+  const rawBody = typeof req.body === 'string' ? req.body : req.body.toString('utf8');
+  const expectedSignature = crypto.createHmac('sha256', webhookSecret).update(rawBody).digest('hex');
+
+  if (signature !== expectedSignature) {
+    console.warn('[Webhook Invalid Signature]');
+    return res.status(400).send('Invalid signature');
+  }
+
+  let event;
+  try {
+    event = JSON.parse(rawBody);
+  } catch (e) {
+    return res.status(400).send('Invalid JSON payload');
+  }
+
+  try {
+    const eventType = event.event || event.type;
+    console.info(`[Payment Webhook Received]: ${eventType}`);
+
+    if (eventType === 'payment.captured' || eventType === 'order.paid' || eventType === 'invoice.payment_succeeded') {
+      const userId = event.payload?.payment?.entity?.notes?.userId || event.data?.object?.metadata?.userId;
+      if (userId) {
+        const now = new Date();
+        const expiry = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+        await pool.query(
+          `UPDATE users
+           SET subscription_tier = 'premium',
+               payment_status = 'active',
+               subscription_started_at = $1,
+               subscription_expiry = $2
+           WHERE id = $3`,
+          [now, expiry, Number(userId)]
+        );
+
+        await pool.query(
+          `INSERT INTO payment_events (user_id, event_type, payload, created_at)
+           VALUES ($1, $2, $3::jsonb, NOW())`,
+          [Number(userId), eventType, JSON.stringify(event)]
+        );
+      }
+    }
+
+    res.status(200).json({ received: true });
+  } catch (error) {
+    console.error('[Webhook Processing Error]', error.message);
+    res.status(500).json({ error: 'Webhook processing failed' });
+  }
+});
+
 module.exports = router;
 module.exports.ensureMembershipConfigSchema = ensureMembershipConfigSchema;
+

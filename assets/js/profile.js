@@ -185,7 +185,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   byId('editProfileBtn')?.addEventListener('click', async () => {
-    window.location.href = 'settings.html';
+    const onboardingDone = Boolean(academicProfileCache);
+    window.location.href = onboardingDone ? 'settings.html' : 'academic-onboarding.html';
   });
 
   byId('changePasswordBtn')?.addEventListener('click', async () => {

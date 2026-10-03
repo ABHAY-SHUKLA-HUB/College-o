@@ -531,7 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
   saveBtn?.addEventListener('click', async () => {
     if (!hasPremiumAccess) {
       alert('Upgrade to Premium (Rs.49/month) to access notes.');
-      window.location.href = 'pricing.html';
+      window.open('pricing.html', '_blank');
       return;
     }
 

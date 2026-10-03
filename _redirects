@@ -1,31 +1,28 @@
-/dashboard.html /dashboard 301
-/admin-dashboard.html /admin-dashboard 301
-/admin-login.html /admin-login 301
-/admin-ai-tools.html /admin-ai-tools 301
-/admin-control.html /admin-control 301
-/home.html /home 301
-/study.html /study 301
-/mock-tests.html /mock-tests 301
-/notes-library.html /notes 301
-/study-roadmap.html /roadmap 301
-/ai-tools.html /ai-tools 301
-/live-hub.html /live-hub 301
-/notifications.html /notifications 301
-/profile.html /profile 301
-/settings.html /settings 301
-/academic-contribution-hub.html /contribute 301
-/support-dashboard.html /support-dashboard 301
-/support-hub.html /support-hub 301
-/login.html /login 301
-/signup.html /signup 301
-/reset-password.html /reset-password 301
+# API & Socket Proxy to Live Backend
+/api/* https://college-o.onrender.com/api/:splat 200
+/socket.io/* https://college-o.onrender.com/socket.io/:splat 200
+/uploads/* https://college-o.onrender.com/uploads/:splat 200
 
-/home /home.html 200
-/dashboard /dashboard.html 200
-/admin-dashboard /admin-dashboard.html 200
+# Public Informational Pages
+/about-us /about-us.html 200
+/contact-us /contact-us.html 200
+/help-center /help-center.html 200
+/pricing /pricing.html 200
+/membership /pricing.html 200
+/referrals /referrals.html 200
+/feedback /feedback.html 200
+/manifest.json /manifest.json 200
+/sw.js /sw.js 200
+
+# Public Authentication
+/login /login.html 200
+/signup /signup.html 200
+/reset-password /reset-password.html 200
 /admin-login /admin-login.html 200
-/admin-ai-tools /admin-ai-tools.html 200
-/admin-control /admin-control.html 200
+
+# App & Student Routes
+/dashboard /dashboard.html 200
+/academic-onboarding /academic-onboarding.html 200
 /study /study.html 200
 /mock-test /mock-tests.html 200
 /mock-tests /mock-tests.html 200
@@ -36,12 +33,20 @@
 /notifications /notifications.html 200
 /profile /profile.html 200
 /settings /settings.html 200
+/contribute /academic-contribution-hub.html 200
 /support-dashboard /support-dashboard.html 200
 /support-hub /support-hub.html 200
-/contribute /academic-contribution-hub.html 200
-/reset-password /reset-password.html 200
+/leaderboard /leaderboards.html 200
+/certificates /certificates.html 200
+/college-feed /college-feed.html 200
+/forum /forum.html 200
 
-/uploads/* https://college-o.onrender.com/uploads/:splat 200!
-/api/* https://college-o.onrender.com/api/:splat 200!
+# Admin Pages
+/admin-dashboard /admin-dashboard.html 200
+/admin-control /admin-control.html 200
+/admin-academics /admin-academics.html 200
+/admin-ai-tools /admin-ai-tools.html 200
+/admin-support-governance /admin-support-governance.html 200
 
+# Default Fallback
 /* /index.html 200

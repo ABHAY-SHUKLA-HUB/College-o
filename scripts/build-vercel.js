@@ -44,6 +44,7 @@ for (const item of fs.readdirSync(rootDir)) {
   copyRecursive(path.join(rootDir, item), path.join(staticDir, item));
 }
 
+// Copy HTML aliases to ensure physical files exist for all named routes
 const htmlAliases = {
   'notes.html': 'notes-library.html',
   'roadmap.html': 'study-roadmap.html',
@@ -68,8 +69,33 @@ const config = {
   version: 3,
   routes: [
     {
-      src: '^/$',
-      dest: '/index.html'
+      src: '/(.*)',
+      headers: {
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'SAMEORIGIN',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+        'Permissions-Policy': 'camera=(self "https://meet.jit.si"), microphone=(self "https://meet.jit.si"), geolocation=(), payment=(), usb=()',
+        'Content-Security-Policy': "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; script-src 'self' 'unsafe-inline' https://meet.jit.si https://download.agora.io https://accounts.google.com https://www.gstatic.com https://challenges.cloudflare.com https://checkout.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://college-o.onrender.com https://*.supabase.co wss://*.supabase.co https://meet.jit.si https://download.agora.io https://accounts.google.com https://oauth2.googleapis.com https://challenges.cloudflare.com https://api.razorpay.com; frame-src 'self' https://meet.jit.si https://challenges.cloudflare.com https://api.razorpay.com"
+      },
+      continue: true
+    },
+    {
+      src: '/sw.js',
+      headers: {
+        'Cache-Control': 'public, max-age=0, must-revalidate',
+        'Service-Worker-Allowed': '/',
+        'Content-Type': 'application/javascript'
+      },
+      continue: true
+    },
+    {
+      src: '/manifest.json',
+      headers: {
+        'Content-Type': 'application/manifest+json',
+        'Cache-Control': 'public, max-age=3600'
+      },
+      continue: true
     },
     {
       src: '^/\\.well-known/security\\.txt$',
@@ -84,8 +110,19 @@ const config = {
       dest: 'https://college-o.onrender.com/uploads/$1'
     },
     {
+      src: '^/socket.io/(.*)$',
+      dest: 'https://college-o.onrender.com/socket.io/$1'
+    },
+    {
       src: '^/api/(.*)$',
       dest: 'https://college-o.onrender.com/api/$1'
+    },
+    {
+      handle: 'filesystem'
+    },
+    {
+      src: '^/$',
+      dest: '/index.html'
     },
     {
       src: '^/contact$',
@@ -120,12 +157,13 @@ const config = {
       dest: '/academic-contribution-hub.html'
     },
     {
-      handle: 'filesystem'
-    },
-    {
       src: '^/([^/.]+)/?$',
       dest: '/$1.html',
       check: true
+    },
+    {
+      src: '^/(.*)$',
+      dest: '/index.html'
     }
   ]
 };

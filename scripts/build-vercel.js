@@ -46,21 +46,29 @@ for (const item of fs.readdirSync(rootDir)) {
 
 // Copy HTML aliases to ensure physical files exist for all named routes
 const htmlAliases = {
-  'notes.html': 'notes-library.html',
-  'roadmap.html': 'study-roadmap.html',
+  'notes.html': 'notes.html',
+  'pyqs.html': 'pyqs.html',
+  'quizzes.html': 'quizzes.html',
+  'mock-test.html': 'mock-tests.html',
+  'features.html': 'features.html',
+  'ai-study.html': 'ai-study.html',
+  'career-roadmaps.html': 'career-roadmaps.html',
+  'community.html': 'community.html',
+  'live-study.html': 'live-study.html',
+  'certificates.html': 'certificates.html',
+  'roadmap.html': 'career-roadmaps.html',
   'contribute.html': 'academic-contribution-hub.html',
   'membership.html': 'pricing.html',
   'leaderboard.html': 'leaderboards.html',
   'forms.html': 'create-support-request.html',
   'contact.html': 'contact-us.html',
-  'mock-test.html': 'mock-tests.html',
   'campus-feed.html': 'college-feed.html'
 };
 
 for (const [alias, target] of Object.entries(htmlAliases)) {
   const targetPath = path.join(staticDir, target);
   const aliasPath = path.join(staticDir, alias);
-  if (fs.existsSync(targetPath)) {
+  if (fs.existsSync(targetPath) && targetPath !== aliasPath) {
     fs.copyFileSync(targetPath, aliasPath);
   }
 }
@@ -125,36 +133,84 @@ const config = {
       dest: '/index.html'
     },
     {
-      src: '^/contact$',
-      dest: '/contact-us.html'
+      src: '^/features$',
+      dest: '/features.html'
     },
     {
-      src: '^/forms$',
-      dest: '/create-support-request.html'
+      src: '^/notes$',
+      dest: '/notes.html'
     },
     {
-      src: '^/leaderboard$',
-      dest: '/leaderboards.html'
+      src: '^/pyqs$',
+      dest: '/pyqs.html'
     },
     {
-      src: '^/membership$',
-      dest: '/pricing.html'
+      src: '^/quizzes$',
+      dest: '/quizzes.html'
+    },
+    {
+      src: '^/mock-tests$',
+      dest: '/mock-tests.html'
     },
     {
       src: '^/mock-test$',
       dest: '/mock-tests.html'
     },
     {
-      src: '^/notes$',
-      dest: '/notes-library.html'
+      src: '^/ai-study$',
+      dest: '/ai-study.html'
     },
     {
-      src: '^/roadmap$',
-      dest: '/study-roadmap.html'
+      src: '^/career-roadmaps$',
+      dest: '/career-roadmaps.html'
     },
     {
-      src: '^/contribute$',
-      dest: '/academic-contribution-hub.html'
+      src: '^/community$',
+      dest: '/community.html'
+    },
+    {
+      src: '^/live-study$',
+      dest: '/live-study.html'
+    },
+    {
+      src: '^/certificates$',
+      dest: '/certificates.html'
+    },
+    {
+      src: '^/certificate-verify$',
+      dest: '/certificate-verify.html'
+    },
+    {
+      src: '^/pricing$',
+      dest: '/pricing.html'
+    },
+    {
+      src: '^/membership$',
+      dest: '/pricing.html'
+    },
+    {
+      src: '^/about-us$',
+      dest: '/about-us.html'
+    },
+    {
+      src: '^/contact-us$',
+      dest: '/contact-us.html'
+    },
+    {
+      src: '^/contact$',
+      dest: '/contact-us.html'
+    },
+    {
+      src: '^/help-center$',
+      dest: '/help-center.html'
+    },
+    {
+      src: '^/privacy$',
+      dest: '/privacy.html'
+    },
+    {
+      src: '^/terms$',
+      dest: '/terms.html'
     },
     {
       src: '^/([^/.]+)/?$',
@@ -170,4 +226,4 @@ const config = {
 
 fs.writeFileSync(path.join(outputDir, 'config.json'), JSON.stringify(config, null, 2));
 
-console.log('[build-vercel] Successfully generated Vercel Build Output API v3 bundle!');
+console.log('[build-vercel] Successfully generated Vercel Build Output API v3 bundle with multi-page routes!');

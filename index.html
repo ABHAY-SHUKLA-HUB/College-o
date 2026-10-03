@@ -3,515 +3,470 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="assets/js/theme-init.js"></script>
-
-  <title>College OS | Student Growth Platform</title>
-  <meta
-    name="description"
-    content="College OS is a student growth platform for study materials, college updates, notes upload, points, rewards, leaderboard, community, internships and hackathons."
-  />
+  <title>College OS | Your Academic OS for College & Career</title>
+  <meta name="description" content="Streamline your college journey with verified notes, previous year questions (PYQs), interactive quizzes, mock tests, AI study tools, and career roadmaps." />
   <link rel="canonical" href="https://collegeo.in/" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="College OS | Student Growth Platform" />
-  <meta property="og:description" content="A student workspace for study materials, progress, community and career-focused learning." />
+  <meta property="og:title" content="College OS | Your Academic OS for College & Career" />
+  <meta property="og:description" content="Streamline your college journey with verified notes, PYQs, quizzes, mock tests, AI tools, and career roadmaps in one cohesive platform." />
   <meta property="og:url" content="https://collegeo.in/" />
   <meta property="og:image" content="https://collegeo.in/assets/images/college-os-logo.png" />
-  <meta property="og:image:width" content="512" />
-  <meta property="og:image:height" content="512" />
-  <meta property="og:image:alt" content="College OS logo" />
-  <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="College OS | Student Growth Platform" />
-  <meta name="twitter:description" content="A student workspace for study materials, progress, community and career-focused learning." />
-  <meta name="twitter:image" content="https://collegeo.in/assets/images/college-os-logo.png" />
   <link rel="icon" type="image/png" sizes="512x512" href="/assets/images/college-os-logo.png" />
-  <link rel="apple-touch-icon" href="/assets/images/college-os-logo.png" />
-  <link rel="manifest" href="/site.webmanifest" />
+  <link rel="manifest" href="/manifest.json" />
 
   <link rel="stylesheet" href="assets/css/landing.css" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <script src="assets/js/theme-init.js"></script>
 </head>
 
 <body>
+  <!-- GLOBAL HEADER -->
+  <header class="co-header" id="coHeader">
+    <nav class="co-nav">
+      <a href="/" class="co-brand">
+        <img src="assets/images/college-os-logo.png" alt="College OS Logo" />
+        <span>College OS</span>
+      </a>
 
-<header class="co-header" id="coHeader">
-  <nav class="co-nav">
-    <a href="#home" class="co-brand">
-      <img src="assets/images/college-os-logo.png" alt="College OS Logo" />
-      <span>College OS</span>
-    </a>
+      <div class="co-nav-menu">
+        <a href="/" class="co-nav-link active">Home</a>
+        <a href="/features" class="co-nav-link">Features</a>
+        
+        <div class="co-nav-dropdown">
+          <span class="co-nav-link">Study <i class="fa-solid fa-chevron-down" style="font-size:0.75rem;"></i></span>
+          <div class="co-dropdown-menu">
+            <a href="/notes" class="co-dropdown-item"><i class="fa-solid fa-book-bookmark"></i> Notes Library</a>
+            <a href="/pyqs" class="co-dropdown-item"><i class="fa-solid fa-file-lines"></i> Previous Year Papers</a>
+            <a href="/quizzes" class="co-dropdown-item"><i class="fa-solid fa-circle-question"></i> Practice Quizzes</a>
+            <a href="/mock-tests" class="co-dropdown-item"><i class="fa-solid fa-chart-line"></i> Mock Tests</a>
+          </div>
+        </div>
 
-    <div class="co-nav-links">
-      <a href="#vision">Vision</a>
-      <a href="#platform">Platform</a>
-      <a href="#features">Features</a>
-      <a href="#rewards">Rewards</a>
-      <a href="#faq">FAQ</a>
-    </div>
-
-    <div class="co-nav-actions">
-      <a href="login.html" class="co-nav-btn">Student Login</a>
-      <a href="login.html?mode=signup" class="co-nav-btn co-nav-btn-secondary">Sign Up</a>      <a href="mailto:support@collegeo.in" class="co-btn-secondary">Contact Us</a>    </div>
-  </nav>
-</header>
-
-<main>
-
-  <!-- HERO -->
-  <section class="co-hero" id="home">
-    <div class="co-hero-bg"></div>
-
-    <div class="co-hero-content">
-      <div class="co-pill">
-        <span></span>
-        Learn • Contribute • Earn • Grow
+        <a href="/ai-study" class="co-nav-link">AI Study</a>
+        <a href="/career-roadmaps" class="co-nav-link">Career</a>
+        <a href="/community" class="co-nav-link">Community</a>
+        <a href="/pricing" class="co-nav-link">Pricing</a>
       </div>
 
-      <h1>
-        One smart platform for
-        <span>students, learning & campus growth.</span>
-      </h1>
-
-      <p>
-        College OS brings study materials, college updates, student uploads,
-        points, referrals, leaderboard, community, internships, hackathons,
-        live sessions and rewards into one modern student ecosystem.
-      </p>
-
-      <div class="co-actions">
-        <a href="login.html" class="co-btn-primary">Student Login</a>
-        <a href="login.html?mode=signup" class="co-btn-secondary">Get Started</a>
-        <a href="#platform" class="co-btn-secondary">Explore Platform</a>
+      <div class="co-nav-actions">
+        <a href="/login" class="co-btn co-btn-secondary co-btn-sm">Log In</a>
+        <a href="/signup" class="co-btn co-btn-primary co-btn-sm">Get Started</a>
+        <button class="co-nav-toggle" id="coNavToggle" aria-label="Toggle Menu">
+          <i class="fa-solid fa-bars"></i>
+        </button>
       </div>
+    </nav>
+  </header>
 
-      <div class="co-hero-cards">
-        <article class="co-hero-card active">
-          <b>01</b>
-          <h3>Personalized Dashboard</h3>
-          <p>Relevant content based on college, course, branch and semester.</p>
-        </article>
-
-        <article class="co-hero-card">
-          <b>02</b>
-          <h3>Contribution System</h3>
-          <p>Students upload helpful notes and earn recognition.</p>
-        </article>
-
-        <article class="co-hero-card">
-          <b>03</b>
-          <h3>Growth Ecosystem</h3>
-          <p>Internships, hackathons, rewards and community updates.</p>
-        </article>
-      </div>
-    </div>
-
-    <div class="co-hero-visual">
-      <div class="co-ecosystem">
-        <div class="co-glow"></div>
-
-        <div class="co-ring ring-one"></div>
-        <div class="co-ring ring-two"></div>
-        <div class="co-ring ring-three"></div>
-
-        <div class="co-core">
+  <!-- MOBILE DRAWER -->
+  <div class="co-mobile-drawer" id="coMobileDrawer">
+    <div class="co-drawer-content">
+      <div class="co-drawer-header">
+        <a href="/" class="co-brand">
           <img src="assets/images/college-os-logo.png" alt="College OS Logo" />
-          <h3>College OS</h3>
-          <p>Student Growth Ecosystem</p>
-        </div>
+          <span>College OS</span>
+        </a>
+        <button class="co-drawer-close" id="coDrawerClose" aria-label="Close Menu">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
 
-        <div class="co-float-card float-one">
-          <strong>Study</strong>
-          <span>Notes • Quizzes • PDFs</span>
-        </div>
+      <div class="co-drawer-links">
+        <a href="/" class="co-drawer-link active"><i class="fa-solid fa-house"></i> Home</a>
+        <a href="/features" class="co-drawer-link"><i class="fa-solid fa-cubes"></i> Features</a>
+        <a href="/notes" class="co-drawer-link"><i class="fa-solid fa-book-bookmark"></i> Notes Library</a>
+        <a href="/pyqs" class="co-drawer-link"><i class="fa-solid fa-file-lines"></i> PYQs & Papers</a>
+        <a href="/quizzes" class="co-drawer-link"><i class="fa-solid fa-circle-question"></i> Quizzes</a>
+        <a href="/mock-tests" class="co-drawer-link"><i class="fa-solid fa-chart-line"></i> Mock Tests</a>
+        <a href="/ai-study" class="co-drawer-link"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Study Tools</a>
+        <a href="/career-roadmaps" class="co-drawer-link"><i class="fa-solid fa-route"></i> Career Roadmaps</a>
+        <a href="/community" class="co-drawer-link"><i class="fa-solid fa-users"></i> Community</a>
+        <a href="/live-study" class="co-drawer-link"><i class="fa-solid fa-video"></i> Live Study Hub</a>
+        <a href="/certificates" class="co-drawer-link"><i class="fa-solid fa-award"></i> Certificates</a>
+        <a href="/pricing" class="co-drawer-link"><i class="fa-solid fa-tags"></i> Pricing</a>
+        <a href="/about-us" class="co-drawer-link"><i class="fa-solid fa-circle-info"></i> About Us</a>
+        <a href="/help-center" class="co-drawer-link"><i class="fa-solid fa-headset"></i> Help Center</a>
+        <a href="/contact-us" class="co-drawer-link"><i class="fa-solid fa-envelope"></i> Contact Us</a>
+      </div>
 
-        <div class="co-float-card float-two">
-          <strong>Contribute</strong>
-          <span>Student uploads & sharing</span>
-        </div>
-
-        <div class="co-float-card float-three">
-          <strong>Rewards</strong>
-          <span>Points • Leaderboard</span>
-        </div>
-
-        <div class="co-float-card float-four">
-          <strong>Opportunities</strong>
-          <span>Internships • Hackathons</span>
-        </div>
-
-        <div class="co-float-card float-five">
-          <strong>Community</strong>
-          <span>Guidance • Updates</span>
-        </div>
+      <div style="margin-top:auto; display:grid; gap:10px;">
+        <a href="/login" class="co-btn co-btn-secondary" style="width:100%;">Log In</a>
+        <a href="/signup" class="co-btn co-btn-primary" style="width:100%;">Start Free</a>
       </div>
     </div>
-  </section>
+  </div>
 
-  <!-- PLATFORM -->
-  <section class="co-section co-platform" id="platform">
-    <div class="co-section-head center">
-      <div class="co-eyebrow">Inside College OS</div>
-      <h2>Everything students need, designed like a real product.</h2>
-      <p>
-        A clean student ecosystem where academics, contribution, rewards and career
-        updates work together instead of being scattered across random groups and links.
-      </p>
-    </div>
-
-    <div class="co-platform-grid">
-      <article class="co-platform-card featured">
-        <div class="card-label">Academic Hub</div>
-        <h3>Study resources that actually feel organized.</h3>
-        <p>
-          Students get notes, PDFs, quizzes, roadmaps and live sessions according
-          to their selected college, course, branch and semester.
-        </p>
-
-        <div class="resource-list">
+  <main>
+    <!-- HERO SECTION -->
+    <section class="co-home-hero">
+      <div class="co-container">
+        <div class="co-hero-grid">
           <div>
-            <span></span>
-            <div>
-              <strong>Semester Notes</strong>
-              <small>Course-based access</small>
+            <div class="co-kicker">
+              <i class="fa-solid fa-graduation-cap"></i> Student Growth Platform
+            </div>
+
+            <h1 class="co-hero-title">
+              Your Academic OS for <span>College & Career</span>
+            </h1>
+
+            <p class="co-hero-lead">
+              Streamline your semesters with verified notes, previous year questions (PYQs), interactive quizzes, AI-assisted revision, and guided career roadmaps.
+            </p>
+
+            <div class="co-hero-actions">
+              <a href="/signup" class="co-btn co-btn-primary co-btn-lg">
+                <i class="fa-solid fa-bolt"></i> Start Learning Free
+              </a>
+              <a href="/features" class="co-btn co-btn-secondary co-btn-lg">
+                <i class="fa-solid fa-compass"></i> Explore Features
+              </a>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:16px; font-size:0.9rem; color:var(--text-muted); flex-wrap:wrap;">
+              <span><i class="fa-solid fa-check" style="color:var(--green); margin-right:6px;"></i> Free Forever Tier</span>
+              <span><i class="fa-solid fa-check" style="color:var(--green); margin-right:6px;"></i> Verified Curriculum</span>
+              <span><i class="fa-solid fa-check" style="color:var(--green); margin-right:6px;"></i> Semester-Wise Materials</span>
             </div>
           </div>
 
-          <div>
-            <span></span>
-            <div>
-              <strong>Quizzes & Mock Tests</strong>
-              <small>Practice with structure</small>
+          <!-- Hero Visual Feature Tiles -->
+          <div class="co-hero-visual-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; border-bottom:1px solid var(--line);">
+              <span style="font-weight:800; color:var(--navy); font-size:1rem;"><i class="fa-solid fa-layer-group" style="color:var(--blue); margin-right:8px;"></i> Student Core Ecosystem</span>
+              <span class="co-badge-green" style="padding:4px 10px; border-radius:999px; font-size:0.75rem; font-weight:800;">LIVE</span>
             </div>
-          </div>
 
-          <div>
-            <span></span>
-            <div>
-              <strong>Career Roadmaps</strong>
-              <small>Skill path for students</small>
+            <div class="co-visual-pill-grid">
+              <a href="/notes" class="co-visual-pill">
+                <i class="fa-solid fa-book-bookmark" style="color:var(--blue);"></i>
+                <div>
+                  <div>Notes Library</div>
+                  <small style="color:var(--text-muted); font-size:0.75rem; font-weight:500;">Handwritten & Verified</small>
+                </div>
+              </a>
+
+              <a href="/pyqs" class="co-visual-pill">
+                <i class="fa-solid fa-file-lines" style="color:var(--cyan);"></i>
+                <div>
+                  <div>PYQ Papers</div>
+                  <small style="color:var(--text-muted); font-size:0.75rem; font-weight:500;">Semester Solved PYQs</small>
+                </div>
+              </a>
+
+              <a href="/quizzes" class="co-visual-pill">
+                <i class="fa-solid fa-circle-question" style="color:var(--purple);"></i>
+                <div>
+                  <div>Smart Quizzes</div>
+                  <small style="color:var(--text-muted); font-size:0.75rem; font-weight:500;">Chapter-wise MCQs</small>
+                </div>
+              </a>
+
+              <a href="/ai-study" class="co-visual-pill">
+                <i class="fa-solid fa-wand-magic-sparkles" style="color:var(--amber);"></i>
+                <div>
+                  <div>AI Assistant</div>
+                  <small style="color:var(--text-muted); font-size:0.75rem; font-weight:500;">Explain & Summarize</small>
+                </div>
+              </a>
+            </div>
+
+            <div style="padding:14px; border-radius:var(--radius-lg); background:var(--blue-soft); border:1px solid rgba(11,103,224,0.15); display:flex; align-items:center; justify-content:space-between; gap:12px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <i class="fa-solid fa-route" style="color:var(--blue); font-size:1.2rem;"></i>
+                <div>
+                  <strong style="color:var(--navy); font-size:0.9rem;">Career Roadmaps</strong>
+                  <div style="color:var(--text-muted); font-size:0.8rem;">Full-Stack • Data Science • Cloud</div>
+                </div>
+              </div>
+              <a href="/career-roadmaps" class="co-btn co-btn-primary co-btn-sm">View</a>
             </div>
           </div>
         </div>
-      </article>
 
-      <article class="co-platform-card">
-        <div class="icon-box">⬆️</div>
-        <h3>Student Uploads</h3>
-        <p>
-          Students can upload helpful notes and resources for others. Approved
-          uploads can improve their contribution value.
-        </p>
-      </article>
+        <!-- QUICK METRICS STRIP -->
+        <div class="co-stats-strip">
+          <div class="co-stat-item">
+            <div class="co-stat-number" data-live-stat="branches">6+</div>
+            <div class="co-stat-label">Engineering & Commerce Branches</div>
+          </div>
+          <div class="co-stat-item">
+            <div class="co-stat-number" data-live-stat="semesters">8 Semesters</div>
+            <div class="co-stat-label">Structured Syllabus Paths</div>
+          </div>
+          <div class="co-stat-item">
+            <div class="co-stat-number">100%</div>
+            <div class="co-stat-label">Curriculum-Aligned Notes</div>
+          </div>
+          <div class="co-stat-item">
+            <div class="co-stat-number" data-live-stat="premium-price">₹49/mo</div>
+            <div class="co-stat-label">Affordable Premium Access</div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-      <article class="co-platform-card">
-        <div class="icon-box">🏫</div>
-        <h3>College Updates</h3>
-        <p>
-          Important notices, events and academic information stay in one clean
-          place for students.
-        </p>
-      </article>
+    <!-- FEATURE PREVIEWS (DEDICATED CARDS LINKING TO PAGES) -->
+    <section class="co-section">
+      <div class="co-container">
+        <div class="co-section-head center">
+          <div class="co-kicker"><i class="fa-solid fa-shapes"></i> Comprehensive Suite</div>
+          <h2 class="co-section-title">Everything You Need to Excel in College</h2>
+          <p class="co-section-desc">Each major study and growth tool has a dedicated workspace designed specifically for college workflows.</p>
+        </div>
 
-      <article class="co-platform-card dark">
-        <div class="card-label">Rewards Layer</div>
-        <h3>Points, recognition and rewards.</h3>
-        <p>
-          Students can earn points through useful uploads, referrals, quizzes and
-          participation. Top contributors can get recognition.
-        </p>
-      </article>
+        <div class="co-grid-3">
+          <!-- Card 1: Notes -->
+          <article class="co-card">
+            <div class="co-card-badge co-badge-blue">Academic</div>
+            <div class="co-card-icon co-icon-blue"><i class="fa-solid fa-book-bookmark"></i></div>
+            <h3 class="co-card-title">Notes Library</h3>
+            <p class="co-card-desc">Access high-yield, chapter-wise study notes organized by branch, semester, and subject code with instant previews.</p>
+            <div class="co-card-meta">
+              <span class="co-meta-tag"><i class="fa-solid fa-file-pdf"></i> PDF & Markdown</span>
+              <a href="/notes" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;">Browse Notes <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+          </article>
 
-      <article class="co-platform-card">
-        <div class="icon-box">🤝</div>
-        <h3>Growth Community</h3>
-        <p>
-          Internship, hackathon, certification, cloud, AI and career updates after
-          joining the official community.
-        </p>
-      </article>
-    </div>
-  </section>
+          <!-- Card 2: PYQs -->
+          <article class="co-card">
+            <div class="co-card-badge co-badge-cyan">Exam Prep</div>
+            <div class="co-card-icon co-icon-cyan"><i class="fa-solid fa-file-lines"></i></div>
+            <h3 class="co-card-title">Previous Year Questions</h3>
+            <p class="co-card-desc">Master your university exams with year-wise question papers, repeat patterns, and semester solution guidelines.</p>
+            <div class="co-card-meta">
+              <span class="co-meta-tag"><i class="fa-solid fa-calendar-check"></i> 2021-2025 Papers</span>
+              <a href="/pyqs" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;">View PYQs <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+          </article>
 
-  <!-- JOURNEY -->
-  <section class="co-section co-journey">
-    <div class="co-section-head">
-      <div class="co-eyebrow">How It Works</div>
-      <h2>A simple journey from signup to student growth.</h2>
-    </div>
+          <!-- Card 3: Quizzes -->
+          <article class="co-card">
+            <div class="co-card-badge co-badge-purple">Practice</div>
+            <div class="co-card-icon co-icon-purple"><i class="fa-solid fa-circle-question"></i></div>
+            <h3 class="co-card-title">Interactive Quizzes</h3>
+            <p class="co-card-desc">Test your understanding with instant feedback, difficulty levels, explanation breakdowns, and score tracking.</p>
+            <div class="co-card-meta">
+              <span class="co-meta-tag"><i class="fa-solid fa-stopwatch"></i> Timed MCQs</span>
+              <a href="/quizzes" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;">Take Quizzes <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+          </article>
 
-    <div class="co-journey-grid">
-      <article>
-        <b>01</b>
-        <h3>Create Account</h3>
-        <p>Student signs up and selects college, course, branch and semester.</p>
-      </article>
+          <!-- Card 4: Mock Tests -->
+          <article class="co-card">
+            <div class="co-card-badge co-badge-green">Assessment</div>
+            <div class="co-card-icon co-icon-green"><i class="fa-solid fa-chart-line"></i></div>
+            <h3 class="co-card-title">Mock Tests</h3>
+            <p class="co-card-desc">Simulate realistic exam scenarios with negative marking rules, timer controls, and detailed performance analytics.</p>
+            <div class="co-card-meta">
+              <span class="co-meta-tag"><i class="fa-solid fa-gauge-high"></i> In-Depth Reports</span>
+              <a href="/mock-tests" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;">Explore Tests <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+          </article>
 
-      <article>
-        <b>02</b>
-        <h3>Access Dashboard</h3>
-        <p>Only relevant materials, updates and resources appear on dashboard.</p>
-      </article>
+          <!-- Card 5: AI Study -->
+          <article class="co-card">
+            <div class="co-card-badge co-badge-amber">Intelligence</div>
+            <div class="co-card-icon co-icon-amber"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+            <h3 class="co-card-title">AI Study Assistant</h3>
+            <p class="co-card-desc">Simplify complex syllabus concepts, generate instant summaries, formulate flashcards, and clarify difficult doubts.</p>
+            <div class="co-card-meta">
+              <span class="co-meta-tag"><i class="fa-solid fa-robot"></i> 24/7 AI Helper</span>
+              <a href="/ai-study" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;">Try AI Tools <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+          </article>
 
-      <article>
-        <b>03</b>
-        <h3>Contribute Notes</h3>
-        <p>Students can upload useful notes and resources for other students.</p>
-      </article>
+          <!-- Card 6: Career Roadmaps -->
+          <article class="co-card">
+            <div class="co-card-badge co-badge-blue">Career</div>
+            <div class="co-card-icon co-icon-blue"><i class="fa-solid fa-route"></i></div>
+            <h3 class="co-card-title">Career Roadmaps</h3>
+            <p class="co-card-desc">Step-by-step career path guides from fundamentals to projects and interview prep for Web Dev, AI, Cloud, and more.</p>
+            <div class="co-card-meta">
+              <span class="co-meta-tag"><i class="fa-solid fa-diagram-project"></i> Project-Driven</span>
+              <a href="/career-roadmaps" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;">View Paths <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
 
-      <article>
-        <b>04</b>
-        <h3>Earn & Grow</h3>
-        <p>Students earn points, get recognition and join the growth community.</p>
-      </article>
-    </div>
-  </section>
+    <!-- HOW COLLEGE OS WORKS (4-STEP WORKFLOW) -->
+    <section class="co-section" style="background:var(--bg-subtle);">
+      <div class="co-container">
+        <div class="co-section-head center">
+          <div class="co-kicker"><i class="fa-solid fa-stairs"></i> The Learning Flow</div>
+          <h2 class="co-section-title">How College OS Powers Your Success</h2>
+          <p class="co-section-desc">A structured 4-step workflow to transition from semester confusion to career confidence.</p>
+        </div>
 
-  <!-- VISION -->
-  <section class="co-section" id="vision">
-    <div class="co-section-head">
-      <div class="co-eyebrow">Our Vision</div>
-      <h2>College OS is built to become the digital operating system of student life.</h2>
-    </div>
+        <div class="co-steps-grid">
+          <div class="co-step-card">
+            <div class="co-step-num">1</div>
+            <h3>Choose Your Branch</h3>
+            <p>Select your college, degree, branch, and current semester for a customized curriculum feed.</p>
+          </div>
 
-    <div class="co-info-grid">
-      <article>
-        <h3>Academic Clarity</h3>
-        <p>
-          Students should not depend on scattered groups and random links for learning.
-          College OS organizes academics in one simple system.
-        </p>
-      </article>
+          <div class="co-step-card">
+            <div class="co-step-num">2</div>
+            <h3>Study Smarter</h3>
+            <p>Revise with high-yield subject notes, previous year question papers, and AI conceptual summaries.</p>
+          </div>
 
-      <article>
-        <h3>Campus Information</h3>
-        <p>
-          Important college information, notices, events and opportunities stay
-          accessible and easy to discover.
-        </p>
-      </article>
+          <div class="co-step-card">
+            <div class="co-step-num">3</div>
+            <h3>Practice & Test</h3>
+            <p>Validate your mastery with chapter-wise quizzes and timed mock tests with performance analysis.</p>
+          </div>
 
-      <article>
-        <h3>Student Growth</h3>
-        <p>
-          Students can contribute, build credibility, get recognition and stay
-          closer to career opportunities.
-        </p>
-      </article>
-    </div>
-  </section>
+          <div class="co-step-card">
+            <div class="co-step-num">4</div>
+            <h3>Build Your Career</h3>
+            <p>Follow verified skill roadmaps, build portfolio projects, and earn shareable achievement badges.</p>
+          </div>
+        </div>
+      </div>
+    </section>
 
-  <!-- COMPARISON -->
-  <section class="co-section co-comparison">
-    <article class="compare-card old">
-      <span>Old Way</span>
-      <h3>Scattered and confusing</h3>
-      <ul>
-        <li>Notes spread across WhatsApp groups</li>
-        <li>Important updates easily missed</li>
-        <li>No contribution or reward system</li>
-        <li>No single place for internships and hackathons</li>
-        <li>No personalized academic experience</li>
-      </ul>
-    </article>
+    <!-- CAREER & COMMUNITY PREVIEW -->
+    <section class="co-section">
+      <div class="co-container">
+        <div class="co-grid-2" style="align-items:center;">
+          <div>
+            <div class="co-kicker"><i class="fa-solid fa-briefcase"></i> Career Acceleration</div>
+            <h2 class="co-section-title">Step-by-Step Roadmaps for Modern Tech Careers</h2>
+            <p class="co-section-desc">
+              Don't get stuck learning random tutorials. Follow curated, milestone-based roadmaps designed with skill checkpoints, hands-on projects, and interview preparation guides.
+            </p>
 
-    <article class="compare-card new">
-      <span>With College OS</span>
-      <h3>Organized, rewarding and growth-focused</h3>
-      <ul>
-        <li>College updates and learning resources in one dashboard</li>
-        <li>Students can upload useful notes and resources</li>
-        <li>Earn points from uploads, referrals and participation</li>
-        <li>Leaderboard, certificates, vouchers, goodies and recognition</li>
-        <li>Community updates for internships, hackathons and events</li>
-      </ul>
-    </article>
-  </section>
+            <div style="display:grid; gap:12px; margin:24px 0 32px;">
+              <div style="display:flex; align-items:center; gap:12px; font-weight:700; color:var(--navy);">
+                <i class="fa-solid fa-circle-check" style="color:var(--blue);"></i> Frontend & Backend Web Development
+              </div>
+              <div style="display:flex; align-items:center; gap:12px; font-weight:700; color:var(--navy);">
+                <i class="fa-solid fa-circle-check" style="color:var(--blue);"></i> Data Science, Machine Learning & AI
+              </div>
+              <div style="display:flex; align-items:center; gap:12px; font-weight:700; color:var(--navy);">
+                <i class="fa-solid fa-circle-check" style="color:var(--blue);"></i> Cloud Computing, DevOps & Cyber Security
+              </div>
+            </div>
 
-  <!-- FEATURES -->
-  <section class="co-section" id="features">
-    <div class="co-section-head center">
-      <div class="co-eyebrow">Features</div>
-      <h2>A complete student-first ecosystem.</h2>
-    </div>
+            <a href="/career-roadmaps" class="co-btn co-btn-primary">
+              <i class="fa-solid fa-route"></i> Explore Career Roadmaps
+            </a>
+          </div>
 
-    <div class="co-feature-grid">
-      <article><b>01</b><h3>Study Materials</h3><p>Notes, PDFs and organized resources.</p></article>
-      <article><b>02</b><h3>College Information</h3><p>Announcements, notices and campus updates.</p></article>
-      <article><b>03</b><h3>Student Uploads</h3><p>Students can upload useful notes and resources.</p></article>
-      <article><b>04</b><h3>Points System</h3><p>Earn points from activity, contribution and referrals.</p></article>
-      <article><b>05</b><h3>Leaderboard</h3><p>Recognize top performers and active contributors.</p></article>
-      <article><b>06</b><h3>Rewards</h3><p>Recognition, certificates, goodies and possible vouchers.</p></article>
-      <article><b>07</b><h3>Support System</h3><p>Raise help requests directly from the dashboard.</p></article>
-      <article><b>08</b><h3>Community Access</h3><p>Stay updated with growth opportunities and events.</p></article>
-    </div>
-  </section>
+          <!-- Community Preview Box -->
+          <div style="background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-xl); padding:32px; box-shadow:var(--shadow-md);">
+            <div class="co-kicker" style="background:var(--cyan-soft); color:var(--cyan); border-color:rgba(6,182,212,0.2);">
+              <i class="fa-solid fa-users"></i> Student Community
+            </div>
+            <h3 style="font-size:1.5rem; font-weight:800; color:var(--navy); margin-bottom:12px;">Peer Q&A & Contribution Hub</h3>
+            <p style="color:var(--text-muted); font-size:0.95rem; line-height:1.6; margin-bottom:24px;">
+              Share your handwritten notes, ask doubts to senior students, participate in campus discussions, and earn XP and community badges.
+            </p>
+            <div style="display:flex; gap:12px; flex-wrap:wrap;">
+              <a href="/community" class="co-btn co-btn-secondary co-btn-sm"><i class="fa-solid fa-comments"></i> Join Community</a>
+              <a href="/contribute" class="co-btn co-btn-outline co-btn-sm"><i class="fa-solid fa-cloud-arrow-up"></i> Upload Notes</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-  <!-- REWARDS -->
-  <section class="co-rewards" id="rewards">
-    <div class="rewards-content">
-      <div class="co-eyebrow dark">Rewards</div>
-      <h2>Learn more. Contribute more. Get recognized.</h2>
-      <p>
-        College OS encourages student participation through points, referrals,
-        leaderboard ranking, certificates and reward opportunities.
-      </p>
+    <!-- FINAL IMPACTFUL CTA -->
+    <section class="co-section">
+      <div class="co-container">
+        <div class="co-cta-banner">
+          <h2>Start Your College Journey with College OS</h2>
+          <p>
+            Join students studying smarter, passing exams with confidence, and building real career skills.
+          </p>
+          <div class="co-actions">
+            <a href="/signup" class="co-btn co-btn-primary co-btn-lg">
+              <i class="fa-solid fa-rocket"></i> Get Started Free
+            </a>
+            <a href="/features" class="co-btn co-btn-secondary co-btn-lg">
+              <i class="fa-solid fa-compass"></i> Explore All Features
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
 
-      <div class="reward-tags">
-        <span>Notes Upload Points</span>
-        <span>Referral Points</span>
-        <span>Quiz Participation</span>
-        <span>Leaderboard Recognition</span>
-        <span>Certificates</span>
-        <span>Possible Vouchers & Goodies</span>
+  <!-- GLOBAL FOOTER -->
+  <footer class="co-footer">
+    <div class="co-container">
+      <div class="co-footer-grid">
+        <div class="co-footer-brand">
+          <h3>
+            <img src="assets/images/college-os-logo.png" alt="College OS" style="width:36px; height:36px; border-radius:10px;" />
+            College OS
+          </h3>
+          <p>Your Academic OS for College & Career. Learn smarter, practice better, and build your future.</p>
+          <div style="display:flex; gap:12px;">
+            <a href="https://github.com/ABHAY-SHUKLA-HUB/College-o" aria-label="GitHub" style="width:36px; height:36px; border-radius:10px; background:rgba(255,255,255,0.08); display:grid; place-items:center; color:#fff;"><i class="fa-brands fa-github"></i></a>
+            <a href="mailto:support@collegeo.in" aria-label="Email Support" style="width:36px; height:36px; border-radius:10px; background:rgba(255,255,255,0.08); display:grid; place-items:center; color:#fff;"><i class="fa-solid fa-envelope"></i></a>
+          </div>
+        </div>
+
+        <div class="co-footer-col">
+          <h4>Product</h4>
+          <ul class="co-footer-links">
+            <li><a href="/features">Features Overview</a></li>
+            <li><a href="/pricing">Pricing & Plans</a></li>
+            <li><a href="/ai-study">AI Study Assistant</a></li>
+            <li><a href="/career-roadmaps">Career Roadmaps</a></li>
+            <li><a href="/live-study">Live Study Hub</a></li>
+            <li><a href="/certificates">Certificates</a></li>
+          </ul>
+        </div>
+
+        <div class="co-footer-col">
+          <h4>Study Resources</h4>
+          <ul class="co-footer-links">
+            <li><a href="/notes">Notes Library</a></li>
+            <li><a href="/pyqs">Previous Year Papers</a></li>
+            <li><a href="/quizzes">Practice Quizzes</a></li>
+            <li><a href="/mock-tests">Mock Tests</a></li>
+            <li><a href="/coding-challenges">Coding Arena</a></li>
+          </ul>
+        </div>
+
+        <div class="co-footer-col">
+          <h4>Company</h4>
+          <ul class="co-footer-links">
+            <li><a href="/about-us">About Us</a></li>
+            <li><a href="/contact-us">Contact Us</a></li>
+            <li><a href="/privacy">Privacy Policy</a></li>
+            <li><a href="/terms">Terms of Service</a></li>
+          </ul>
+        </div>
+
+        <div class="co-footer-col">
+          <h4>Support</h4>
+          <ul class="co-footer-links">
+            <li><a href="/help-center">Help Center</a></li>
+            <li><a href="/community">Community Hub</a></li>
+            <li><a href="/contribute">Contribute Notes</a></li>
+            <li><a href="/feedback">Send Feedback</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="co-footer-bottom">
+        <div>&copy; 2026 College OS. All rights reserved.</div>
+        <div class="co-footer-legal">
+          <a href="/privacy">Privacy Policy</a>
+          <a href="/terms">Terms of Service</a>
+          <a href="/about-us">About Us</a>
+          <a href="/contact-us">Contact</a>
+        </div>
       </div>
     </div>
+  </footer>
 
-    <div class="rewards-side">
-      <article>
-        <small>Recognition Layer</small>
-        <h3>Top Students</h3>
-        <p>High-performing students can receive recognition and special reward eligibility.</p>
-      </article>
-
-      <article>
-        <small>Possible Benefits</small>
-        <p>
-          Eligible students may receive Microsoft, AWS or Nutanix related voucher
-          opportunities, certificates, goodies or recognition.
-        </p>
-      </article>
-    </div>
-  </section>
-
-  <!-- COMMUNITY -->
-  <section class="co-section co-community" id="community">
-    <div class="community-box">
-      <div class="co-eyebrow">Community</div>
-      <h2>Join a community that keeps students ahead.</h2>
-      <p>
-        After login, students will receive an email from College OS with official
-        community joining details. This community can share updates about internships,
-        hackathons, cloud programs, AI resources, workshops, events and guidance.
-      </p>
-
-      <div class="community-tags">
-        <span>Internships</span>
-        <span>Hackathons</span>
-        <span>Cloud Programs</span>
-        <span>AI Events</span>
-        <span>Workshops</span>
-        <span>Guidance</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- ABOUT -->
-  <section class="co-section co-about">
-    <div class="about-grid">
-      <div>
-        <div class="co-eyebrow">About College OS</div>
-        <h2>Built for students who want more than just academics.</h2>
-      </div>
-
-      <div class="about-copy">
-        <p>
-          College OS is a student-first platform designed to make college life more
-          organized, productive and growth-driven.
-        </p>
-
-        <p>
-          Instead of keeping study materials, updates, opportunities and support
-          scattered across different places, College OS brings them into one clean,
-          connected and professional system.
-        </p>
-
-        <p>
-          It helps students learn better, contribute value, earn recognition, join a
-          meaningful community and stay connected with internships, hackathons and
-          career opportunities.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- FAQ -->
-  <section class="co-faq" id="faq">
-    <div class="co-eyebrow">FAQ</div>
-    <h2>Frequently Asked Questions</h2>
-
-    <details>
-      <summary>How will students join the community?</summary>
-      <p>
-        After login, students will receive an email from College OS with official
-        community joining details.
-      </p>
-    </details>
-
-    <details>
-      <summary>Can students upload notes?</summary>
-      <p>
-        Yes. Students can upload useful notes and resources. Approved uploads may
-        help them earn points and recognition.
-      </p>
-    </details>
-
-    <details>
-      <summary>How will students earn points?</summary>
-      <p>
-        Students may earn points through uploads, referrals, quizzes and platform activity.
-      </p>
-    </details>
-
-    <details>
-      <summary>What kind of rewards can students get?</summary>
-      <p>
-        Eligible students may receive certificates, recognition, goodies and possible
-        voucher opportunities.
-      </p>
-    </details>
-
-    <details>
-      <summary>Is admin login visible publicly?</summary>
-      <p>No. Admin login is hidden and not shown on the public landing page.</p>
-    </details>
-  </section>
-
-  <!-- CTA -->
-  <section class="co-final">
-    <h2>Start your College OS journey.</h2>
-    <p>One place for learning, contribution, rewards, opportunities and student growth.</p>
-    <a href="login.html" class="co-btn-primary">Student Login</a>
-    <a href="login.html?mode=signup" class="co-btn-secondary">Get Started</a>
-  </section>
-
-</main>
-
-<footer class="co-footer">
-  <img src="assets/images/college-os-logo.png" alt="College OS Logo" loading="lazy" />
-  <p>College OS — One Platform for Students, Learning & Campus Growth</p>
-  <span>© 2026 College OS. All rights reserved.</span>
-</footer>
-
-<script>
-  const header = document.getElementById("coHeader");
-  let lastScroll = 0;
-
-  window.addEventListener("scroll", () => {
-    const currentScroll = window.pageYOffset;
-
-    if (currentScroll > lastScroll && currentScroll > 120) {
-      header.classList.add("hide-header");
-    } else {
-      header.classList.remove("hide-header");
-    }
-
-    lastScroll = currentScroll;
-  });
-
-  document.addEventListener("keydown", function (event) {
-    if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "a") {
-      window.location.href = "admin-login.html";
-    }
-  });
-</script>
-
+  <script src="assets/js/public-nav.js"></script>
 </body>
 </html>

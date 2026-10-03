@@ -28,6 +28,7 @@ out/
 .next/
 .nuxt/
 .output/
+.vercel/
 .cache/
 .turbo/
 .parcel-cache/

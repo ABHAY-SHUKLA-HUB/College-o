@@ -227,7 +227,7 @@ function pageName() {
 
 // Expose protected page names to the client-side for guard checks
 window.PROTECTED_PAGES = [
-  'dashboard', 'dashboard.html', 'study', 'study.html', 'mock-test', 'mock-tests.html', 'mock-tests', 'notes', 'notes-library.html', 'contribute', 'academic-contribution-hub.html', 'roadmap', 'study-roadmap.html', 'live-hub', 'live-hub.html', 'ai-tools', 'ai-tools.html', 'college-feed', 'college-feed.html', 'forum', 'forum.html', 'support-hub', 'support-hub.html', 'profile', 'profile.html', 'settings', 'settings.html', 'coding-challenges', 'coding-challenges.html', 'academic-onboarding', 'academic-onboarding.html'
+  'dashboard', 'dashboard.html', 'study', 'study.html', 'profile', 'profile.html', 'settings', 'settings.html', 'notifications', 'notifications.html', 'academic-onboarding', 'academic-onboarding.html', 'support-dashboard', 'support-dashboard.html'
 ];
 
 function normalizeRoutePath(href) {
@@ -805,9 +805,13 @@ function publicPage() {
   const file = pageName().replace(/\.html$/i, '').toLowerCase();
   const PUBLIC_PAGES = new Set([
     '', 'index', 'landing', 'login', 'signup', 'reset-password',
+    'features', 'notes', 'notes-library', 'pyqs', 'previous-papers',
+    'quizzes', 'quiz-library', 'mock-tests', 'mock-test', 'ai-study', 'ai-tools',
+    'career-roadmaps', 'study-roadmap', 'community', 'college-feed', 'forum',
+    'live-study', 'live-hub', 'certificates', 'certificate-verify',
     'about-us', 'contact-us', 'contact', 'help-center', 'pricing', 'membership',
     'support', 'referrals', 'feedback', 'terms', 'privacy',
-    'privacy-policy', 'terms-and-conditions', 'certificate-verify'
+    'privacy-policy', 'terms-and-conditions', 'contribute'
   ]);
   return PUBLIC_PAGES.has(file);
 }

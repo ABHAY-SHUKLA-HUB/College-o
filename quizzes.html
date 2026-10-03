@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mock Tests & Exam Practice | College OS</title>
-  <meta name="description" content="Simulate real semester and competitive examination environments with timed mock tests, negative marking rules, and performance analytics." />
-  <link rel="canonical" href="https://collegeo.in/mock-tests" />
+  <title>Practice Quizzes | College OS — Interactive Topic Quizzes</title>
+  <meta name="description" content="Validate your concept mastery with chapter-wise timed MCQs, immediate explanations, and performance scorecards." />
+  <link rel="canonical" href="https://collegeo.in/quizzes" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Mock Tests | College OS" />
-  <meta property="og:description" content="Timed mock tests and exam simulations for college students." />
+  <meta property="og:title" content="Practice Quizzes | College OS" />
+  <meta property="og:description" content="Test your understanding with chapter-wise MCQs, difficulty filters, and instant feedback." />
   <link rel="icon" type="image/png" sizes="512x512" href="/assets/images/college-os-logo.png" />
   <link rel="manifest" href="/manifest.json" />
 
@@ -74,8 +74,8 @@
         <a href="/features" class="co-drawer-link"><i class="fa-solid fa-cubes"></i> Features</a>
         <a href="/notes" class="co-drawer-link"><i class="fa-solid fa-book-bookmark"></i> Notes Library</a>
         <a href="/pyqs" class="co-drawer-link"><i class="fa-solid fa-file-lines"></i> PYQs & Papers</a>
-        <a href="/quizzes" class="co-drawer-link"><i class="fa-solid fa-circle-question"></i> Quizzes</a>
-        <a href="/mock-tests" class="co-drawer-link active"><i class="fa-solid fa-chart-line"></i> Mock Tests</a>
+        <a href="/quizzes" class="co-drawer-link active"><i class="fa-solid fa-circle-question"></i> Quizzes</a>
+        <a href="/mock-tests" class="co-drawer-link"><i class="fa-solid fa-chart-line"></i> Mock Tests</a>
         <a href="/ai-study" class="co-drawer-link"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Study Tools</a>
         <a href="/career-roadmaps" class="co-drawer-link"><i class="fa-solid fa-route"></i> Career Roadmaps</a>
         <a href="/community" class="co-drawer-link"><i class="fa-solid fa-users"></i> Community</a>
@@ -99,10 +99,10 @@
     <section class="co-page-hero">
       <div class="co-container">
         <div class="co-page-hero-inner">
-          <div class="co-kicker"><i class="fa-solid fa-chart-line"></i> Exam Simulation</div>
-          <h1>Timed <span>Mock Tests</span></h1>
+          <div class="co-kicker"><i class="fa-solid fa-circle-question"></i> Active Practice</div>
+          <h1>Chapter-Wise <span>Practice Quizzes</span></h1>
           <p>
-            Experience simulated university semester exams and placement aptitude tests with strict timers, negative marking, and detailed performance scorecards.
+            Assess your recall with timed chapter quizzes, difficulty filters, detailed answer explanations, and instant XP tracking.
           </p>
         </div>
 
@@ -110,100 +110,98 @@
         <div class="co-filter-bar">
           <div class="co-search-box">
             <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" id="mockSearchInput" class="co-search-input" placeholder="Search by test name or subject..." />
+            <input type="text" id="quizSearchInput" class="co-search-input" placeholder="Search by topic, subject or keywords..." />
           </div>
 
-          <select id="mockCategorySelect" class="co-filter-select">
-            <option value="">All Categories</option>
-            <option value="Semester">Semester Exam Mocks</option>
-            <option value="Placement">Campus Placement Aptitude</option>
-            <option value="GATE">GATE & Technical Prep</option>
+          <select id="quizSubjectSelect" class="co-filter-select">
+            <option value="">All Subjects</option>
+            <option value="DSA">Data Structures & Algorithms</option>
+            <option value="DBMS">Database Management</option>
+            <option value="OS">Operating Systems</option>
+            <option value="CN">Computer Networks</option>
+            <option value="JAVA">Java & OOP</option>
+            <option value="TAX">Direct Tax & Accounting</option>
           </select>
 
-          <select id="mockDurationSelect" class="co-filter-select">
-            <option value="">All Durations</option>
-            <option value="30">30 Minutes</option>
-            <option value="60">60 Minutes</option>
-            <option value="120">120 Minutes (Full Length)</option>
+          <select id="quizDiffSelect" class="co-filter-select">
+            <option value="">All Difficulties</option>
+            <option value="Easy">Beginner / Easy</option>
+            <option value="Medium">Intermediate / Medium</option>
+            <option value="Hard">Advanced / Hard</option>
           </select>
         </div>
       </div>
     </section>
 
-    <!-- MOCK TESTS GRID -->
+    <!-- QUIZ GRID -->
     <section class="co-section" style="padding-top:0;">
       <div class="co-container">
-        <div id="mockTestsContainer" class="co-grid-3">
-          <article class="co-card" data-category="Semester" data-duration="60">
-            <div class="co-card-badge co-badge-green">Semester Exam • 60 Mins</div>
-            <div class="co-card-icon co-icon-green"><i class="fa-solid fa-code"></i></div>
-            <h3 class="co-card-title">Data Structures & Algorithms Mock</h3>
-            <p class="co-card-desc">30 questions covering asymptotic analysis, binary heaps, balanced trees, graph traversal algorithms, and hash tables.</p>
+        <div id="quizzesContainer" class="co-grid-3">
+          <article class="co-card" data-subject="DSA" data-difficulty="Medium">
+            <div class="co-card-badge co-badge-purple">Medium • 15 Mins</div>
+            <div class="co-card-icon co-icon-purple"><i class="fa-solid fa-code"></i></div>
+            <h3 class="co-card-title">Binary Search Trees & AVL Rotations</h3>
+            <p class="co-card-desc">Test your understanding of tree traversals (Inorder, Preorder), AVL balance factors, and red-black tree insertion invariants.</p>
             <div class="co-card-meta">
-              <span class="co-meta-tag"><i class="fa-solid fa-file-pen"></i> 30 Questions • 60 Marks</span>
-              <a href="/login" class="co-btn co-btn-primary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-play"></i> Attempt Test</a>
+              <span class="co-meta-tag"><i class="fa-solid fa-list-check"></i> 10 Questions</span>
+              <a href="/quiz-attempt.html?id=1" class="co-btn co-btn-primary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-play"></i> Start Quiz</a>
             </div>
           </article>
 
-          <article class="co-card" data-category="Semester" data-duration="60">
-            <div class="co-card-badge co-badge-blue">Semester Exam • 60 Mins</div>
-            <div class="co-card-icon co-icon-blue"><i class="fa-solid fa-database"></i></div>
-            <h3 class="co-card-title">DBMS & SQL Comprehensive Mock</h3>
-            <p class="co-card-desc">Questions covering relational algebra queries, transaction serializability, locking protocols, and indexing algorithms.</p>
+          <article class="co-card" data-subject="DBMS" data-difficulty="Hard">
+            <div class="co-card-badge co-badge-amber">Hard • 20 Mins</div>
+            <div class="co-card-icon co-icon-amber"><i class="fa-solid fa-database"></i></div>
+            <h3 class="co-card-title">SQL Normalization & BCNF Proofs</h3>
+            <p class="co-card-desc">Functional dependencies, candidate key derivation, Lossless join decomposition, and BCNF violation questions.</p>
             <div class="co-card-meta">
-              <span class="co-meta-tag"><i class="fa-solid fa-file-pen"></i> 25 Questions • 50 Marks</span>
-              <a href="/login" class="co-btn co-btn-primary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-play"></i> Attempt Test</a>
+              <span class="co-meta-tag"><i class="fa-solid fa-list-check"></i> 12 Questions</span>
+              <a href="/quiz-attempt.html?id=2" class="co-btn co-btn-primary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-play"></i> Start Quiz</a>
             </div>
           </article>
 
-          <article class="co-card" data-category="Placement" data-duration="30">
-            <div class="co-card-badge co-badge-purple">Placement • 30 Mins</div>
-            <div class="co-card-icon co-icon-purple"><i class="fa-solid fa-brain"></i></div>
-            <h3 class="co-card-title">Campus Placement General Aptitude</h3>
-            <p class="co-card-desc">Quantitative math, logical reasoning, data interpretation charts, and verbal English ability practice for tech recruitment.</p>
+          <article class="co-card" data-subject="OS" data-difficulty="Easy">
+            <div class="co-card-badge co-badge-green">Easy • 10 Mins</div>
+            <div class="co-card-icon co-icon-green"><i class="fa-solid fa-microchip"></i></div>
+            <h3 class="co-card-title">CPU Scheduling & Deadlock Basics</h3>
+            <p class="co-card-desc">Round Robin vs. SJF turnaround calculations, Banker's algorithm safe sequence checks, and Coffman conditions.</p>
             <div class="co-card-meta">
-              <span class="co-meta-tag"><i class="fa-solid fa-file-pen"></i> 20 Questions • 40 Marks</span>
-              <a href="/login" class="co-btn co-btn-primary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-play"></i> Attempt Test</a>
+              <span class="co-meta-tag"><i class="fa-solid fa-list-check"></i> 10 Questions</span>
+              <a href="/quiz-attempt.html?id=3" class="co-btn co-btn-primary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-play"></i> Start Quiz</a>
             </div>
           </article>
 
-          <article class="co-card" data-category="Semester" data-duration="120">
-            <div class="co-card-badge co-badge-amber">Full Length • 120 Mins</div>
-            <div class="co-card-icon co-icon-amber"><i class="fa-solid fa-microchip"></i></div>
-            <h3 class="co-card-title">Operating Systems Full Module Mock</h3>
-            <p class="co-card-desc">Complete syllabus simulation: Process scheduling, semaphore synchronization, paging & virtual memory, and file systems.</p>
-            <div class="co-card-meta">
-              <span class="co-meta-tag"><i class="fa-solid fa-file-pen"></i> 50 Questions • 100 Marks</span>
-              <a href="/login" class="co-btn co-btn-primary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-play"></i> Attempt Test</a>
-            </div>
-          </article>
-
-          <article class="co-card" data-category="Placement" data-duration="30">
-            <div class="co-card-badge co-badge-cyan">Placement • 30 Mins</div>
-            <div class="co-card-icon co-icon-cyan"><i class="fa-solid fa-code-compare"></i></div>
-            <h3 class="co-card-title">C++ / Java Core Coding Output Test</h3>
-            <p class="co-card-desc">Predict the output snippets, pointer arithmetic, memory allocation, inheritance scope, and template edge cases.</p>
-            <div class="co-card-meta">
-              <span class="co-meta-tag"><i class="fa-solid fa-file-pen"></i> 20 Questions • 40 Marks</span>
-              <a href="/login" class="co-btn co-btn-primary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-play"></i> Attempt Test</a>
-            </div>
-          </article>
-
-          <article class="co-card" data-category="GATE" data-duration="60">
-            <div class="co-card-badge co-badge-blue">GATE CS • 60 Mins</div>
+          <article class="co-card" data-subject="CN" data-difficulty="Medium">
+            <div class="co-card-badge co-badge-blue">Medium • 15 Mins</div>
             <div class="co-card-icon co-icon-blue"><i class="fa-solid fa-network-wired"></i></div>
-            <h3 class="co-card-title">Computer Networks GATE Practice</h3>
-            <p class="co-card-desc">Numerical questions on Sliding Window protocol efficiency, IP fragmentation offsets, and TCP congestion window math.</p>
+            <h3 class="co-card-title">IP Addressing & Subnet Masking</h3>
+            <p class="co-card-desc">CIDR notation math, Broadcast and Network address derivation, VLSM division, and NAT packet translations.</p>
             <div class="co-card-meta">
-              <span class="co-meta-tag"><i class="fa-solid fa-file-pen"></i> 25 Questions • 50 Marks</span>
-              <a href="/login" class="co-btn co-btn-primary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-play"></i> Attempt Test</a>
+              <span class="co-meta-tag"><i class="fa-solid fa-list-check"></i> 15 Questions</span>
+              <a href="/quiz-attempt.html?id=4" class="co-btn co-btn-primary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-play"></i> Start Quiz</a>
             </div>
           </article>
-        </div>
 
-        <!-- TRANSPARENT NOTICE -->
-        <div style="margin-top:32px; padding:16px 20px; border-radius:12px; background:var(--bg-subtle); border:1px solid var(--line); font-size:0.88rem; color:var(--text-muted); text-align:center;">
-          <i class="fa-solid fa-circle-info" style="color:var(--blue); margin-right:6px;"></i> Note: Mock tests provide simulated institutional assessments designed for curriculum revision and self-evaluation.
+          <article class="co-card" data-subject="JAVA" data-difficulty="Easy">
+            <div class="co-card-badge co-badge-green">Easy • 12 Mins</div>
+            <div class="co-card-icon co-icon-green"><i class="fa-brands fa-java"></i></div>
+            <h3 class="co-card-title">Java Polymorphism & Interfaces</h3>
+            <p class="co-card-desc">Method overloading vs. overriding, default interface methods, abstract classes, and lambda expressions.</p>
+            <div class="co-card-meta">
+              <span class="co-meta-tag"><i class="fa-solid fa-list-check"></i> 10 Questions</span>
+              <a href="/quiz-attempt.html?id=5" class="co-btn co-btn-primary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-play"></i> Start Quiz</a>
+            </div>
+          </article>
+
+          <article class="co-card" data-subject="TAX" data-difficulty="Medium">
+            <div class="co-card-badge co-badge-purple">Medium • 18 Mins</div>
+            <div class="co-card-icon co-icon-purple"><i class="fa-solid fa-receipt"></i></div>
+            <h3 class="co-card-title">GST Input Tax Credit (ITC) Rules</h3>
+            <p class="co-card-desc">Inward supply compliance, GSTR-2B matching requirements, ineligible ITC heads under Section 17(5), and reversals.</p>
+            <div class="co-card-meta">
+              <span class="co-meta-tag"><i class="fa-solid fa-list-check"></i> 12 Questions</span>
+              <a href="/quiz-attempt.html?id=6" class="co-btn co-btn-primary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-play"></i> Start Quiz</a>
+            </div>
+          </article>
         </div>
       </div>
     </section>
@@ -279,32 +277,32 @@
 
   <script src="assets/js/public-nav.js"></script>
   <script>
-    const searchInput = document.getElementById('mockSearchInput');
-    const catSelect = document.getElementById('mockCategorySelect');
-    const durSelect = document.getElementById('mockDurationSelect');
-    const cards = document.querySelectorAll('#mockTestsContainer .co-card');
+    const searchInput = document.getElementById('quizSearchInput');
+    const subjectSelect = document.getElementById('quizSubjectSelect');
+    const diffSelect = document.getElementById('quizDiffSelect');
+    const cards = document.querySelectorAll('#quizzesContainer .co-card');
 
-    function filterMockTests() {
+    function filterQuizzes() {
       const q = (searchInput?.value || '').toLowerCase().trim();
-      const cat = (catSelect?.value || '');
-      const dur = (durSelect?.value || '');
+      const sub = (subjectSelect?.value || '').toUpperCase();
+      const diff = (diffSelect?.value || '');
 
       cards.forEach(card => {
         const text = card.textContent.toLowerCase();
-        const cardCat = card.dataset.category || '';
-        const cardDur = card.dataset.duration || '';
+        const cardSub = (card.dataset.subject || '').toUpperCase();
+        const cardDiff = card.dataset.difficulty || '';
 
         const matchQuery = !q || text.includes(q);
-        const matchCat = !cat || cardCat === cat;
-        const matchDur = !dur || cardDur === dur;
+        const matchSub = !sub || cardSub === sub;
+        const matchDiff = !diff || cardDiff === diff;
 
-        card.style.display = (matchQuery && matchCat && matchDur) ? '' : 'none';
+        card.style.display = (matchQuery && matchSub && matchDiff) ? '' : 'none';
       });
     }
 
-    searchInput?.addEventListener('input', filterMockTests);
-    catSelect?.addEventListener('change', filterMockTests);
-    durSelect?.addEventListener('change', filterMockTests);
+    searchInput?.addEventListener('input', filterQuizzes);
+    subjectSelect?.addEventListener('change', filterQuizzes);
+    diffSelect?.addEventListener('change', filterQuizzes);
   </script>
 </body>
 </html>

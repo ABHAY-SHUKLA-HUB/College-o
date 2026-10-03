@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Certificates & Verification | College OS — Verified Achievements</title>
-  <meta name="description" content="Verify academic completion certificates and achievements earned through College OS course modules and challenge completions." />
-  <link rel="canonical" href="https://collegeo.in/certificates" />
+  <title>Student Community | College OS — Q&A, Discussions & Notes Sharing</title>
+  <meta name="description" content="Connect with fellow college students, ask academic doubts, share verified notes, and participate in campus learning discussions." />
+  <link rel="canonical" href="https://collegeo.in/community" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Certificates & Verification | College OS" />
-  <meta property="og:description" content="Official certificate verification and academic credential portal." />
+  <meta property="og:title" content="Student Community | College OS" />
+  <meta property="og:description" content="Peer Q&A, student discussion forums, and academic contribution network." />
   <link rel="icon" type="image/png" sizes="512x512" href="/assets/images/college-os-logo.png" />
   <link rel="manifest" href="/manifest.json" />
 
@@ -42,7 +42,7 @@
 
         <a href="/ai-study" class="co-nav-link">AI Study</a>
         <a href="/career-roadmaps" class="co-nav-link">Career</a>
-        <a href="/community" class="co-nav-link">Community</a>
+        <a href="/community" class="co-nav-link active">Community</a>
         <a href="/pricing" class="co-nav-link">Pricing</a>
       </div>
 
@@ -78,9 +78,9 @@
         <a href="/mock-tests" class="co-drawer-link"><i class="fa-solid fa-chart-line"></i> Mock Tests</a>
         <a href="/ai-study" class="co-drawer-link"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Study Tools</a>
         <a href="/career-roadmaps" class="co-drawer-link"><i class="fa-solid fa-route"></i> Career Roadmaps</a>
-        <a href="/community" class="co-drawer-link"><i class="fa-solid fa-users"></i> Community</a>
+        <a href="/community" class="co-drawer-link active"><i class="fa-solid fa-users"></i> Community</a>
         <a href="/live-study" class="co-drawer-link"><i class="fa-solid fa-video"></i> Live Study Hub</a>
-        <a href="/certificates" class="co-drawer-link active"><i class="fa-solid fa-award"></i> Certificates</a>
+        <a href="/certificates" class="co-drawer-link"><i class="fa-solid fa-award"></i> Certificates</a>
         <a href="/pricing" class="co-drawer-link"><i class="fa-solid fa-tags"></i> Pricing</a>
         <a href="/about-us" class="co-drawer-link"><i class="fa-solid fa-circle-info"></i> About Us</a>
         <a href="/help-center" class="co-drawer-link"><i class="fa-solid fa-headset"></i> Help Center</a>
@@ -99,64 +99,67 @@
     <section class="co-page-hero">
       <div class="co-container">
         <div class="co-page-hero-inner">
-          <div class="co-kicker"><i class="fa-solid fa-award"></i> Academic Credentials</div>
-          <h1>Certificate <span>Verification Portal</span></h1>
+          <div class="co-kicker"><i class="fa-solid fa-users"></i> Student Network</div>
+          <h1>Student Community & <span>Peer Learning</span></h1>
           <p>
-            Verify authentic student credentials issued by College OS for syllabus course completion, coding arena milestones, and contributor recognition.
+            Connect with college peers, participate in subject discussions, exchange exam insights, and contribute study resources.
           </p>
         </div>
       </div>
     </section>
 
-    <!-- VERIFICATION INPUT SECTION -->
+    <!-- COMMUNITY HUBS -->
     <section class="co-section" style="padding-top:0;">
       <div class="co-container">
-        <div style="max-width:680px; margin:0 auto; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-xl); padding:36px; box-shadow:var(--shadow-lg);">
-          <h3 style="font-size:1.35rem; font-weight:800; color:var(--navy); margin-bottom:8px; text-align:center;">Verify a Certificate ID</h3>
-          <p style="color:var(--text-muted); font-size:0.95rem; text-align:center; margin-bottom:24px;">Enter the unique 8 to 16-character alphanumeric Certificate ID below:</p>
-
-          <form id="certVerifyForm" style="display:grid; gap:16px;">
-            <div class="co-search-box" style="width:100%;">
-              <i class="fa-solid fa-fingerprint"></i>
-              <input type="text" id="certIdInput" class="co-search-input" placeholder="e.g. COS-2025-ENG-9824" required />
+        <div class="co-grid-3" style="margin-bottom:48px;">
+          <article class="co-card">
+            <div class="co-card-icon co-icon-blue"><i class="fa-solid fa-comments"></i></div>
+            <h3 class="co-card-title">Subject Q&A Forum</h3>
+            <p class="co-card-desc">Ask doubts on programming assignments, calculus derivations, or circuit diagrams and get answers from high-ranking peers.</p>
+            <div class="co-card-meta">
+              <a href="/login" class="co-btn co-btn-secondary co-btn-sm" style="width:100%;">Open Q&A Forum <i class="fa-solid fa-arrow-right"></i></a>
             </div>
-            <button type="submit" id="certVerifyBtn" class="co-btn co-btn-primary" style="width:100%;">
-              <i class="fa-solid fa-shield-halved"></i> Verify Credential
-            </button>
-          </form>
+          </article>
 
-          <div id="certResultBox" style="margin-top:24px; display:none; padding:18px; border-radius:12px; font-size:0.95rem; line-height:1.6;"></div>
+          <article class="co-card">
+            <div class="co-card-icon co-icon-cyan"><i class="fa-solid fa-newspaper"></i></div>
+            <h3 class="co-card-title">Campus Feed & Updates</h3>
+            <p class="co-card-desc">Stay informed with college notices, hackathon announcements, tech club webinars, and internship openings.</p>
+            <div class="co-card-meta">
+              <a href="/login" class="co-btn co-btn-secondary co-btn-sm" style="width:100%;">View Campus Feed <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+          </article>
+
+          <article class="co-card">
+            <div class="co-card-icon co-icon-purple"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+            <h3 class="co-card-title">Contribution Hub</h3>
+            <p class="co-card-desc">Upload verified notes and past test questions to earn reputation XP and unlock the platform contributor badge.</p>
+            <div class="co-card-meta">
+              <a href="/contribute" class="co-btn co-btn-secondary co-btn-sm" style="width:100%;">Upload Materials <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+          </article>
         </div>
-      </div>
-    </section>
 
-    <!-- HOW CERTIFICATES WORK -->
-    <section class="co-section" style="background:var(--bg-subtle);">
-      <div class="co-container">
-        <div class="co-section-head center">
-          <div class="co-kicker"><i class="fa-solid fa-circle-info"></i> Credential Standard</div>
-          <h2 class="co-section-title">How Credentials Are Earned</h2>
-          <p class="co-section-desc">Certificates represent genuine learning achievements validated against curriculum benchmarks.</p>
-        </div>
+        <!-- COMMUNITY GUIDELINES & HIGHLIGHTS -->
+        <div class="co-grid-2">
+          <div style="background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-xl); padding:32px; box-shadow:var(--shadow-md);">
+            <div class="co-kicker"><i class="fa-solid fa-shield-halved"></i> Guidelines</div>
+            <h3 style="font-size:1.4rem; font-weight:800; color:var(--navy); margin-bottom:16px;">Community Standards</h3>
+            <ul style="list-style:none; display:grid; gap:14px; color:var(--text-muted); font-size:0.95rem;">
+              <li><i class="fa-solid fa-check" style="color:var(--green); margin-right:8px;"></i> <strong>Constructive Feedback:</strong> Help junior peers with clear, explanatory answers.</li>
+              <li><i class="fa-solid fa-check" style="color:var(--green); margin-right:8px;"></i> <strong>Verified Notes:</strong> Ensure uploaded PDFs are clear and properly tagged with subject codes.</li>
+              <li><i class="fa-solid fa-check" style="color:var(--green); margin-right:8px;"></i> <strong>Zero Plagiarism:</strong> Give attribution to professors and original textbook authors.</li>
+            </ul>
+          </div>
 
-        <div class="co-grid-3">
-          <article class="co-card">
-            <div class="co-card-icon co-icon-blue"><i class="fa-solid fa-graduation-cap"></i></div>
-            <h3 class="co-card-title">Curriculum Completion</h3>
-            <p class="co-card-desc">Awarded when a student completes all core modules, revision notes, and quizzes for a semester subject track.</p>
-          </article>
-
-          <article class="co-card">
-            <div class="co-card-icon co-icon-cyan"><i class="fa-solid fa-code"></i></div>
-            <h3 class="co-card-title">Coding Arena Milestones</h3>
-            <p class="co-card-desc">Awarded for solving structured data structure and algorithmic programming problems in the coding arena.</p>
-          </article>
-
-          <article class="co-card">
-            <div class="co-card-icon co-icon-purple"><i class="fa-solid fa-hand-holding-heart"></i></div>
-            <h3 class="co-card-title">Academic Contribution</h3>
-            <p class="co-card-desc">Recognizes peer leaders who contribute verified study notes, solution guides, and assist peers with doubt clearing.</p>
-          </article>
+          <div style="background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-xl); padding:32px; box-shadow:var(--shadow-md);">
+            <div class="co-kicker" style="background:var(--purple-soft); color:var(--purple); border-color:rgba(124,58,237,0.2);"><i class="fa-solid fa-trophy"></i> Rewards</div>
+            <h3 style="font-size:1.4rem; font-weight:800; color:var(--navy); margin-bottom:16px;">Contributor Leaderboard</h3>
+            <p style="color:var(--text-muted); font-size:0.95rem; line-height:1.7; margin-bottom:20px;">
+              Every approved note upload and top-voted answer earns you platform XP. Top weekly helpers are highlighted on the public leaderboard.
+            </p>
+            <a href="/login" class="co-btn co-btn-primary co-btn-sm"><i class="fa-solid fa-ranking-star"></i> View Leaderboard</a>
+          </div>
         </div>
       </div>
     </section>
@@ -231,52 +234,5 @@
   </footer>
 
   <script src="assets/js/public-nav.js"></script>
-  <script>
-    const form = document.getElementById('certVerifyForm');
-    const input = document.getElementById('certIdInput');
-    const resultBox = document.getElementById('certResultBox');
-
-    form?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const id = (input?.value || '').trim();
-      if (!id) return;
-
-      resultBox.style.display = 'block';
-      resultBox.style.background = 'var(--bg-subtle)';
-      resultBox.style.border = '1px solid var(--line)';
-      resultBox.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying certificate signature with server...';
-
-      try {
-        const res = await fetch(`/api/certificates/verify/${encodeURIComponent(id)}`);
-        const data = await res.json();
-
-        if (res.ok && data && (data.valid !== false)) {
-          resultBox.style.background = 'var(--green-soft)';
-          resultBox.style.border = '1px solid rgba(16, 185, 129, 0.3)';
-          resultBox.innerHTML = `
-            <div style="color:var(--green); font-weight:800; font-size:1.05rem; margin-bottom:6px;">
-              <i class="fa-solid fa-circle-check"></i> Valid College OS Certificate
-            </div>
-            <div><strong>Recipient:</strong> ${data.studentName || 'Verified Student'}</div>
-            <div><strong>Achievement:</strong> ${data.courseTitle || 'Curriculum Excellence'}</div>
-            <div><strong>Issue Date:</strong> ${data.issueDate ? new Date(data.issueDate).toLocaleDateString() : 'Verified'}</div>
-          `;
-        } else {
-          resultBox.style.background = '#fef2f2';
-          resultBox.style.border = '1px solid rgba(239, 68, 68, 0.3)';
-          resultBox.innerHTML = `
-            <div style="color:#dc2626; font-weight:800;">
-              <i class="fa-solid fa-circle-xmark"></i> Certificate Not Found
-            </div>
-            <div style="color:var(--text-muted); margin-top:4px;">No record matching ID "${id}" was located in the verification registry. Please double-check the ID.</div>
-          `;
-        }
-      } catch (err) {
-        resultBox.style.background = '#fef2f2';
-        resultBox.style.border = '1px solid rgba(239, 68, 68, 0.3)';
-        resultBox.innerHTML = '<div style="color:#dc2626;">Unable to reach verification service. Please retry shortly.</div>';
-      }
-    });
-  </script>
 </body>
 </html>

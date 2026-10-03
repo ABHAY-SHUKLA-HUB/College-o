@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Notes Library | College OS — Curriculum Notes</title>
-  <meta name="description" content="Access verified, chapter-wise semester study notes, formula sheets, and handwritten revision guides organized by branch and semester." />
-  <link rel="canonical" href="https://collegeo.in/notes" />
+  <title>PYQs & Papers | College OS — Previous Year Question Papers</title>
+  <meta name="description" content="Download university previous year question papers (PYQs) with solved solutions for midterm and endterm semester examinations." />
+  <link rel="canonical" href="https://collegeo.in/pyqs" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Notes Library | College OS" />
-  <meta property="og:description" content="Browse verified semester study notes, revision guides, and subject materials." />
-  <meta property="og:url" content="https://collegeo.in/notes" />
+  <meta property="og:title" content="PYQs & Papers | College OS" />
+  <meta property="og:description" content="Download university previous year question papers (PYQs) with solutions." />
+  <meta property="og:url" content="https://collegeo.in/pyqs" />
   <meta property="og:image" content="https://collegeo.in/assets/images/college-os-logo.png" />
   <link rel="icon" type="image/png" sizes="512x512" href="/assets/images/college-os-logo.png" />
   <link rel="manifest" href="/manifest.json" />
@@ -74,8 +74,8 @@
       <div class="co-drawer-links">
         <a href="/" class="co-drawer-link"><i class="fa-solid fa-house"></i> Home</a>
         <a href="/features" class="co-drawer-link"><i class="fa-solid fa-cubes"></i> Features</a>
-        <a href="/notes" class="co-drawer-link active"><i class="fa-solid fa-book-bookmark"></i> Notes Library</a>
-        <a href="/pyqs" class="co-drawer-link"><i class="fa-solid fa-file-lines"></i> PYQs & Papers</a>
+        <a href="/notes" class="co-drawer-link"><i class="fa-solid fa-book-bookmark"></i> Notes Library</a>
+        <a href="/pyqs" class="co-drawer-link active"><i class="fa-solid fa-file-lines"></i> PYQs & Papers</a>
         <a href="/quizzes" class="co-drawer-link"><i class="fa-solid fa-circle-question"></i> Quizzes</a>
         <a href="/mock-tests" class="co-drawer-link"><i class="fa-solid fa-chart-line"></i> Mock Tests</a>
         <a href="/ai-study" class="co-drawer-link"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Study Tools</a>
@@ -101,10 +101,10 @@
     <section class="co-page-hero">
       <div class="co-container">
         <div class="co-page-hero-inner">
-          <div class="co-kicker"><i class="fa-solid fa-book-bookmark"></i> Academic Library</div>
-          <h1>Verified Semester <span>Study Notes</span></h1>
+          <div class="co-kicker"><i class="fa-solid fa-file-lines"></i> Exam Archive</div>
+          <h1>Previous Year <span>Question Papers</span></h1>
           <p>
-            Filter by branch, semester, and subject code to discover handwritten summaries, textbook outlines, and exam cheat-sheets.
+            Review genuine university question papers from 2021 to 2025. Spot recurring questions and analyze exam trends.
           </p>
         </div>
 
@@ -112,20 +112,19 @@
         <div class="co-filter-bar">
           <div class="co-search-box">
             <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" id="noteSearchInput" class="co-search-input" placeholder="Search by subject, topic or chapter..." />
+            <input type="text" id="pyqSearchInput" class="co-search-input" placeholder="Search by paper name, subject, or year..." />
           </div>
 
-          <select id="noteBranchSelect" class="co-filter-select">
+          <select id="pyqBranchSelect" class="co-filter-select">
             <option value="">All Branches</option>
             <option value="CSE">Computer Science (CSE)</option>
             <option value="ECE">Electronics (ECE)</option>
             <option value="MECH">Mechanical (MECH)</option>
-            <option value="CIVIL">Civil Engineering</option>
-            <option value="BCOM">Commerce (B.Com)</option>
-            <option value="BCA">Computer Applications (BCA)</option>
+            <option value="CIVIL">Civil</option>
+            <option value="BCOM">B.Com</option>
           </select>
 
-          <select id="noteSemesterSelect" class="co-filter-select">
+          <select id="pyqSemesterSelect" class="co-filter-select">
             <option value="">All Semesters</option>
             <option value="1">Semester 1</option>
             <option value="2">Semester 2</option>
@@ -133,114 +132,88 @@
             <option value="4">Semester 4</option>
             <option value="5">Semester 5</option>
             <option value="6">Semester 6</option>
-            <option value="7">Semester 7</option>
-            <option value="8">Semester 8</option>
           </select>
 
-          <a href="/contribute" class="co-btn co-btn-primary co-btn-sm" style="margin-left:auto;">
-            <i class="fa-solid fa-cloud-arrow-up"></i> Upload Notes
-          </a>
+          <select id="pyqYearSelect" class="co-filter-select">
+            <option value="">All Exam Years</option>
+            <option value="2025">2025 Papers</option>
+            <option value="2024">2024 Papers</option>
+            <option value="2023">2023 Papers</option>
+            <option value="2022">2022 Papers</option>
+          </select>
         </div>
       </div>
     </section>
 
-    <!-- NOTES LISTING GRID -->
+    <!-- PYQ GRID -->
     <section class="co-section" style="padding-top:0;">
       <div class="co-container">
-        <div id="notesContainer" class="co-grid-3">
-          <!-- Dynamic & Default Notes -->
-          <article class="co-card" data-branch="CSE" data-semester="4">
-            <div class="co-card-badge co-badge-blue">Semester 4</div>
-            <div class="co-card-icon co-icon-blue"><i class="fa-solid fa-database"></i></div>
-            <h3 class="co-card-title">Database Management Systems</h3>
-            <p class="co-card-desc">Complete relational model, Normalization (1NF to BCNF), SQL queries, transactions, and concurrency protocols.</p>
+        <div id="pyqsContainer" class="co-grid-3">
+          <article class="co-card" data-branch="CSE" data-semester="4" data-year="2024">
+            <div class="co-card-badge co-badge-cyan">2024 End-Term</div>
+            <div class="co-card-icon co-icon-cyan"><i class="fa-solid fa-file-pdf"></i></div>
+            <h3 class="co-card-title">Design & Analysis of Algorithms</h3>
+            <p class="co-card-desc">Endterm paper with questions on Master's Theorem, Greedy MST, Dynamic Programming (0/1 Knapsack), and NP-Completeness.</p>
             <div class="co-card-meta">
-              <span class="co-meta-tag"><i class="fa-solid fa-file-pdf"></i> PDF • 42 Pages</span>
-              <a href="/login" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-eye"></i> View Note</a>
+              <span class="co-meta-tag"><i class="fa-solid fa-calendar"></i> May 2024 • End-Term</span>
+              <a href="/login" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-download"></i> View Paper</a>
             </div>
           </article>
 
-          <article class="co-card" data-branch="CSE" data-semester="3">
-            <div class="co-card-badge co-badge-cyan">Semester 3</div>
-            <div class="co-card-icon co-icon-cyan"><i class="fa-solid fa-code-merge"></i></div>
-            <h3 class="co-card-title">Data Structures & Algorithms</h3>
-            <p class="co-card-desc">Arrays, linked lists, trees, graphs, sorting algorithms, dynamic programming, and asymptotic time complexity.</p>
+          <article class="co-card" data-branch="CSE" data-semester="3" data-year="2024">
+            <div class="co-card-badge co-badge-blue">2024 Mid-Term</div>
+            <div class="co-card-icon co-icon-blue"><i class="fa-solid fa-file-pdf"></i></div>
+            <h3 class="co-card-title">Object Oriented Programming (Java)</h3>
+            <p class="co-card-desc">Midterm exam covering Polymorphism, Inheritance, Exception handling, Multi-threading synchronization, and Collections.</p>
             <div class="co-card-meta">
-              <span class="co-meta-tag"><i class="fa-solid fa-file-lines"></i> PDF • 68 Pages</span>
-              <a href="/login" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-eye"></i> View Note</a>
+              <span class="co-meta-tag"><i class="fa-solid fa-calendar"></i> Nov 2024 • Mid-Term</span>
+              <a href="/login" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-download"></i> View Paper</a>
             </div>
           </article>
 
-          <article class="co-card" data-branch="CSE" data-semester="5">
-            <div class="co-card-badge co-badge-purple">Semester 5</div>
-            <div class="co-card-icon co-icon-purple"><i class="fa-solid fa-network-wired"></i></div>
-            <h3 class="co-card-title">Computer Networks & Protocols</h3>
-            <p class="co-card-desc">OSI 7 layers, TCP/IP, subnetting formulas, routing algorithms, DNS, HTTP, and socket programming principles.</p>
+          <article class="co-card" data-branch="ECE" data-semester="4" data-year="2023">
+            <div class="co-card-badge co-badge-purple">2023 End-Term</div>
+            <div class="co-card-icon co-icon-purple"><i class="fa-solid fa-file-pdf"></i></div>
+            <h3 class="co-card-title">Analog & Digital Communication</h3>
+            <p class="co-card-desc">Comprehensive question set on AM/FM modulation indices, Noise figure calculations, PCM, and QPSK constellation diagrams.</p>
             <div class="co-card-meta">
-              <span class="co-meta-tag"><i class="fa-solid fa-file-pdf"></i> PDF • 54 Pages</span>
-              <a href="/login" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-eye"></i> View Note</a>
+              <span class="co-meta-tag"><i class="fa-solid fa-calendar"></i> May 2023 • End-Term</span>
+              <a href="/login" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-download"></i> View Paper</a>
             </div>
           </article>
 
-          <article class="co-card" data-branch="CSE" data-semester="4">
-            <div class="co-card-badge co-badge-green">Semester 4</div>
-            <div class="co-card-icon co-icon-green"><i class="fa-solid fa-microchip"></i></div>
-            <h3 class="co-card-title">Operating Systems & Kernels</h3>
-            <p class="co-card-desc">Process scheduling, synchronization (Semaphores, Mutex), memory management, paging, and deadlocks.</p>
+          <article class="co-card" data-branch="CSE" data-semester="5" data-year="2024">
+            <div class="co-card-badge co-badge-green">2024 End-Term</div>
+            <div class="co-card-icon co-icon-green"><i class="fa-solid fa-file-pdf"></i></div>
+            <h3 class="co-card-title">Software Engineering & Agile</h3>
+            <p class="co-card-desc">SDLC models, Agile Scrum sprints, Use case diagrams, Cyclomatic complexity calculations, and Integration testing.</p>
             <div class="co-card-meta">
-              <span class="co-meta-tag"><i class="fa-solid fa-file-pdf"></i> PDF • 48 Pages</span>
-              <a href="/login" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-eye"></i> View Note</a>
+              <span class="co-meta-tag"><i class="fa-solid fa-calendar"></i> Dec 2024 • End-Term</span>
+              <a href="/login" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-download"></i> View Paper</a>
             </div>
           </article>
 
-          <article class="co-card" data-branch="ECE" data-semester="3">
-            <div class="co-card-badge co-badge-amber">Semester 3</div>
-            <div class="co-card-icon co-icon-amber"><i class="fa-solid fa-bolt"></i></div>
-            <h3 class="co-card-title">Digital Signal Processing</h3>
-            <p class="co-card-desc">Z-Transforms, Discrete Fourier Transforms (DFT), FFT algorithms, FIR/IIR filter design, and spectrum analysis.</p>
+          <article class="co-card" data-branch="CSE" data-semester="6" data-year="2023">
+            <div class="co-card-badge co-badge-amber">2023 End-Term</div>
+            <div class="co-card-icon co-icon-amber"><i class="fa-solid fa-file-pdf"></i></div>
+            <h3 class="co-card-title">Compiler Design</h3>
+            <p class="co-card-desc">Lexical analysis, LL(1) / LR(1) parsing tables, Syntax directed translation, Intermediate 3-address code, and Register allocation.</p>
             <div class="co-card-meta">
-              <span class="co-meta-tag"><i class="fa-solid fa-file-pdf"></i> PDF • 38 Pages</span>
-              <a href="/login" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-eye"></i> View Note</a>
+              <span class="co-meta-tag"><i class="fa-solid fa-calendar"></i> June 2023 • End-Term</span>
+              <a href="/login" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-download"></i> View Paper</a>
             </div>
           </article>
 
-          <article class="co-card" data-branch="BCOM" data-semester="2">
-            <div class="co-card-badge co-badge-blue">Semester 2</div>
-            <div class="co-card-icon co-icon-blue"><i class="fa-solid fa-calculator"></i></div>
-            <h3 class="co-card-title">Corporate Financial Accounting</h3>
-            <p class="co-card-desc">Issue of shares, debentures, cash flow statements, ratio analysis, balance sheet finalization, and auditing.</p>
+          <article class="co-card" data-branch="BCOM" data-semester="3" data-year="2024">
+            <div class="co-card-badge co-badge-blue">2024 End-Term</div>
+            <div class="co-card-icon co-icon-blue"><i class="fa-solid fa-file-pdf"></i></div>
+            <h3 class="co-card-title">Direct Taxation & GST Law</h3>
+            <p class="co-card-desc">Income tax calculation under salary heads, House property deductions, Capital gains computations, and GST input credit.</p>
             <div class="co-card-meta">
-              <span class="co-meta-tag"><i class="fa-solid fa-file-pdf"></i> PDF • 50 Pages</span>
-              <a href="/login" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-eye"></i> View Note</a>
+              <span class="co-meta-tag"><i class="fa-solid fa-calendar"></i> Nov 2024 • End-Term</span>
+              <a href="/login" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-download"></i> View Paper</a>
             </div>
           </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- CONTRIBUTOR BANNER -->
-    <section class="co-section" style="background:var(--bg-subtle);">
-      <div class="co-container">
-        <div class="co-grid-2" style="align-items:center;">
-          <div>
-            <div class="co-kicker"><i class="fa-solid fa-award"></i> Student Recognition</div>
-            <h2 class="co-section-title">Share Your Notes & Earn Verified Badges</h2>
-            <p class="co-section-desc">
-              Have handwritten notes, practical lab solutions, or revision cheat-sheets? Upload them to help junior peers, earn reputation points, and climb the platform contributor leaderboard.
-            </p>
-            <a href="/contribute" class="co-btn co-btn-primary">
-              <i class="fa-solid fa-cloud-arrow-up"></i> Start Contributing
-            </a>
-          </div>
-
-          <div style="background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-xl); padding:32px; box-shadow:var(--shadow-md);">
-            <h3 style="font-size:1.3rem; font-weight:800; color:var(--navy); margin-bottom:14px;">Contribution Guidelines</h3>
-            <ul style="list-style:none; display:grid; gap:12px; color:var(--text-muted); font-size:0.95rem;">
-              <li><i class="fa-solid fa-check" style="color:var(--green); margin-right:8px;"></i> Must be legible handwritten or typed documents</li>
-              <li><i class="fa-solid fa-check" style="color:var(--green); margin-right:8px;"></i> Clearly mention Course, Branch, Semester & Subject Code</li>
-              <li><i class="fa-solid fa-check" style="color:var(--green); margin-right:8px;"></i> Automated virus scanning & moderation review</li>
-            </ul>
-          </div>
         </div>
       </div>
     </section>
@@ -316,33 +289,38 @@
 
   <script src="assets/js/public-nav.js"></script>
   <script>
-    // Live Search and Filter logic for Notes
-    const searchInput = document.getElementById('noteSearchInput');
-    const branchSelect = document.getElementById('noteBranchSelect');
-    const semesterSelect = document.getElementById('noteSemesterSelect');
-    const cards = document.querySelectorAll('#notesContainer .co-card');
+    // Live Search and Filter logic for PYQs
+    const searchInput = document.getElementById('pyqSearchInput');
+    const branchSelect = document.getElementById('pyqBranchSelect');
+    const semesterSelect = document.getElementById('pyqSemesterSelect');
+    const yearSelect = document.getElementById('pyqYearSelect');
+    const cards = document.querySelectorAll('#pyqsContainer .co-card');
 
-    function filterNotes() {
+    function filterPYQs() {
       const q = (searchInput?.value || '').toLowerCase().trim();
       const branch = (branchSelect?.value || '').toUpperCase();
       const sem = (semesterSelect?.value || '');
+      const year = (yearSelect?.value || '');
 
       cards.forEach(card => {
         const text = card.textContent.toLowerCase();
         const cardBranch = (card.dataset.branch || '').toUpperCase();
         const cardSem = card.dataset.semester || '';
+        const cardYear = card.dataset.year || '';
 
         const matchQuery = !q || text.includes(q);
         const matchBranch = !branch || cardBranch === branch;
         const matchSem = !sem || cardSem === sem;
+        const matchYear = !year || cardYear === year;
 
-        card.style.display = (matchQuery && matchBranch && matchSem) ? '' : 'none';
+        card.style.display = (matchQuery && matchBranch && matchSem && matchYear) ? '' : 'none';
       });
     }
 
-    searchInput?.addEventListener('input', filterNotes);
-    branchSelect?.addEventListener('change', filterNotes);
-    semesterSelect?.addEventListener('change', filterNotes);
+    searchInput?.addEventListener('input', filterPYQs);
+    branchSelect?.addEventListener('change', filterPYQs);
+    semesterSelect?.addEventListener('change', filterPYQs);
+    yearSelect?.addEventListener('change', filterPYQs);
   </script>
 </body>
 </html>

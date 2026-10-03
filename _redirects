@@ -1,16 +1,30 @@
 # API & Socket Proxy to Live Backend
-/api/* https://college-o.onrender.com/api/:splat 200
-/socket.io/* https://college-o.onrender.com/socket.io/:splat 200
-/uploads/* https://college-o.onrender.com/uploads/:splat 200
+/api/* https://college-o.onrender.com/api/:splat 200!
+/socket.io/* https://college-o.onrender.com/socket.io/:splat 200!
+/uploads/* https://college-o.onrender.com/uploads/:splat 200!
 
-# Public Informational Pages
-/about-us /about-us.html 200
-/contact-us /contact-us.html 200
-/help-center /help-center.html 200
+# Public Multi-Page Platform Pages
+/ /index.html 200
+/features /features.html 200
+/notes /notes.html 200
+/pyqs /pyqs.html 200
+/quizzes /quizzes.html 200
+/mock-tests /mock-tests.html 200
+/mock-test /mock-tests.html 200
+/ai-study /ai-study.html 200
+/career-roadmaps /career-roadmaps.html 200
+/community /community.html 200
+/live-study /live-study.html 200
+/certificates /certificates.html 200
+/certificate-verify /certificate-verify.html 200
 /pricing /pricing.html 200
 /membership /pricing.html 200
-/referrals /referrals.html 200
-/feedback /feedback.html 200
+/about-us /about-us.html 200
+/contact-us /contact-us.html 200
+/contact /contact-us.html 200
+/help-center /help-center.html 200
+/privacy /privacy.html 200
+/terms /terms.html 200
 /manifest.json /manifest.json 200
 /sw.js /sw.js 200
 
@@ -24,9 +38,6 @@
 /dashboard /dashboard.html 200
 /academic-onboarding /academic-onboarding.html 200
 /study /study.html 200
-/mock-test /mock-tests.html 200
-/mock-tests /mock-tests.html 200
-/notes /notes-library.html 200
 /roadmap /study-roadmap.html 200
 /ai-tools /ai-tools.html 200
 /live-hub /live-hub.html 200
@@ -37,9 +48,10 @@
 /support-dashboard /support-dashboard.html 200
 /support-hub /support-hub.html 200
 /leaderboard /leaderboards.html 200
-/certificates /certificates.html 200
 /college-feed /college-feed.html 200
 /forum /forum.html 200
+/referrals /referrals.html 200
+/feedback /feedback.html 200
 
 # Admin Pages
 /admin-dashboard /admin-dashboard.html 200

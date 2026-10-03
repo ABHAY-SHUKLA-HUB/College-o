@@ -31,7 +31,7 @@
       ]
     },
     {
-      "source": "/(login|signup|admin-.*|dashboard|study|notes|mock-tests|mock-test|profile|settings|roadmap|ai-tools|live-hub|reset-password)(.*)",
+      "source": "/(admin-.*|dashboard|study|profile|settings|live-hub|reset-password)(.*)",
       "headers": [
         { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
       ]
@@ -59,12 +59,60 @@
       "destination": "https://college-o.onrender.com/uploads/:path*"
     },
     {
-      "source": "/login",
-      "destination": "/login.html"
+      "source": "/features",
+      "destination": "/features.html"
     },
     {
-      "source": "/signup",
-      "destination": "/signup.html"
+      "source": "/notes",
+      "destination": "/notes.html"
+    },
+    {
+      "source": "/pyqs",
+      "destination": "/pyqs.html"
+    },
+    {
+      "source": "/quizzes",
+      "destination": "/quizzes.html"
+    },
+    {
+      "source": "/mock-tests",
+      "destination": "/mock-tests.html"
+    },
+    {
+      "source": "/mock-test",
+      "destination": "/mock-tests.html"
+    },
+    {
+      "source": "/ai-study",
+      "destination": "/ai-study.html"
+    },
+    {
+      "source": "/career-roadmaps",
+      "destination": "/career-roadmaps.html"
+    },
+    {
+      "source": "/community",
+      "destination": "/community.html"
+    },
+    {
+      "source": "/live-study",
+      "destination": "/live-study.html"
+    },
+    {
+      "source": "/certificates",
+      "destination": "/certificates.html"
+    },
+    {
+      "source": "/certificate-verify",
+      "destination": "/certificate-verify.html"
+    },
+    {
+      "source": "/pricing",
+      "destination": "/pricing.html"
+    },
+    {
+      "source": "/membership",
+      "destination": "/pricing.html"
     },
     {
       "source": "/about-us",
@@ -83,12 +131,24 @@
       "destination": "/help-center.html"
     },
     {
-      "source": "/pricing",
-      "destination": "/pricing.html"
+      "source": "/privacy",
+      "destination": "/privacy.html"
     },
     {
-      "source": "/membership",
-      "destination": "/pricing.html"
+      "source": "/terms",
+      "destination": "/terms.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/login.html"
+    },
+    {
+      "source": "/signup",
+      "destination": "/signup.html"
+    },
+    {
+      "source": "/reset-password",
+      "destination": "/reset-password.html"
     },
     {
       "source": "/dashboard",
@@ -101,18 +161,6 @@
     {
       "source": "/study",
       "destination": "/study.html"
-    },
-    {
-      "source": "/mock-test",
-      "destination": "/mock-tests.html"
-    },
-    {
-      "source": "/mock-tests",
-      "destination": "/mock-tests.html"
-    },
-    {
-      "source": "/notes",
-      "destination": "/notes-library.html"
     },
     {
       "source": "/roadmap",
@@ -159,14 +207,6 @@
       "destination": "/leaderboards.html"
     },
     {
-      "source": "/certificates",
-      "destination": "/certificates.html"
-    },
-    {
-      "source": "/certificate-verify",
-      "destination": "/certificate-verify.html"
-    },
-    {
       "source": "/referrals",
       "destination": "/referrals.html"
     },
@@ -193,10 +233,6 @@
     {
       "source": "/coding-challenges",
       "destination": "/coding-challenges.html"
-    },
-    {
-      "source": "/reset-password",
-      "destination": "/reset-password.html"
     },
     {
       "source": "/admin-login",

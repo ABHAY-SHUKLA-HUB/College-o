@@ -227,7 +227,7 @@ function pageName() {
 
 // Expose protected page names to the client-side for guard checks
 window.PROTECTED_PAGES = [
-  'dashboard', 'dashboard.html', 'study', 'study.html', 'mock-test', 'mock-tests.html', 'mock-tests', 'notes', 'notes-library.html', 'contribute', 'academic-contribution-hub.html', 'roadmap', 'study-roadmap.html', 'live-hub', 'live-hub.html', 'ai-tools', 'ai-tools.html', 'college-feed', 'college-feed.html', 'forum', 'forum.html', 'support-hub', 'support-hub.html', 'profile', 'profile.html', 'membership', 'pricing.html', 'settings', 'settings.html', 'coding-challenges', 'coding-challenges.html'
+  'dashboard', 'dashboard.html', 'study', 'study.html', 'mock-test', 'mock-tests.html', 'mock-tests', 'notes', 'notes-library.html', 'contribute', 'academic-contribution-hub.html', 'roadmap', 'study-roadmap.html', 'live-hub', 'live-hub.html', 'ai-tools', 'ai-tools.html', 'college-feed', 'college-feed.html', 'forum', 'forum.html', 'support-hub', 'support-hub.html', 'profile', 'profile.html', 'settings', 'settings.html', 'coding-challenges', 'coding-challenges.html', 'academic-onboarding', 'academic-onboarding.html'
 ];
 
 function normalizeRoutePath(href) {
@@ -802,8 +802,14 @@ function mountContent() {
 }
 
 function publicPage() {
-  const file = pageName();
-  return ['index.html', 'login', 'signup', 'pricing.html', 'support.html', 'about-us.html', 'contact-us.html', 'help-center.html', 'login.html', 'signup.html'].includes(file);
+  const file = pageName().replace(/\.html$/i, '').toLowerCase();
+  const PUBLIC_PAGES = new Set([
+    '', 'index', 'landing', 'login', 'signup', 'reset-password',
+    'about-us', 'contact-us', 'contact', 'help-center', 'pricing', 'membership',
+    'support', 'referrals', 'feedback', 'terms', 'privacy',
+    'privacy-policy', 'terms-and-conditions', 'certificate-verify'
+  ]);
+  return PUBLIC_PAGES.has(file);
 }
 
 async function hydrateCommonStats() {
@@ -881,10 +887,11 @@ async function applyAuthGuard() {
   // Ensure protected pages are blocked until auth check completes
   const file = pageName();
   const isProtected = (function() {
+    if (publicPage()) return false;
     const p = window.PROTECTED_PAGES || [];
-    const name = String(file || '').toLowerCase();
+    const name = String(file || '').toLowerCase().replace(/\.html$/i, '');
     if (!p.length) return false;
-    return p.includes(name) || p.includes(name.replace(/\.html$/i, ''));
+    return p.some((item) => item.toLowerCase().replace(/\.html$/i, '') === name);
   })();
 
   if (!user && isProtected) {
@@ -893,18 +900,17 @@ async function applyAuthGuard() {
     return;
   }
 
-  // If explicit unauthorized, redirect to login for protected pages
+  // If explicit unauthorized, redirect to login ONLY for protected pages
   if (!user && lastError && (lastError.status === 401 || lastError.status === 403)) {
-    if (!publicPage()) {
+    if (!publicPage() && isProtected) {
       setContentLoadingState(false);
       goToRoute('/login', { replace: true });
       return;
     }
   }
 
-  // If no user and no explicit auth error, avoid aggressive redirect — allow public pages and proceed on transient failures
-  if (!user && !publicPage() && !lastError) {
-    // No session but no error (unexpected) — redirect conservatively
+  // If no user and page is not public and is protected, redirect to login
+  if (!user && !publicPage() && isProtected) {
     setContentLoadingState(false);
     goToRoute('/login', { replace: true });
     return;

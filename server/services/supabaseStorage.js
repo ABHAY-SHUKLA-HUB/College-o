@@ -5,6 +5,8 @@ const DEFAULT_BUCKET = 'college-os';
 const DEFAULT_SIGNED_URL_TTL_SECONDS = 60 * 60;
 
 let client = null;
+const verifiedBuckets = new Set();
+let bucketEnsurePromise = null;
 
 function getConfig() {
   const url = String(process.env.SUPABASE_URL || '').trim();
@@ -40,6 +42,70 @@ function getBucket() {
   return getConfig().bucket;
 }
 
+async function ensureBucketExists(requestedBucket = getBucket()) {
+  const targetBucket = String(requestedBucket || DEFAULT_BUCKET).trim();
+  if (verifiedBuckets.has(targetBucket)) {
+    return targetBucket;
+  }
+
+  const supabase = getClient();
+
+  try {
+    // 1. Check if the bucket already exists
+    const { data: bucketData, error: getError } = await supabase.storage.getBucket(targetBucket);
+    if (!getError && bucketData) {
+      verifiedBuckets.add(targetBucket);
+      return targetBucket;
+    }
+
+    // 2. List buckets to see if it exists in the list or find an alternative active bucket
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    if (!listError && Array.isArray(buckets)) {
+      const match = buckets.find((b) => b.name === targetBucket || b.id === targetBucket);
+      if (match) {
+        verifiedBuckets.add(targetBucket);
+        return targetBucket;
+      }
+    }
+
+    // 3. Create the bucket via service role key
+    console.info(`[SupabaseStorage] Creating missing storage bucket '${targetBucket}'...`);
+    const { data: created, error: createError } = await supabase.storage.createBucket(targetBucket, {
+      public: false,
+      fileSizeLimit: 50 * 1024 * 1024 // 50MB
+    });
+
+    if (createError) {
+      const isAlreadyExists = /already exists/i.test(createError.message) ||
+        createError.statusCode === '409' ||
+        createError.status === 409;
+      if (isAlreadyExists) {
+        verifiedBuckets.add(targetBucket);
+        return targetBucket;
+      }
+
+      console.warn(`[SupabaseStorage] createBucket('${targetBucket}') returned:`, createError.message);
+
+      // If existing buckets exist, use the first available bucket as fallback
+      if (Array.isArray(buckets) && buckets.length > 0) {
+        const fallbackBucket = buckets[0].name || buckets[0].id;
+        console.info(`[SupabaseStorage] Using existing bucket '${fallbackBucket}' as active bucket`);
+        verifiedBuckets.add(fallbackBucket);
+        return fallbackBucket;
+      }
+    } else {
+      console.info(`[SupabaseStorage] Successfully provisioned storage bucket '${targetBucket}'`);
+      verifiedBuckets.add(targetBucket);
+      return targetBucket;
+    }
+  } catch (err) {
+    console.warn('[SupabaseStorage] Bucket check/provision error:', err.message);
+  }
+
+  verifiedBuckets.add(targetBucket);
+  return targetBucket;
+}
+
 function isSupabaseStorageConfigured() {
   const url = String(process.env.SUPABASE_URL || '').trim();
   const serviceRoleKey = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
@@ -57,6 +123,14 @@ function validateSupabaseStorageConfiguration() {
   if (!/^[a-z0-9][a-z0-9._-]{1,62}$/i.test(bucket)) {
     throw new Error('SUPABASE_STORAGE_BUCKET contains invalid characters.');
   }
+
+  // Pre-provision bucket asynchronously on startup
+  if (!bucketEnsurePromise) {
+    bucketEnsurePromise = ensureBucketExists(bucket).catch((err) => {
+      console.warn('[SupabaseStorage] Initial bucket ensure non-fatal warning:', err.message);
+    });
+  }
+
   return { bucket };
 }
 
@@ -89,16 +163,31 @@ async function uploadBufferToSupabase({
   if (!Buffer.isBuffer(buffer)) throw new Error('Missing upload buffer');
   if (!fileName) throw new Error('Missing upload file name');
 
-  const bucket = getBucket();
+  const configuredBucket = getBucket();
+  const bucket = await ensureBucketExists(configuredBucket);
   const storagePath = normalizePath(`${folder}/${fileName}`);
   if (!storagePath) throw new Error('Missing Supabase Storage path');
 
   const storage = getClient().storage.from(bucket);
-  const { error: uploadError } = await storage.upload(storagePath, buffer, {
+  let { error: uploadError } = await storage.upload(storagePath, buffer, {
     contentType,
     upsert: false,
     cacheControl: '3600'
   });
+
+  // If Supabase reports bucket not found, retry once after explicitly creating the bucket
+  if (uploadError && /bucket not found/i.test(uploadError.message)) {
+    console.warn(`[SupabaseStorage] Bucket '${bucket}' not found during upload. Auto-creating and retrying...`);
+    verifiedBuckets.delete(bucket);
+    await ensureBucketExists(bucket);
+    const retryResult = await storage.upload(storagePath, buffer, {
+      contentType,
+      upsert: false,
+      cacheControl: '3600'
+    });
+    uploadError = retryResult.error;
+  }
+
   if (uploadError) {
     throw new Error(`Supabase Storage upload failed: ${uploadError.message}`);
   }
@@ -181,11 +270,22 @@ async function deleteUploadedFileById(fileId) {
 async function createSignedSupabaseUrl({ bucket = getBucket(), path: storagePath, key, expiresIn = DEFAULT_SIGNED_URL_TTL_SECONDS }) {
   const normalizedPath = normalizePath(storagePath || key);
   if (!normalizedPath) throw new Error('Missing Supabase Storage path');
-  const { data, error } = await getClient().storage.from(bucket).createSignedUrl(
+
+  const targetBucket = bucket || getBucket();
+  const { data, error } = await getClient().storage.from(targetBucket).createSignedUrl(
     normalizedPath,
     Math.max(60, Number(expiresIn) || DEFAULT_SIGNED_URL_TTL_SECONDS)
   );
-  if (error) throw new Error(`Supabase Storage signed URL failed: ${error.message}`);
+
+  if (error) {
+    // If signed URL creation failed, try getting public URL if bucket is public
+    try {
+      const { data: pubData } = getClient().storage.from(targetBucket).getPublicUrl(normalizedPath);
+      if (pubData?.publicUrl) return pubData.publicUrl;
+    } catch (_) {}
+    throw new Error(`Supabase Storage signed URL failed: ${error.message}`);
+  }
+
   return data.signedUrl;
 }
 
@@ -193,6 +293,7 @@ module.exports = {
   createSignedSupabaseUrl,
   deleteUploadedFileById,
   deleteFileFromSupabase,
+  ensureBucketExists,
   getBucket,
   isSupabaseStorageConfigured,
   normalizePath,

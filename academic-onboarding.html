@@ -3,55 +3,90 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Complete Academic Profile — College OS</title>
-  <meta name="description" content="Complete your academic profile setup on College OS to personalize your portal." />
-  <link rel="stylesheet" href="assets/css/style.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <title>Academic Setup — College OS</title>
+  <meta name="description" content="Personalize your College OS student workspace with your university, course, branch, and semester." />
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
   <style>
     :root {
       --ao-bg: #0b0f19;
-      --ao-card-bg: rgba(17, 24, 39, 0.85);
+      --ao-card-bg: rgba(17, 24, 39, 0.92);
       --ao-card-border: rgba(255, 255, 255, 0.1);
       --ao-primary: #6366f1;
       --ao-primary-hover: #4f46e5;
-      --ao-text: #f9fafb;
-      --ao-text-muted: #9ca3af;
-      --ao-card-selected-bg: rgba(99, 102, 241, 0.12);
+      --ao-primary-light: rgba(99, 102, 241, 0.15);
+      --ao-text: #f8fafc;
+      --ao-text-muted: #94a3b8;
+      --ao-text-light: #64748b;
+      --ao-card-selected-bg: rgba(99, 102, 241, 0.14);
       --ao-card-selected-border: #6366f1;
+      --ao-success: #10b981;
+      --ao-font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
     body {
       background-color: var(--ao-bg);
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 40%);
       color: var(--ao-text);
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-family: var(--ao-font);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      margin: 0;
     }
 
     .onboarding-navbar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 1.25rem 2rem;
+      padding: 1rem 2rem;
       border-bottom: 1px solid var(--ao-card-border);
-      background: rgba(15, 23, 42, 0.8);
+      background: rgba(11, 15, 25, 0.85);
       backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
 
     .onboarding-brand {
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      font-weight: 700;
-      font-size: 1.25rem;
+      font-weight: 800;
+      font-size: 1.15rem;
       color: #fff;
+      text-decoration: none;
     }
 
-    .onboarding-brand i {
-      color: var(--ao-primary);
-      font-size: 1.5rem;
+    .onboarding-brand-mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #6366f1, #3b82f6);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.95rem;
+    }
+
+    .onboarding-nav-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      font-size: 0.85rem;
+      color: var(--ao-text-muted);
     }
 
     .onboarding-container {
@@ -59,18 +94,21 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 2.5rem 1.5rem;;
+      padding: 2rem 1rem;
+      max-width: 760px;
+      margin: 0 auto;
+      width: 100%;
     }
 
     .onboarding-card {
       background: var(--ao-card-bg);
       border: 1px solid var(--ao-card-border);
-      border-radius: 20px;
-      padding: 2.5rem;
+      border-radius: 24px;
+      padding: 2.25rem;
       width: 100%;
-      max-width: 680px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
       backdrop-filter: blur(16px);
+      position: relative;
     }
 
     .onboarding-header {
@@ -78,26 +116,41 @@
       margin-bottom: 2rem;
     }
 
+    .onboarding-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ao-primary);
+      margin-bottom: 0.5rem;
+      padding: 3px 10px;
+      background: var(--ao-primary-light);
+      border-radius: 999px;
+    }
+
     .onboarding-header h1 {
-      font-size: 1.75rem;
+      font-size: 1.65rem;
       font-weight: 800;
-      margin: 0 0 0.5rem 0;
+      margin-bottom: 0.4rem;
       letter-spacing: -0.02em;
     }
 
     .onboarding-header p {
       color: var(--ao-text-muted);
-      font-size: 0.95rem;
-      margin: 0;
+      font-size: 0.92rem;
     }
 
-    /* Step Stepper Indicator */
+    /* Stepper Progress Indicator */
     .stepper {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 2.5rem;
+      margin-bottom: 2rem;
       position: relative;
+      padding: 0 0.5rem;
     }
 
     .stepper::before {
@@ -126,22 +179,22 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.4rem;
       position: relative;
       z-index: 2;
     }
 
     .step-circle {
-      width: 38px;
-      height: 38px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
-      background: #1f2937;
+      background: #1e293b;
       border: 2px solid var(--ao-card-border);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 600;
-      font-size: 0.9rem;
+      font-weight: 700;
+      font-size: 0.85rem;
       color: var(--ao-text-muted);
       transition: all 0.3s ease;
     }
@@ -150,79 +203,129 @@
       border-color: var(--ao-primary);
       background: var(--ao-primary);
       color: #fff;
-      box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
+      box-shadow: 0 0 16px rgba(99, 102, 241, 0.5);
     }
 
     .step-item.completed .step-circle {
-      border-color: #10b981;
-      background: #10b981;
+      border-color: var(--ao-success);
+      background: var(--ao-success);
       color: #fff;
     }
 
     .step-label {
-      font-size: 0.8rem;
-      font-weight: 500;
+      font-size: 0.75rem;
+      font-weight: 600;
       color: var(--ao-text-muted);
+      transition: color 0.3s ease;
     }
 
     .step-item.active .step-label {
       color: #fff;
-      font-weight: 600;
+    }
+
+    /* Search & Filter Bar */
+    .ao-search-wrap {
+      position: relative;
+      margin-bottom: 1.25rem;
+    }
+
+    .ao-search-wrap i {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--ao-text-light);
+    }
+
+    .ao-search-input {
+      width: 100%;
+      height: 42px;
+      padding: 0 16px 0 40px;
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid var(--ao-card-border);
+      border-radius: 12px;
+      color: #fff;
+      font-size: 0.9rem;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+
+    .ao-search-input:focus {
+      outline: none;
+      border-color: var(--ao-primary);
+      box-shadow: 0 0 0 3px var(--ao-primary-light);
     }
 
     /* Option Cards */
     .options-grid {
       display: grid;
-      gap: 1rem;
-      margin-bottom: 2rem;
+      gap: 0.85rem;
+      max-height: 380px;
+      overflow-y: auto;
+      padding-right: 4px;
+      margin-bottom: 1.5rem;
+    }
+
+    .options-grid::-webkit-scrollbar {
+      width: 6px;
+    }
+    .options-grid::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
     }
 
     .option-card {
-      background: rgba(31, 41, 55, 0.5);
+      background: rgba(30, 41, 59, 0.5);
       border: 1.5px solid var(--ao-card-border);
-      border-radius: 12px;
-      padding: 1.25rem 1.5rem;
+      border-radius: 14px;
+      padding: 1rem 1.25rem;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 1rem;
       transition: all 0.2s ease;
     }
 
     .option-card:hover {
       border-color: rgba(99, 102, 241, 0.5);
-      background: rgba(31, 41, 55, 0.8);
+      background: rgba(30, 41, 59, 0.8);
       transform: translateY(-1px);
     }
 
     .option-card.selected {
       background: var(--ao-card-selected-bg);
       border-color: var(--ao-card-selected-border);
-      box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
+      box-shadow: 0 0 14px rgba(99, 102, 241, 0.25);
+    }
+
+    .option-info {
+      flex: 1;
+      min-width: 0;
     }
 
     .option-info h3 {
-      margin: 0 0 0.25rem 0;
-      font-size: 1.05rem;
-      font-weight: 600;
+      font-size: 0.98rem;
+      font-weight: 700;
       color: #fff;
+      margin-bottom: 2px;
     }
 
     .option-info p {
-      margin: 0;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       color: var(--ao-text-muted);
     }
 
     .radio-check {
-      width: 20px;
-      height: 20px;
+      width: 22px;
+      height: 22px;
       border-radius: 50%;
-      border: 2px solid var(--ao-text-muted);
+      border: 2px solid var(--ao-text-light);
       display: flex;
       align-items: center;
       justify-content: center;
       transition: all 0.2s ease;
+      flex-shrink: 0;
     }
 
     .option-card.selected .radio-check {
@@ -238,28 +341,62 @@
       background: #fff;
     }
 
+    /* Semester Pills Grid */
+    .semester-pills-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.6rem;
+      margin-top: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .sem-pill {
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid var(--ao-card-border);
+      border-radius: 10px;
+      padding: 0.65rem 0.5rem;
+      text-align: center;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--ao-text);
+      transition: all 0.18s ease;
+    }
+
+    .sem-pill:hover {
+      border-color: var(--ao-primary);
+      background: rgba(30, 41, 59, 0.9);
+    }
+
+    .sem-pill.selected {
+      background: var(--ao-primary);
+      border-color: var(--ao-primary);
+      color: #fff;
+      box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);
+    }
+
     /* Actions Bar */
     .actions-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 1rem;
-      margin-top: 2rem;
-      padding-top: 1.5rem;
+      margin-top: 1.75rem;
+      padding-top: 1.25rem;
       border-top: 1px solid var(--ao-card-border);
     }
 
     .btn-ao {
-      padding: 0.85rem 1.75rem;
+      padding: 0.75rem 1.5rem;
       border-radius: 10px;
-      font-weight: 600;
-      font-size: 0.95rem;
+      font-weight: 700;
+      font-size: 0.9rem;
       border: none;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
-      transition: all 0.2s ease;
+      transition: all 0.18s ease;
     }
 
     .btn-primary-ao {
@@ -270,54 +407,65 @@
 
     .btn-primary-ao:hover:not(:disabled) {
       background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
-      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+      box-shadow: 0 6px 18px rgba(99, 102, 241, 0.6);
+      transform: translateY(-1px);
     }
 
     .btn-primary-ao:disabled {
-      opacity: 0.5;
+      opacity: 0.45;
       cursor: not-allowed;
     }
 
     .btn-secondary-ao {
-      background: rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.08);
       color: var(--ao-text);
       border: 1px solid var(--ao-card-border);
     }
 
     .btn-secondary-ao:hover {
-      background: rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.14);
     }
 
-    /* Review Summary */
+    /* Review Table */
     .review-table {
       width: 100%;
       border-collapse: separate;
       border-spacing: 0;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
+      background: rgba(30, 41, 59, 0.4);
+      border-radius: 14px;
+      border: 1px solid var(--ao-card-border);
+      overflow: hidden;
     }
 
     .review-table tr td {
-      padding: 1rem;
+      padding: 0.9rem 1.25rem;
       border-bottom: 1px solid var(--ao-card-border);
+    }
+
+    .review-table tr:last-child td {
+      border-bottom: none;
     }
 
     .review-table tr td:first-child {
       color: var(--ao-text-muted);
       font-weight: 500;
+      font-size: 0.85rem;
       width: 35%;
     }
 
     .review-table tr td:last-child {
       color: #fff;
-      font-weight: 600;
+      font-weight: 700;
+      font-size: 0.9rem;
     }
 
     .selection-banner {
-      background: rgba(99, 102, 241, 0.08);
+      background: rgba(99, 102, 241, 0.1);
       border-left: 3px solid var(--ao-primary);
       padding: 0.75rem 1rem;
-      border-radius: 6px;
-      margin-bottom: 1.5rem;
+      border-radius: 8px;
+      margin-bottom: 1.25rem;
       font-size: 0.85rem;
       color: #c7d2fe;
     }
@@ -328,32 +476,33 @@
 
     .loading-state {
       text-align: center;
-      padding: 3rem 1rem;
+      padding: 2.5rem 1rem;
       color: var(--ao-text-muted);
     }
 
     .loading-state i {
-      font-size: 2rem;
+      font-size: 1.75rem;
       color: var(--ao-primary);
-      margin-bottom: 1rem;
+      margin-bottom: 0.75rem;
     }
 
     .error-banner-ao {
       background: rgba(239, 68, 68, 0.15);
       border: 1px solid rgba(239, 68, 68, 0.4);
       color: #fca5a5;
-      padding: 0.85rem 1.25rem;
+      padding: 0.75rem 1.25rem;
       border-radius: 10px;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.25rem;
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
     }
 
     @media (max-width: 640px) {
       .onboarding-card {
-        padding: 1.75rem 1.25rem;;
+        padding: 1.5rem 1rem;
+        border-radius: 18px;
       }
       .actions-bar {
         flex-direction: column-reverse;
@@ -362,19 +511,22 @@
         width: 100%;
         justify-content: center;
       }
+      .semester-pills-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
     }
   </style>
 </head>
 <body>
 
-  <!-- Navbar -->
+  <!-- Top Navbar -->
   <header class="onboarding-navbar">
-    <div class="onboarding-brand">
-      <i class="fa-solid fa-graduation-cap"></i>
+    <a href="/" class="onboarding-brand">
+      <div class="onboarding-brand-mark">CO</div>
       <span>College OS</span>
-    </div>
-    <div style="font-size: 0.85rem; color: var(--ao-text-muted);">
-      Academic Identity Setup
+    </a>
+    <div class="onboarding-nav-right">
+      <span><i class="fa-solid fa-graduation-cap"></i> Student Setup</span>
     </div>
   </header>
 
@@ -384,8 +536,9 @@
 
       <!-- Header -->
       <div class="onboarding-header">
-        <h1>Complete Your Academic Profile</h1>
-        <p>Select your University, Course, and Batch to setup your personal portal.</p>
+        <div class="onboarding-kicker"><i class="fa-solid fa-sparkles"></i> Step Into Your Learning Workspace</div>
+        <h1>Personalize Your Academic Scope</h1>
+        <p>Select your University, Course, Branch, and Semester to tailor your dashboard and resources.</p>
       </div>
 
       <!-- Stepper Progress Bar -->
@@ -404,7 +557,7 @@
 
         <div class="step-item" id="stepIndicator3">
           <div class="step-circle">3</div>
-          <div class="step-label">Batch</div>
+          <div class="step-label">Branch &amp; Sem</div>
         </div>
 
         <div class="step-item" id="stepIndicator4">
@@ -421,13 +574,18 @@
 
       <!-- STEP 1: UNIVERSITY SELECTION -->
       <div class="step-panel" id="stepPanel1">
-        <div style="margin-bottom: 1rem; font-weight: 600; color: #fff;">Select your University:</div>
+        <div class="ao-search-wrap">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="search" id="uniSearchInput" class="ao-search-input" placeholder="Search your university or college name..." />
+        </div>
+        
         <div class="options-grid" id="universityGrid">
           <div class="loading-state">
             <i class="fa-solid fa-spinner fa-spin"></i>
             <p>Loading available universities...</p>
           </div>
         </div>
+
         <div class="actions-bar">
           <div></div>
           <button type="button" class="btn-ao btn-primary-ao" id="btnNext1" disabled>
@@ -441,51 +599,80 @@
         <div class="selection-banner" id="bannerUniSelected">
           Selected University: <strong>-</strong>
         </div>
-        <div style="margin-bottom: 1rem; font-weight: 600; color: #fff;">Select your Course / Program:</div>
+
+        <div class="ao-search-wrap">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="search" id="courseSearchInput" class="ao-search-input" placeholder="Filter courses (e.g. B.Tech, BCA, MBA)..." />
+        </div>
+
         <div class="options-grid" id="courseGrid">
           <div class="loading-state">
             <i class="fa-solid fa-spinner fa-spin"></i>
             <p>Loading available courses...</p>
           </div>
         </div>
+
         <div class="actions-bar">
           <button type="button" class="btn-ao btn-secondary-ao" id="btnBack2">
             <i class="fa-solid fa-arrow-left"></i> Back
           </button>
           <button type="button" class="btn-ao btn-primary-ao" id="btnNext2" disabled>
-            Next: Select Batch <i class="fa-solid fa-arrow-right"></i>
+            Next: Branch &amp; Semester <i class="fa-solid fa-arrow-right"></i>
           </button>
         </div>
       </div>
 
-      <!-- STEP 3: BATCH SELECTION -->
+      <!-- STEP 3: BRANCH, BATCH & SEMESTER SELECTION -->
       <div class="step-panel hidden" id="stepPanel3">
         <div class="selection-banner" id="bannerCourseSelected">
           Selected: <strong>-</strong>
         </div>
-        <div style="margin-bottom: 1rem; font-weight: 600; color: #fff;">Select your Academic Batch:</div>
-        <div class="options-grid" id="batchGrid">
-          <div class="loading-state">
-            <i class="fa-solid fa-spinner fa-spin"></i>
-            <p>Loading available batches...</p>
+
+        <!-- Academic Batch -->
+        <div style="margin-bottom: 1.25rem;">
+          <label style="font-size: 0.85rem; font-weight: 700; color: #fff; display: block; margin-bottom: 6px;">
+            1. Select Academic Session / Batch *
+          </label>
+          <div class="options-grid" id="batchGrid" style="max-height: 180px;">
+            <div class="loading-state">
+              <i class="fa-solid fa-spinner fa-spin"></i>
+              <p>Loading batches...</p>
+            </div>
           </div>
         </div>
+
+        <!-- Current Semester -->
+        <div>
+          <label style="font-size: 0.85rem; font-weight: 700; color: #fff; display: block; margin-bottom: 2px;">
+            2. Select Current Semester *
+          </label>
+          <div class="semester-pills-grid" id="semesterGrid">
+            <div class="sem-pill selected" data-sem="1">Semester 1</div>
+            <div class="sem-pill" data-sem="2">Semester 2</div>
+            <div class="sem-pill" data-sem="3">Semester 3</div>
+            <div class="sem-pill" data-sem="4">Semester 4</div>
+            <div class="sem-pill" data-sem="5">Semester 5</div>
+            <div class="sem-pill" data-sem="6">Semester 6</div>
+            <div class="sem-pill" data-sem="7">Semester 7</div>
+            <div class="sem-pill" data-sem="8">Semester 8</div>
+          </div>
+        </div>
+
         <div class="actions-bar">
           <button type="button" class="btn-ao btn-secondary-ao" id="btnBack3">
             <i class="fa-solid fa-arrow-left"></i> Back
           </button>
           <button type="button" class="btn-ao btn-primary-ao" id="btnNext3" disabled>
-            Next: Review <i class="fa-solid fa-arrow-right"></i>
+            Next: Review Profile <i class="fa-solid fa-arrow-right"></i>
           </button>
         </div>
       </div>
 
       <!-- STEP 4: REVIEW & CONFIRM -->
       <div class="step-panel hidden" id="stepPanel4">
-        <div style="margin-bottom: 1rem; font-weight: 600; color: #fff;">Review your Academic Profile:</div>
         <table class="review-table">
           <tr>
-            <td>University</td>
+            <td>University / College</td>
             <td id="reviewUni">-</td>
           </tr>
           <tr>
@@ -496,19 +683,25 @@
             <td>Academic Batch</td>
             <td id="reviewBatch">-</td>
           </tr>
+          <tr>
+            <td>Current Semester</td>
+            <td id="reviewSemester">Semester 1</td>
+          </tr>
         </table>
         
-        <p style="font-size: 0.85rem; color: var(--ao-text-muted); margin-bottom: 1.5rem;">
-          <i class="fa-solid fa-shield-halved" style="color: var(--ao-primary);"></i> 
-          Your academic scope determines your tailored study materials, roadmaps, and mock tests.
-        </p>
+        <div style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 10px; padding: 12px; margin-bottom: 1.5rem; display: flex; align-items: flex-start; gap: 10px;">
+          <i class="fa-solid fa-circle-check" style="color: var(--ao-success); font-size: 1.1rem; margin-top: 2px;"></i>
+          <p style="font-size: 0.82rem; color: var(--ao-text-muted); line-height: 1.4; margin: 0;">
+            Your academic identity is ready. Notes, previous exam papers, quizzes, and mock tests will be scoped automatically to your curriculum.
+          </p>
+        </div>
 
         <div class="actions-bar">
           <button type="button" class="btn-ao btn-secondary-ao" id="btnBack4">
-            <i class="fa-solid fa-arrow-left"></i> Edit Selection
+            <i class="fa-solid fa-arrow-left"></i> Edit Details
           </button>
           <button type="button" class="btn-ao btn-primary-ao" id="btnSubmitProfile">
-            <i class="fa-solid fa-check"></i> Complete Profile &amp; Enter Dashboard
+            <i class="fa-solid fa-check"></i> Complete Profile &amp; Go to Dashboard →
           </button>
         </div>
       </div>

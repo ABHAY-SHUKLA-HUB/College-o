@@ -234,6 +234,20 @@ router.post('/academic-profile', requireAuth, async (req, res) => {
          updated_at = NOW()`,
       [studentId, safeCollegeId, safeCourseId, courseName]
     );
+    const branchName = req.body.branch ? String(req.body.branch).trim().slice(0, 100) : null;
+    const semesterNum = parseInt(req.body.semester, 10) || null;
+
+    // Sync users table
+    await client.query(
+      `UPDATE users
+       SET university_id = $2,
+           university_name = $3,
+           college_name = COALESCE(college_name, $3),
+           branch = COALESCE($4, branch),
+           semester = COALESCE($5, semester)
+       WHERE id = $1`,
+      [studentId, universityId, universityName, branchName, semesterNum]
+    );
 
     await client.query('COMMIT');
 

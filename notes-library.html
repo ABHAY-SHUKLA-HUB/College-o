@@ -3,146 +3,135 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>College OS - Summarization Notes</title>
-  <script src="assets/js/theme-init.js"></script>
-  <link rel="stylesheet" href="assets/css/styles.css" />
-  <link rel="stylesheet" href="assets/css/print.css" />
-  <link rel="stylesheet" href="assets/vendor/quill/quill.snow.css" />
+  <title>Notes Library &amp; AI Summaries | College OS</title>
+  <meta name="description" content="Access verified chapter-wise semester notes, handwritten summaries, AI flashcards, and protected PDF readers organized by course and semester." />
+  <meta name="robots" content="noindex, nofollow" />
+  
+  <!-- Font & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
-  <style>
-    .ai-tools-shell {
-      display: grid;
-      gap: 1rem;
-    }
+  <link rel="stylesheet" href="assets/vendor/quill/quill.snow.css" />
+  
+  <!-- Theme & Redesign CSS -->
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/student-dashboard-redesign.css" />
 
+  <style>
+    /* AI Tools & Panels */
     .ai-tool-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
       gap: 0.65rem;
     }
-
     .ai-tool-btn {
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      border-radius: 12px;
-      background: #fff;
-      padding: 0.8rem;
+      border: 1px solid var(--co-stu-border);
+      border-radius: var(--co-stu-radius-sm);
+      background: var(--co-stu-surface);
+      padding: 0.75rem 0.85rem;
       font-weight: 700;
-      color: #1f2d3d;
+      color: var(--co-stu-text);
       text-align: left;
       cursor: pointer;
-      transition: transform 130ms ease, box-shadow 130ms ease, border-color 130ms ease;
       display: inline-flex;
       align-items: center;
       gap: 0.55rem;
+      transition: all 0.18s ease;
+      font-size: 0.82rem;
+      font-family: inherit;
     }
-
     .ai-tool-btn:hover {
+      background: var(--co-stu-surface-hover);
+      border-color: var(--co-stu-primary);
       transform: translateY(-1px);
-      border-color: rgba(15, 123, 108, 0.5);
-      box-shadow: 0 8px 20px rgba(15, 123, 108, 0.14);
     }
-
     .ai-tool-btn.active {
-      background: linear-gradient(135deg, #eef9f6, #e9f4ff);
-      border-color: #0f7b6c;
-      color: #0f7b6c;
+      background: var(--co-stu-primary-light);
+      border-color: var(--co-stu-primary);
+      color: var(--co-stu-primary);
     }
-
     .ai-panels {
       display: grid;
       gap: 0.9rem;
+      margin-top: 1rem;
     }
-
     .ai-panel {
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      border-radius: 12px;
-      padding: 0.95rem;
-      background: linear-gradient(180deg, #fff, #f8fbff);
+      border: 1px solid var(--co-stu-border);
+      border-radius: var(--co-stu-radius);
+      padding: 1.25rem;
+      background: var(--co-stu-surface);
       display: none;
-      gap: 0.75rem;
+      gap: 0.85rem;
+      box-shadow: var(--co-stu-shadow-sm);
     }
-
     .ai-panel.active {
       display: grid;
     }
-
-    .ai-source-grid {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 0.65rem;
-      align-items: end;
-    }
-
-    .ai-source-grid input[type="file"] {
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      border-radius: 10px;
-      padding: 0.48rem;
-      background: #fff;
-    }
-
     .ai-output {
-      background: #0d1b2a;
-      color: #d6f5ff;
-      border-radius: 10px;
-      padding: 0.8rem;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: var(--co-stu-radius-sm);
+      padding: 1rem;
       white-space: pre-wrap;
       min-height: 120px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      font-size: 0.92rem;
+      font-size: 0.88rem;
+      line-height: 1.55;
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
-
     .flashcards-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 0.7rem;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 0.75rem;
       margin-top: 0.5rem;
     }
-
     .flashcard {
-      border-radius: 12px;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      padding: 0.75rem;
-      background: #fff;
-      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+      border-radius: var(--co-stu-radius-sm);
+      border: 1px solid var(--co-stu-border);
+      padding: 1rem;
+      background: var(--co-stu-surface);
+      box-shadow: var(--co-stu-shadow-sm);
     }
-
     .flashcard h4 {
       margin: 0 0 0.4rem 0;
-      color: #0c476e;
-      font-size: 0.95rem;
+      color: var(--co-stu-primary);
+      font-size: 0.92rem;
+      font-weight: 700;
     }
-
     .quiz-list {
       display: grid;
-      gap: 0.7rem;
-      margin-top: 0.4rem;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
     }
-
     .quiz-item {
-      border-radius: 10px;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      padding: 0.75rem;
-      background: #fff;
+      border-radius: var(--co-stu-radius-sm);
+      border: 1px solid var(--co-stu-border);
+      padding: 0.95rem;
+      background: var(--co-stu-surface);
     }
-
     .quiz-item .opts {
-      margin-top: 0.45rem;
-      color: var(--muted);
-      font-size: 0.92rem;
+      margin-top: 0.5rem;
+      color: var(--co-stu-text-muted);
+      font-size: 0.88rem;
     }
-
     .ai-inline {
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 0.65rem;
       align-items: center;
     }
-
-    @media (max-width: 820px) {
-      .ai-source-grid,
-      .ai-inline {
-        grid-template-columns: 1fr;
-      }
+    .ai-inline input {
+      height: 40px;
+      padding: 0 12px;
+      border-radius: var(--co-stu-radius-sm);
+      border: 1px solid var(--co-stu-border);
+      background: var(--co-stu-bg);
+      color: var(--co-stu-text);
+      font-size: 0.88rem;
+      outline: none;
+    }
+    .ai-inline input:focus {
+      border-color: var(--co-stu-primary);
     }
 
     /* Protected PDF Viewer Modal */
@@ -153,147 +142,354 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: rgba(15, 23, 42, 0.92);
-      backdrop-filter: blur(10px);
+      background: rgba(15, 23, 42, 0.94);
+      backdrop-filter: blur(8px);
       z-index: 999999;
       flex-direction: column;
     }
-
     .pdf-viewer-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 12px 24px;
-      background: #0f172a;
+      background: #0b0f19;
       color: #fff;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
-
     .pdf-viewer-body {
       flex: 1;
       width: 100%;
       height: calc(100vh - 60px);
       position: relative;
-      background: #1e293b;
+      background: #111827;
     }
   </style>
 </head>
-<body>
-  <div class="app-shell" data-shell></div>
-  <template data-page>
-    <section class="hero">
-      <h1 data-page-title>Summarization Notes Library</h1>
-      <p>Live notes feed from your college with one-page summaries, detailed notes, and uploaded PDFs.</p>
-    </section>
+<body class="student-portal">
 
-    <section class="card">
-      <div class="form-grid">
-        <div><label>Search Notes</label><input id="noteSearch" placeholder="Search by chapter, subject, concept" /></div>
-        <div><label>Format</label><select id="noteFormatFilter"><option value="">All Formats</option><option value="detailed">Detailed</option><option value="one-page">One-Page</option><option value="personal">Personal</option></select></div>
-        <div><label>Academic Category</label><select id="noteCategoryFilter"><option value="">All Categories</option></select></div>
-        <div><label>Branch / Course</label><select id="noteBranchFilter" disabled><option value="">All Branches</option></select></div>
-        <div><label>Semester / Year</label><select id="noteSemesterFilter"><option value="">All Semesters</option></select></div>
-        <div><label>College</label><select id="noteCollegeFilter"><option value="">All Colleges</option></select></div>
-        <div><label>Quick Action</label><button id="refreshNotesBtn" class="btn secondary" type="button">Refresh Feed</button></div>
-      </div>
-      <div class="actions">
-        <span style="display:inline-flex; align-items:center; gap:6px; font-size:0.85rem; color:#0f7b6c; font-weight:600; background:#eef9f6; padding:6px 12px; border-radius:8px; border:1px solid rgba(15,123,108,0.2);">
-          <i class="fa-solid fa-lock"></i> Protected View Mode Active
-        </span>
-        <a class="btn warn" href="pricing.html">Upgrade</a>
-      </div>
-      <p class="muted" id="notesStatus"></p>
-    </section>
+  <!-- Mobile Drawer Backdrop -->
+  <div class="co-student-backdrop" id="studentBackdrop"></div>
 
-    <section class="card">
-      <h3>Uploaded Notes Feed</h3>
-      <div id="notesFeed" class="resource-list">
-        <div class="empty-state">Loading notes...</div>
-      </div>
-    </section>
-
-    <section class="grid cols-2">
-      <article class="card">
-        <h3>AI Summary Generator</h3>
-        <textarea id="chapterInput" rows="6" placeholder="Paste long chapter text"></textarea>
-        <div class="actions"><button id="aiSummarizeBtn" class="btn primary">Generate Summary</button></div>
-        <pre id="aiSummaryOutput" class="muted">Summary appears here...</pre>
-      </article>
-      <article class="card">
-        <h3>Personal Notes</h3>
-        <div id="personalNotesEditor" style="height: 220px; background: #fff;"></div>
-        <div class="actions"><button id="savePersonalNotesBtn" class="btn primary">Save Personal Notes</button></div>
-      </article>
-    </section>
-
-    <section class="card ai-tools-shell">
-      <h3><i class="fa-solid fa-brain"></i> AI Study Tools</h3>
-      <p class="muted">Turn your notes into summaries, quizzes, flashcards, simplified explanations, and instant doubt resolution.</p>
-
-      <div class="ai-source-grid">
-        <div>
-          <label>Notes Source</label>
-          <textarea id="aiSourceInput" rows="6" placeholder="Paste your chapter notes here, or upload a .txt/.md file below"></textarea>
-        </div>
-        <div>
-          <label>Upload Text</label>
-          <input id="aiSourceFile" type="file" accept=".txt,.md,.text" />
-        </div>
+  <div class="co-student-shell">
+    <!-- LEFT SIDEBAR -->
+    <aside class="co-student-sidebar" id="studentSidebar">
+      <div class="co-sidebar-brand">
+        <a href="dashboard.html" class="brand-logo">
+          <div class="brand-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+          <div class="brand-text">College <span>OS</span></div>
+        </a>
+        <button class="co-sidebar-close" id="studentSidebarClose" aria-label="Close sidebar">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
 
-      <div class="ai-tool-grid" id="aiToolsNav">
-        <button class="ai-tool-btn active" data-ai-tool="summary"><i class="fa-solid fa-file-lines"></i> Generate Summary</button>
-        <button class="ai-tool-btn" data-ai-tool="quiz"><i class="fa-solid fa-list-check"></i> Generate Quiz</button>
-        <button class="ai-tool-btn" data-ai-tool="flashcards"><i class="fa-solid fa-layer-group"></i> Generate Flashcards</button>
-        <button class="ai-tool-btn" data-ai-tool="explain"><i class="fa-solid fa-lightbulb"></i> Explain Concept</button>
-        <button class="ai-tool-btn" data-ai-tool="doubt"><i class="fa-solid fa-comments"></i> Ask AI</button>
-        <button class="ai-tool-btn" data-ai-tool="simplify"><i class="fa-solid fa-wand-magic-sparkles"></i> Simplify Notes</button>
-      </div>
+      <nav class="co-sidebar-nav" aria-label="Student main navigation">
+        <div class="nav-section-title">LEARNING</div>
+        <a href="dashboard.html" class="nav-item" id="navDashboard">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="study.html" class="nav-item" id="navMyCourses">
+          <i class="fa-solid fa-book-open"></i>
+          <span>My Courses</span>
+        </a>
+        <a href="notes-library.html" class="nav-item active" id="navNotes">
+          <i class="fa-solid fa-file-lines"></i>
+          <span>Notes Library</span>
+        </a>
+        <a href="pyqs.html" class="nav-item" id="navPyqs">
+          <i class="fa-solid fa-file-circle-question"></i>
+          <span>Previous Papers</span>
+        </a>
+        <a href="quizzes.html" class="nav-item" id="navQuizzes">
+          <i class="fa-solid fa-clipboard-question"></i>
+          <span>Quizzes</span>
+        </a>
+        <a href="mock-tests.html" class="nav-item" id="navMockTests">
+          <i class="fa-solid fa-flask"></i>
+          <span>Mock Tests</span>
+        </a>
 
-      <div class="ai-panels">
-        <article class="ai-panel active" data-ai-panel="summary">
-          <h4>AI Notes Summary</h4>
-          <div class="actions"><button id="generateAiSummaryBtn" class="btn primary">Generate Summary</button></div>
-          <div id="aiSummaryResult" class="ai-output">Short summary, bullet points, and key concepts will appear here.</div>
-        </article>
+        <div class="nav-section-title">CAREER &amp; TOOLS</div>
+        <a href="study-roadmap.html" class="nav-item" id="navRoadmaps">
+          <i class="fa-solid fa-map-location-dot"></i>
+          <span>Career Roadmaps</span>
+        </a>
+        <a href="coding-challenges.html" class="nav-item" id="navCoding">
+          <i class="fa-solid fa-code"></i>
+          <span>Coding Arena</span>
+        </a>
+        <a href="ai-tools.html" class="nav-item" id="navAiTools">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span>AI Study Tools</span>
+        </a>
+        <a href="leaderboards.html" class="nav-item" id="navLeaderboards">
+          <i class="fa-solid fa-trophy"></i>
+          <span>Leaderboard</span>
+        </a>
 
-        <article class="ai-panel" data-ai-panel="quiz">
-          <h4>AI Quiz Generator</h4>
-          <div class="actions"><button id="generateAiQuizBtn" class="btn primary">Generate Quiz</button></div>
-          <div id="aiQuizResult" class="quiz-list"></div>
-        </article>
+        <div class="nav-section-title">COMMUNITY &amp; LIVE</div>
+        <a href="college-feed.html" class="nav-item" id="navCommunity">
+          <i class="fa-solid fa-newspaper"></i>
+          <span>Campus Feed</span>
+        </a>
+        <a href="live-study.html" class="nav-item" id="navLiveStudy">
+          <i class="fa-solid fa-video"></i>
+          <span>Live Study Rooms</span>
+        </a>
 
-        <article class="ai-panel" data-ai-panel="flashcards">
-          <h4>AI Flashcards Generator</h4>
-          <div class="actions"><button id="generateFlashcardsBtn" class="btn primary">Generate Flashcards</button></div>
-          <div id="aiFlashcardsResult" class="flashcards-grid"></div>
-        </article>
+        <div class="nav-section-title">ACHIEVEMENTS &amp; ACCOUNT</div>
+        <a href="certificates.html" class="nav-item" id="navCertificates">
+          <i class="fa-solid fa-award"></i>
+          <span>Certificates</span>
+        </a>
+        <a href="academic-onboarding.html" class="nav-item" id="navAcademicProfile">
+          <i class="fa-solid fa-building-columns"></i>
+          <span>Academic Profile</span>
+        </a>
+        <a href="profile.html" class="nav-item" id="navProfile">
+          <i class="fa-solid fa-user-gear"></i>
+          <span>Account Settings</span>
+        </a>
+      </nav>
 
-        <article class="ai-panel" data-ai-panel="explain">
-          <h4>AI Concept Explainer</h4>
-          <div class="ai-inline">
-            <input id="aiExplainTopicInput" placeholder="Type a topic, e.g., Dynamic Programming" />
-            <button id="explainConceptBtn" class="btn primary">Explain Concept</button>
+      <!-- Sidebar Mini Profile -->
+      <div class="co-sidebar-footer">
+        <div class="sidebar-user-pill">
+          <div class="user-avatar" id="sidebarStudentAvatar">ST</div>
+          <div class="user-info">
+            <div class="user-name" id="sidebarStudentName">Student</div>
+            <div class="user-meta" id="sidebarStudentSub">Learner</div>
           </div>
-          <div id="aiExplainResult" class="ai-output">Simple concept explanation appears here.</div>
-        </article>
-
-        <article class="ai-panel" data-ai-panel="doubt">
-          <h4>AI Doubt Solver</h4>
-          <div class="ai-inline">
-            <input id="aiDoubtInput" placeholder="Ask a study doubt, e.g., Why is binary search O(log n)?" />
-            <button id="askAiBtn" class="btn primary">Ask AI</button>
-          </div>
-          <div id="aiDoubtResult" class="ai-output">Instant answer appears here.</div>
-        </article>
-
-        <article class="ai-panel" data-ai-panel="simplify">
-          <h4>AI Notes Simplifier</h4>
-          <div class="actions"><button id="simplifyNotesBtn" class="btn primary">Simplify Notes</button></div>
-          <div id="aiSimplifyResult" class="ai-output">Complex notes rewritten in simple language appear here.</div>
+        </div>
       </div>
-    </section>
-  </template>
+    </aside>
+
+    <!-- MAIN CONTAINER -->
+    <div class="co-student-main">
+      <!-- TOPBAR -->
+      <header class="co-student-topbar">
+        <div class="topbar-left">
+          <button class="co-mobile-toggle" id="studentSidebarToggle" aria-label="Open sidebar">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="topbar-search">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="search" id="studentGlobalSearch" placeholder="Search notes, subjects, PYQs, roadmaps... (Ctrl+K)" aria-label="Global search" />
+            <span class="search-kbd">⌘K</span>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <!-- Theme Toggle -->
+          <button class="topbar-action-btn" id="studentThemeToggle" aria-label="Toggle dark/light mode" title="Toggle theme">
+            <i class="fa-solid fa-moon"></i>
+          </button>
+
+          <!-- Notification Bell -->
+          <a href="notifications.html" class="topbar-action-btn" aria-label="Notifications" title="Notifications">
+            <i class="fa-solid fa-bell"></i>
+          </a>
+
+          <!-- Profile Menu Toggle -->
+          <div class="topbar-profile" id="studentProfileMenuToggle" role="button" tabindex="0" aria-label="User profile menu">
+            <div class="profile-avatar" id="studentProfileAvatar">ST</div>
+            <div class="profile-meta">
+              <span class="profile-name" id="studentProfileName">Student</span>
+              <span class="profile-role" id="studentProfileRole">Learner</span>
+            </div>
+            <i class="fa-solid fa-chevron-down" style="font-size:0.75rem; color:var(--co-stu-text-light);"></i>
+
+            <!-- Dropdown Menu -->
+            <div class="profile-dropdown" id="studentProfileDropdown">
+              <div class="dropdown-header">
+                <div class="user-name" id="dropdownStudentName">Student</div>
+                <div class="user-email" id="dropdownStudentEmail">student@collegeo.in</div>
+              </div>
+              <div class="dropdown-links">
+                <a href="profile.html"><i class="fa-solid fa-user"></i> My Profile</a>
+                <a href="academic-onboarding.html"><i class="fa-solid fa-building-columns"></i> Academic Setup</a>
+                <a href="certificates.html"><i class="fa-solid fa-award"></i> My Certificates</a>
+                <a href="settings.html"><i class="fa-solid fa-gear"></i> Settings</a>
+              </div>
+              <div class="dropdown-footer">
+                <a href="/login" id="studentLogoutBtn" class="logout-link"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- PAGE CONTENT -->
+      <main class="co-student-container">
+        <!-- Breadcrumbs -->
+        <nav class="co-breadcrumb" aria-label="Breadcrumb">
+          <a href="dashboard.html"><i class="fa-solid fa-house"></i> Home</a>
+          <span class="separator">›</span>
+          <span class="current">Notes Library</span>
+        </nav>
+
+        <!-- Page Header -->
+        <div class="co-page-header">
+          <div>
+            <h1 class="co-page-header-title">Notes Library &amp; AI Summaries</h1>
+            <p class="co-page-header-desc">Search verified chapter notes, handwritten study guides, one-page cheat sheets, and turn any notes into interactive AI summaries.</p>
+          </div>
+          <div class="co-page-header-actions">
+            <span class="co-badge success"><i class="fa-solid fa-lock"></i> Protected View Active</span>
+            <button id="refreshNotesBtn" class="btn-stu secondary sm" type="button"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="co-filter-bar">
+          <div class="co-filter-group">
+            <div class="co-search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="search" id="noteSearch" class="co-search-input" placeholder="Search by chapter, subject, or concept..." />
+            </div>
+            <select id="noteFormatFilter" class="co-filter-select">
+              <option value="">All Formats</option>
+              <option value="detailed">Detailed Notes</option>
+              <option value="one-page">One-Page Summary</option>
+              <option value="personal">Personal Notes</option>
+            </select>
+            <select id="noteCategoryFilter" class="co-filter-select">
+              <option value="">All Categories</option>
+            </select>
+            <select id="noteBranchFilter" class="co-filter-select" disabled>
+              <option value="">All Branches</option>
+            </select>
+            <select id="noteSemesterFilter" class="co-filter-select">
+              <option value="">All Semesters</option>
+            </select>
+            <select id="noteCollegeFilter" class="co-filter-select">
+              <option value="">All Colleges</option>
+            </select>
+          </div>
+        </div>
+        <p class="co-page-header-desc" id="notesStatus" style="margin-top:-0.5rem;"></p>
+
+        <!-- Uploaded Notes Feed -->
+        <section class="co-dashboard-section">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title"><i class="fa-solid fa-folder-open"></i> Available Notes Feed</h2>
+              <p class="section-subtitle">Verified notes and reference materials organized for your branch.</p>
+            </div>
+          </div>
+
+          <div id="notesFeed" class="co-card-grid">
+            <div class="co-card co-skeleton" style="height:140px;"></div>
+            <div class="co-card co-skeleton" style="height:140px;"></div>
+            <div class="co-card co-skeleton" style="height:140px;"></div>
+          </div>
+        </section>
+
+        <!-- AI Summary & Personal Editor Grid -->
+        <div class="co-dashboard-layout">
+          <!-- AI Quick Summarizer -->
+          <div class="co-card">
+            <div class="co-card-top">
+              <div class="co-card-icon-wrap"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+              <span class="co-badge primary">AI Fast Tool</span>
+            </div>
+            <h3 class="co-card-title">AI Summary Generator</h3>
+            <p class="co-card-desc">Paste long chapter text to extract core concepts, definitions, and bullet-point summaries in seconds.</p>
+            <textarea id="chapterInput" rows="5" class="co-search-input" style="height:auto; padding:10px; resize:vertical;" placeholder="Paste long chapter text or lecture transcript here..."></textarea>
+            <button id="aiSummarizeBtn" class="btn-stu primary sm" style="width:100%;"><i class="fa-solid fa-bolt"></i> Generate Summary</button>
+            <pre id="aiSummaryOutput" class="ai-output" style="max-height:180px; overflow-y:auto; margin:0;">Summary appears here...</pre>
+          </div>
+
+          <!-- Personal Notes Editor -->
+          <div class="co-card">
+            <div class="co-card-top">
+              <div class="co-card-icon-wrap" style="background:rgba(14,165,233,0.1); color:#0ea5e9;"><i class="fa-solid fa-pen-to-square"></i></div>
+              <span class="co-badge success">Cloud Sync</span>
+            </div>
+            <h3 class="co-card-title">My Personal Notes</h3>
+            <p class="co-card-desc">Write and save rich-text notes synced to your student profile across devices.</p>
+            <div id="personalNotesEditor" style="min-height:140px; background:var(--co-stu-bg); border-radius:var(--co-stu-radius-sm); border:1px solid var(--co-stu-border);"></div>
+            <button id="savePersonalNotesBtn" class="btn-stu secondary sm" style="width:100%; margin-top:8px;"><i class="fa-solid fa-floppy-disk"></i> Save Personal Notes</button>
+          </div>
+        </div>
+
+        <!-- AI Study Suite -->
+        <section class="co-card">
+          <div class="co-card-top">
+            <div class="co-card-icon-wrap" style="background:rgba(139,92,246,0.1); color:#8b5cf6;"><i class="fa-solid fa-brain"></i></div>
+            <span class="co-badge warning">AI Study Suite</span>
+          </div>
+          <h3 class="co-card-title">AI Study Studio &amp; Flashcards</h3>
+          <p class="co-card-desc">Turn your notes into comprehensive flashcards, practice quizzes, concept explanations, and instant doubt resolution.</p>
+
+          <div style="display:grid; grid-template-columns:1fr auto; gap:0.75rem; align-items:end; margin-top:0.5rem;" class="ai-source-grid">
+            <div style="flex:1;">
+              <label style="font-size:0.78rem; font-weight:700; color:var(--co-stu-text-muted); display:block; margin-bottom:4px;">Notes Source Text</label>
+              <textarea id="aiSourceInput" rows="4" class="co-search-input" style="height:auto; padding:10px; resize:vertical; width:100%;" placeholder="Paste your chapter notes here, or upload a .txt / .md file..."></textarea>
+            </div>
+            <div>
+              <label style="font-size:0.78rem; font-weight:700; color:var(--co-stu-text-muted); display:block; margin-bottom:4px;">Upload File</label>
+              <input id="aiSourceFile" type="file" accept=".txt,.md,.text" class="co-filter-select" style="padding:4px 8px; height:auto;" />
+            </div>
+          </div>
+
+          <div class="ai-tool-grid" id="aiToolsNav" style="margin-top:1rem;">
+            <button class="ai-tool-btn active" data-ai-tool="summary"><i class="fa-solid fa-file-lines"></i> Summary</button>
+            <button class="ai-tool-btn" data-ai-tool="quiz"><i class="fa-solid fa-list-check"></i> Generate Quiz</button>
+            <button class="ai-tool-btn" data-ai-tool="flashcards"><i class="fa-solid fa-layer-group"></i> Flashcards</button>
+            <button class="ai-tool-btn" data-ai-tool="explain"><i class="fa-solid fa-lightbulb"></i> Explain Concept</button>
+            <button class="ai-tool-btn" data-ai-tool="doubt"><i class="fa-solid fa-comments"></i> Ask AI Doubt</button>
+            <button class="ai-tool-btn" data-ai-tool="simplify"><i class="fa-solid fa-wand-magic-sparkles"></i> Simplify Notes</button>
+          </div>
+
+          <div class="ai-panels">
+            <article class="ai-panel active" data-ai-panel="summary">
+              <h4 style="margin:0; font-size:1rem; font-weight:700;">AI Notes Summary</h4>
+              <button id="generateAiSummaryBtn" class="btn-stu primary sm" style="width:fit-content;"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate Summary</button>
+              <div id="aiSummaryResult" class="ai-output">Short summary, bullet points, and key concepts will appear here.</div>
+            </article>
+
+            <article class="ai-panel" data-ai-panel="quiz">
+              <h4 style="margin:0; font-size:1rem; font-weight:700;">AI Quiz Generator</h4>
+              <button id="generateAiQuizBtn" class="btn-stu primary sm" style="width:fit-content;"><i class="fa-solid fa-list-check"></i> Generate Quiz</button>
+              <div id="aiQuizResult" class="quiz-list"></div>
+            </article>
+
+            <article class="ai-panel" data-ai-panel="flashcards">
+              <h4 style="margin:0; font-size:1rem; font-weight:700;">AI Flashcards Generator</h4>
+              <button id="generateFlashcardsBtn" class="btn-stu primary sm" style="width:fit-content;"><i class="fa-solid fa-layer-group"></i> Generate Flashcards</button>
+              <div id="aiFlashcardsResult" class="flashcards-grid"></div>
+            </article>
+
+            <article class="ai-panel" data-ai-panel="explain">
+              <h4 style="margin:0; font-size:1rem; font-weight:700;">AI Concept Explainer</h4>
+              <div class="ai-inline">
+                <input id="aiExplainTopicInput" placeholder="Type a topic, e.g., Dynamic Programming or Dijkstra's Algorithm" />
+                <button id="explainConceptBtn" class="btn-stu primary sm">Explain Concept</button>
+              </div>
+              <div id="aiExplainResult" class="ai-output">Simple concept explanation appears here.</div>
+            </article>
+
+            <article class="ai-panel" data-ai-panel="doubt">
+              <h4 style="margin:0; font-size:1rem; font-weight:700;">AI Doubt Solver</h4>
+              <div class="ai-inline">
+                <input id="aiDoubtInput" placeholder="Ask a study doubt, e.g., Why is binary search O(log n)?" />
+                <button id="askAiBtn" class="btn-stu primary sm">Ask AI</button>
+              </div>
+              <div id="aiDoubtResult" class="ai-output">Instant answer appears here.</div>
+            </article>
+
+            <article class="ai-panel" data-ai-panel="simplify">
+              <h4 style="margin:0; font-size:1rem; font-weight:700;">AI Notes Simplifier</h4>
+              <button id="simplifyNotesBtn" class="btn-stu primary sm" style="width:fit-content;"><i class="fa-solid fa-wand-magic-sparkles"></i> Simplify Notes</button>
+              <div id="aiSimplifyResult" class="ai-output">Complex notes rewritten in simple language appear here.</div>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
 
   <!-- Protected PDF Viewer Modal overlay -->
   <div id="pdfViewerModal" class="pdf-viewer-modal">
@@ -312,11 +508,9 @@
     </div>
   </div>
 
+  <!-- Scripts -->
   <script src="assets/js/api.js"></script>
-  <script src="assets/js/app.js"></script>
+  <script src="assets/js/student-shell.js"></script>
   <script src="assets/js/notes.js"></script>
 </body>
 </html>
-
-
-

@@ -3,148 +3,190 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Settings - College OS</title>
+  <title>Settings &amp; Preferences — College OS</title>
+  <meta name="description" content="Manage your student profile, academic batch, appearance, notifications, and security settings." />
+  <link rel="icon" type="image/png" href="assets/images/college-os-logo.png" />
   <script src="assets/js/theme-init.js"></script>
-  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" />
   <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <link rel="stylesheet" href="assets/css/student-dashboard-redesign.css" />
   <style>
-    .settings-layout {
-      display: grid;
-      gap: 1rem;
+    .settings-sections {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
     }
-
-    .section-card {
-      background: var(--surface);
-      border: 1px solid rgba(0, 0, 0, 0.08);
-      border-radius: 14px;
-      box-shadow: var(--shadow);
-      padding: 1rem;
+    .settings-section-card {
+      background: var(--co-surface);
+      border: 1px solid var(--co-border);
+      border-radius: var(--co-radius-lg);
+      padding: 1.5rem;
+      box-shadow: var(--co-shadow-sm);
     }
-
-    .section-head {
+    .settings-section-header {
       display: flex;
       align-items: center;
-      gap: 0.6rem;
-      margin-bottom: 0.75rem;
+      gap: 0.85rem;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.85rem;
+      border-bottom: 1px solid var(--co-border);
     }
-
-    .section-head i {
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
+    .settings-section-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--co-radius-md);
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      font-size: 1rem;
       color: #fff;
-      background: linear-gradient(135deg, #0f7b6c, #2f6fed);
+      background: var(--co-gradient-primary);
     }
-
-    .section-head h3 {
+    .settings-section-title h3 {
       margin: 0;
-      font-size: 1.1rem;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--co-text-primary);
     }
-
+    .settings-section-title p {
+      margin: 0.15rem 0 0 0;
+      font-size: 0.82rem;
+      color: var(--co-text-muted);
+    }
     .settings-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 0.75rem;
+      gap: 1rem;
     }
-
-    .field {
-      display: grid;
-      gap: 0.35rem;
+    .settings-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
     }
-
-    .field.full {
+    .settings-field.full-width {
       grid-column: 1 / -1;
     }
-
-    .field label {
-      color: var(--muted);
-      font-size: 0.85rem;
-      font-weight: 600;
+    .settings-field label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--co-text-secondary);
+      letter-spacing: 0.01em;
     }
-
-    .switch-row {
+    .settings-field input,
+    .settings-field select {
+      padding: 0.75rem 0.95rem;
+      border-radius: var(--co-radius-md);
+      border: 1px solid var(--co-border);
+      background: var(--co-surface-alt);
+      color: var(--co-text-primary);
+      font-size: 0.88rem;
+      font-family: inherit;
+      outline: none;
+      transition: all var(--co-transition-fast);
+    }
+    .settings-field input:focus,
+    .settings-field select:focus {
+      border-color: var(--co-primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+      background: var(--co-surface);
+    }
+    .switch-card {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 0.8rem;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      border-radius: 11px;
-      background: #fff;
-      padding: 0.65rem 0.75rem;
+      gap: 1rem;
+      border: 1px solid var(--co-border);
+      border-radius: var(--co-radius-md);
+      background: var(--co-surface-alt);
+      padding: 0.85rem 1rem;
+      transition: all var(--co-transition-fast);
     }
-
-    .switch-row .meta {
-      display: grid;
-      gap: 0.1rem;
+    .switch-card:hover {
+      border-color: var(--co-border-hover);
     }
-
-    .switch-row .meta strong {
-      font-size: 0.95rem;
+    .switch-meta strong {
+      display: block;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--co-text-primary);
+      margin-bottom: 0.2rem;
     }
-
+    .switch-meta span {
+      font-size: 0.78rem;
+      color: var(--co-text-muted);
+    }
     .switch {
       position: relative;
-      width: 46px;
-      height: 26px;
+      width: 44px;
+      height: 24px;
       display: inline-block;
       flex-shrink: 0;
     }
-
     .switch input {
       opacity: 0;
       width: 0;
       height: 0;
     }
-
     .slider {
       position: absolute;
       cursor: pointer;
       inset: 0;
-      background-color: #c9ced6;
-      transition: 0.2s;
+      background-color: var(--co-border-hover);
+      transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       border-radius: 999px;
     }
-
     .slider:before {
       position: absolute;
       content: '';
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
       left: 3px;
       top: 3px;
       background: #fff;
-      transition: 0.2s;
+      transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     }
-
     .switch input:checked + .slider {
-      background: #0f7b6c;
+      background: var(--co-primary);
     }
-
     .switch input:checked + .slider:before {
       transform: translateX(20px);
     }
-
     .sessions-list {
-      margin-top: 0.6rem;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      border-radius: 10px;
-      background: #fff;
-      padding: 0.6rem;
-      max-height: 170px;
-      overflow: auto;
-      color: var(--muted);
-      font-size: 0.9rem;
+      margin-top: 0.5rem;
+      border: 1px solid var(--co-border);
+      border-radius: var(--co-radius-md);
+      background: var(--co-surface-alt);
+      padding: 0.75rem;
+      max-height: 180px;
+      overflow-y: auto;
+      color: var(--co-text-secondary);
+      font-size: 0.85rem;
+      list-style: none;
     }
-
     .sessions-list li {
-      margin: 0.35rem 0;
+      padding: 0.4rem 0.2rem;
+      border-bottom: 1px solid var(--co-border);
     }
-
-    @media (max-width: 900px) {
+    .sessions-list li:last-child {
+      border-bottom: none;
+    }
+    .form-actions-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+      padding: 1.25rem;
+      background: var(--co-surface);
+      border: 1px solid var(--co-border);
+      border-radius: var(--co-radius-lg);
+    }
+    @media (max-width: 768px) {
       .settings-grid {
         grid-template-columns: 1fr;
       }
@@ -152,97 +194,376 @@
   </style>
 </head>
 <body>
-  <div class="app-shell" data-shell></div>
-  <template data-page>
-    <section class="hero"><h1 data-page-title>Settings</h1><p>Manage profile, icon style, notifications, and accessibility preferences.</p></section>
+  <div class="co-student-backdrop" id="studentBackdrop"></div>
+  <div class="co-student-shell">
+    <!-- STUDENT SIDEBAR -->
+    <aside class="co-student-sidebar" id="studentSidebar">
+      <div class="co-sidebar-header">
+        <a href="dashboard.html" class="co-brand-logo">
+          <div class="co-brand-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+          <div class="co-brand-text">College <span>OS</span></div>
+        </a>
+      </div>
+      <div class="co-sidebar-nav">
+        <div class="co-nav-group-label">Core Learning</div>
+        <a href="dashboard.html" class="co-nav-item"><i class="fa-solid fa-house"></i><span>Dashboard</span></a>
+        <a href="study.html" class="co-nav-item"><i class="fa-solid fa-book-open"></i><span>My Courses</span></a>
+        <a href="notes-library.html" class="co-nav-item"><i class="fa-solid fa-file-lines"></i><span>Notes Library</span></a>
+        <a href="pyqs.html" class="co-nav-item"><i class="fa-solid fa-clock-rotate-left"></i><span>PYQs &amp; Papers</span></a>
+        <a href="materials-library.html" class="co-nav-item"><i class="fa-solid fa-folder-open"></i><span>Study Materials</span></a>
 
-    <section class="settings-layout">
-      <form id="iconSettingsForm">
-        <article class="section-card">
-          <div class="section-head"><i class="fa-solid fa-user-gear"></i><h3>Account Settings</h3></div>
-          <div class="settings-grid">
-            <div class="field"><label>Full Name</label><input id="settingsName" placeholder="Full name" /></div>
-            <div class="field"><label>Email Address</label><input id="settingsEmail" type="email" placeholder="Email address" readonly style="opacity: 0.8; cursor: not-allowed;" /></div>
-            <div class="field"><label>University / College</label><select id="settingsUniversitySelect"><option value="">Select University</option></select></div>
-            <div class="field"><label>Department &amp; Course</label><select id="settingsCourseSelect" disabled><option value="">Select Course</option></select></div>
-            <div class="field"><label>Academic Batch / Session</label><select id="settingsBatchSelect" disabled><option value="">Select Batch</option></select></div>
-            <div class="field"><label>Target Exam</label><input id="settingsTargetExam" placeholder="Optional (e.g., GATE, CAT)" /></div>
-            <div class="field"><label>Career Interest</label><input id="settingsCareerInterest" placeholder="Optional career goal" /></div>
-            <div class="field"><label>Preferred Study Mode</label><select id="settingsStudyMode"><option value="">Select Study Mode</option><option value="self-paced">Self-Paced</option><option value="structured">Structured Course</option><option value="mixed">Mixed Approach</option></select></div>
+        <div class="co-nav-group-label">Assessment &amp; Prep</div>
+        <a href="quizzes.html" class="co-nav-item"><i class="fa-solid fa-circle-question"></i><span>Practice Quizzes</span></a>
+        <a href="mock-tests.html" class="co-nav-item"><i class="fa-solid fa-chart-line"></i><span>Mock Tests</span></a>
+        <a href="study-roadmap.html" class="co-nav-item"><i class="fa-solid fa-route"></i><span>Career Roadmaps</span></a>
+        <a href="coding-challenges.html" class="co-nav-item"><i class="fa-solid fa-code"></i><span>Coding Arena</span></a>
+
+        <div class="co-nav-group-label">Community &amp; Tools</div>
+        <a href="ai-tools.html" class="co-nav-item"><i class="fa-solid fa-wand-magic-sparkles"></i><span>AI Study Studio</span></a>
+        <a href="college-feed.html" class="co-nav-item"><i class="fa-solid fa-comments"></i><span>Campus Feed</span></a>
+        <a href="live-study.html" class="co-nav-item"><i class="fa-solid fa-video"></i><span>Live Study Rooms</span></a>
+        <a href="leaderboards.html" class="co-nav-item"><i class="fa-solid fa-trophy"></i><span>Leaderboards</span></a>
+        <a href="certificates.html" class="co-nav-item"><i class="fa-solid fa-award"></i><span>Certificates</span></a>
+
+        <div class="co-nav-group-label">Account</div>
+        <a href="profile.html" class="co-nav-item"><i class="fa-solid fa-user"></i><span>My Profile</span></a>
+        <a href="notifications.html" class="co-nav-item"><i class="fa-solid fa-bell"></i><span>Notifications</span></a>
+        <a href="settings.html" class="co-nav-item active"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
+      </div>
+      <div class="co-sidebar-footer">
+        <a href="profile.html" class="co-user-card" id="sidebarUserProfile">
+          <div class="co-user-avatar" id="sidebarUserInitials">ST</div>
+          <div class="co-user-info">
+            <span class="co-user-name" id="sidebarUserName">Student</span>
+            <span class="co-user-role" id="sidebarUserRole">Scholar</span>
           </div>
-        </article>
+          <i class="fa-solid fa-ellipsis-vertical" style="color:var(--co-text-muted);font-size:0.85rem;"></i>
+        </a>
+      </div>
+    </aside>
 
-        <article class="section-card">
-          <div class="section-head"><i class="fa-solid fa-palette"></i><h3>Appearance Settings</h3></div>
-          <div class="settings-grid">
-            <div class="field"><label>Icon Size</label><select id="iconSize"><option>small</option><option selected>medium</option><option>large</option></select></div>
-            <div class="field"><label>Icon Style</label><select id="iconStyle"><option>fontawesome</option><option>material</option></select></div>
-            <div class="field"><label>Font Size</label><select id="fontSize"><option value="small">Small</option><option value="medium" selected>Medium</option><option value="large">Large</option></select></div>
-            <div class="field"><label>Theme Selection</label><select id="themeMode"><option value="light">Light</option><option value="dark">Dark</option><option value="system" selected>System</option></select></div>
-            <div class="field full">
-              <div class="switch-row">
-                <div class="meta"><strong>Dark Mode Compatibility</strong><span>Optimize icons and UI contrast for dark backgrounds</span></div>
-                <label class="switch"><input id="iconDarkSwitch" type="checkbox" /><span class="slider"></span></label>
-              </div>
-            </div>
+    <!-- MAIN CONTENT -->
+    <div class="co-student-main">
+      <header class="co-student-topbar">
+        <div class="co-topbar-left">
+          <button class="co-mobile-toggle" id="mobileNavToggle" aria-label="Open navigation menu">
+            <i class="fa-solid fa-bars-staggered"></i>
+          </button>
+          <div class="co-quick-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" placeholder="Search settings, preferences..." aria-label="Search settings" />
+            <kbd>Ctrl+K</kbd>
           </div>
-        </article>
-
-        <article class="section-card">
-          <div class="section-head"><i class="fa-solid fa-bell"></i><h3>Notification Settings</h3></div>
-          <div class="settings-grid">
-            <div class="switch-row"><div class="meta"><strong>Email Alerts</strong><span>General account and activity notifications</span></div><label class="switch"><input id="notifyEmail" type="checkbox" checked /><span class="slider"></span></label></div>
-            <div class="switch-row"><div class="meta"><strong>Mock Test Reminders</strong><span>Reminders before upcoming tests</span></div><label class="switch"><input id="notifyMock" type="checkbox" checked /><span class="slider"></span></label></div>
-            <div class="switch-row"><div class="meta"><strong>Certificate Alerts</strong><span>Get notified when certificates are issued</span></div><label class="switch"><input id="notifyCert" type="checkbox" checked /><span class="slider"></span></label></div>
-            <div class="switch-row"><div class="meta"><strong>Roadmap Updates</strong><span>Progress milestones and roadmap updates</span></div><label class="switch"><input id="notifyRoadmap" type="checkbox" checked /><span class="slider"></span></label></div>
-          </div>
-        </article>
-
-        <article class="section-card">
-          <div class="section-head"><i class="fa-solid fa-user-shield"></i><h3>Privacy Settings</h3></div>
-          <div class="settings-grid">
-            <div class="switch-row"><div class="meta"><strong>Profile Visibility</strong><span>Allow others to view your profile</span></div><label class="switch"><input id="privacyProfile" type="checkbox" checked /><span class="slider"></span></label></div>
-            <div class="switch-row"><div class="meta"><strong>Leaderboard Visibility</strong><span>Show your name in leaderboard rankings</span></div><label class="switch"><input id="privacyLeaderboard" type="checkbox" checked /><span class="slider"></span></label></div>
-            <div class="switch-row full"><div class="meta"><strong>Data Sharing Controls</strong><span>Allow anonymous usage analytics for product improvement</span></div><label class="switch"><input id="privacyDataSharing" type="checkbox" /><span class="slider"></span></label></div>
-          </div>
-        </article>
-
-        <article class="section-card">
-          <div class="section-head"><i class="fa-solid fa-lock"></i><h3>Security Settings</h3></div>
-          <div class="settings-grid">
-            <div class="field"><label>Current Password</label><input id="currentPassword" type="password" placeholder="Enter current password" /></div>
-            <div class="field"><label>New Password</label><input id="newPassword" type="password" placeholder="Enter new password" /></div>
-            <div class="switch-row full"><div class="meta"><strong>Two-Factor Authentication</strong><span>Add an extra verification step at login</span></div><label class="switch"><input id="security2FA" type="checkbox" /><span class="slider"></span></label></div>
-            <div class="field full">
-              <label>Active Sessions</label>
-              <ul id="activeSessionsList" class="sessions-list"><li>Loading active sessions...</li></ul>
-            </div>
-            <div class="actions full"><button id="refreshSessionsBtn" class="btn secondary" type="button">View Active Sessions</button><button id="logoutAllDevicesBtn" class="btn warn" type="button">Logout from All Devices</button></div>
-          </div>
-        </article>
-
-        <article class="section-card">
-          <div class="section-head"><i class="fa-solid fa-universal-access"></i><h3>Accessibility Settings</h3></div>
-          <div class="settings-grid">
-            <div class="field"><label>Icon Scaling</label><select id="iconScaling"><option value="0.9">90%</option><option value="1" selected>100%</option><option value="1.1">110%</option><option value="1.25">125%</option></select></div>
-            <div class="field"><label>Text Size Adjustment</label><select id="textSize"><option value="0.95">Small</option><option value="1" selected>Normal</option><option value="1.1">Large</option><option value="1.2">Extra Large</option></select></div>
-            <div class="switch-row full"><div class="meta"><strong>High Contrast Mode</strong><span>Increase readability with stronger text/background contrast</span></div><label class="switch"><input id="highContrast" type="checkbox" /><span class="slider"></span></label></div>
-          </div>
-        </article>
-
-        <div class="actions">
-          <button class="btn primary" type="submit">Save Settings</button>
-          <button id="resetSettingsBtn" class="btn secondary" type="button">Reset Settings</button>
         </div>
-        <p class="muted" id="settingsFeedback"></p>
-      </form>
-    </section>
-  </template>
+        <div class="co-topbar-right">
+          <button class="co-topbar-btn" id="themeToggleBtn" aria-label="Toggle theme">
+            <i class="fa-regular fa-sun" id="themeIcon"></i>
+          </button>
+          <a href="notifications.html" class="co-topbar-btn" aria-label="Notifications">
+            <i class="fa-regular fa-bell"></i>
+            <span class="co-badge-dot"></span>
+          </a>
+          <a href="profile.html" class="co-topbar-avatar" id="topbarUserAvatar">ST</a>
+        </div>
+      </header>
+
+      <main class="co-student-container">
+        <!-- BREADCRUMB & HEADER -->
+        <div class="co-breadcrumb">
+          <a href="dashboard.html"><i class="fa-solid fa-house"></i> Home</a>
+          <span>/</span>
+          <span class="active">Settings &amp; Preferences</span>
+        </div>
+
+        <div class="co-page-header">
+          <div class="co-page-header-title">
+            <h1>Settings &amp; Preferences</h1>
+            <p>Customize your student profile, academic curriculum, interface appearance, and security policies.</p>
+          </div>
+        </div>
+
+        <!-- SETTINGS FORM -->
+        <form id="iconSettingsForm">
+          <div class="settings-sections">
+            <!-- 1. ACADEMIC & PROFILE -->
+            <article class="settings-section-card">
+              <div class="settings-section-header">
+                <div class="settings-section-icon"><i class="fa-solid fa-user-graduate"></i></div>
+                <div class="settings-section-title">
+                  <h3>Academic &amp; Profile Setup</h3>
+                  <p>Update your institutional registration, department, batch, and target examinations.</p>
+                </div>
+              </div>
+              <div class="settings-grid">
+                <div class="settings-field">
+                  <label for="settingsName">Full Name</label>
+                  <input id="settingsName" placeholder="e.g., Alex Johnson" />
+                </div>
+                <div class="settings-field">
+                  <label for="settingsEmail">Email Address</label>
+                  <input id="settingsEmail" type="email" placeholder="student@university.edu" readonly style="opacity:0.75;cursor:not-allowed;" />
+                </div>
+                <div class="settings-field">
+                  <label for="settingsUniversitySelect">University / College</label>
+                  <select id="settingsUniversitySelect"><option value="">Select University</option></select>
+                </div>
+                <div class="settings-field">
+                  <label for="settingsCourseSelect">Department &amp; Course</label>
+                  <select id="settingsCourseSelect" disabled><option value="">Select Course</option></select>
+                </div>
+                <div class="settings-field">
+                  <label for="settingsBatchSelect">Academic Batch / Session</label>
+                  <select id="settingsBatchSelect" disabled><option value="">Select Batch</option></select>
+                </div>
+                <div class="settings-field">
+                  <label for="settingsTargetExam">Target Competitive Exam</label>
+                  <input id="settingsTargetExam" placeholder="e.g., GATE CS, CAT, Campus Placements" />
+                </div>
+                <div class="settings-field">
+                  <label for="settingsCareerInterest">Primary Career Goal</label>
+                  <input id="settingsCareerInterest" placeholder="e.g., Full Stack Engineer, Data Scientist" />
+                </div>
+                <div class="settings-field">
+                  <label for="settingsStudyMode">Preferred Study Mode</label>
+                  <select id="settingsStudyMode">
+                    <option value="">Select Study Mode</option>
+                    <option value="self-paced">Self-Paced Exploration</option>
+                    <option value="structured">Structured Semester Pace</option>
+                    <option value="mixed">Mixed Approach</option>
+                  </select>
+                </div>
+              </div>
+            </article>
+
+            <!-- 2. APPEARANCE & THEME -->
+            <article class="settings-section-card">
+              <div class="settings-section-header">
+                <div class="settings-section-icon" style="background:var(--co-gradient-indigo);"><i class="fa-solid fa-palette"></i></div>
+                <div class="settings-section-title">
+                  <h3>Appearance &amp; Theme</h3>
+                  <p>Fine-tune colors, dark mode contrast, font scaling, and icon density.</p>
+                </div>
+              </div>
+              <div class="settings-grid">
+                <div class="settings-field">
+                  <label for="themeMode">Interface Theme</label>
+                  <select id="themeMode">
+                    <option value="system" selected>System Default</option>
+                    <option value="dark">Dark Theme (Pro)</option>
+                    <option value="light">Light Theme</option>
+                  </select>
+                </div>
+                <div class="settings-field">
+                  <label for="fontSize">Base Typography Size</label>
+                  <select id="fontSize">
+                    <option value="small">Compact (14px)</option>
+                    <option value="medium" selected>Default (16px)</option>
+                    <option value="large">Spacious (18px)</option>
+                  </select>
+                </div>
+                <div class="settings-field">
+                  <label for="iconSize">Icon Size</label>
+                  <select id="iconSize">
+                    <option value="small">Small</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="large">Large</option>
+                  </select>
+                </div>
+                <div class="settings-field">
+                  <label for="iconStyle">Icon Library Style</label>
+                  <select id="iconStyle">
+                    <option value="fontawesome" selected>FontAwesome Modern</option>
+                    <option value="material">Material Symbols</option>
+                  </select>
+                </div>
+                <div class="settings-field full-width">
+                  <div class="switch-card">
+                    <div class="switch-meta">
+                      <strong>High Contrast Mode</strong>
+                      <span>Maximize contrast ratios for enhanced readability across low-light environments.</span>
+                    </div>
+                    <label class="switch">
+                      <input id="iconDarkSwitch" type="checkbox" />
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <!-- 3. NOTIFICATION PREFERENCES -->
+            <article class="settings-section-card">
+              <div class="settings-section-header">
+                <div class="settings-section-icon" style="background:linear-gradient(135deg, #06b6d4, #3b82f6);"><i class="fa-solid fa-bell"></i></div>
+                <div class="settings-section-title">
+                  <h3>Notification Preferences</h3>
+                  <p>Choose when and how you receive alerts, reminder pings, and milestone certificates.</p>
+                </div>
+              </div>
+              <div class="settings-grid">
+                <div class="switch-card">
+                  <div class="switch-meta">
+                    <strong>Email Digest &amp; Alerts</strong>
+                    <span>Weekly study reports and critical account alerts.</span>
+                  </div>
+                  <label class="switch"><input id="notifyEmail" type="checkbox" checked /><span class="slider"></span></label>
+                </div>
+                <div class="switch-card">
+                  <div class="switch-meta">
+                    <strong>Mock Test Reminders</strong>
+                    <span>Upcoming registered mock tests and timed challenges.</span>
+                  </div>
+                  <label class="switch"><input id="notifyMock" type="checkbox" checked /><span class="slider"></span></label>
+                </div>
+                <div class="switch-card">
+                  <div class="switch-meta">
+                    <strong>Certificate Issuances</strong>
+                    <span>Instant notification upon course or contest completion.</span>
+                  </div>
+                  <label class="switch"><input id="notifyCert" type="checkbox" checked /><span class="slider"></span></label>
+                </div>
+                <div class="switch-card">
+                  <div class="switch-meta">
+                    <strong>Roadmap Updates</strong>
+                    <span>Reminders for next milestones in your active tracks.</span>
+                  </div>
+                  <label class="switch"><input id="notifyRoadmap" type="checkbox" checked /><span class="slider"></span></label>
+                </div>
+              </div>
+            </article>
+
+            <!-- 4. PRIVACY & SOCIAL -->
+            <article class="settings-section-card">
+              <div class="settings-section-header">
+                <div class="settings-section-icon" style="background:var(--co-gradient-emerald);"><i class="fa-solid fa-user-shield"></i></div>
+                <div class="settings-section-title">
+                  <h3>Privacy &amp; Social Visibility</h3>
+                  <p>Control whether other students see your profile, badges, and contest standings.</p>
+                </div>
+              </div>
+              <div class="settings-grid">
+                <div class="switch-card">
+                  <div class="switch-meta">
+                    <strong>Public Profile</strong>
+                    <span>Allow peer students to view your verified achievements.</span>
+                  </div>
+                  <label class="switch"><input id="privacyProfile" type="checkbox" checked /><span class="slider"></span></label>
+                </div>
+                <div class="switch-card">
+                  <div class="switch-meta">
+                    <strong>Leaderboard Visibility</strong>
+                    <span>Display your username and XP rank on college rankings.</span>
+                  </div>
+                  <label class="switch"><input id="privacyLeaderboard" type="checkbox" checked /><span class="slider"></span></label>
+                </div>
+                <div class="switch-card full-width">
+                  <div class="switch-meta">
+                    <strong>Anonymous Usage Analytics</strong>
+                    <span>Help College OS improve personalized study recommendations.</span>
+                  </div>
+                  <label class="switch"><input id="privacyDataSharing" type="checkbox" /><span class="slider"></span></label>
+                </div>
+              </div>
+            </article>
+
+            <!-- 5. SECURITY & SESSIONS -->
+            <article class="settings-section-card">
+              <div class="settings-section-header">
+                <div class="settings-section-icon" style="background:linear-gradient(135deg, #ef4444, #f59e0b);"><i class="fa-solid fa-lock"></i></div>
+                <div class="settings-section-title">
+                  <h3>Security &amp; Active Sessions</h3>
+                  <p>Manage password changes, two-factor authentication, and signed-in devices.</p>
+                </div>
+              </div>
+              <div class="settings-grid">
+                <div class="settings-field">
+                  <label for="currentPassword">Current Password</label>
+                  <input id="currentPassword" type="password" placeholder="Enter current password" />
+                </div>
+                <div class="settings-field">
+                  <label for="newPassword">New Password</label>
+                  <input id="newPassword" type="password" placeholder="Enter new password (min. 8 chars)" />
+                </div>
+                <div class="switch-card full-width">
+                  <div class="switch-meta">
+                    <strong>Two-Factor Authentication (2FA)</strong>
+                    <span>Add extra verification security during account sign-in.</span>
+                  </div>
+                  <label class="switch"><input id="security2FA" type="checkbox" /><span class="slider"></span></label>
+                </div>
+                <div class="settings-field full-width">
+                  <label>Active Logged-in Sessions</label>
+                  <ul id="activeSessionsList" class="sessions-list">
+                    <li><i class="fa-solid fa-spinner fa-spin"></i> Loading active devices...</li>
+                  </ul>
+                </div>
+                <div class="settings-field full-width" style="display:flex;gap:0.75rem;flex-direction:row;flex-wrap:wrap;">
+                  <button id="refreshSessionsBtn" class="co-btn co-btn-secondary" type="button">
+                    <i class="fa-solid fa-arrows-rotate"></i> Refresh Sessions
+                  </button>
+                  <button id="logoutAllDevicesBtn" class="co-btn co-btn-ghost" type="button" style="color:#ef4444;">
+                    <i class="fa-solid fa-right-from-bracket"></i> Logout All Devices
+                  </button>
+                </div>
+              </div>
+            </article>
+
+            <!-- 6. ACCESSIBILITY -->
+            <article class="settings-section-card">
+              <div class="settings-section-header">
+                <div class="settings-section-icon" style="background:linear-gradient(135deg, #8b5cf6, #ec4899);"><i class="fa-solid fa-universal-access"></i></div>
+                <div class="settings-section-title">
+                  <h3>Accessibility &amp; Scaling</h3>
+                  <p>Adjust scale factors for comfortable viewing on high-resolution displays.</p>
+                </div>
+              </div>
+              <div class="settings-grid">
+                <div class="settings-field">
+                  <label for="iconScaling">UI Scaling</label>
+                  <select id="iconScaling">
+                    <option value="0.9">90% Compact</option>
+                    <option value="1" selected>100% Standard</option>
+                    <option value="1.1">110% Comfortable</option>
+                    <option value="1.25">125% Large</option>
+                  </select>
+                </div>
+                <div class="settings-field">
+                  <label for="textSize">Reading Text Size</label>
+                  <select id="textSize">
+                    <option value="0.95">Small</option>
+                    <option value="1" selected>Normal</option>
+                    <option value="1.1">Large</option>
+                    <option value="1.2">Extra Large</option>
+                  </select>
+                </div>
+                <div class="switch-card full-width">
+                  <div class="switch-meta">
+                    <strong>Enhanced Contrast Mode</strong>
+                    <span>Apply stronger background and text contrast across all modules.</span>
+                  </div>
+                  <label class="switch"><input id="highContrast" type="checkbox" /><span class="slider"></span></label>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <!-- FORM ACTIONS BAR -->
+          <div class="form-actions-bar">
+            <div>
+              <p id="settingsFeedback" style="margin:0;font-size:0.88rem;color:var(--co-primary);font-weight:600;"></p>
+            </div>
+            <div style="display:flex;gap:0.75rem;align-items:center;">
+              <button id="resetSettingsBtn" class="co-btn co-btn-secondary" type="button">Reset Changes</button>
+              <button class="co-btn co-btn-primary" type="submit"><i class="fa-solid fa-check"></i> Save Settings</button>
+            </div>
+          </div>
+        </form>
+      </main>
+    </div>
+  </div>
+
   <script src="assets/js/api.js"></script>
-  <script src="assets/js/app.js"></script>
+  <script src="assets/js/student-shell.js"></script>
   <script src="assets/js/settings.js"></script>
 </body>
 </html>
-
-
-

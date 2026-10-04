@@ -1,300 +1,377 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PYQs & Papers | College OS — Previous Year Question Papers</title>
+  <title>Previous Year Papers (PYQs) | College OS</title>
   <meta name="description" content="Download university previous year question papers (PYQs) with solved solutions for midterm and endterm semester examinations." />
-  <link rel="canonical" href="https://collegeo.in/pyqs" />
-  <meta property="og:type" content="website" />
-  <meta property="og:title" content="PYQs & Papers | College OS" />
-  <meta property="og:description" content="Download university previous year question papers (PYQs) with solutions." />
-  <meta property="og:url" content="https://collegeo.in/pyqs" />
-  <meta property="og:image" content="https://collegeo.in/assets/images/college-os-logo.png" />
-  <link rel="icon" type="image/png" sizes="512x512" href="/assets/images/college-os-logo.png" />
-  <link rel="manifest" href="/manifest.json" />
-
-  <link rel="stylesheet" href="assets/css/landing.css" />
+  <meta name="robots" content="noindex, nofollow" />
+  
+  <!-- Font & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  
+  <!-- Theme & Redesign CSS -->
   <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/student-dashboard-redesign.css" />
 </head>
+<body class="student-portal">
 
-<body>
-  <!-- GLOBAL HEADER -->
-  <header class="co-header" id="coHeader">
-    <nav class="co-nav">
-      <a href="/" class="co-brand">
-        <img src="assets/images/college-os-logo.png" alt="College OS Logo" />
-        <span>College OS</span>
-      </a>
+  <!-- Mobile Drawer Backdrop -->
+  <div class="co-student-backdrop" id="studentBackdrop"></div>
 
-      <div class="co-nav-menu">
-        <a href="/" class="co-nav-link">Home</a>
-        <a href="/features" class="co-nav-link">Features</a>
-        
-        <div class="co-nav-dropdown">
-          <span class="co-nav-link active">Study <i class="fa-solid fa-chevron-down" style="font-size:0.75rem;"></i></span>
-          <div class="co-dropdown-menu">
-            <a href="/notes" class="co-dropdown-item"><i class="fa-solid fa-book-bookmark"></i> Notes Library</a>
-            <a href="/pyqs" class="co-dropdown-item"><i class="fa-solid fa-file-lines"></i> Previous Year Papers</a>
-            <a href="/quizzes" class="co-dropdown-item"><i class="fa-solid fa-circle-question"></i> Practice Quizzes</a>
-            <a href="/mock-tests" class="co-dropdown-item"><i class="fa-solid fa-chart-line"></i> Mock Tests</a>
-          </div>
-        </div>
-
-        <a href="/ai-study" class="co-nav-link">AI Study</a>
-        <a href="/career-roadmaps" class="co-nav-link">Career</a>
-        <a href="/community" class="co-nav-link">Community</a>
-        <a href="/pricing" class="co-nav-link">Pricing</a>
-      </div>
-
-      <div class="co-nav-actions">
-        <a href="/login" class="co-btn co-btn-secondary co-btn-sm">Log In</a>
-        <a href="/signup" class="co-btn co-btn-primary co-btn-sm">Get Started</a>
-        <button class="co-nav-toggle" id="coNavToggle" aria-label="Toggle Menu">
-          <i class="fa-solid fa-bars"></i>
-        </button>
-      </div>
-    </nav>
-  </header>
-
-  <!-- MOBILE DRAWER -->
-  <div class="co-mobile-drawer" id="coMobileDrawer">
-    <div class="co-drawer-content">
-      <div class="co-drawer-header">
-        <a href="/" class="co-brand">
-          <img src="assets/images/college-os-logo.png" alt="College OS Logo" />
-          <span>College OS</span>
+  <div class="co-student-shell">
+    <!-- LEFT SIDEBAR -->
+    <aside class="co-student-sidebar" id="studentSidebar">
+      <div class="co-sidebar-brand">
+        <a href="dashboard.html" class="brand-logo">
+          <div class="brand-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+          <div class="brand-text">College <span>OS</span></div>
         </a>
-        <button class="co-drawer-close" id="coDrawerClose" aria-label="Close Menu">
+        <button class="co-sidebar-close" id="studentSidebarClose" aria-label="Close sidebar">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
-      <div class="co-drawer-links">
-        <a href="/" class="co-drawer-link"><i class="fa-solid fa-house"></i> Home</a>
-        <a href="/features" class="co-drawer-link"><i class="fa-solid fa-cubes"></i> Features</a>
-        <a href="/notes" class="co-drawer-link"><i class="fa-solid fa-book-bookmark"></i> Notes Library</a>
-        <a href="/pyqs" class="co-drawer-link active"><i class="fa-solid fa-file-lines"></i> PYQs & Papers</a>
-        <a href="/quizzes" class="co-drawer-link"><i class="fa-solid fa-circle-question"></i> Quizzes</a>
-        <a href="/mock-tests" class="co-drawer-link"><i class="fa-solid fa-chart-line"></i> Mock Tests</a>
-        <a href="/ai-study" class="co-drawer-link"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Study Tools</a>
-        <a href="/career-roadmaps" class="co-drawer-link"><i class="fa-solid fa-route"></i> Career Roadmaps</a>
-        <a href="/community" class="co-drawer-link"><i class="fa-solid fa-users"></i> Community</a>
-        <a href="/live-study" class="co-drawer-link"><i class="fa-solid fa-video"></i> Live Study Hub</a>
-        <a href="/certificates" class="co-drawer-link"><i class="fa-solid fa-award"></i> Certificates</a>
-        <a href="/pricing" class="co-drawer-link"><i class="fa-solid fa-tags"></i> Pricing</a>
-        <a href="/about-us" class="co-drawer-link"><i class="fa-solid fa-circle-info"></i> About Us</a>
-        <a href="/help-center" class="co-drawer-link"><i class="fa-solid fa-headset"></i> Help Center</a>
-        <a href="/contact-us" class="co-drawer-link"><i class="fa-solid fa-envelope"></i> Contact Us</a>
-      </div>
+      <nav class="co-sidebar-nav" aria-label="Student main navigation">
+        <div class="nav-section-title">LEARNING</div>
+        <a href="dashboard.html" class="nav-item" id="navDashboard">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="study.html" class="nav-item" id="navMyCourses">
+          <i class="fa-solid fa-book-open"></i>
+          <span>My Courses</span>
+        </a>
+        <a href="notes-library.html" class="nav-item" id="navNotes">
+          <i class="fa-solid fa-file-lines"></i>
+          <span>Notes Library</span>
+        </a>
+        <a href="pyqs.html" class="nav-item active" id="navPyqs">
+          <i class="fa-solid fa-file-circle-question"></i>
+          <span>Previous Papers</span>
+        </a>
+        <a href="quizzes.html" class="nav-item" id="navQuizzes">
+          <i class="fa-solid fa-clipboard-question"></i>
+          <span>Quizzes</span>
+        </a>
+        <a href="mock-tests.html" class="nav-item" id="navMockTests">
+          <i class="fa-solid fa-flask"></i>
+          <span>Mock Tests</span>
+        </a>
 
-      <div style="margin-top:auto; display:grid; gap:10px;">
-        <a href="/login" class="co-btn co-btn-secondary" style="width:100%;">Log In</a>
-        <a href="/signup" class="co-btn co-btn-primary" style="width:100%;">Start Free</a>
-      </div>
-    </div>
-  </div>
+        <div class="nav-section-title">CAREER &amp; TOOLS</div>
+        <a href="study-roadmap.html" class="nav-item" id="navRoadmaps">
+          <i class="fa-solid fa-map-location-dot"></i>
+          <span>Career Roadmaps</span>
+        </a>
+        <a href="coding-challenges.html" class="nav-item" id="navCoding">
+          <i class="fa-solid fa-code"></i>
+          <span>Coding Arena</span>
+        </a>
+        <a href="ai-tools.html" class="nav-item" id="navAiTools">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span>AI Study Tools</span>
+        </a>
+        <a href="leaderboards.html" class="nav-item" id="navLeaderboards">
+          <i class="fa-solid fa-trophy"></i>
+          <span>Leaderboard</span>
+        </a>
 
-  <main>
-    <!-- PAGE HERO -->
-    <section class="co-page-hero">
-      <div class="co-container">
-        <div class="co-page-hero-inner">
-          <div class="co-kicker"><i class="fa-solid fa-file-lines"></i> Exam Archive</div>
-          <h1>Previous Year <span>Question Papers</span></h1>
-          <p>
-            Review genuine university question papers from 2021 to 2025. Spot recurring questions and analyze exam trends.
-          </p>
-        </div>
+        <div class="nav-section-title">COMMUNITY &amp; LIVE</div>
+        <a href="college-feed.html" class="nav-item" id="navCommunity">
+          <i class="fa-solid fa-newspaper"></i>
+          <span>Campus Feed</span>
+        </a>
+        <a href="live-study.html" class="nav-item" id="navLiveStudy">
+          <i class="fa-solid fa-video"></i>
+          <span>Live Study Rooms</span>
+        </a>
 
-        <!-- FILTER TOOLBAR -->
-        <div class="co-filter-bar">
-          <div class="co-search-box">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" id="pyqSearchInput" class="co-search-input" placeholder="Search by paper name, subject, or year..." />
+        <div class="nav-section-title">ACHIEVEMENTS &amp; ACCOUNT</div>
+        <a href="certificates.html" class="nav-item" id="navCertificates">
+          <i class="fa-solid fa-award"></i>
+          <span>Certificates</span>
+        </a>
+        <a href="academic-onboarding.html" class="nav-item" id="navAcademicProfile">
+          <i class="fa-solid fa-building-columns"></i>
+          <span>Academic Profile</span>
+        </a>
+        <a href="profile.html" class="nav-item" id="navProfile">
+          <i class="fa-solid fa-user-gear"></i>
+          <span>Account Settings</span>
+        </a>
+      </nav>
+
+      <!-- Sidebar Mini Profile -->
+      <div class="co-sidebar-footer">
+        <div class="sidebar-user-pill">
+          <div class="user-avatar" id="sidebarStudentAvatar">ST</div>
+          <div class="user-info">
+            <div class="user-name" id="sidebarStudentName">Student</div>
+            <div class="user-meta" id="sidebarStudentSub">Learner</div>
           </div>
-
-          <select id="pyqBranchSelect" class="co-filter-select">
-            <option value="">All Branches</option>
-            <option value="CSE">Computer Science (CSE)</option>
-            <option value="ECE">Electronics (ECE)</option>
-            <option value="MECH">Mechanical (MECH)</option>
-            <option value="CIVIL">Civil</option>
-            <option value="BCOM">B.Com</option>
-          </select>
-
-          <select id="pyqSemesterSelect" class="co-filter-select">
-            <option value="">All Semesters</option>
-            <option value="1">Semester 1</option>
-            <option value="2">Semester 2</option>
-            <option value="3">Semester 3</option>
-            <option value="4">Semester 4</option>
-            <option value="5">Semester 5</option>
-            <option value="6">Semester 6</option>
-          </select>
-
-          <select id="pyqYearSelect" class="co-filter-select">
-            <option value="">All Exam Years</option>
-            <option value="2025">2025 Papers</option>
-            <option value="2024">2024 Papers</option>
-            <option value="2023">2023 Papers</option>
-            <option value="2022">2022 Papers</option>
-          </select>
         </div>
       </div>
-    </section>
+    </aside>
 
-    <!-- PYQ GRID -->
-    <section class="co-section" style="padding-top:0;">
-      <div class="co-container">
-        <div id="pyqsContainer" class="co-grid-3">
+    <!-- MAIN CONTAINER -->
+    <div class="co-student-main">
+      <!-- TOPBAR -->
+      <header class="co-student-topbar">
+        <div class="topbar-left">
+          <button class="co-mobile-toggle" id="studentSidebarToggle" aria-label="Open sidebar">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="topbar-search">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="search" id="studentGlobalSearch" placeholder="Search notes, subjects, PYQs, roadmaps... (Ctrl+K)" aria-label="Global search" />
+            <span class="search-kbd">⌘K</span>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <!-- Theme Toggle -->
+          <button class="topbar-action-btn" id="studentThemeToggle" aria-label="Toggle dark/light mode" title="Toggle theme">
+            <i class="fa-solid fa-moon"></i>
+          </button>
+
+          <!-- Notification Bell -->
+          <a href="notifications.html" class="topbar-action-btn" aria-label="Notifications" title="Notifications">
+            <i class="fa-solid fa-bell"></i>
+          </a>
+
+          <!-- Profile Menu Toggle -->
+          <div class="topbar-profile" id="studentProfileMenuToggle" role="button" tabindex="0" aria-label="User profile menu">
+            <div class="profile-avatar" id="studentProfileAvatar">ST</div>
+            <div class="profile-meta">
+              <span class="profile-name" id="studentProfileName">Student</span>
+              <span class="profile-role" id="studentProfileRole">Learner</span>
+            </div>
+            <i class="fa-solid fa-chevron-down" style="font-size:0.75rem; color:var(--co-stu-text-light);"></i>
+
+            <!-- Dropdown Menu -->
+            <div class="profile-dropdown" id="studentProfileDropdown">
+              <div class="dropdown-header">
+                <div class="user-name" id="dropdownStudentName">Student</div>
+                <div class="user-email" id="dropdownStudentEmail">student@collegeo.in</div>
+              </div>
+              <div class="dropdown-links">
+                <a href="profile.html"><i class="fa-solid fa-user"></i> My Profile</a>
+                <a href="academic-onboarding.html"><i class="fa-solid fa-building-columns"></i> Academic Setup</a>
+                <a href="certificates.html"><i class="fa-solid fa-award"></i> My Certificates</a>
+                <a href="settings.html"><i class="fa-solid fa-gear"></i> Settings</a>
+              </div>
+              <div class="dropdown-footer">
+                <a href="/login" id="studentLogoutBtn" class="logout-link"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- PAGE CONTENT -->
+      <main class="co-student-container">
+        <!-- Breadcrumbs -->
+        <nav class="co-breadcrumb" aria-label="Breadcrumb">
+          <a href="dashboard.html"><i class="fa-solid fa-house"></i> Home</a>
+          <span class="separator">›</span>
+          <span class="current">Previous Year Papers</span>
+        </nav>
+
+        <!-- Page Header -->
+        <div class="co-page-header">
+          <div>
+            <h1 class="co-page-header-title">Previous Year Question Papers (PYQs)</h1>
+            <p class="co-page-header-desc">Review university question papers from 2021 to 2025. Spot recurring exam patterns, mark weightages, and practice with authentic midterm and endterm papers.</p>
+          </div>
+          <div class="co-page-header-actions">
+            <a href="mock-tests.html" class="btn-stu secondary"><i class="fa-solid fa-flask"></i> Practice Mock Tests</a>
+            <a href="notes-library.html" class="btn-stu primary"><i class="fa-solid fa-file-lines"></i> Open Notes Library</a>
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="co-filter-bar">
+          <div class="co-filter-group">
+            <div class="co-search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="search" id="pyqSearchInput" class="co-search-input" placeholder="Search by paper name, subject, or year..." />
+            </div>
+
+            <select id="pyqBranchSelect" class="co-filter-select">
+              <option value="">All Branches</option>
+              <option value="CSE">Computer Science (CSE)</option>
+              <option value="ECE">Electronics (ECE)</option>
+              <option value="MECH">Mechanical (MECH)</option>
+              <option value="CIVIL">Civil Engineering</option>
+              <option value="BCOM">B.Com / Management</option>
+            </select>
+
+            <select id="pyqSemesterSelect" class="co-filter-select">
+              <option value="">All Semesters</option>
+              <option value="1">Semester 1</option>
+              <option value="2">Semester 2</option>
+              <option value="3">Semester 3</option>
+              <option value="4">Semester 4</option>
+              <option value="5">Semester 5</option>
+              <option value="6">Semester 6</option>
+              <option value="7">Semester 7</option>
+              <option value="8">Semester 8</option>
+            </select>
+
+            <select id="pyqYearSelect" class="co-filter-select">
+              <option value="">All Exam Years</option>
+              <option value="2025">2025 Papers</option>
+              <option value="2024">2024 Papers</option>
+              <option value="2023">2023 Papers</option>
+              <option value="2022">2022 Papers</option>
+              <option value="2021">2021 Papers</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- PYQs Grid -->
+        <div id="pyqsContainer" class="co-card-grid">
           <article class="co-card" data-branch="CSE" data-semester="4" data-year="2024">
-            <div class="co-card-badge co-badge-cyan">2024 End-Term</div>
-            <div class="co-card-icon co-icon-cyan"><i class="fa-solid fa-file-pdf"></i></div>
-            <h3 class="co-card-title">Design & Analysis of Algorithms</h3>
-            <p class="co-card-desc">Endterm paper with questions on Master's Theorem, Greedy MST, Dynamic Programming (0/1 Knapsack), and NP-Completeness.</p>
-            <div class="co-card-meta">
-              <span class="co-meta-tag"><i class="fa-solid fa-calendar"></i> May 2024 • End-Term</span>
-              <a href="/login" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-download"></i> View Paper</a>
+            <div class="co-card-top">
+              <div class="co-card-icon-wrap"><i class="fa-solid fa-file-pdf"></i></div>
+              <span class="co-badge primary">2024 End-Term</span>
+            </div>
+            <div>
+              <h3 class="co-card-title">Design &amp; Analysis of Algorithms</h3>
+              <p class="co-card-desc">Endterm examination covering Master's Theorem, Greedy MST algorithms, 0/1 Knapsack Dynamic Programming, and NP-Completeness proofs.</p>
+              <div class="co-card-meta" style="margin-top:8px;">
+                <span class="co-card-meta-item"><i class="fa-solid fa-graduation-cap"></i> CSE • Sem 4</span>
+                <span class="co-card-meta-item"><i class="fa-solid fa-calendar"></i> May 2024</span>
+              </div>
+            </div>
+            <div class="co-card-bottom">
+              <span class="co-badge success">Verified Paper</span>
+              <a href="notes-library.html?search=algorithms" class="btn-stu secondary sm"><i class="fa-solid fa-arrow-up-right-from-square"></i> View Paper</a>
             </div>
           </article>
 
           <article class="co-card" data-branch="CSE" data-semester="3" data-year="2024">
-            <div class="co-card-badge co-badge-blue">2024 Mid-Term</div>
-            <div class="co-card-icon co-icon-blue"><i class="fa-solid fa-file-pdf"></i></div>
-            <h3 class="co-card-title">Object Oriented Programming (Java)</h3>
-            <p class="co-card-desc">Midterm exam covering Polymorphism, Inheritance, Exception handling, Multi-threading synchronization, and Collections.</p>
-            <div class="co-card-meta">
-              <span class="co-meta-tag"><i class="fa-solid fa-calendar"></i> Nov 2024 • Mid-Term</span>
-              <a href="/login" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-download"></i> View Paper</a>
+            <div class="co-card-top">
+              <div class="co-card-icon-wrap" style="background:rgba(14,165,233,0.1); color:#0ea5e9;"><i class="fa-solid fa-file-pdf"></i></div>
+              <span class="co-badge success">2024 Mid-Term</span>
+            </div>
+            <div>
+              <h3 class="co-card-title">Object Oriented Programming (Java)</h3>
+              <p class="co-card-desc">Midterm paper covering Polymorphism, Inheritance, Exception handling, Multi-threading synchronization, and Java Collections Framework.</p>
+              <div class="co-card-meta" style="margin-top:8px;">
+                <span class="co-card-meta-item"><i class="fa-solid fa-graduation-cap"></i> CSE • Sem 3</span>
+                <span class="co-card-meta-item"><i class="fa-solid fa-calendar"></i> Nov 2024</span>
+              </div>
+            </div>
+            <div class="co-card-bottom">
+              <span class="co-badge success">Verified Paper</span>
+              <a href="notes-library.html?search=java" class="btn-stu secondary sm"><i class="fa-solid fa-arrow-up-right-from-square"></i> View Paper</a>
             </div>
           </article>
 
           <article class="co-card" data-branch="ECE" data-semester="4" data-year="2023">
-            <div class="co-card-badge co-badge-purple">2023 End-Term</div>
-            <div class="co-card-icon co-icon-purple"><i class="fa-solid fa-file-pdf"></i></div>
-            <h3 class="co-card-title">Analog & Digital Communication</h3>
-            <p class="co-card-desc">Comprehensive question set on AM/FM modulation indices, Noise figure calculations, PCM, and QPSK constellation diagrams.</p>
-            <div class="co-card-meta">
-              <span class="co-meta-tag"><i class="fa-solid fa-calendar"></i> May 2023 • End-Term</span>
-              <a href="/login" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-download"></i> View Paper</a>
+            <div class="co-card-top">
+              <div class="co-card-icon-wrap" style="background:rgba(139,92,246,0.1); color:#8b5cf6;"><i class="fa-solid fa-file-pdf"></i></div>
+              <span class="co-badge warning">2023 End-Term</span>
+            </div>
+            <div>
+              <h3 class="co-card-title">Analog &amp; Digital Communication</h3>
+              <p class="co-card-desc">Comprehensive question set on AM/FM modulation indices, Noise figure calculations, Pulse Code Modulation (PCM), and QPSK constellation diagrams.</p>
+              <div class="co-card-meta" style="margin-top:8px;">
+                <span class="co-card-meta-item"><i class="fa-solid fa-graduation-cap"></i> ECE • Sem 4</span>
+                <span class="co-card-meta-item"><i class="fa-solid fa-calendar"></i> May 2023</span>
+              </div>
+            </div>
+            <div class="co-card-bottom">
+              <span class="co-badge success">Verified Paper</span>
+              <a href="notes-library.html?search=communication" class="btn-stu secondary sm"><i class="fa-solid fa-arrow-up-right-from-square"></i> View Paper</a>
             </div>
           </article>
 
           <article class="co-card" data-branch="CSE" data-semester="5" data-year="2024">
-            <div class="co-card-badge co-badge-green">2024 End-Term</div>
-            <div class="co-card-icon co-icon-green"><i class="fa-solid fa-file-pdf"></i></div>
-            <h3 class="co-card-title">Software Engineering & Agile</h3>
-            <p class="co-card-desc">SDLC models, Agile Scrum sprints, Use case diagrams, Cyclomatic complexity calculations, and Integration testing.</p>
-            <div class="co-card-meta">
-              <span class="co-meta-tag"><i class="fa-solid fa-calendar"></i> Dec 2024 • End-Term</span>
-              <a href="/login" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-download"></i> View Paper</a>
+            <div class="co-card-top">
+              <div class="co-card-icon-wrap"><i class="fa-solid fa-file-pdf"></i></div>
+              <span class="co-badge primary">2024 End-Term</span>
+            </div>
+            <div>
+              <h3 class="co-card-title">Software Engineering &amp; Agile</h3>
+              <p class="co-card-desc">SDLC methodologies, Agile Scrum sprints, Use case modeling, Cyclomatic complexity calculations, and Unit/Integration testing strategies.</p>
+              <div class="co-card-meta" style="margin-top:8px;">
+                <span class="co-card-meta-item"><i class="fa-solid fa-graduation-cap"></i> CSE • Sem 5</span>
+                <span class="co-card-meta-item"><i class="fa-solid fa-calendar"></i> Dec 2024</span>
+              </div>
+            </div>
+            <div class="co-card-bottom">
+              <span class="co-badge success">Verified Paper</span>
+              <a href="notes-library.html?search=software" class="btn-stu secondary sm"><i class="fa-solid fa-arrow-up-right-from-square"></i> View Paper</a>
             </div>
           </article>
 
           <article class="co-card" data-branch="CSE" data-semester="6" data-year="2023">
-            <div class="co-card-badge co-badge-amber">2023 End-Term</div>
-            <div class="co-card-icon co-icon-amber"><i class="fa-solid fa-file-pdf"></i></div>
-            <h3 class="co-card-title">Compiler Design</h3>
-            <p class="co-card-desc">Lexical analysis, LL(1) / LR(1) parsing tables, Syntax directed translation, Intermediate 3-address code, and Register allocation.</p>
-            <div class="co-card-meta">
-              <span class="co-meta-tag"><i class="fa-solid fa-calendar"></i> June 2023 • End-Term</span>
-              <a href="/login" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-download"></i> View Paper</a>
+            <div class="co-card-top">
+              <div class="co-card-icon-wrap" style="background:rgba(245,158,11,0.1); color:#f59e0b;"><i class="fa-solid fa-file-pdf"></i></div>
+              <span class="co-badge warning">2023 End-Term</span>
+            </div>
+            <div>
+              <h3 class="co-card-title">Compiler Design</h3>
+              <p class="co-card-desc">Lexical analysis, LL(1) / LR(1) parsing tables, Syntax directed translation, Intermediate 3-address code generation, and Register allocation.</p>
+              <div class="co-card-meta" style="margin-top:8px;">
+                <span class="co-card-meta-item"><i class="fa-solid fa-graduation-cap"></i> CSE • Sem 6</span>
+                <span class="co-card-meta-item"><i class="fa-solid fa-calendar"></i> June 2023</span>
+              </div>
+            </div>
+            <div class="co-card-bottom">
+              <span class="co-badge success">Verified Paper</span>
+              <a href="notes-library.html?search=compiler" class="btn-stu secondary sm"><i class="fa-solid fa-arrow-up-right-from-square"></i> View Paper</a>
             </div>
           </article>
 
           <article class="co-card" data-branch="BCOM" data-semester="3" data-year="2024">
-            <div class="co-card-badge co-badge-blue">2024 End-Term</div>
-            <div class="co-card-icon co-icon-blue"><i class="fa-solid fa-file-pdf"></i></div>
-            <h3 class="co-card-title">Direct Taxation & GST Law</h3>
-            <p class="co-card-desc">Income tax calculation under salary heads, House property deductions, Capital gains computations, and GST input credit.</p>
-            <div class="co-card-meta">
-              <span class="co-meta-tag"><i class="fa-solid fa-calendar"></i> Nov 2024 • End-Term</span>
-              <a href="/login" class="co-btn co-btn-secondary co-btn-sm" style="margin-left:auto;"><i class="fa-solid fa-download"></i> View Paper</a>
+            <div class="co-card-top">
+              <div class="co-card-icon-wrap" style="background:rgba(16,185,129,0.1); color:#10b981;"><i class="fa-solid fa-file-pdf"></i></div>
+              <span class="co-badge success">2024 End-Term</span>
+            </div>
+            <div>
+              <h3 class="co-card-title">Direct Taxation &amp; GST Law</h3>
+              <p class="co-card-desc">Income tax calculation under salary heads, House property deductions, Capital gains computations, and GST input tax credit mechanism.</p>
+              <div class="co-card-meta" style="margin-top:8px;">
+                <span class="co-card-meta-item"><i class="fa-solid fa-graduation-cap"></i> B.Com • Sem 3</span>
+                <span class="co-card-meta-item"><i class="fa-solid fa-calendar"></i> Nov 2024</span>
+              </div>
+            </div>
+            <div class="co-card-bottom">
+              <span class="co-badge success">Verified Paper</span>
+              <a href="notes-library.html?search=taxation" class="btn-stu secondary sm"><i class="fa-solid fa-arrow-up-right-from-square"></i> View Paper</a>
             </div>
           </article>
         </div>
-      </div>
-    </section>
-  </main>
 
-  <!-- GLOBAL FOOTER -->
-  <footer class="co-footer">
-    <div class="co-container">
-      <div class="co-footer-grid">
-        <div class="co-footer-brand">
-          <h3>
-            <img src="assets/images/college-os-logo.png" alt="College OS" style="width:36px; height:36px; border-radius:10px;" />
-            College OS
-          </h3>
-          <p>Your Academic OS for College & Career. Learn smarter, practice better, and build your future.</p>
+        <!-- Empty Filter Results State -->
+        <div id="noPyqState" class="co-empty-state" style="display:none;">
+          <i class="fa-solid fa-file-circle-question empty-icon"></i>
+          <h3>No Papers Match Your Filters</h3>
+          <p>Try resetting the branch, semester, or search term to discover available previous exam papers.</p>
+          <button id="resetPyqFilterBtn" class="btn-stu primary sm">Reset All Filters</button>
         </div>
-
-        <div class="co-footer-col">
-          <h4>Product</h4>
-          <ul class="co-footer-links">
-            <li><a href="/features">Features Overview</a></li>
-            <li><a href="/pricing">Pricing & Plans</a></li>
-            <li><a href="/ai-study">AI Study Assistant</a></li>
-            <li><a href="/career-roadmaps">Career Roadmaps</a></li>
-            <li><a href="/live-study">Live Study Hub</a></li>
-            <li><a href="/certificates">Certificates</a></li>
-          </ul>
-        </div>
-
-        <div class="co-footer-col">
-          <h4>Study Resources</h4>
-          <ul class="co-footer-links">
-            <li><a href="/notes">Notes Library</a></li>
-            <li><a href="/pyqs">Previous Year Papers</a></li>
-            <li><a href="/quizzes">Practice Quizzes</a></li>
-            <li><a href="/mock-tests">Mock Tests</a></li>
-            <li><a href="/coding-challenges">Coding Arena</a></li>
-          </ul>
-        </div>
-
-        <div class="co-footer-col">
-          <h4>Company</h4>
-          <ul class="co-footer-links">
-            <li><a href="/about-us">About Us</a></li>
-            <li><a href="/contact-us">Contact Us</a></li>
-            <li><a href="/privacy">Privacy Policy</a></li>
-            <li><a href="/terms">Terms of Service</a></li>
-          </ul>
-        </div>
-
-        <div class="co-footer-col">
-          <h4>Support</h4>
-          <ul class="co-footer-links">
-            <li><a href="/help-center">Help Center</a></li>
-            <li><a href="/community">Community Hub</a></li>
-            <li><a href="/contribute">Contribute Notes</a></li>
-            <li><a href="/feedback">Send Feedback</a></li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="co-footer-bottom">
-        <div>&copy; 2026 College OS. All rights reserved.</div>
-        <div class="co-footer-legal">
-          <a href="/privacy">Privacy Policy</a>
-          <a href="/terms">Terms of Service</a>
-          <a href="/about-us">About Us</a>
-          <a href="/contact-us">Contact</a>
-        </div>
-      </div>
+      </main>
     </div>
-  </footer>
+  </div>
 
-  <script src="assets/js/public-nav.js"></script>
+  <!-- Scripts -->
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/student-shell.js"></script>
   <script>
-    // Live Search and Filter logic for PYQs
     const searchInput = document.getElementById('pyqSearchInput');
     const branchSelect = document.getElementById('pyqBranchSelect');
     const semesterSelect = document.getElementById('pyqSemesterSelect');
     const yearSelect = document.getElementById('pyqYearSelect');
     const cards = document.querySelectorAll('#pyqsContainer .co-card');
+    const noState = document.getElementById('noPyqState');
+    const resetBtn = document.getElementById('resetPyqFilterBtn');
 
     function filterPYQs() {
       const q = (searchInput?.value || '').toLowerCase().trim();
@@ -302,6 +379,7 @@
       const sem = (semesterSelect?.value || '');
       const year = (yearSelect?.value || '');
 
+      let visibleCount = 0;
       cards.forEach(card => {
         const text = card.textContent.toLowerCase();
         const cardBranch = (card.dataset.branch || '').toUpperCase();
@@ -313,14 +391,31 @@
         const matchSem = !sem || cardSem === sem;
         const matchYear = !year || cardYear === year;
 
-        card.style.display = (matchQuery && matchBranch && matchSem && matchYear) ? '' : 'none';
+        if (matchQuery && matchBranch && matchSem && matchYear) {
+          card.style.display = '';
+          visibleCount++;
+        } else {
+          card.style.display = 'none';
+        }
       });
+
+      if (noState) {
+        noState.style.display = visibleCount === 0 ? 'flex' : 'none';
+      }
     }
 
     searchInput?.addEventListener('input', filterPYQs);
     branchSelect?.addEventListener('change', filterPYQs);
     semesterSelect?.addEventListener('change', filterPYQs);
     yearSelect?.addEventListener('change', filterPYQs);
+
+    resetBtn?.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      if (branchSelect) branchSelect.value = '';
+      if (semesterSelect) semesterSelect.value = '';
+      if (yearSelect) yearSelect.value = '';
+      filterPYQs();
+    });
   </script>
 </body>
 </html>

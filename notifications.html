@@ -3,68 +3,272 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Notification Center - College OS</title>
+  <title>Notification Center — College OS</title>
+  <meta name="description" content="Track your academic updates, study milestones, mock test results, and certificate issuances." />
+  <link rel="icon" type="image/png" href="assets/images/college-os-logo.png" />
   <script src="assets/js/theme-init.js"></script>
-  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" />
   <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <link rel="stylesheet" href="assets/css/student-dashboard-redesign.css" />
   <style>
-    .notif-wrap { display:grid; gap:1rem; }
-    .notif-card { background:#fff; border:1px solid #dce5f0; border-radius:14px; box-shadow:0 8px 22px rgba(35,56,83,.09); padding:1rem; }
-    .notif-head { display:flex; justify-content:space-between; align-items:center; gap:.7rem; flex-wrap:wrap; }
-    .tabs { display:flex; flex-wrap:wrap; gap:.45rem; }
-    .tab { border:1px solid #d2deeb; background:#fff; border-radius:999px; padding:.36rem .72rem; cursor:pointer; font-size:.82rem; }
-    .tab.active { background:#dff4ef; border-color:#88d1c2; color:#0c5a4f; font-weight:700; }
-    .group-title { margin:.5rem 0 .4rem; color:#5f6f82; font-size:.82rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
-    .notif-list { display:grid; gap:.58rem; }
-    .notif-item { border:1px solid #dce5f0; border-radius:12px; padding:.7rem; background:#fff; transition:.2s ease; }
-    .notif-item:hover { transform:translateY(-1px); box-shadow:0 8px 22px rgba(35,56,83,.09); border-color:#bfd3ea; }
-    .notif-item.unread { border-left:4px solid #0f7b6c; background:#f8fffd; }
-    .notif-row { display:flex; justify-content:space-between; gap:.6rem; }
-    .notif-main { display:flex; gap:.56rem; flex:1; }
-    .nicon { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; font-size:.9rem; }
-    .meta { font-size:.76rem; color:#64788f; display:flex; gap:.35rem; flex-wrap:wrap; }
-    .pill { border-radius:999px; background:#edf3fb; color:#2e4b6b; padding:.12rem .52rem; font-size:.7rem; }
-    .actions { display:flex; gap:.35rem; flex-wrap:wrap; margin-top:.45rem; }
-    .btn-mini { border:none; border-radius:8px; cursor:pointer; padding:.3rem .54rem; font-size:.74rem; }
-    .btn-mini.secondary { background:#e9f0f8; color:#264765; }
-    .btn-mini.warn { background:#fff0dd; color:#7a4700; }
-    .btn-mini.danger { background:#ffe7e7; color:#8e2222; }
-    .empty-state { border:1px dashed #c9d9ea; border-radius:12px; background:#f8fbff; text-align:center; color:#536b86; padding:1.2rem .8rem; }
+    .notif-feed-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .group-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--co-text-muted);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .group-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--co-border);
+    }
+    .notif-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .notif-item {
+      background: var(--co-surface);
+      border: 1px solid var(--co-border);
+      border-radius: var(--co-radius-md);
+      padding: 1.15rem;
+      transition: all var(--co-transition-fast);
+      position: relative;
+    }
+    .notif-item:hover {
+      border-color: var(--co-border-hover);
+      box-shadow: var(--co-shadow-sm);
+      transform: translateY(-1px);
+    }
+    .notif-item.unread {
+      border-left: 3px solid var(--co-primary);
+      background: linear-gradient(90deg, rgba(99, 102, 241, 0.04) 0%, var(--co-surface) 100%);
+    }
+    .notif-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .notif-main {
+      display: flex;
+      gap: 1rem;
+      flex: 1;
+    }
+    .nicon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      font-size: 1.05rem;
+      flex-shrink: 0;
+    }
+    .notif-item h4 {
+      margin: 0 0 0.25rem 0;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--co-text-primary);
+    }
+    .notif-item p {
+      margin: 0 0 0.6rem 0;
+      font-size: 0.875rem;
+      color: var(--co-text-secondary);
+      line-height: 1.5;
+    }
+    .meta {
+      font-size: 0.78rem;
+      color: var(--co-text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+    .pill {
+      border-radius: 999px;
+      background: var(--co-surface-alt);
+      color: var(--co-text-secondary);
+      border: 1px solid var(--co-border);
+      padding: 0.15rem 0.55rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.75rem;
+    }
+    .btn-mini {
+      border: 1px solid var(--co-border);
+      background: var(--co-surface-alt);
+      color: var(--co-text-secondary);
+      border-radius: var(--co-radius-sm);
+      cursor: pointer;
+      padding: 0.35rem 0.65rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      text-decoration: none;
+      transition: all var(--co-transition-fast);
+    }
+    .btn-mini:hover {
+      background: var(--co-surface-hover);
+      color: var(--co-text-primary);
+    }
+    .btn-mini.secondary {
+      background: rgba(99, 102, 241, 0.08);
+      border-color: rgba(99, 102, 241, 0.2);
+      color: var(--co-primary);
+    }
+    .btn-mini.secondary:hover {
+      background: rgba(99, 102, 241, 0.15);
+    }
+    .btn-mini.warn {
+      background: rgba(245, 158, 11, 0.08);
+      border-color: rgba(245, 158, 11, 0.2);
+      color: var(--co-accent-amber);
+    }
+    .btn-mini.danger {
+      background: rgba(239, 68, 68, 0.08);
+      border-color: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+    .btn-mini.danger:hover {
+      background: rgba(239, 68, 68, 0.15);
+    }
   </style>
 </head>
 <body>
-  <div class="app-shell" data-shell></div>
-  <template data-page>
-    <section class="hero">
-      <h1 data-page-title>Notification Center</h1>
-      <p>Your learning activity feed: study updates, roadmap progress, notes, tests, certificates, and system alerts.</p>
-    </section>
+  <div class="co-student-backdrop" id="studentBackdrop"></div>
+  <div class="co-student-shell">
+    <!-- STUDENT SIDEBAR -->
+    <aside class="co-student-sidebar" id="studentSidebar">
+      <div class="co-sidebar-header">
+        <a href="dashboard.html" class="co-brand-logo">
+          <div class="co-brand-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+          <div class="co-brand-text">College <span>OS</span></div>
+        </a>
+      </div>
+      <div class="co-sidebar-nav">
+        <div class="co-nav-group-label">Core Learning</div>
+        <a href="dashboard.html" class="co-nav-item"><i class="fa-solid fa-house"></i><span>Dashboard</span></a>
+        <a href="study.html" class="co-nav-item"><i class="fa-solid fa-book-open"></i><span>My Courses</span></a>
+        <a href="notes-library.html" class="co-nav-item"><i class="fa-solid fa-file-lines"></i><span>Notes Library</span></a>
+        <a href="pyqs.html" class="co-nav-item"><i class="fa-solid fa-clock-rotate-left"></i><span>PYQs &amp; Papers</span></a>
+        <a href="materials-library.html" class="co-nav-item"><i class="fa-solid fa-folder-open"></i><span>Study Materials</span></a>
 
-    <section class="notif-wrap">
-      <article class="notif-card">
-        <div class="notif-head">
-          <div class="tabs" id="notificationTabs">
-            <button class="tab active" data-tab="all">All</button>
-            <button class="tab" data-tab="unread">Unread</button>
-            <button class="tab" data-tab="achievements">Achievements</button>
-            <button class="tab" data-tab="study">Study</button>
-            <button class="tab" data-tab="system">System</button>
+        <div class="co-nav-group-label">Assessment &amp; Prep</div>
+        <a href="quizzes.html" class="co-nav-item"><i class="fa-solid fa-circle-question"></i><span>Practice Quizzes</span></a>
+        <a href="mock-tests.html" class="co-nav-item"><i class="fa-solid fa-chart-line"></i><span>Mock Tests</span></a>
+        <a href="study-roadmap.html" class="co-nav-item"><i class="fa-solid fa-route"></i><span>Career Roadmaps</span></a>
+        <a href="coding-challenges.html" class="co-nav-item"><i class="fa-solid fa-code"></i><span>Coding Arena</span></a>
+
+        <div class="co-nav-group-label">Community &amp; Tools</div>
+        <a href="ai-tools.html" class="co-nav-item"><i class="fa-solid fa-wand-magic-sparkles"></i><span>AI Study Studio</span></a>
+        <a href="college-feed.html" class="co-nav-item"><i class="fa-solid fa-comments"></i><span>Campus Feed</span></a>
+        <a href="live-study.html" class="co-nav-item"><i class="fa-solid fa-video"></i><span>Live Study Rooms</span></a>
+        <a href="leaderboards.html" class="co-nav-item"><i class="fa-solid fa-trophy"></i><span>Leaderboards</span></a>
+        <a href="certificates.html" class="co-nav-item"><i class="fa-solid fa-award"></i><span>Certificates</span></a>
+
+        <div class="co-nav-group-label">Account</div>
+        <a href="profile.html" class="co-nav-item"><i class="fa-solid fa-user"></i><span>My Profile</span></a>
+        <a href="notifications.html" class="co-nav-item active"><i class="fa-solid fa-bell"></i><span>Notifications</span></a>
+        <a href="settings.html" class="co-nav-item"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
+      </div>
+      <div class="co-sidebar-footer">
+        <a href="profile.html" class="co-user-card" id="sidebarUserProfile">
+          <div class="co-user-avatar" id="sidebarUserInitials">ST</div>
+          <div class="co-user-info">
+            <span class="co-user-name" id="sidebarUserName">Student</span>
+            <span class="co-user-role" id="sidebarUserRole">Scholar</span>
           </div>
-          <button class="btn secondary" id="markAllReadBtn"><i class="fa-regular fa-circle-check"></i> Mark All as Read</button>
-        </div>
-      </article>
+          <i class="fa-solid fa-ellipsis-vertical" style="color:var(--co-text-muted);font-size:0.85rem;"></i>
+        </a>
+      </div>
+    </aside>
 
-      <article class="notif-card">
-        <div id="notificationFeed"></div>
-      </article>
-    </section>
-  </template>
+    <!-- MAIN CONTENT -->
+    <div class="co-student-main">
+      <header class="co-student-topbar">
+        <div class="co-topbar-left">
+          <button class="co-mobile-toggle" id="mobileNavToggle" aria-label="Open navigation menu">
+            <i class="fa-solid fa-bars-staggered"></i>
+          </button>
+          <div class="co-quick-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" placeholder="Search notifications, announcements..." aria-label="Search notifications" />
+            <kbd>Ctrl+K</kbd>
+          </div>
+        </div>
+        <div class="co-topbar-right">
+          <button class="co-topbar-btn" id="themeToggleBtn" aria-label="Toggle theme">
+            <i class="fa-regular fa-sun" id="themeIcon"></i>
+          </button>
+          <a href="notifications.html" class="co-topbar-btn" aria-label="Notifications">
+            <i class="fa-regular fa-bell"></i>
+            <span class="co-badge-dot"></span>
+          </a>
+          <a href="profile.html" class="co-topbar-avatar" id="topbarUserAvatar">ST</a>
+        </div>
+      </header>
+
+      <main class="co-student-container">
+        <!-- BREADCRUMB & HEADER -->
+        <div class="co-breadcrumb">
+          <a href="dashboard.html"><i class="fa-solid fa-house"></i> Home</a>
+          <span>/</span>
+          <span class="active">Notification Center</span>
+        </div>
+
+        <div class="co-page-header">
+          <div class="co-page-header-title">
+            <h1>Notification Center</h1>
+            <p>Your real-time academic stream: course milestones, test results, verified notes, and system updates.</p>
+          </div>
+          <div class="co-header-actions">
+            <button class="co-btn co-btn-secondary" id="markAllReadBtn">
+              <i class="fa-regular fa-circle-check"></i> Mark All as Read
+            </button>
+          </div>
+        </div>
+
+        <!-- NOTIFICATION TABS -->
+        <div class="co-tab-row" id="notificationTabs">
+          <button class="co-tab-btn active" data-tab="all"><i class="fa-solid fa-layer-group"></i> All Updates</button>
+          <button class="co-tab-btn" data-tab="unread"><i class="fa-regular fa-envelope"></i> Unread</button>
+          <button class="co-tab-btn" data-tab="achievements"><i class="fa-solid fa-award"></i> Achievements</button>
+          <button class="co-tab-btn" data-tab="study"><i class="fa-solid fa-book-open"></i> Study Activity</button>
+          <button class="co-tab-btn" data-tab="system"><i class="fa-solid fa-shield-halved"></i> System Alerts</button>
+        </div>
+
+        <!-- NOTIFICATION FEED CONTAINER -->
+        <div class="notif-feed-container" id="notificationFeed">
+          <div class="co-card" style="text-align:center;padding:3rem 1rem;">
+            <div class="co-skeleton" style="height:20px;width:40%;margin:0 auto 1rem auto;border-radius:4px;"></div>
+            <div class="co-skeleton" style="height:14px;width:60%;margin:0 auto;border-radius:4px;"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
   <script src="assets/js/api.js"></script>
-  <script src="assets/js/app.js"></script>
+  <script src="assets/js/student-shell.js"></script>
   <script src="assets/js/notifications.js"></script>
 </body>
 </html>
-
-
-
-

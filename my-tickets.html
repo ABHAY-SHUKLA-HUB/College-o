@@ -3,106 +3,236 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Support Tickets - College OS</title>
+  <title>My Support Tickets — College OS</title>
+  <meta name="description" content="View and track responses for your support tickets and inquiry resolutions." />
+  <link rel="icon" type="image/png" href="assets/images/college-os-logo.png" />
   <script src="assets/js/theme-init.js"></script>
-  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" />
   <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <link rel="stylesheet" href="assets/css/student-dashboard-redesign.css" />
   <style>
-    .tickets-header {
-      display: flex; align-items: center; justify-content: space-between;
-      flex-wrap: wrap; gap: 14px; margin-bottom: 24px;
-    }
-    .tickets-header h1 { font-size: 1.6rem; font-weight: 800; margin: 0; }
     .ticket-card {
-      background: var(--surface-0, #fff);
-      border: 1px solid var(--border-color, #dbe4ef);
-      border-radius: 16px;
-      padding: 20px 22px;
-      margin-bottom: 14px;
-      box-shadow: 0 2px 8px rgba(15,23,42,0.05);
-      transition: box-shadow 0.2s;
+      background: var(--co-surface);
+      border: 1px solid var(--co-border);
+      border-radius: var(--co-radius-lg);
+      padding: 1.35rem;
+      margin-bottom: 1rem;
+      box-shadow: var(--co-shadow-sm);
+      transition: all var(--co-transition-fast);
     }
-    .ticket-card:hover { box-shadow: 0 6px 20px rgba(15,23,42,0.09); }
+    .ticket-card:hover {
+      border-color: var(--co-border-hover);
+      box-shadow: var(--co-shadow-md);
+    }
     .ticket-card-top {
-      display: flex; align-items: flex-start; justify-content: space-between;
-      gap: 12px; flex-wrap: wrap; margin-bottom: 10px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.5rem;
     }
-    .ticket-subject { font-weight: 700; font-size: 1rem; }
-    .ticket-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .ticket-subject {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--co-text-primary);
+    }
+    .ticket-meta {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
     .ticket-badge {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 3px 10px; border-radius: 100px;
-      font-size: 0.75rem; font-weight: 700; text-transform: capitalize;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.2rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: capitalize;
     }
-    .badge-open { background: #dbeafe; color: #1d4ed8; }
-    .badge-in_progress { background: #fef9c3; color: #854d0e; }
-    .badge-resolved { background: #dcfce7; color: #166534; }
-    .badge-closed { background: #f1f5f9; color: #475569; }
-    .badge-high { background: #fee2e2; color: #b91c1c; }
-    .badge-medium { background: #fef3c7; color: #92400e; }
-    .badge-low { background: #f0fdf4; color: #166534; }
+    .badge-open { background: rgba(99, 102, 241, 0.15); color: var(--co-primary); }
+    .badge-in_progress { background: rgba(245, 158, 11, 0.15); color: var(--co-accent-amber); }
+    .badge-resolved { background: rgba(16, 185, 129, 0.15); color: var(--co-accent-emerald); }
+    .badge-closed { background: var(--co-surface-alt); color: var(--co-text-muted); border: 1px solid var(--co-border); }
+    .badge-high { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+    .badge-medium { background: rgba(59, 130, 246, 0.15); color: var(--co-accent-blue); }
+    .badge-low { background: rgba(16, 185, 129, 0.15); color: var(--co-accent-emerald); }
     .ticket-message {
-      font-size: 0.9rem; color: var(--text-muted, #64748b);
-      line-height: 1.6; margin-bottom: 10px;
+      font-size: 0.9rem;
+      color: var(--co-text-secondary);
+      line-height: 1.5;
     }
     .ticket-reply {
-      background: var(--surface-1, #f8fafc);
-      border-left: 3px solid var(--brand-primary, #0f7b6c);
-      border-radius: 0 10px 10px 0;
-      padding: 12px 16px;
-      margin-top: 12px;
+      background: var(--co-surface-alt);
+      border-left: 3px solid var(--co-primary);
+      border-radius: 0 var(--co-radius-md) var(--co-radius-md) 0;
+      padding: 1rem 1.25rem;
+      margin-top: 1rem;
     }
     .ticket-reply-label {
-      font-size: 0.78rem; font-weight: 700; color: var(--brand-primary, #0f7b6c);
-      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--co-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
     }
-    .ticket-reply-text { font-size: 0.9rem; line-height: 1.6; }
-    .ticket-date { font-size: 0.8rem; color: var(--text-muted, #64748b); }
-    .empty-tickets {
-      text-align: center; padding: 60px 24px;
-      color: var(--text-muted, #64748b);
+    .ticket-reply-text {
+      font-size: 0.88rem;
+      color: var(--co-text-primary);
+      line-height: 1.5;
     }
-    .empty-tickets i { font-size: 3rem; opacity: 0.3; margin-bottom: 16px; display: block; }
-    .empty-tickets p { margin: 0 0 20px; }
+    .ticket-date {
+      font-size: 0.78rem;
+      color: var(--co-text-muted);
+    }
     .ticket-status-track {
-      display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px;
+      display: flex;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+      margin-top: 0.75rem;
     }
     .track-step {
-      flex: 1; min-width: 80px;
-      background: var(--surface-1, #f1f5f9);
-      border-radius: 8px; padding: 6px 10px;
-      text-align: center; font-size: 0.75rem; font-weight: 600;
-      color: var(--text-muted, #64748b); position: relative;
+      flex: 1;
+      min-width: 75px;
+      background: var(--co-surface-alt);
+      border: 1px solid var(--co-border);
+      border-radius: var(--co-radius-sm);
+      padding: 0.35rem 0.5rem;
+      text-align: center;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--co-text-muted);
     }
     .track-step.done {
-      background: var(--brand-soft, #e8f5f3);
-      color: var(--brand-primary, #0f7b6c);
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: var(--co-accent-emerald);
     }
     .track-step.active {
-      background: var(--brand-primary, #0f7b6c);
+      background: var(--co-primary);
+      border-color: var(--co-primary);
       color: #fff;
     }
   </style>
 </head>
 <body>
-  <div class="app-shell" data-shell></div>
-  <template data-page>
+  <div class="co-student-backdrop" id="studentBackdrop"></div>
+  <div class="co-student-shell">
+    <!-- STUDENT SIDEBAR -->
+    <aside class="co-student-sidebar" id="studentSidebar">
+      <div class="co-sidebar-header">
+        <a href="dashboard.html" class="co-brand-logo">
+          <div class="co-brand-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+          <div class="co-brand-text">College <span>OS</span></div>
+        </a>
+      </div>
+      <div class="co-sidebar-nav">
+        <div class="co-nav-group-label">Core Learning</div>
+        <a href="dashboard.html" class="co-nav-item"><i class="fa-solid fa-house"></i><span>Dashboard</span></a>
+        <a href="study.html" class="co-nav-item"><i class="fa-solid fa-book-open"></i><span>My Courses</span></a>
+        <a href="notes-library.html" class="co-nav-item"><i class="fa-solid fa-file-lines"></i><span>Notes Library</span></a>
+        <a href="pyqs.html" class="co-nav-item"><i class="fa-solid fa-clock-rotate-left"></i><span>PYQs &amp; Papers</span></a>
+        <a href="materials-library.html" class="co-nav-item"><i class="fa-solid fa-folder-open"></i><span>Study Materials</span></a>
 
-    <div class="tickets-header">
-      <h1><i class="fa-solid fa-ticket" style="color:#0f7b6c;margin-right:10px;"></i>My Support Tickets</h1>
-      <a class="btn primary" href="contact-us.html">
-        <i class="fa-solid fa-plus"></i> New Ticket
-      </a>
+        <div class="co-nav-group-label">Assessment &amp; Prep</div>
+        <a href="quizzes.html" class="co-nav-item"><i class="fa-solid fa-circle-question"></i><span>Practice Quizzes</span></a>
+        <a href="mock-tests.html" class="co-nav-item"><i class="fa-solid fa-chart-line"></i><span>Mock Tests</span></a>
+        <a href="study-roadmap.html" class="co-nav-item"><i class="fa-solid fa-route"></i><span>Career Roadmaps</span></a>
+        <a href="coding-challenges.html" class="co-nav-item"><i class="fa-solid fa-code"></i><span>Coding Arena</span></a>
+
+        <div class="co-nav-group-label">Community &amp; Tools</div>
+        <a href="ai-tools.html" class="co-nav-item"><i class="fa-solid fa-wand-magic-sparkles"></i><span>AI Study Studio</span></a>
+        <a href="college-feed.html" class="co-nav-item"><i class="fa-solid fa-comments"></i><span>Campus Feed</span></a>
+        <a href="live-study.html" class="co-nav-item"><i class="fa-solid fa-video"></i><span>Live Study Rooms</span></a>
+        <a href="leaderboards.html" class="co-nav-item"><i class="fa-solid fa-trophy"></i><span>Leaderboards</span></a>
+        <a href="certificates.html" class="co-nav-item"><i class="fa-solid fa-award"></i><span>Certificates</span></a>
+
+        <div class="co-nav-group-label">Account</div>
+        <a href="profile.html" class="co-nav-item"><i class="fa-solid fa-user"></i><span>My Profile</span></a>
+        <a href="notifications.html" class="co-nav-item"><i class="fa-solid fa-bell"></i><span>Notifications</span></a>
+        <a href="settings.html" class="co-nav-item"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
+      </div>
+      <div class="co-sidebar-footer">
+        <a href="profile.html" class="co-user-card" id="sidebarUserProfile">
+          <div class="co-user-avatar" id="sidebarUserInitials">ST</div>
+          <div class="co-user-info">
+            <span class="co-user-name" id="sidebarUserName">Student</span>
+            <span class="co-user-role" id="sidebarUserRole">Scholar</span>
+          </div>
+          <i class="fa-solid fa-ellipsis-vertical" style="color:var(--co-text-muted);font-size:0.85rem;"></i>
+        </a>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <div class="co-student-main">
+      <header class="co-student-topbar">
+        <div class="co-topbar-left">
+          <button class="co-mobile-toggle" id="mobileNavToggle" aria-label="Open navigation menu">
+            <i class="fa-solid fa-bars-staggered"></i>
+          </button>
+          <div class="co-quick-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" placeholder="Search my tickets..." aria-label="Search tickets" />
+            <kbd>Ctrl+K</kbd>
+          </div>
+        </div>
+        <div class="co-topbar-right">
+          <button class="co-topbar-btn" id="themeToggleBtn" aria-label="Toggle theme">
+            <i class="fa-regular fa-sun" id="themeIcon"></i>
+          </button>
+          <a href="notifications.html" class="co-topbar-btn" aria-label="Notifications">
+            <i class="fa-regular fa-bell"></i>
+            <span class="co-badge-dot"></span>
+          </a>
+          <a href="profile.html" class="co-topbar-avatar" id="topbarUserAvatar">ST</a>
+        </div>
+      </header>
+
+      <main class="co-student-container">
+        <!-- BREADCRUMB & HEADER -->
+        <div class="co-breadcrumb">
+          <a href="dashboard.html"><i class="fa-solid fa-house"></i> Home</a>
+          <span>/</span>
+          <a href="support-hub.html">Support Hub</a>
+          <span>/</span>
+          <span class="active">My Support Tickets</span>
+        </div>
+
+        <div class="co-page-header">
+          <div class="co-page-header-title">
+            <h1>My Support Tickets</h1>
+            <p>Track open support requests, administrative feedback, and academic guidance threads.</p>
+          </div>
+          <div class="co-header-actions">
+            <a href="create-support-request.html" class="co-btn co-btn-primary">
+              <i class="fa-solid fa-plus"></i> Submit New Ticket
+            </a>
+          </div>
+        </div>
+
+        <!-- TICKETS FEED -->
+        <div id="ticketsList">
+          <div class="co-card" style="text-align:center;padding:3rem 1rem;">
+            <div class="co-skeleton" style="height:20px;width:30%;margin:0 auto 1rem auto;border-radius:4px;"></div>
+            <div class="co-skeleton" style="height:14px;width:50%;margin:0 auto;border-radius:4px;"></div>
+          </div>
+        </div>
+      </main>
     </div>
+  </div>
 
-    <!-- Tickets List -->
-    <div id="ticketsList">
-      <p class="muted">Loading your tickets...</p>
-    </div>
-
-  </template>
   <script src="assets/js/api.js"></script>
-  <script src="assets/js/app.js"></script>
+  <script src="assets/js/student-shell.js"></script>
   <script src="assets/js/company-support.js"></script>
 </body>
 </html>

@@ -3,254 +3,125 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Learning Materials - College OS</title>
+  <title>Study Materials Library — College OS</title>
+  <meta name="description" content="Explore verified textbooks, slide decks, reference manuals, and lecture presentations." />
+  <link rel="icon" type="image/png" href="assets/images/college-os-logo.png" />
   <script src="assets/js/theme-init.js"></script>
-  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" />
   <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <link rel="stylesheet" href="assets/css/student-dashboard-redesign.css" />
   <style>
-    .materials-hero {
-      background: linear-gradient(135deg, #0f766e 0%, #0ea5e9 100%);
-      color: #fff;
-      border-radius: 24px;
-      padding: 32px;
-      margin-bottom: 24px;
-      box-shadow: 0 20px 40px rgba(15, 118, 110, 0.2);
-    }
-
-    .materials-hero h1 {
-      margin: 0 0 8px 0;
-      font-size: clamp(1.8rem, 4vw, 2.8rem);
-      line-height: 1.1;
-    }
-
-    .materials-hero p {
-      margin: 0;
-      font-size: 1rem;
-      opacity: 0.95;
-      max-width: 60ch;
-    }
-
-    .materials-toolbar {
-      display: grid;
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-
-    .materials-filter-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 12px;
-    }
-
-    .materials-btn-group {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .materials-btn {
-      border-radius: 999px;
-      border: 1px solid #e2e8f0;
-      padding: 8px 16px;
-      background: #fff;
-      color: #334155;
-      cursor: pointer;
-      font-weight: 500;
-      transition: all 140ms ease;
-      font-size: 0.9rem;
-    }
-
-    .materials-btn:hover {
-      border-color: #0ea5e9;
-      color: #0ea5e9;
-      background: #f0f9ff;
-    }
-
-    .materials-btn.active {
-      background: #0ea5e9;
-      color: #fff;
-      border-color: #0ea5e9;
-    }
-
-    .materials-select {
-      padding: 10px 12px;
-      border-radius: 12px;
-      border: 1px solid #e2e8f0;
-      font: inherit;
-      font-size: 0.95rem;
-      background: #fff;
-    }
-
     .materials-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.25rem;
     }
-
     .material-card {
-      background: #fff;
-      border: 1px solid #e2e8f0;
-      border-radius: 16px;
-      padding: 20px;
-      display: grid;
-      gap: 12px;
-      transition: all 180ms ease;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    }
-
-    .material-card:hover {
-      transform: translateY(-4px);
-      border-color: #0ea5e9;
-      box-shadow: 0 12px 28px rgba(15, 118, 110, 0.15);
-    }
-
-    .material-card.book {
-      border-left: 4px solid #8b5cf6;
-    }
-
-    .material-card.ppt {
-      border-left: 4px solid #f59e0b;
-    }
-
-    .material-icon {
-      font-size: 2.4rem;
-      margin-bottom: 4px;
-    }
-
-    .material-type-badge {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.02em;
-      width: fit-content;
-    }
-
-    .material-type-badge.book {
-      background: #faf5ff;
-      color: #7c3aed;
-      border: 1px solid #e9d5ff;
-    }
-
-    .material-type-badge.ppt {
-      background: #fef3c7;
-      color: #d97706;
-      border: 1px solid #fde68a;
-    }
-
-    .material-title {
-      margin: 0;
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: #1e293b;
-      line-height: 1.3;
-    }
-
-    .material-meta {
-      display: grid;
-      gap: 6px;
-      font-size: 0.85rem;
-      color: #64748b;
-    }
-
-    .material-meta-item {
+      background: var(--co-surface);
+      border: 1px solid var(--co-border);
+      border-radius: var(--co-radius-lg);
+      padding: 1.35rem;
       display: flex;
-      gap: 6px;
-      align-items: center;
+      flex-direction: column;
+      gap: 0.9rem;
+      transition: all var(--co-transition-fast);
+      position: relative;
     }
-
-    .material-meta-item i {
-      opacity: 0.6;
-      width: 16px;
+    .material-card:hover {
+      border-color: var(--co-border-hover);
+      box-shadow: var(--co-shadow-md);
+      transform: translateY(-2px);
     }
-
-    .material-desc {
-      margin: 0;
-      font-size: 0.9rem;
-      color: #64748b;
+    .material-card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+    .material-icon-box {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--co-radius-md);
+      display: grid;
+      place-items: center;
+      font-size: 1.35rem;
+      background: var(--co-surface-alt);
+      border: 1px solid var(--co-border);
+      color: var(--co-primary);
+    }
+    .material-card.book .material-icon-box {
+      background: rgba(99, 102, 241, 0.1);
+      color: var(--co-primary);
+      border-color: rgba(99, 102, 241, 0.2);
+    }
+    .material-card.ppt .material-icon-box {
+      background: rgba(245, 158, 11, 0.1);
+      color: var(--co-accent-amber);
+      border-color: rgba(245, 158, 11, 0.2);
+    }
+    .material-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--co-text-primary);
       line-height: 1.4;
+      margin: 0;
+    }
+    .material-desc {
+      font-size: 0.85rem;
+      color: var(--co-text-secondary);
+      line-height: 1.5;
+      margin: 0;
       display: -webkit-box;
       -webkit-line-clamp: 2;
-      line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
-
+    .material-meta-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      font-size: 0.8rem;
+      color: var(--co-text-muted);
+    }
+    .material-meta-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: var(--co-surface-alt);
+      border: 1px solid var(--co-border);
+      border-radius: var(--co-radius-sm);
+      padding: 0.2rem 0.5rem;
+    }
     .material-footer {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      padding-top: 12px;
-      border-top: 1px solid #f1f5f9;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-top: auto;
+      padding-top: 0.9rem;
+      border-top: 1px solid var(--co-border);
     }
-
-    .material-tags {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .material-tag {
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      background: #f1f5f9;
-      color: #475569;
-    }
-
-    .material-tag.premium {
-      background: #fef08a;
-      color: #a16207;
-    }
-
-    .materials-empty {
-      grid-column: 1 / -1;
-      text-align: center;
-      padding: 60px 20px;
-      color: #94a3b8;
-    }
-
-    .materials-empty-icon {
-      font-size: 3rem;
-      margin-bottom: 12px;
-      opacity: 0.4;
-    }
-
-    .materials-loader {
-      grid-column: 1 / -1;
-      text-align: center;
-      padding: 40px 20px;
-      color: #94a3b8;
-    }
-
-    /* Protected PDF Viewer Modal */
+    /* PDF Viewer Modal */
     .pdf-viewer-modal {
       display: none;
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(15, 23, 42, 0.92);
-      backdrop-filter: blur(10px);
+      inset: 0;
+      background: rgba(11, 15, 25, 0.92);
+      backdrop-filter: blur(12px);
       z-index: 999999;
       flex-direction: column;
     }
-
     .pdf-viewer-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 24px;
+      padding: 0.85rem 1.5rem;
       background: #0f172a;
-      color: #fff;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      color: #fff;
     }
-
     .pdf-viewer-body {
       flex: 1;
       width: 100%;
@@ -258,80 +129,153 @@
       position: relative;
       background: #1e293b;
     }
-
-    @media (max-width: 768px) {
-      .materials-grid {
-        grid-template-columns: 1fr;
-      }
-      
-      .materials-hero {
-        padding: 24px;
-      }
-
-      .materials-filter-row {
-        grid-template-columns: 1fr;
-      }
-    }
   </style>
 </head>
 <body>
-  <div class="app-shell" data-shell></div>
-  <template data-page>
-    <section class="materials-hero">
-      <h1><i class="fa-solid fa-book-open"></i> Learning Materials</h1>
-      <p>Explore official books, presentations, and reference study materials published for your academic program.</p>
-    </section>
+  <div class="co-student-backdrop" id="studentBackdrop"></div>
+  <div class="co-student-shell">
+    <!-- STUDENT SIDEBAR -->
+    <aside class="co-student-sidebar" id="studentSidebar">
+      <div class="co-sidebar-header">
+        <a href="dashboard.html" class="co-brand-logo">
+          <div class="co-brand-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+          <div class="co-brand-text">College <span>OS</span></div>
+        </a>
+      </div>
+      <div class="co-sidebar-nav">
+        <div class="co-nav-group-label">Core Learning</div>
+        <a href="dashboard.html" class="co-nav-item"><i class="fa-solid fa-house"></i><span>Dashboard</span></a>
+        <a href="study.html" class="co-nav-item"><i class="fa-solid fa-book-open"></i><span>My Courses</span></a>
+        <a href="notes-library.html" class="co-nav-item"><i class="fa-solid fa-file-lines"></i><span>Notes Library</span></a>
+        <a href="pyqs.html" class="co-nav-item"><i class="fa-solid fa-clock-rotate-left"></i><span>PYQs &amp; Papers</span></a>
+        <a href="materials-library.html" class="co-nav-item active"><i class="fa-solid fa-folder-open"></i><span>Study Materials</span></a>
 
-    <section class="card">
-      <div class="materials-toolbar">
-        <div>
-          <p style="margin: 0 0 10px 0; font-weight: 600; font-size: 0.9rem; color: #475569;">Material Type</p>
-          <div class="materials-btn-group">
-            <button class="materials-btn active" data-type-filter="all"><i class="fa-solid fa-border-all"></i> All Materials</button>
-            <button class="materials-btn" data-type-filter="book"><i class="fa-solid fa-book"></i> Books</button>
-            <button class="materials-btn" data-type-filter="ppt"><i class="fa-solid fa-presentation"></i> Presentations</button>
+        <div class="co-nav-group-label">Assessment &amp; Prep</div>
+        <a href="quizzes.html" class="co-nav-item"><i class="fa-solid fa-circle-question"></i><span>Practice Quizzes</span></a>
+        <a href="mock-tests.html" class="co-nav-item"><i class="fa-solid fa-chart-line"></i><span>Mock Tests</span></a>
+        <a href="study-roadmap.html" class="co-nav-item"><i class="fa-solid fa-route"></i><span>Career Roadmaps</span></a>
+        <a href="coding-challenges.html" class="co-nav-item"><i class="fa-solid fa-code"></i><span>Coding Arena</span></a>
+
+        <div class="co-nav-group-label">Community &amp; Tools</div>
+        <a href="ai-tools.html" class="co-nav-item"><i class="fa-solid fa-wand-magic-sparkles"></i><span>AI Study Studio</span></a>
+        <a href="college-feed.html" class="co-nav-item"><i class="fa-solid fa-comments"></i><span>Campus Feed</span></a>
+        <a href="live-study.html" class="co-nav-item"><i class="fa-solid fa-video"></i><span>Live Study Rooms</span></a>
+        <a href="leaderboards.html" class="co-nav-item"><i class="fa-solid fa-trophy"></i><span>Leaderboards</span></a>
+        <a href="certificates.html" class="co-nav-item"><i class="fa-solid fa-award"></i><span>Certificates</span></a>
+
+        <div class="co-nav-group-label">Account</div>
+        <a href="profile.html" class="co-nav-item"><i class="fa-solid fa-user"></i><span>My Profile</span></a>
+        <a href="notifications.html" class="co-nav-item"><i class="fa-solid fa-bell"></i><span>Notifications</span></a>
+        <a href="settings.html" class="co-nav-item"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
+      </div>
+      <div class="co-sidebar-footer">
+        <a href="profile.html" class="co-user-card" id="sidebarUserProfile">
+          <div class="co-user-avatar" id="sidebarUserInitials">ST</div>
+          <div class="co-user-info">
+            <span class="co-user-name" id="sidebarUserName">Student</span>
+            <span class="co-user-role" id="sidebarUserRole">Scholar</span>
+          </div>
+          <i class="fa-solid fa-ellipsis-vertical" style="color:var(--co-text-muted);font-size:0.85rem;"></i>
+        </a>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <div class="co-student-main">
+      <header class="co-student-topbar">
+        <div class="co-topbar-left">
+          <button class="co-mobile-toggle" id="mobileNavToggle" aria-label="Open navigation menu">
+            <i class="fa-solid fa-bars-staggered"></i>
+          </button>
+          <div class="co-quick-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" placeholder="Search textbooks, slide decks..." aria-label="Search study materials" />
+            <kbd>Ctrl+K</kbd>
+          </div>
+        </div>
+        <div class="co-topbar-right">
+          <button class="co-topbar-btn" id="themeToggleBtn" aria-label="Toggle theme">
+            <i class="fa-regular fa-sun" id="themeIcon"></i>
+          </button>
+          <a href="notifications.html" class="co-topbar-btn" aria-label="Notifications">
+            <i class="fa-regular fa-bell"></i>
+            <span class="co-badge-dot"></span>
+          </a>
+          <a href="profile.html" class="co-topbar-avatar" id="topbarUserAvatar">ST</a>
+        </div>
+      </header>
+
+      <main class="co-student-container">
+        <!-- BREADCRUMB & HEADER -->
+        <div class="co-breadcrumb">
+          <a href="dashboard.html"><i class="fa-solid fa-house"></i> Home</a>
+          <span>/</span>
+          <span class="active">Study Materials</span>
+        </div>
+
+        <div class="co-page-header">
+          <div class="co-page-header-title">
+            <h1>Learning &amp; Study Materials</h1>
+            <p>Access authorized university textbooks, reference manuals, and lecture presentation decks in protected view.</p>
+          </div>
+          <div class="co-header-actions">
+            <a href="notes-library.html" class="co-btn co-btn-secondary">
+              <i class="fa-solid fa-file-lines"></i> Open Notes Library
+            </a>
           </div>
         </div>
 
-        <div class="materials-filter-row">
-          <div>
-            <label style="font-weight: 600; font-size: 0.85rem; color: #475569; display: block; margin-bottom: 6px;">Subject Category</label>
-            <select id="materialsSubjectFilter" class="materials-select" style="width:100%;"><option value="">All Categories</option></select>
+        <!-- TYPE CHIPS -->
+        <div class="co-tab-row" style="margin-bottom:1rem;">
+          <button class="co-tab-btn active" data-type-filter="all"><i class="fa-solid fa-layer-group"></i> All Materials</button>
+          <button class="co-tab-btn" data-type-filter="book"><i class="fa-solid fa-book"></i> Textbooks</button>
+          <button class="co-tab-btn" data-type-filter="ppt"><i class="fa-solid fa-chart-pie"></i> Presentations</button>
+        </div>
+
+        <!-- FILTER BAR -->
+        <div class="co-filter-bar" style="margin-bottom:1.5rem;">
+          <div class="co-filter-group" style="flex:1.5;min-width:200px;">
+            <label>Search Materials</label>
+            <input id="materialsSearch" type="text" placeholder="Search by title or subject..." />
           </div>
-          <div>
-            <label style="font-weight: 600; font-size: 0.85rem; color: #475569; display: block; margin-bottom: 6px;">Semester</label>
-            <select id="materialsSemesterFilter" class="materials-select" style="width:100%;"><option value="">All Semesters</option></select>
+          <div class="co-filter-group">
+            <label>Subject</label>
+            <select id="materialsSubjectFilter"><option value="">All Subjects</option></select>
           </div>
-          <div>
-            <label style="font-weight: 600; font-size: 0.85rem; color: #475569; display: block; margin-bottom: 6px;">Branch / Course</label>
-            <select id="materialsBranchFilter" class="materials-select" style="width:100%;"><option value="">All Branches</option></select>
+          <div class="co-filter-group">
+            <label>Semester</label>
+            <select id="materialsSemesterFilter"><option value="">All Semesters</option></select>
           </div>
-          <div>
-            <label style="font-weight: 600; font-size: 0.85rem; color: #475569; display: block; margin-bottom: 6px;">Search</label>
-            <input id="materialsSearch" type="text" class="materials-select" style="width:100%;" placeholder="Search by title or subject..." />
+          <div class="co-filter-group">
+            <label>Branch</label>
+            <select id="materialsBranchFilter"><option value="">All Branches</option></select>
           </div>
         </div>
-      </div>
-    </section>
 
-    <section class="card">
-      <div class="materials-grid" id="materialsGrid">
-        <div class="materials-loader">Loading materials...</div>
-      </div>
-    </section>
-  </template>
+        <!-- MATERIALS GRID -->
+        <div class="materials-grid" id="materialsGrid">
+          <div class="co-card" style="grid-column:1/-1;text-align:center;padding:3rem 1rem;">
+            <div class="co-skeleton" style="height:20px;width:30%;margin:0 auto 1rem auto;border-radius:4px;"></div>
+            <div class="co-skeleton" style="height:14px;width:50%;margin:0 auto;border-radius:4px;"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
 
   <!-- Protected PDF Viewer Modal overlay -->
   <div id="pdfViewerModal" class="pdf-viewer-modal">
     <div class="pdf-viewer-header">
       <div style="display:flex; align-items:center; gap:12px;">
-        <i class="fa-solid fa-shield-halved" style="color:#0ea5e9; font-size:1.3rem;"></i>
+        <i class="fa-solid fa-shield-halved" style="color:var(--co-primary); font-size:1.3rem;"></i>
         <div>
-          <h4 id="pdfViewerTitle" style="margin:0; font-size:1rem; font-weight:600; color:#fff;">Document Viewer</h4>
+          <h4 id="pdfViewerTitle" style="margin:0; font-size:1rem; font-weight:700; color:#fff;">Document Viewer</h4>
           <span style="font-size:0.75rem; color:#94a3b8;"><i class="fa-solid fa-lock"></i> Protected View Mode — Application Download Disabled</span>
         </div>
       </div>
-      <button id="closePdfViewerBtn" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:6px 14px; border-radius:8px; cursor:pointer; font-weight:500; display:flex; align-items:center; gap:6px;"><i class="fa-solid fa-xmark"></i> Close Viewer</button>
+      <button id="closePdfViewerBtn" class="co-btn co-btn-secondary co-btn-sm" style="background:rgba(255,255,255,0.1);color:#fff;border-color:rgba(255,255,255,0.2);">
+        <i class="fa-solid fa-xmark"></i> Close Viewer
+      </button>
     </div>
     <div class="pdf-viewer-body">
       <iframe id="pdfViewerFrame" style="width:100%; height:100%; border:none;" src="about:blank"></iframe>
@@ -339,7 +283,7 @@
   </div>
 
   <script src="assets/js/api.js"></script>
-  <script src="assets/js/app-base.js"></script>
+  <script src="assets/js/student-shell.js"></script>
   <script>
     const materialsFilters = {
       type: 'all',
@@ -377,7 +321,6 @@
 
     document.getElementById('closePdfViewerBtn')?.addEventListener('click', closeProtectedPdfViewer);
 
-    // Prevent context menu and keyboard save shortcuts when viewer modal is active
     window.addEventListener('contextmenu', (e) => {
       const modal = document.getElementById('pdfViewerModal');
       if (modal && modal.style.display === 'flex') {
@@ -400,50 +343,48 @@
 
     async function loadMaterialsOptions() {
       try {
-        const [categoriesResp, semestersResp, branchesResp] = await Promise.all([
-          fetch('/api/student/library/materials/categories', { credentials: 'include' }).then(r => r.json()),
-          fetch('/api/student/library/materials/semesters', { credentials: 'include' }).then(r => r.json()),
-          fetch('/api/student/library/materials/branches', { credentials: 'include' }).then(r => r.json())
+        const [categoriesRes, semestersRes, branchesRes] = await Promise.all([
+          fetch('/api/academics/content/categories', { credentials: 'include' }).catch(() => ({ ok: false })),
+          fetch('/api/academics/content/semesters', { credentials: 'include' }).catch(() => ({ ok: false })),
+          fetch('/api/academics/content/branches', { credentials: 'include' }).catch(() => ({ ok: false }))
         ]);
 
-        const subjectSelect = document.getElementById('materialsSubjectFilter');
-        if (subjectSelect && categoriesResp.categories) {
-          categoriesResp.categories.forEach(cat => {
-            const option = document.createElement('option');
-            option.value = cat.id;
-            option.textContent = cat.name;
-            subjectSelect.appendChild(option);
-          });
+        if (categoriesRes.ok) {
+          const categoriesData = await categoriesRes.json();
+          const select = document.getElementById('materialsSubjectFilter');
+          if (select && categoriesData.categories) {
+            select.innerHTML = '<option value="">All Categories</option>' +
+              categoriesData.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+          }
         }
 
-        const semesterSelect = document.getElementById('materialsSemesterFilter');
-        if (semesterSelect && semestersResp.semesters) {
-          semestersResp.semesters.forEach(sem => {
-            const option = document.createElement('option');
-            option.value = sem.id;
-            option.textContent = sem.label;
-            semesterSelect.appendChild(option);
-          });
+        if (semestersRes.ok) {
+          const semestersData = await semestersRes.json();
+          const select = document.getElementById('materialsSemesterFilter');
+          if (select && semestersData.semesters) {
+            select.innerHTML = '<option value="">All Semesters</option>' +
+              semestersData.semesters.map(s => `<option value="${s.id}">${s.semester_label || 'Semester ' + s.semester_number}</option>`).join('');
+          }
         }
 
-        const branchSelect = document.getElementById('materialsBranchFilter');
-        if (branchSelect && branchesResp.branches) {
-          branchesResp.branches.forEach(br => {
-            const option = document.createElement('option');
-            option.value = br.id;
-            option.textContent = br.name;
-            branchSelect.appendChild(option);
-          });
+        if (branchesRes.ok) {
+          const branchesData = await branchesRes.json();
+          const select = document.getElementById('materialsBranchFilter');
+          if (select && branchesData.branches) {
+            select.innerHTML = '<option value="">All Branches</option>' +
+              branchesData.branches.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+          }
         }
-      } catch (error) {
-        console.error('Error loading options:', error);
+      } catch (err) {
+        console.error('Error loading filter options:', err);
       }
     }
 
     async function loadMaterials() {
       const grid = document.getElementById('materialsGrid');
       if (!grid) return;
-      grid.innerHTML = '<div class="materials-loader"><i class="fa-solid fa-spinner fa-spin"></i> Loading materials...</div>';
+
+      grid.innerHTML = '<div class="co-card" style="grid-column:1/-1;text-align:center;padding:3rem 1rem;"><div class="co-skeleton" style="height:20px;width:30%;margin:0 auto 1rem auto;border-radius:4px;"></div><div class="co-skeleton" style="height:14px;width:50%;margin:0 auto;border-radius:4px;"></div></div>';
 
       try {
         const params = new URLSearchParams();
@@ -465,44 +406,50 @@
           grid.innerHTML = data.materials.map(material => {
             const isBook = material.material_type === 'book';
             const isPpt = material.material_type === 'ppt';
-            const icon = isBook ? '📚' : isPpt ? '🎯' : '📄';
+            const icon = isBook ? 'fa-book' : isPpt ? 'fa-chart-pie' : 'fa-file-lines';
             const typeName = isBook ? 'Book' : isPpt ? 'Presentation' : 'Document';
             const typeClass = isBook ? 'book' : isPpt ? 'ppt' : '';
             const safeTitle = encodeURIComponent(material.title || '');
             
             return `
               <div class="material-card ${typeClass}">
-                <div style="font-size:2rem;">${icon}</div>
-                <span class="material-type-badge ${typeClass}">${typeName}</span>
-                <h3 class="material-title">${material.title}</h3>
-                <div class="material-meta">
-                  ${material.subject ? `<div class="material-meta-item"><i class="fa-solid fa-book-open"></i><span>Subject: ${material.subject}</span></div>` : ''}
-                  ${material.category_name ? `<div class="material-meta-item"><i class="fa-solid fa-tag"></i><span>${material.category_name}</span></div>` : ''}
-                  ${material.branch_name ? `<div class="material-meta-item"><i class="fa-solid fa-graduation-cap"></i><span>${material.branch_name}</span></div>` : ''}
-                  ${material.semester_label ? `<div class="material-meta-item"><i class="fa-solid fa-calendar"></i><span>${material.semester_label}</span></div>` : ''}
+                <div class="material-card-top">
+                  <div class="material-icon-box"><i class="fa-solid ${icon}"></i></div>
+                  <span class="co-badge co-badge-primary">${typeName}</span>
                 </div>
+                <h3 class="material-title">${material.title}</h3>
                 ${material.description ? `<p class="material-desc">${material.description}</p>` : ''}
+                <div class="material-meta-grid">
+                  ${material.subject ? `<span class="material-meta-pill"><i class="fa-solid fa-book-open"></i> ${material.subject}</span>` : ''}
+                  ${material.category_name ? `<span class="material-meta-pill"><i class="fa-solid fa-tag"></i> ${material.category_name}</span>` : ''}
+                  ${material.branch_name ? `<span class="material-meta-pill"><i class="fa-solid fa-graduation-cap"></i> ${material.branch_name}</span>` : ''}
+                  ${material.semester_label ? `<span class="material-meta-pill"><i class="fa-solid fa-calendar"></i> ${material.semester_label}</span>` : ''}
+                </div>
                 <div class="material-footer">
-                  <div class="material-tags">
-                    <span class="material-tag"><i class="fa-solid fa-shield-check"></i> Verified</span>
-                    ${material.is_premium ? '<span class="material-tag premium"><i class="fa-solid fa-crown"></i> Premium</span>' : ''}
-                  </div>
-                  <button class="btn primary sm" onclick="openProtectedPdfViewer('${material.id}', '${safeTitle}')"><i class="fa-solid fa-book-open"></i> Read Material</button>
+                  <span class="co-badge co-badge-success"><i class="fa-solid fa-shield-check"></i> Verified</span>
+                  <button class="co-btn co-btn-primary co-btn-sm" onclick="openProtectedPdfViewer('${material.id}', '${safeTitle}')">
+                    <i class="fa-solid fa-book-open"></i> Read
+                  </button>
                 </div>
               </div>
             `;
           }).join('');
         } else {
           grid.innerHTML = `
-            <div class="materials-empty">
-              <div class="materials-empty-icon"><i class="fa-solid fa-inbox"></i></div>
-              <h4 style="margin: 0 0 8px 0; color: #64748b;">No materials found</h4>
-              <p style="margin: 0; font-size: 0.9rem;">Try adjusting your filters or check back later.</p>
+            <div class="co-empty-state" style="grid-column:1/-1;">
+              <div class="co-empty-icon"><i class="fa-solid fa-folder-open"></i></div>
+              <h3>No study materials found</h3>
+              <p>Try adjusting your search criteria or semester filters.</p>
             </div>
           `;
         }
       } catch (error) {
-        grid.innerHTML = `<div class="materials-empty" style="color:#c6342d;"><i class="fa-solid fa-exclamation-triangle"></i> ${error.message}</div>`;
+        grid.innerHTML = `
+          <div class="co-card" style="grid-column:1/-1;text-align:center;padding:2rem;color:#ef4444;">
+            <i class="fa-solid fa-triangle-exclamation" style="font-size:2rem;margin-bottom:0.5rem;"></i>
+            <p style="margin:0;">${error.message}</p>
+          </div>
+        `;
       }
     }
 
@@ -512,8 +459,9 @@
       document.querySelectorAll('[data-type-filter]').forEach(btn => {
         btn.addEventListener('click', (e) => {
           document.querySelectorAll('[data-type-filter]').forEach(b => b.classList.remove('active'));
-          e.target.closest('[data-type-filter]').classList.add('active');
-          materialsFilters.type = e.target.closest('[data-type-filter]').dataset.typeFilter;
+          const target = e.target.closest('[data-type-filter]');
+          target.classList.add('active');
+          materialsFilters.type = target.dataset.typeFilter;
           loadMaterials();
         });
       });

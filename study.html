@@ -3,406 +3,416 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Study & Learning Hub - College OS</title>
-  <script src="assets/js/theme-init.js"></script>
-  <link rel="stylesheet" href="assets/css/styles.css" />
+  <title>My Courses & Study Hub | College OS</title>
+  <meta name="description" content="College OS My Courses & Study Hub — Master your curriculum with structured learning resources, course books, syllabus notes, and presentations." />
+  <meta name="robots" content="noindex, nofollow" />
+  
+  <!-- Font & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
-  <style>
-    .study-hero {
-      background: linear-gradient(135deg, #1e3a8a 0%, #0ea5e9 50%, #06b6d4 100%);
-      color: #fff;
-      border-radius: 24px;
-      padding: 40px;
-      margin-bottom: 24px;
-      box-shadow: 0 24px 48px rgba(15, 23, 42, 0.25);
-      display: grid;
-      gap: 16px;
-    }
-
-    .study-hero h1 {
-      margin: 0;
-      font-size: clamp(2rem, 5vw, 3.2rem);
-      line-height: 1.1;
-      font-weight: 700;
-    }
-
-    .study-hero p {
-      margin: 0;
-      font-size: 1.05rem;
-      opacity: 0.95;
-      max-width: 70ch;
-      line-height: 1.5;
-    }
-
-    .study-kpis {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 12px;
-      margin-top: 12px;
-    }
-
-    .study-kpi {
-      background: rgba(255, 255, 255, 0.15);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      border-radius: 12px;
-      padding: 12px;
-      backdrop-filter: blur(8px);
-      text-align: center;
-    }
-
-    .study-kpi .value {
-      display: block;
-      font-size: 1.8rem;
-      font-weight: 700;
-      margin: 0;
-    }
-
-    .study-kpi .label {
-      display: block;
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      opacity: 0.8;
-      margin-top: 4px;
-    }
-
-    .study-layout {
-      display: grid;
-      gap: 20px;
-    }
-
-    .study-section {
-      background: #fff;
-      border: 1px solid #e2e8f0;
-      border-radius: 16px;
-      padding: 28px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    }
-
-    .study-section-header {
-      display: grid;
-      gap: 8px;
-      margin-bottom: 20px;
-    }
-
-    .study-section-header h2 {
-      margin: 0;
-      font-size: 1.4rem;
-      color: #1e293b;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .study-section-header p {
-      margin: 0;
-      color: #64748b;
-      font-size: 0.95rem;
-    }
-
-    .study-subject-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 12px;
-    }
-
-    .subject-card {
-      background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
-      border: 2px solid #bae6fd;
-      border-radius: 14px;
-      padding: 20px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 180ms ease;
-      display: grid;
-      gap: 10px;
-      align-content: center;
-    }
-
-    .subject-card:hover {
-      transform: translateY(-4px);
-      background: linear-gradient(135deg, #e0f2fe, #cffafe);
-      border-color: #0ea5e9;
-      box-shadow: 0 12px 28px rgba(15, 118, 110, 0.15);
-    }
-
-    .subject-icon {
-      font-size: 2.2rem;
-    }
-
-    .subject-name {
-      margin: 0;
-      font-weight: 600;
-      color: #1e293b;
-      font-size: 0.95rem;
-    }
-
-    .subject-count {
-      margin: 0;
-      font-size: 0.8rem;
-      color: #64748b;
-    }
-
-    .resources-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: 14px;
-    }
-
-    .resource-preview {
-      background: #fff;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 16px;
-      display: grid;
-      gap: 10px;
-      transition: all 140ms ease;
-    }
-
-    .resource-preview:hover {
-      border-color: #0ea5e9;
-      box-shadow: 0 8px 20px rgba(15, 118, 110, 0.1);
-    }
-
-    .resource-badge {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 0.7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      width: fit-content;
-    }
-
-    .resource-badge.book {
-      background: #f3e8ff;
-      color: #7c3aed;
-    }
-
-    .resource-badge.ppt {
-      background: #fef3c7;
-      color: #d97706;
-    }
-
-    .resource-title {
-      margin: 0;
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: #1e293b;
-      line-height: 1.3;
-    }
-
-    .resource-meta {
-      font-size: 0.8rem;
-      color: #64748b;
-      display: grid;
-      gap: 4px;
-    }
-
-    .study-actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 20px;
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 40px 20px;
-      color: #94a3b8;
-    }
-
-    .empty-icon {
-      font-size: 2.5rem;
-      margin-bottom: 12px;
-      opacity: 0.4;
-    }
-
-    @media (max-width: 768px) {
-      .study-hero {
-        padding: 24px;
-      }
-
-      .study-section {
-        padding: 20px;
-      }
-
-      .study-subject-grid {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      }
-
-      .resources-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
+  
+  <!-- Theme & Redesign CSS -->
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/student-dashboard-redesign.css" />
 </head>
-<body>
-  <div class="app-shell" data-shell></div>
-  <template data-page>
-    <section class="study-hero">
-      <div>
-        <h1><i class="fa-solid fa-lightbulb"></i> Learning Hub</h1>
-        <p>Master your curriculum with structured learning resources, expert materials, and subject-wise discovery.</p>
+<body class="student-portal">
+
+  <!-- Mobile Drawer Backdrop -->
+  <div class="co-student-backdrop" id="studentBackdrop"></div>
+
+  <div class="co-student-shell">
+    <!-- LEFT SIDEBAR -->
+    <aside class="co-student-sidebar" id="studentSidebar">
+      <div class="co-sidebar-brand">
+        <a href="dashboard.html" class="brand-logo">
+          <div class="brand-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+          <div class="brand-text">College <span>OS</span></div>
+        </a>
+        <button class="co-sidebar-close" id="studentSidebarClose" aria-label="Close sidebar">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
-      <div class="study-kpis">
-        <div class="study-kpi">
-          <span class="value" id="studyMaterialCount">0</span>
-          <span class="label">Materials</span>
-        </div>
-        <div class="study-kpi">
-          <span class="value" id="studyBookCount">0</span>
-          <span class="label">Books</span>
-        </div>
-        <div class="study-kpi">
-          <span class="value" id="studyPptCount">0</span>
-          <span class="label">PPTs</span>
-        </div>
-        <div class="study-kpi">
-          <span class="value" id="studySubjectCount">0</span>
-          <span class="label">Subjects</span>
+
+      <nav class="co-sidebar-nav" aria-label="Student main navigation">
+        <div class="nav-section-title">LEARNING</div>
+        <a href="dashboard.html" class="nav-item" id="navDashboard">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="study.html" class="nav-item active" id="navMyCourses">
+          <i class="fa-solid fa-book-open"></i>
+          <span>My Courses</span>
+        </a>
+        <a href="notes-library.html" class="nav-item" id="navNotes">
+          <i class="fa-solid fa-file-lines"></i>
+          <span>Notes Library</span>
+        </a>
+        <a href="pyqs.html" class="nav-item" id="navPyqs">
+          <i class="fa-solid fa-file-circle-question"></i>
+          <span>Previous Papers</span>
+        </a>
+        <a href="quizzes.html" class="nav-item" id="navQuizzes">
+          <i class="fa-solid fa-clipboard-question"></i>
+          <span>Quizzes</span>
+        </a>
+        <a href="mock-tests.html" class="nav-item" id="navMockTests">
+          <i class="fa-solid fa-flask"></i>
+          <span>Mock Tests</span>
+        </a>
+
+        <div class="nav-section-title">CAREER &amp; TOOLS</div>
+        <a href="study-roadmap.html" class="nav-item" id="navRoadmaps">
+          <i class="fa-solid fa-map-location-dot"></i>
+          <span>Career Roadmaps</span>
+        </a>
+        <a href="coding-challenges.html" class="nav-item" id="navCoding">
+          <i class="fa-solid fa-code"></i>
+          <span>Coding Arena</span>
+        </a>
+        <a href="ai-tools.html" class="nav-item" id="navAiTools">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span>AI Study Tools</span>
+        </a>
+        <a href="leaderboards.html" class="nav-item" id="navLeaderboards">
+          <i class="fa-solid fa-trophy"></i>
+          <span>Leaderboard</span>
+        </a>
+
+        <div class="nav-section-title">COMMUNITY &amp; LIVE</div>
+        <a href="college-feed.html" class="nav-item" id="navCommunity">
+          <i class="fa-solid fa-newspaper"></i>
+          <span>Campus Feed</span>
+        </a>
+        <a href="live-study.html" class="nav-item" id="navLiveStudy">
+          <i class="fa-solid fa-video"></i>
+          <span>Live Study Rooms</span>
+        </a>
+
+        <div class="nav-section-title">ACHIEVEMENTS &amp; ACCOUNT</div>
+        <a href="certificates.html" class="nav-item" id="navCertificates">
+          <i class="fa-solid fa-award"></i>
+          <span>Certificates</span>
+        </a>
+        <a href="academic-onboarding.html" class="nav-item" id="navAcademicProfile">
+          <i class="fa-solid fa-building-columns"></i>
+          <span>Academic Profile</span>
+        </a>
+        <a href="profile.html" class="nav-item" id="navProfile">
+          <i class="fa-solid fa-user-gear"></i>
+          <span>Account Settings</span>
+        </a>
+      </nav>
+
+      <!-- Sidebar Mini Profile -->
+      <div class="co-sidebar-footer">
+        <div class="sidebar-user-pill">
+          <div class="user-avatar" id="sidebarStudentAvatar">ST</div>
+          <div class="user-info">
+            <div class="user-name" id="sidebarStudentName">Student</div>
+            <div class="user-meta" id="sidebarStudentSub">Learner</div>
+          </div>
         </div>
       </div>
-    </section>
+    </aside>
 
-    <section class="study-layout">
-      <section class="study-section">
-        <div class="study-section-header">
-          <h2><i class="fa-solid fa-book-open" style="color:#0ea5e9;"></i> Browse by Subject</h2>
-          <p>Select a subject to explore curated learning materials aligned with your curriculum.</p>
-        </div>
-        <div class="study-subject-grid" id="subjectsGrid">
-          <div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i> Loading subjects...</div>
-        </div>
-      </section>
-
-      <section class="study-section">
-        <div class="study-section-header">
-          <h2><i class="fa-solid fa-gems" style="color:#06b6d4;"></i> Featured Learning Materials</h2>
-          <p>Handpicked resources to boost your understanding and exam preparation.</p>
-        </div>
-        <div class="resources-grid" id="featuredResourcesGrid">
-          <div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i> Loading resources...</div>
-        </div>
-        <div class="study-actions">
-          <a href="materials-library.html" class="btn primary"><i class="fa-solid fa-arrow-right"></i> Browse All Materials</a>
-          <a href="notes-library.html" class="btn secondary"><i class="fa-solid fa-file-lines"></i> Quick Notes</a>
-        </div>
-      </section>
-
-      <section class="study-section">
-        <div class="study-section-header">
-          <h2><i class="fa-solid fa-square-check" style="color:#22c55e;"></i> Learning Tips</h2>
-          <p>Optimize your study approach with these proven strategies.</p>
-        </div>
-        <div style="display: grid; gap: 12px;">
-          <div style="display: grid; gap: 8px; padding: 14px; background: #f0fdf4; border-radius: 10px; border-left: 3px solid #22c55e;">
-            <strong style="color: #15803d;">📚 Structured Learning</strong>
-            <p style="margin: 0; font-size: 0.9rem; color: #4b5563;">Start with books to build foundational concepts, supplement with presentations for visual learning.</p>
-          </div>
-          <div style="display: grid; gap: 8px; padding: 14px; background: #f0f9ff; border-radius: 10px; border-left: 3px solid #0ea5e9;">
-            <strong style="color: #0369a1;">⏰ Active Revision</strong>
-            <p style="margin: 0; font-size: 0.9rem; color: #4b5563;">Use notes for quick revision before exams. Review important diagrams from presentations regularly.</p>
-          </div>
-          <div style="display: grid; gap: 8px; padding: 14px; background: #fff7ed; border-radius: 10px; border-left: 3px solid #f59e0b;">
-            <strong style="color: #b45309;">🎯 Practice & Test</strong>
-            <p style="margin: 0; font-size: 0.9rem; color: #4b5563;">After studying materials, test your knowledge with mock tests to identify weak areas.</p>
+    <!-- MAIN CONTAINER -->
+    <div class="co-student-main">
+      <!-- TOPBAR -->
+      <header class="co-student-topbar">
+        <div class="topbar-left">
+          <button class="co-mobile-toggle" id="studentSidebarToggle" aria-label="Open sidebar">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="topbar-search">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="search" id="studentGlobalSearch" placeholder="Search notes, subjects, PYQs, roadmaps... (Ctrl+K)" aria-label="Global search" />
+            <span class="search-kbd">⌘K</span>
           </div>
         </div>
-      </section>
-    </section>
-  </template>
 
+        <div class="topbar-right">
+          <!-- Theme Toggle -->
+          <button class="topbar-action-btn" id="studentThemeToggle" aria-label="Toggle dark/light mode" title="Toggle theme">
+            <i class="fa-solid fa-moon"></i>
+          </button>
+
+          <!-- Notification Bell -->
+          <a href="notifications.html" class="topbar-action-btn" aria-label="Notifications" title="Notifications">
+            <i class="fa-solid fa-bell"></i>
+          </a>
+
+          <!-- Profile Menu Toggle -->
+          <div class="topbar-profile" id="studentProfileMenuToggle" role="button" tabindex="0" aria-label="User profile menu">
+            <div class="profile-avatar" id="studentProfileAvatar">ST</div>
+            <div class="profile-meta">
+              <span class="profile-name" id="studentProfileName">Student</span>
+              <span class="profile-role" id="studentProfileRole">Learner</span>
+            </div>
+            <i class="fa-solid fa-chevron-down" style="font-size:0.75rem; color:var(--co-stu-text-light);"></i>
+
+            <!-- Dropdown Menu -->
+            <div class="profile-dropdown" id="studentProfileDropdown">
+              <div class="dropdown-header">
+                <div class="user-name" id="dropdownStudentName">Student</div>
+                <div class="user-email" id="dropdownStudentEmail">student@collegeo.in</div>
+              </div>
+              <div class="dropdown-links">
+                <a href="profile.html"><i class="fa-solid fa-user"></i> My Profile</a>
+                <a href="academic-onboarding.html"><i class="fa-solid fa-building-columns"></i> Academic Setup</a>
+                <a href="certificates.html"><i class="fa-solid fa-award"></i> My Certificates</a>
+                <a href="settings.html"><i class="fa-solid fa-gear"></i> Settings</a>
+              </div>
+              <div class="dropdown-footer">
+                <a href="/login" id="studentLogoutBtn" class="logout-link"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- PAGE CONTENT -->
+      <main class="co-student-container">
+        <!-- Breadcrumbs -->
+        <nav class="co-breadcrumb" aria-label="Breadcrumb">
+          <a href="dashboard.html"><i class="fa-solid fa-house"></i> Home</a>
+          <span class="separator">›</span>
+          <span class="current">My Courses &amp; Study Hub</span>
+        </nav>
+
+        <!-- Page Header -->
+        <div class="co-page-header">
+          <div>
+            <h1 class="co-page-header-title">My Courses &amp; Study Hub</h1>
+            <p class="co-page-header-desc">Access structured learning resources, reference textbooks, verified lecture presentations, and subject-wise curriculum content.</p>
+          </div>
+          <div class="co-page-header-actions">
+            <a href="notes-library.html" class="btn-stu secondary"><i class="fa-solid fa-file-lines"></i> Open Notes Library</a>
+            <a href="pyqs.html" class="btn-stu primary"><i class="fa-solid fa-file-circle-question"></i> Browse PYQs</a>
+          </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="co-kpi-grid">
+          <div class="co-kpi-card">
+            <div class="kpi-icon blue"><i class="fa-solid fa-folder-open"></i></div>
+            <div class="kpi-body">
+              <span class="kpi-label">Total Materials</span>
+              <h3 class="kpi-value" id="studyMaterialCount">0</h3>
+            </div>
+          </div>
+          <div class="co-kpi-card">
+            <div class="kpi-icon indigo"><i class="fa-solid fa-book"></i></div>
+            <div class="kpi-body">
+              <span class="kpi-label">Reference Books</span>
+              <h3 class="kpi-value" id="studyBookCount">0</h3>
+            </div>
+          </div>
+          <div class="co-kpi-card">
+            <div class="kpi-icon purple"><i class="fa-solid fa-file-powerpoint"></i></div>
+            <div class="kpi-body">
+              <span class="kpi-label">Lecture PPTs</span>
+              <h3 class="kpi-value" id="studyPptCount">0</h3>
+            </div>
+          </div>
+          <div class="co-kpi-card">
+            <div class="kpi-icon emerald"><i class="fa-solid fa-graduation-cap"></i></div>
+            <div class="kpi-body">
+              <span class="kpi-label">Active Subjects</span>
+              <h3 class="kpi-value" id="studySubjectCount">0</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Subjects Section -->
+        <section class="co-dashboard-section">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title"><i class="fa-solid fa-book-open"></i> Browse by Subject</h2>
+              <p class="section-subtitle">Select a subject to explore curated learning materials aligned with your semester syllabus.</p>
+            </div>
+          </div>
+
+          <div class="co-card-grid" id="subjectsGrid">
+            <div class="co-card co-skeleton" style="height:120px;"></div>
+            <div class="co-card co-skeleton" style="height:120px;"></div>
+            <div class="co-card co-skeleton" style="height:120px;"></div>
+          </div>
+        </section>
+
+        <!-- Featured Materials Section -->
+        <section class="co-dashboard-section">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title"><i class="fa-solid fa-star"></i> Featured Learning Materials</h2>
+              <p class="section-subtitle">Handpicked resources to accelerate your concept mastery and semester exam preparation.</p>
+            </div>
+          </div>
+
+          <div class="co-card-grid" id="featuredResourcesGrid">
+            <div class="co-card co-skeleton" style="height:140px;"></div>
+            <div class="co-card co-skeleton" style="height:140px;"></div>
+            <div class="co-card co-skeleton" style="height:140px;"></div>
+          </div>
+        </section>
+
+        <!-- Structured Learning Guidance -->
+        <section class="co-dashboard-section">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title"><i class="fa-solid fa-lightbulb"></i> Study Best Practices</h2>
+              <p class="section-subtitle">Proven workflows to maximize retention and exam performance.</p>
+            </div>
+          </div>
+
+          <div class="co-card-grid" style="grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));">
+            <div class="co-card" style="border-left:4px solid var(--co-stu-primary);">
+              <div class="co-card-top">
+                <div class="co-card-icon-wrap"><i class="fa-solid fa-book"></i></div>
+                <span class="co-badge primary">Step 1</span>
+              </div>
+              <h3 class="co-card-title">Foundational Concept Reading</h3>
+              <p class="co-card-desc">Start with recommended textbooks and syllabus overviews to build crystal-clear fundamentals before jumping to problem solving.</p>
+            </div>
+
+            <div class="co-card" style="border-left:4px solid var(--co-stu-secondary);">
+              <div class="co-card-top">
+                <div class="co-card-icon-wrap" style="background:rgba(14,165,233,0.1); color:#0ea5e9;"><i class="fa-solid fa-file-lines"></i></div>
+                <span class="co-badge success">Step 2</span>
+              </div>
+              <h3 class="co-card-title">Active Notes &amp; Flashcards</h3>
+              <p class="co-card-desc">Review concise chapter notes, formula sheets, and AI flashcards to encode key definitions into long-term memory.</p>
+            </div>
+
+            <div class="co-card" style="border-left:4px solid var(--co-stu-accent-purple);">
+              <div class="co-card-top">
+                <div class="co-card-icon-wrap" style="background:rgba(139,92,246,0.1); color:#8b5cf6;"><i class="fa-solid fa-clipboard-question"></i></div>
+                <span class="co-badge warning">Step 3</span>
+              </div>
+              <h3 class="co-card-title">PYQ &amp; Mock Test Simulation</h3>
+              <p class="co-card-desc">Solve past university papers under timed test conditions to identify weak topics and calibrate your time management.</p>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- Scripts -->
   <script src="assets/js/api.js"></script>
-  <script src="assets/js/app.js"></script>
+  <script src="assets/js/student-shell.js"></script>
   <script>
     async function loadStudyHub() {
       try {
         const [materialsResp, categoriesResp] = await Promise.all([
-          fetch('/api/student/library/materials?limit=100', { credentials: 'include' }).then(r => r.json()),
-          fetch('/api/student/library/materials/categories', { credentials: 'include' }).then(r => r.json())
+          fetch('/api/student/library/materials?limit=100', { credentials: 'include' }).then(r => r.json()).catch(() => ({ materials: [] })),
+          fetch('/api/student/library/materials/categories', { credentials: 'include' }).then(r => r.json()).catch(() => ({ categories: [] }))
         ]);
 
         const materials = materialsResp.materials || [];
         const categories = categoriesResp.categories || [];
 
         // Update KPIs
-        document.getElementById('studyMaterialCount').textContent = materials.length;
-        document.getElementById('studyBookCount').textContent = materials.filter(m => m.material_type === 'book').length;
-        document.getElementById('studyPptCount').textContent = materials.filter(m => m.material_type === 'ppt').length;
-        document.getElementById('studySubjectCount').textContent = new Set(materials.map(m => m.category_id)).size;
+        const matCount = document.getElementById('studyMaterialCount');
+        const bookCount = document.getElementById('studyBookCount');
+        const pptCount = document.getElementById('studyPptCount');
+        const subCount = document.getElementById('studySubjectCount');
+
+        if (matCount) matCount.textContent = materials.length;
+        if (bookCount) bookCount.textContent = materials.filter(m => m.material_type === 'book').length;
+        if (pptCount) pptCount.textContent = materials.filter(m => m.material_type === 'ppt').length;
+        if (subCount) subCount.textContent = new Set(materials.map(m => m.category_id || m.subject_id)).size || categories.length;
 
         // Render subjects
         const subjectsGrid = document.getElementById('subjectsGrid');
-        if (categories.length > 0) {
-          subjectsGrid.innerHTML = categories.map(cat => {
-            const catMaterials = materials.filter(m => m.category_id === cat.id);
-            return `
-              <div class="subject-card" onclick="window.location.href='materials-library.html?subject=${cat.id}'">
-                <div class="subject-icon">${getSubjectIcon(cat.name)}</div>
-                <h3 class="subject-name">${cat.name}</h3>
-                <p class="subject-count">${catMaterials.length} materials</p>
-              </div>
-            `;
-          }).join('');
-        } else {
-          subjectsGrid.innerHTML = '<div class="empty-state"><p>No subjects available yet.</p></div>';
+        if (subjectsGrid) {
+          if (categories.length > 0) {
+            subjectsGrid.innerHTML = categories.map(cat => {
+              const catMaterials = materials.filter(m => (m.category_id === cat.id || m.subject_id === cat.id));
+              return `
+                <div class="co-card" style="cursor:pointer;" onclick="window.location.href='notes-library.html?subject=${encodeURIComponent(cat.id || cat.name)}'">
+                  <div class="co-card-top">
+                    <div class="co-card-icon-wrap"><i class="${getSubjectFaIcon(cat.name)}"></i></div>
+                    <span class="co-badge primary">${catMaterials.length} Files</span>
+                  </div>
+                  <div>
+                    <h3 class="co-card-title">${cat.name}</h3>
+                    <p class="co-card-desc">Syllabus modules, reference notes, and downloadable assets.</p>
+                  </div>
+                  <div class="co-card-bottom">
+                    <span style="font-size:0.78rem; font-weight:700; color:var(--co-stu-primary);">Open Course <i class="fa-solid fa-arrow-right"></i></span>
+                  </div>
+                </div>
+              `;
+            }).join('');
+          } else {
+            subjectsGrid.innerHTML = `
+              <div class="co-empty-state" style="grid-column: 1/-1;">
+                <i class="fa-solid fa-book-open empty-icon"></i>
+                <h3>No Subjects Found</h3>
+                <p>Complete your academic onboarding to personalize your course syllabus.</p>
+                <a href="academic-onboarding.html" class="btn-stu primary sm">Setup Academic Profile</a>
+              </div>`;
+          }
         }
 
         // Render featured resources (top 6)
-        const featuredResourcesGrid = document.getElementById('featuredResourcesGrid');
-        const featured = materials.slice(0, 6);
-        if (featured.length > 0) {
-          featuredResourcesGrid.innerHTML = featured.map(material => {
-            const isBook = material.material_type === 'book';
-            const isPpt = material.material_type === 'ppt';
-            const badge = isBook ? 'book' : isPpt ? 'ppt' : '';
-            const badgeText = isBook ? '📚 Book' : isPpt ? '🎯 PPT' : '📄 Material';
-            
-            return `
-              <div class="resource-preview">
-                <span class="resource-badge ${badge}">${badgeText}</span>
-                <h4 class="resource-title">${material.title}</h4>
-                <div class="resource-meta">
-                  ${material.category_name ? `<div><i class="fa-solid fa-tag"></i> ${material.category_name}</div>` : ''}
-                  ${material.semester_label ? `<div><i class="fa-solid fa-calendar"></i> ${material.semester_label}</div>` : ''}
+        const featuredGrid = document.getElementById('featuredResourcesGrid');
+        if (featuredGrid) {
+          const featured = materials.slice(0, 6);
+          if (featured.length > 0) {
+            featuredGrid.innerHTML = featured.map(material => {
+              const isBook = material.material_type === 'book';
+              const isPpt = material.material_type === 'ppt';
+              const badgeClass = isBook ? 'primary' : isPpt ? 'warning' : 'success';
+              const badgeLabel = isBook ? 'Book' : isPpt ? 'Presentation' : 'PDF Note';
+              const iconClass = isBook ? 'fa-solid fa-book' : isPpt ? 'fa-solid fa-file-powerpoint' : 'fa-solid fa-file-pdf';
+
+              return `
+                <div class="co-card">
+                  <div class="co-card-top">
+                    <div class="co-card-icon-wrap"><i class="${iconClass}"></i></div>
+                    <span class="co-badge ${badgeClass}">${badgeLabel}</span>
+                  </div>
+                  <div>
+                    <h3 class="co-card-title">${material.title}</h3>
+                    <div class="co-card-meta" style="margin-top:6px;">
+                      ${material.category_name ? `<span class="co-card-meta-item"><i class="fa-solid fa-tag"></i> ${material.category_name}</span>` : ''}
+                      ${material.semester_label ? `<span class="co-card-meta-item"><i class="fa-solid fa-calendar"></i> ${material.semester_label}</span>` : ''}
+                    </div>
+                  </div>
+                  <div class="co-card-bottom">
+                    <span style="font-size:0.78rem; color:var(--co-stu-text-muted);">Verified Resource</span>
+                    <a href="${material.file_url || '#'}" target="_blank" class="btn-stu secondary sm"><i class="fa-solid fa-arrow-up-right-from-square"></i> View</a>
+                  </div>
                 </div>
-                <a href="${material.file_url}" target="_blank" class="btn secondary sm" style="margin-top:8px;"><i class="fa-solid fa-download"></i> View</a>
-              </div>
-            `;
-          }).join('');
-        } else {
-          featuredResourcesGrid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><p>No materials available yet.</p></div>';
+              `;
+            }).join('');
+          } else {
+            featuredGrid.innerHTML = `
+              <div class="co-empty-state" style="grid-column: 1/-1;">
+                <i class="fa-solid fa-folder-open empty-icon"></i>
+                <h3>No Materials Available Yet</h3>
+                <p>New study materials are being reviewed and published for your branch.</p>
+              </div>`;
+          }
         }
       } catch (error) {
         console.error('Error loading study hub:', error);
-        document.getElementById('subjectsGrid').innerHTML = `<div class="empty-state"><i class="fa-solid fa-exclamation-triangle"></i> ${error.message}</div>`;
       }
     }
 
-    function getSubjectIcon(subjectName) {
-      const name = subjectName.toLowerCase();
-      const iconMap = {
-        'mathematics': '🔢',
-        'physics': '⚛️',
-        'chemistry': '🧪',
-        'biology': '🧬',
-        'english': '📖',
-        'history': '📜',
-        'geography': '🌍',
-        'economics': '💹',
-        'computer science': '💻',
-        'programming': '👨‍💻',
-        'database': '🗄️',
-        'networks': '🌐',
-        'management': '🎯',
-        'accounting': '📊',
-        'law': '⚖️'
-      };
-      
-      for (const [key, icon] of Object.entries(iconMap)) {
-        if (name.includes(key)) return icon;
-      }
-      return '📚';
+    function getSubjectFaIcon(subjectName) {
+      const name = String(subjectName || '').toLowerCase();
+      if (name.includes('math') || name.includes('calc')) return 'fa-solid fa-calculator';
+      if (name.includes('physics') || name.includes('mechanic')) return 'fa-solid fa-atom';
+      if (name.includes('chem')) return 'fa-solid fa-flask';
+      if (name.includes('code') || name.includes('program') || name.includes('data structure') || name.includes('algorithm')) return 'fa-solid fa-code';
+      if (name.includes('database') || name.includes('sql') || name.includes('dbms')) return 'fa-solid fa-database';
+      if (name.includes('network') || name.includes('cloud')) return 'fa-solid fa-network-wired';
+      if (name.includes('electr') || name.includes('circuit')) return 'fa-solid fa-bolt';
+      return 'fa-solid fa-book-bookmark';
     }
 
     document.addEventListener('DOMContentLoaded', loadStudyHub);

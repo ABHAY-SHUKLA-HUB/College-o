@@ -3,640 +3,464 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>College OS - AI Tools</title>
-  <script src="assets/js/theme-init.js"></script>
-  <link rel="stylesheet" href="assets/css/styles.css" />
+  <title>AI Study Tools &amp; Tutor Studio | College OS</title>
+  <meta name="description" content="AI-powered study assistant: instant concept explanation, quiz generation from notes, session summarization, attendance insights, and career recommendations." />
+  <meta name="robots" content="noindex, nofollow" />
+  
+  <!-- Font & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  
+  <!-- Theme & Redesign CSS -->
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/student-dashboard-redesign.css" />
+
   <style>
-    .ai-hero {
-      position: relative;
-      overflow: hidden;
-      background:
-        radial-gradient(circle at top right, rgba(255,255,255,0.18), transparent 32%),
-        linear-gradient(135deg, #0f172a 0%, #1d4ed8 50%, #0f766e 100%);
-      color: #fff;
-      padding: 28px;
-      border-radius: 24px;
-      box-shadow: 0 24px 50px rgba(15, 23, 42, 0.22);
-      margin-bottom: 22px;
-    }
-
-    .ai-hero-grid {
+    .ai-layout {
       display: grid;
-      grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.9fr);
-      gap: 18px;
-      align-items: stretch;
-    }
-
-    .ai-kicker {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 12px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.14);
-      border: 1px solid rgba(255,255,255,0.18);
-      font-size: 12px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      margin-bottom: 16px;
-    }
-
-    .ai-hero h1 {
-      margin: 0 0 10px;
-      font-size: clamp(2rem, 4vw, 3rem);
-      line-height: 1.05;
-    }
-
-    .ai-hero p {
-      margin: 0 0 18px;
-      max-width: 60ch;
-      color: rgba(255,255,255,0.85);
-    }
-
-    .ai-chip-row {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .ai-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.16);
-      background: rgba(255,255,255,0.1);
-      font-size: 13px;
-      color: #fff;
-    }
-
-    .ai-runtime-row {
-      margin-top: 12px;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .ai-runtime-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      border-radius: 999px;
-      padding: 8px 12px;
-      background: rgba(255,255,255,0.12);
-      border: 1px solid rgba(255,255,255,0.18);
-      color: #fff;
-      font-size: 12px;
-      letter-spacing: 0.02em;
-    }
-
-    .ai-hero-side {
-      display: grid;
-      gap: 12px;
-    }
-
-    .ai-glass-card {
-      border-radius: 20px;
-      background: rgba(255,255,255,0.12);
-      border: 1px solid rgba(255,255,255,0.16);
-      padding: 18px;
-      backdrop-filter: blur(10px);
-      min-height: 0;
-    }
-
-    .ai-glass-card h3,
-    .ai-glass-card p {
-      margin: 0;
-    }
-
-    .ai-glass-card h3 {
-      font-size: 1rem;
-      margin-bottom: 8px;
-    }
-
-    .ai-glass-card p {
-      color: rgba(255,255,255,0.84);
-      font-size: 0.95rem;
-      line-height: 1.55;
-    }
-
-    .ai-module-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.05fr) minmax(360px, 1.15fr);
-      gap: 18px;
+      grid-template-columns: minmax(0, 1.25fr) minmax(360px, 1fr);
+      gap: 1.5rem;
       align-items: start;
     }
-
-    .ai-toolbar {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-bottom: 16px;
-    }
-
-    .ai-toolbar input,
-    .ai-toolbar select,
-    .ai-workbench textarea,
-    .ai-workbench input {
-      border: 1px solid rgba(15, 23, 42, 0.12);
-      background: rgba(255,255,255,0.95);
-      border-radius: 14px;
-      padding: 11px 14px;
-      font: inherit;
-      color: inherit;
-    }
-
-    .ai-toolbar input {
-      min-width: 240px;
-      flex: 1;
-    }
-
     .ai-tools-grid {
       display: grid;
-      gap: 14px;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1rem;
     }
-
     .ai-tool-card {
-      position: relative;
-      min-height: 220px;
+      background: var(--co-stu-surface);
+      border: 1px solid var(--co-stu-border);
+      border-radius: var(--co-stu-radius);
+      padding: 1.15rem;
+      box-shadow: var(--co-stu-shadow-sm);
       display: flex;
       flex-direction: column;
-      border-radius: 22px;
-      padding: 18px;
-      border: 1px solid rgba(15,23,42,0.08);
-      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.95));
-      box-shadow: 0 14px 26px rgba(15, 23, 42, 0.08);
-      transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+      gap: 0.65rem;
       cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
-
-    .ai-tool-card:hover,
-    .ai-tool-card.active {
-      transform: translateY(-3px);
-      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
-      border-color: rgba(37, 99, 235, 0.24);
+    .ai-tool-card:hover, .ai-tool-card.active {
+      transform: translateY(-2px);
+      border-color: var(--co-stu-primary);
+      box-shadow: var(--co-stu-shadow-md);
     }
-
     .ai-tool-top {
       display: flex;
       justify-content: space-between;
-      align-items: start;
-      gap: 12px;
-      margin-bottom: 14px;
+      align-items: flex-start;
+      gap: 8px;
     }
-
     .ai-tool-icon {
-      width: 52px;
-      height: 52px;
-      border-radius: 16px;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--co-stu-primary-light);
+      color: var(--co-stu-primary);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #fff;
-      font-size: 1.25rem;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.28);
+      font-size: 1.1rem;
     }
-
-    .ai-badge {
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      background: #eff6ff;
-      color: #1d4ed8;
-    }
-
-    .ai-badge.premium {
-      background: #fff7ed;
-      color: #c2410c;
-    }
-
-    .ai-badge.locked {
-      background: #fef2f2;
-      color: #b91c1c;
-    }
-
-    .ai-tool-card h3 {
-      margin: 0 0 6px;
-      font-size: 1.05rem;
-    }
-
-    .ai-tool-card p {
-      margin: 0;
-      color: var(--text-secondary, #475569);
-      line-height: 1.55;
-      font-size: 0.94rem;
-    }
-
     .ai-tool-benefits {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 5px;
       margin-top: auto;
-      padding-top: 14px;
+      padding-top: 8px;
     }
-
     .ai-tool-benefits span {
       border-radius: 999px;
-      background: rgba(15, 23, 42, 0.06);
-      color: #334155;
-      padding: 6px 10px;
-      font-size: 12px;
-    }
-
-    .ai-workbench {
-      border-radius: 24px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.95));
-      border: 1px solid rgba(15, 23, 42, 0.08);
-      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
-      padding: 20px;
-      position: sticky;
-      top: 18px;
-    }
-
-    .ai-workbench-header {
-      display: flex;
-      align-items: start;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 18px;
-    }
-
-    .ai-workbench-header h2 {
-      margin: 0 0 6px;
-      font-size: 1.4rem;
-    }
-
-    .ai-workbench-header p {
-      margin: 0;
-      color: var(--text-secondary, #475569);
-      line-height: 1.55;
-    }
-
-    .ai-form-grid {
-      display: grid;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .ai-form-grid label {
-      display: grid;
-      gap: 8px;
-      color: var(--text-primary, #0f172a);
-      font-weight: 600;
-      font-size: 0.95rem;
-    }
-
-    .ai-form-grid textarea {
-      min-height: 120px;
-      resize: vertical;
-    }
-
-    .ai-workbench-actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 16px;
-    }
-
-    .ai-output {
-      border-radius: 18px;
-      border: 1px solid rgba(15, 23, 42, 0.08);
-      background: #fff;
-      padding: 18px;
-      min-height: 220px;
-    }
-
-    .ai-output-meta {
-      margin-top: 10px;
-      color: #64748b;
-      font-size: 12px;
-    }
-
-    .ai-output-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 10px;
-    }
-
-    .ai-history-list {
-      display: grid;
-      gap: 8px;
-    }
-
-    .ai-history-item {
-      display: grid;
-      gap: 4px;
-      text-align: left;
-      border-radius: 12px;
-      border: 1px solid rgba(15, 23, 42, 0.08);
-      background: #fff;
-      padding: 10px;
-      cursor: pointer;
-      color: inherit;
-    }
-
-    .ai-history-item strong {
-      font-size: 13px;
-    }
-
-    .ai-history-item span {
-      font-size: 12px;
-      color: #475569;
-      line-height: 1.4;
-    }
-
-    .ai-history-item small {
+      background: var(--co-stu-bg-alt);
+      color: var(--co-stu-text-muted);
+      padding: 3px 8px;
       font-size: 11px;
-      color: #94a3b8;
+      font-weight: 600;
     }
-
-    .ai-skeleton {
-      position: relative;
-      overflow: hidden;
-      border-radius: 10px;
-      background: #e2e8f0;
+    .ai-output {
+      background: #0b0f19;
+      color: #e2e8f0;
+      border-radius: var(--co-stu-radius-sm);
+      padding: 1rem;
+      white-space: pre-wrap;
+      min-height: 140px;
+      font-size: 0.88rem;
+      line-height: 1.55;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      overflow-y: auto;
+      max-height: 380px;
     }
-
-    .ai-skeleton::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      transform: translateX(-100%);
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.75), transparent);
-      animation: shimmer 1.15s infinite;
-    }
-
-    .ai-skeleton-line {
-      height: 12px;
-      margin-bottom: 10px;
-    }
-
-    .ai-skeleton-card {
-      cursor: default;
-      pointer-events: none;
-    }
-
-    .ai-output-skeleton {
-      padding: 6px 0;
-    }
-
-    @keyframes shimmer {
-      100% {
-        transform: translateX(100%);
-      }
-    }
-
-    .ai-output h3 {
-      margin: 0 0 8px;
-      font-size: 1rem;
-    }
-
-    .ai-output p,
-    .ai-output li,
-    .ai-output pre {
-      color: var(--text-secondary, #475569);
-      line-height: 1.6;
-      margin-top: 0;
-    }
-
-    .ai-output ul,
-    .ai-output ol {
-      padding-left: 18px;
-      margin: 10px 0 0;
-    }
-
     .ai-empty {
-      display: grid;
-      place-items: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       text-align: center;
-      color: var(--text-secondary, #64748b);
-    }
-
-    .ai-empty i {
-      font-size: 2rem;
-      margin-bottom: 10px;
       color: #94a3b8;
+      min-height: 100px;
     }
-
-    .ai-section-card {
-      border-radius: 22px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
-      border: 1px solid rgba(15, 23, 42, 0.08);
-      box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
-      padding: 20px;
-      margin-top: 18px;
+    .ai-empty i {
+      font-size: 1.8rem;
+      margin-bottom: 6px;
     }
-
     .ai-studio-grid {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
-      gap: 16px;
-      align-items: start;
-      margin-top: 16px;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+      gap: 1.25rem;
     }
-
     .ai-studio-panel {
-      border-radius: 20px;
-      padding: 18px;
-      background: linear-gradient(180deg, rgba(15,23,42,0.03), rgba(255,255,255,0.96));
-      border: 1px solid rgba(15, 23, 42, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
     }
-
     .ai-studio-panel label {
-      display: grid;
-      gap: 8px;
-      margin-bottom: 12px;
-      font-weight: 600;
-      color: var(--text-primary, #0f172a);
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--co-stu-text);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
-
-    .ai-studio-panel textarea,
-    .ai-studio-panel input,
-    .ai-studio-panel select {
-      border: 1px solid rgba(15, 23, 42, 0.12);
-      background: rgba(255,255,255,0.96);
-      border-radius: 14px;
-      padding: 11px 14px;
-      font: inherit;
+    .ai-studio-panel textarea, .ai-studio-panel input, .ai-studio-panel select {
+      border: 1px solid var(--co-stu-border);
+      background: var(--co-stu-bg);
+      color: var(--co-stu-text);
+      border-radius: var(--co-stu-radius-sm);
+      padding: 8px 12px;
+      font-size: 0.88rem;
+      font-family: inherit;
+      outline: none;
     }
-
-    .ai-studio-panel textarea {
-      min-height: 140px;
-      resize: vertical;
+    .ai-studio-panel textarea:focus, .ai-studio-panel input:focus, .ai-studio-panel select:focus {
+      border-color: var(--co-stu-primary);
     }
-
-    .ai-studio-output {
-      min-height: 320px;
-    }
-
-    .ai-upgrade {
-      border-radius: 18px;
-      padding: 16px;
-      background: linear-gradient(135deg, #fff7ed, #ffedd5);
-      border: 1px solid #fdba74;
-      color: #9a3412;
-      margin-bottom: 16px;
-    }
-
-    @media (max-width: 1100px) {
-      .ai-hero-grid,
-      .ai-module-grid {
+    @media (max-width: 980px) {
+      .ai-layout, .ai-studio-grid {
         grid-template-columns: 1fr;
-      }
-
-      .ai-workbench {
-        position: static;
       }
     }
   </style>
 </head>
-<body>
-  <div class="app-shell" data-shell></div>
-  <template data-page>
-    <section class="ai-hero">
-      <div class="ai-hero-grid">
-        <div>
-          <div class="ai-kicker"><i class="fa-solid fa-sparkles"></i><span>AI Productivity Layer</span></div>
-          <h1 data-page-title>AI Tools for Learning and Career Growth</h1>
-          <p id="aiHeroSubtitle">Use branch-aware tools to revise faster, plan better, and prepare for placements with stronger direction.</p>
-          <div class="ai-chip-row" id="aiHeroChips">
-            <span class="ai-chip"><i class="fa-solid fa-brain"></i> Personalized by profile</span>
-            <span class="ai-chip"><i class="fa-solid fa-route"></i> Roadmap-aware workflows</span>
-            <span class="ai-chip"><i class="fa-solid fa-crown"></i> Premium tool controls</span>
-          </div>
-          <div class="ai-runtime-row">
-            <span class="ai-runtime-pill" id="aiRuntimeCredits"><i class="fa-solid fa-bolt"></i> AI Credits Left: --</span>
-            <span class="ai-runtime-pill" id="aiRuntimeUsage"><i class="fa-solid fa-gauge-high"></i> Uses Remaining: --</span>
-            <span class="ai-runtime-pill" id="aiRuntimeProvider"><i class="fa-solid fa-shield-heart"></i> Experience: fallback-ready</span>
-          </div>
-        </div>
-        <div class="ai-hero-side">
-          <article class="ai-glass-card">
-            <h3>What you get</h3>
-            <p>Notes summaries, flashcards, quiz ideas, resume bullet generation, career suggestions, study plans, interview question sets, and roadmap recommendations.</p>
-          </article>
-          <article class="ai-glass-card">
-            <h3 id="aiMembershipTitle">Membership aware</h3>
-            <p id="aiMembershipSubtitle">Free users can access selected tools. Premium unlocks the full AI success suite.</p>
-          </article>
-        </div>
-      </div>
-    </section>
+<body class="student-portal">
 
-    <section class="ai-module-grid">
-      <div>
-        <div class="ai-toolbar">
-          <input id="aiToolSearch" type="search" placeholder="Search AI tools by name or use case" />
-          <select id="aiToolFilter">
-            <option value="all">All tools</option>
-            <option value="free">Free tools</option>
-            <option value="premium">Premium tools</option>
-            <option value="featured">Featured</option>
-          </select>
-        </div>
-        <div class="ai-tools-grid" id="aiToolsGrid"></div>
+  <!-- Mobile Drawer Backdrop -->
+  <div class="co-student-backdrop" id="studentBackdrop"></div>
+
+  <div class="co-student-shell">
+    <!-- LEFT SIDEBAR -->
+    <aside class="co-student-sidebar" id="studentSidebar">
+      <div class="co-sidebar-brand">
+        <a href="dashboard.html" class="brand-logo">
+          <div class="brand-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+          <div class="brand-text">College <span>OS</span></div>
+        </a>
+        <button class="co-sidebar-close" id="studentSidebarClose" aria-label="Close sidebar">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
 
-      <aside class="ai-workbench">
-        <div id="aiUpgradeBanner" class="ai-upgrade" style="display:none;"></div>
-        <div class="ai-workbench-header">
+      <nav class="co-sidebar-nav" aria-label="Student main navigation">
+        <div class="nav-section-title">LEARNING</div>
+        <a href="dashboard.html" class="nav-item" id="navDashboard">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="study.html" class="nav-item" id="navMyCourses">
+          <i class="fa-solid fa-book-open"></i>
+          <span>My Courses</span>
+        </a>
+        <a href="notes-library.html" class="nav-item" id="navNotes">
+          <i class="fa-solid fa-file-lines"></i>
+          <span>Notes Library</span>
+        </a>
+        <a href="pyqs.html" class="nav-item" id="navPyqs">
+          <i class="fa-solid fa-file-circle-question"></i>
+          <span>Previous Papers</span>
+        </a>
+        <a href="quizzes.html" class="nav-item" id="navQuizzes">
+          <i class="fa-solid fa-clipboard-question"></i>
+          <span>Quizzes</span>
+        </a>
+        <a href="mock-tests.html" class="nav-item" id="navMockTests">
+          <i class="fa-solid fa-flask"></i>
+          <span>Mock Tests</span>
+        </a>
+
+        <div class="nav-section-title">CAREER &amp; TOOLS</div>
+        <a href="study-roadmap.html" class="nav-item" id="navRoadmaps">
+          <i class="fa-solid fa-map-location-dot"></i>
+          <span>Career Roadmaps</span>
+        </a>
+        <a href="coding-challenges.html" class="nav-item" id="navCoding">
+          <i class="fa-solid fa-code"></i>
+          <span>Coding Arena</span>
+        </a>
+        <a href="ai-tools.html" class="nav-item active" id="navAiTools">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span>AI Study Tools</span>
+        </a>
+        <a href="leaderboards.html" class="nav-item" id="navLeaderboards">
+          <i class="fa-solid fa-trophy"></i>
+          <span>Leaderboard</span>
+        </a>
+
+        <div class="nav-section-title">COMMUNITY &amp; LIVE</div>
+        <a href="college-feed.html" class="nav-item" id="navCommunity">
+          <i class="fa-solid fa-newspaper"></i>
+          <span>Campus Feed</span>
+        </a>
+        <a href="live-study.html" class="nav-item" id="navLiveStudy">
+          <i class="fa-solid fa-video"></i>
+          <span>Live Study Rooms</span>
+        </a>
+
+        <div class="nav-section-title">ACHIEVEMENTS &amp; ACCOUNT</div>
+        <a href="certificates.html" class="nav-item" id="navCertificates">
+          <i class="fa-solid fa-award"></i>
+          <span>Certificates</span>
+        </a>
+        <a href="academic-onboarding.html" class="nav-item" id="navAcademicProfile">
+          <i class="fa-solid fa-building-columns"></i>
+          <span>Academic Profile</span>
+        </a>
+        <a href="profile.html" class="nav-item" id="navProfile">
+          <i class="fa-solid fa-user-gear"></i>
+          <span>Account Settings</span>
+        </a>
+      </nav>
+
+      <!-- Sidebar Mini Profile -->
+      <div class="co-sidebar-footer">
+        <div class="sidebar-user-pill">
+          <div class="user-avatar" id="sidebarStudentAvatar">ST</div>
+          <div class="user-info">
+            <div class="user-name" id="sidebarStudentName">Student</div>
+            <div class="user-meta" id="sidebarStudentSub">Learner</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTAINER -->
+    <div class="co-student-main">
+      <!-- TOPBAR -->
+      <header class="co-student-topbar">
+        <div class="topbar-left">
+          <button class="co-mobile-toggle" id="studentSidebarToggle" aria-label="Open sidebar">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="topbar-search">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="search" id="studentGlobalSearch" placeholder="Search notes, subjects, PYQs, roadmaps... (Ctrl+K)" aria-label="Global search" />
+            <span class="search-kbd">⌘K</span>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <!-- Theme Toggle -->
+          <button class="topbar-action-btn" id="studentThemeToggle" aria-label="Toggle dark/light mode" title="Toggle theme">
+            <i class="fa-solid fa-moon"></i>
+          </button>
+
+          <!-- Notification Bell -->
+          <a href="notifications.html" class="topbar-action-btn" aria-label="Notifications" title="Notifications">
+            <i class="fa-solid fa-bell"></i>
+          </a>
+
+          <!-- Profile Menu Toggle -->
+          <div class="topbar-profile" id="studentProfileMenuToggle" role="button" tabindex="0" aria-label="User profile menu">
+            <div class="profile-avatar" id="studentProfileAvatar">ST</div>
+            <div class="profile-meta">
+              <span class="profile-name" id="studentProfileName">Student</span>
+              <span class="profile-role" id="studentProfileRole">Learner</span>
+            </div>
+            <i class="fa-solid fa-chevron-down" style="font-size:0.75rem; color:var(--co-stu-text-light);"></i>
+
+            <!-- Dropdown Menu -->
+            <div class="profile-dropdown" id="studentProfileDropdown">
+              <div class="dropdown-header">
+                <div class="user-name" id="dropdownStudentName">Student</div>
+                <div class="user-email" id="dropdownStudentEmail">student@collegeo.in</div>
+              </div>
+              <div class="dropdown-links">
+                <a href="profile.html"><i class="fa-solid fa-user"></i> My Profile</a>
+                <a href="academic-onboarding.html"><i class="fa-solid fa-building-columns"></i> Academic Setup</a>
+                <a href="certificates.html"><i class="fa-solid fa-award"></i> My Certificates</a>
+                <a href="settings.html"><i class="fa-solid fa-gear"></i> Settings</a>
+              </div>
+              <div class="dropdown-footer">
+                <a href="/login" id="studentLogoutBtn" class="logout-link"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- PAGE CONTENT -->
+      <main class="co-student-container">
+        <!-- Breadcrumbs -->
+        <nav class="co-breadcrumb" aria-label="Breadcrumb">
+          <a href="dashboard.html"><i class="fa-solid fa-house"></i> Home</a>
+          <span class="separator">›</span>
+          <span class="current">AI Study Tools</span>
+        </nav>
+
+        <!-- Page Header -->
+        <div class="co-page-header">
           <div>
-            <h2 id="aiWorkbenchTitle">Choose a tool</h2>
-            <p id="aiWorkbenchDescription">Select a tool from the left to start generating useful study or career output.</p>
+            <h1 class="co-page-header-title">AI Study Tools &amp; Tutor Studio</h1>
+            <p class="co-page-header-desc">AI-powered learning assistant: instant concept breakdown, smart quiz generator from lecture notes, exam answer reviews, and personalized career advice.</p>
           </div>
-          <span class="ai-badge" id="aiWorkbenchBadge">Ready</span>
-        </div>
-        <div class="ai-form-grid" id="aiWorkbenchForm"></div>
-        <div class="ai-workbench-actions">
-          <button class="btn primary" id="runAiToolBtn"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate</button>
-          <button class="btn secondary" id="clearAiToolBtn"><i class="fa-solid fa-rotate-left"></i> Reset</button>
-        </div>
-        <div class="ai-output-actions" id="aiOutputActions" style="display:none;">
-          <button class="btn secondary" id="aiCopyBtn" type="button"><i class="fa-solid fa-copy"></i> Copy</button>
-          <button class="btn secondary" id="aiRegenerateBtn" type="button"><i class="fa-solid fa-rotate-right"></i> Regenerate</button>
-          <button class="btn secondary" id="aiSaveBtn" type="button"><i class="fa-solid fa-bookmark"></i> Save</button>
-        </div>
-        <div class="ai-output" id="aiOutput">
-          <div class="ai-empty">
-            <div>
-              <i class="fa-solid fa-sparkles"></i>
-              <p>Pick a tool, add a little input, and College OS will generate a practical first draft.</p>
-            </div>
+          <div class="co-page-header-actions">
+            <a href="notes-library.html" class="btn-stu secondary"><i class="fa-solid fa-file-lines"></i> Open Notes Library</a>
+            <a href="study-roadmap.html" class="btn-stu primary"><i class="fa-solid fa-map-location-dot"></i> Career Tracks</a>
           </div>
         </div>
-        <div class="ai-output-meta" id="aiOutputMeta"></div>
-      </aside>
-    </section>
 
-    <section class="ai-section-card">
-      <div class="section-header">
-        <i class="fa-solid fa-diagram-project"></i>
-        <h2>AI Studio Phase</h2>
-      </div>
-      <p class="muted" style="margin-top:-4px; margin-bottom:0;">A product-style layer for chat, notes, sessions, attendance, predictions, and recommendations.</p>
-      <div class="ai-studio-grid">
-        <div class="ai-studio-panel">
-          <label>
-            Studio mode
-            <select id="aiStudioMode">
-              <option value="chat">Study assistant chat</option>
-              <option value="quiz">Quiz from notes</option>
-              <option value="summary">Session summary</option>
-              <option value="attendance">Attendance insights</option>
-              <option value="prediction">Performance prediction</option>
-              <option value="recommendation">Recommendation system</option>
+        <!-- Filter Bar -->
+        <div class="co-filter-bar">
+          <div class="co-filter-group">
+            <div class="co-search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="search" id="aiToolSearch" class="co-search-input" placeholder="Search AI tools (e.g., Code Explainer, Summary, Quiz)..." />
+            </div>
+
+            <select id="aiCategoryFilter" class="co-filter-select">
+              <option value="">All Tool Categories</option>
+              <option value="Study">Academic &amp; Revision</option>
+              <option value="Coding">Coding &amp; Algorithms</option>
+              <option value="Career">Career &amp; Placement</option>
             </select>
-          </label>
-          <label>
-            Input
-            <textarea id="aiStudioInput" placeholder="Describe the topic, notes, session transcript, or learning problem you want the studio to process."></textarea>
-          </label>
-          <label>
-            Context
-            <input id="aiStudioContext" type="text" placeholder="Optional context, e.g. DSA, live lab, 85% attendance, semester 5" />
-          </label>
-          <div class="ai-workbench-actions" style="margin-bottom:0;">
-            <button class="btn primary" id="aiStudioRunBtn" type="button"><i class="fa-solid fa-wand-magic-sparkles"></i> Run Studio</button>
-            <button class="btn secondary" id="aiStudioExampleBtn" type="button"><i class="fa-solid fa-bolt"></i> Load Example</button>
           </div>
         </div>
-        <div class="ai-output ai-studio-output" id="aiStudioOutput">
-          <div class="ai-empty">
-            <div>
-              <i class="fa-solid fa-stars"></i>
-              <p>Pick a mode, add a little context, and the studio will return a structured startup-style output.</p>
+
+        <!-- AI Tools & Interactive Workbench Layout -->
+        <div class="ai-layout">
+          <!-- Left: Available AI Tools -->
+          <div style="display:flex; flex-direction:column; gap:1rem;">
+            <div class="section-header">
+              <div>
+                <h2 class="section-title"><i class="fa-solid fa-sparkles"></i> AI Assistants</h2>
+                <p class="section-subtitle">Select an assistant to activate the workbench.</p>
+              </div>
+            </div>
+            <div class="ai-tools-grid" id="aiToolsGrid">
+              <div class="co-card co-skeleton" style="height:140px;"></div>
+              <div class="co-card co-skeleton" style="height:140px;"></div>
+            </div>
+          </div>
+
+          <!-- Right: Interactive AI Workbench -->
+          <div class="co-card" style="position:sticky; top:80px;">
+            <div class="co-card-top">
+              <div>
+                <h3 class="co-card-title" id="aiWorkbenchTitle">Choose a Tool</h3>
+                <p class="co-card-desc" id="aiWorkbenchDescription">Select a tool from the left to start generating customized output.</p>
+              </div>
+              <span class="co-badge primary" id="aiWorkbenchBadge">Ready</span>
+            </div>
+
+            <div class="ai-form-grid" id="aiWorkbenchForm" style="display:grid; gap:0.75rem; margin-top:0.5rem;"></div>
+
+            <div style="display:flex; gap:8px; margin-top:0.5rem;" class="ai-workbench-actions">
+              <button class="btn-stu primary sm" id="runAiToolBtn"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate</button>
+              <button class="btn-stu secondary sm" id="clearAiToolBtn"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+            </div>
+
+            <div class="ai-output-actions" id="aiOutputActions" style="display:none; gap:6px; margin-top:0.5rem;">
+              <button class="btn-stu secondary sm" id="aiCopyBtn" type="button"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn-stu secondary sm" id="aiRegenerateBtn" type="button"><i class="fa-solid fa-rotate-right"></i> Regenerate</button>
+              <button class="btn-stu secondary sm" id="aiSaveBtn" type="button"><i class="fa-solid fa-bookmark"></i> Save</button>
+            </div>
+
+            <div class="ai-output" id="aiOutput" style="margin-top:0.5rem;">
+              <div class="ai-empty">
+                <i class="fa-solid fa-sparkles"></i>
+                <p>Pick a tool, enter your prompt or chapter text, and College OS will generate a structured response.</p>
+              </div>
+            </div>
+            <div class="ai-output-meta" id="aiOutputMeta" style="font-size:0.75rem; color:var(--co-stu-text-muted); margin-top:4px;"></div>
+          </div>
+        </div>
+
+        <!-- AI Studio Live Hub -->
+        <section class="co-card">
+          <div class="co-card-top">
+            <div class="co-card-icon-wrap" style="background:rgba(139,92,246,0.1); color:#8b5cf6;"><i class="fa-solid fa-diagram-project"></i></div>
+            <span class="co-badge warning">Studio Mode</span>
+          </div>
+          <h3 class="co-card-title">AI Studio Live Hub</h3>
+          <p class="co-card-desc">Advanced multi-turn study assistant for lecture analysis, automated quizzes, attendance predictions, and personalized revision plans.</p>
+
+          <div class="ai-studio-grid" style="margin-top:1rem;">
+            <div class="ai-studio-panel">
+              <label>
+                Studio Mode
+                <select id="aiStudioMode" class="co-filter-select" style="width:100%;">
+                  <option value="chat">Study Assistant Chat</option>
+                  <option value="quiz">Quiz from Notes</option>
+                  <option value="summary">Session Summary</option>
+                  <option value="attendance">Attendance Insights</option>
+                  <option value="prediction">Performance Prediction</option>
+                  <option value="recommendation">Recommendation System</option>
+                </select>
+              </label>
+              <label>
+                Input / Text
+                <textarea id="aiStudioInput" rows="4" placeholder="Describe the topic, lecture notes, or study problem..."></textarea>
+              </label>
+              <label>
+                Context
+                <input id="aiStudioContext" type="text" placeholder="Optional context, e.g. DSA, Semester 4, Exam next week" />
+              </label>
+              <div style="display:flex; gap:8px; margin-top:4px;">
+                <button class="btn-stu primary sm" id="aiStudioRunBtn" type="button"><i class="fa-solid fa-wand-magic-sparkles"></i> Run Studio</button>
+                <button class="btn-stu secondary sm" id="aiStudioExampleBtn" type="button"><i class="fa-solid fa-bolt"></i> Load Example</button>
+              </div>
+            </div>
+
+            <div class="ai-output ai-studio-output" id="aiStudioOutput">
+              <div class="ai-empty">
+                <i class="fa-solid fa-brain"></i>
+                <p>Pick a mode, add context, and the AI studio will generate a structured breakdown.</p>
+              </div>
+            </div>
+          </div>
+          <div class="ai-output-meta" id="aiStudioMeta" style="font-size:0.75rem; color:var(--co-stu-text-muted); margin-top:8px;"></div>
+        </section>
+
+        <!-- Recommended Moves & Saved History -->
+        <div class="co-dashboard-layout">
+          <!-- Recommended Next Moves -->
+          <div class="co-card">
+            <div class="section-header">
+              <div>
+                <h3 class="section-title"><i class="fa-solid fa-lightbulb"></i> Recommended Next Moves</h3>
+              </div>
+            </div>
+            <div class="ai-tools-grid" id="aiRecommendationGrid"></div>
+          </div>
+
+          <!-- Saved AI History -->
+          <div class="co-card">
+            <div class="section-header">
+              <div>
+                <h3 class="section-title"><i class="fa-solid fa-clock-rotate-left"></i> Saved AI History</h3>
+              </div>
+            </div>
+            <div class="ai-history-list" id="aiHistoryList">
+              <p style="font-size:0.85rem; color:var(--co-stu-text-muted);">No saved prompts yet. Click "Save" on any generation to bookmark it here.</p>
             </div>
           </div>
         </div>
-      </div>
-      <div class="ai-output-meta" id="aiStudioMeta" style="margin-top:12px;"></div>
-    </section>
+      </main>
+    </div>
+  </div>
 
-    <section class="ai-section-card">
-      <div class="section-header">
-        <i class="fa-solid fa-lightbulb"></i>
-        <h2>Recommended Next Moves</h2>
-      </div>
-      <div class="ai-tools-grid" id="aiRecommendationGrid"></div>
-    </section>
-
-    <section class="ai-section-card">
-      <div class="section-header">
-        <i class="fa-solid fa-clock-rotate-left"></i>
-        <h2>Saved AI History</h2>
-      </div>
-      <div class="ai-history-list" id="aiHistoryList"></div>
-    </section>
-  </template>
+  <!-- Scripts -->
   <script src="assets/js/api.js"></script>
-  <script src="assets/js/app.js"></script>
+  <script src="assets/js/student-shell.js"></script>
   <script src="assets/js/ai-client.js"></script>
   <script src="assets/js/ai-tools.js"></script>
 </body>

@@ -3,324 +3,420 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>User Profile - College OS</title>
-  <script src="assets/js/theme-init.js"></script>
-  <link rel="stylesheet" href="assets/css/styles.css" />
+  <title>Student Profile &amp; Account Settings | College OS</title>
+  <meta name="description" content="View and manage your College OS student profile, academic college affiliation, progress statistics, earned achievement badges, and security settings." />
+  <meta name="robots" content="noindex, nofollow" />
+  
+  <!-- Font & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
-  <style>
-    .profile-layout {
-      display: grid;
-      gap: 1rem;
-    }
+  
+  <!-- Theme & Redesign CSS -->
+  <script src="assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="assets/css/student-dashboard-redesign.css" />
 
+  <style>
     .summary-card {
       display: grid;
       grid-template-columns: auto 1fr;
-      gap: 1rem;
+      gap: 1.5rem;
       align-items: center;
-      padding: 1.1rem;
-      border-radius: 14px;
-      background: var(--surface);
-      box-shadow: var(--shadow);
-      border: 1px solid rgba(0, 0, 0, 0.08);
+      padding: 1.5rem;
+      border-radius: var(--co-stu-radius);
+      background: var(--co-stu-surface);
+      box-shadow: var(--co-stu-shadow-sm);
+      border: 1px solid var(--co-stu-border);
     }
-
     .summary-avatar {
-      width: 88px;
-      height: 88px;
+      width: 90px;
+      height: 90px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       color: #fff;
-      font-size: 1.7rem;
-      font-weight: 700;
-      background: linear-gradient(135deg, #0f7b6c, #2f6fed);
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+      font-size: 2rem;
+      font-weight: 800;
+      background: var(--co-stu-primary-gradient);
+      box-shadow: 0 10px 24px rgba(79, 70, 229, 0.25);
       overflow: hidden;
+      flex-shrink: 0;
     }
-
     .summary-avatar img {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
-
-    .summary-main h2 {
-      margin: 0;
-      font-size: 1.4rem;
-    }
-
     .summary-meta {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 0.55rem;
-      margin-top: 0.6rem;
+      gap: 0.75rem;
+      margin-top: 1rem;
     }
-
     .summary-chip {
-      background: #fff;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      border-radius: 10px;
-      padding: 0.55rem;
+      background: var(--co-stu-bg);
+      border: 1px solid var(--co-stu-border);
+      border-radius: var(--co-stu-radius-sm);
+      padding: 0.65rem 0.85rem;
     }
-
     .summary-chip label {
       display: block;
-      color: var(--muted);
-      font-size: 0.74rem;
+      color: var(--co-stu-text-muted);
+      font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      font-weight: 600;
+      font-weight: 700;
+      margin-bottom: 2px;
     }
-
     .summary-chip strong {
       font-size: 0.95rem;
+      color: var(--co-stu-text);
+      font-weight: 700;
     }
-
     .summary-actions {
       display: flex;
       flex-wrap: wrap;
       gap: 0.55rem;
-      margin-top: 0.7rem;
+      margin-top: 1rem;
     }
-
-    .quick-stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-      gap: 0.75rem;
-    }
-
-    .stat-card {
-      border-radius: 12px;
-      background: var(--surface);
-      border: 1px solid rgba(0, 0, 0, 0.08);
-      box-shadow: var(--shadow);
-      padding: 0.8rem;
-      transition: transform 130ms ease;
-    }
-
-    .stat-card:hover {
-      transform: translateY(-2px);
-    }
-
-    .stat-card label {
-      color: var(--muted);
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-      display: block;
-    }
-
-    .stat-card strong {
-      font-size: 1.3rem;
-      font-family: 'Space Grotesk', sans-serif;
-    }
-
-    .progress-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 0.75rem;
-    }
-
-    .progress-item {
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      border-radius: 12px;
-      background: #fff;
-      padding: 0.75rem;
-    }
-
-    .progress-item .progress {
-      margin-top: 0.4rem;
-    }
-
-    .badges-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 0.7rem;
-    }
-
-    .badge-card {
-      border-radius: 12px;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      background: #fff;
-      padding: 0.75rem;
-    }
-
-    .badge-card.locked {
-      opacity: 0.65;
-      filter: grayscale(0.2);
-    }
-
-    .badge-card i {
-      color: #8b6f00;
-      margin-right: 0.45rem;
-    }
-
     .activity-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 0.75rem;
+      gap: 1rem;
     }
-
     .activity-box {
-      border-radius: 12px;
-      background: #fff;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      padding: 0.75rem;
+      border-radius: var(--co-stu-radius-sm);
+      background: var(--co-stu-bg);
+      border: 1px solid var(--co-stu-border);
+      padding: 1rem;
     }
-
     .activity-list {
-      margin: 0.4rem 0 0;
-      padding-left: 1rem;
-      color: var(--muted);
+      margin: 0.5rem 0 0;
+      padding-left: 1.2rem;
+      color: var(--co-stu-text-muted);
+      font-size: 0.85rem;
+      line-height: 1.6;
     }
-
-    .improved-cards {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 0.75rem;
-    }
-
-    .info-card {
-      border-radius: 12px;
-      background: var(--surface);
-      border: 1px solid rgba(0, 0, 0, 0.08);
-      box-shadow: var(--shadow);
-      padding: 0.85rem;
-    }
-
-    .info-card .value {
-      font-size: 1.45rem;
-      font-family: 'Space Grotesk', sans-serif;
-      margin: 0.3rem 0;
-    }
-
     @media (max-width: 980px) {
-      .summary-meta,
-      .progress-grid,
-      .improved-cards,
-      .activity-grid {
+      .summary-card {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+      .summary-avatar {
+        margin: 0 auto;
+      }
+      .summary-meta {
         grid-template-columns: 1fr;
       }
-
-      .summary-card {
+      .summary-actions {
+        justify-content: center;
+      }
+      .activity-grid {
         grid-template-columns: 1fr;
       }
     }
   </style>
 </head>
-<body>
-  <div class="app-shell" data-shell></div>
-  <template data-page>
-    <section class="hero">
-      <h1 data-page-title>User Profile</h1>
-      <p>Manage achievements, roadmaps, and saved notes.</p>
-    </section>
+<body class="student-portal">
 
-    <section class="profile-layout">
-      <article class="summary-card">
-        <div class="summary-avatar" id="profileAvatar">U</div>
-        <div class="summary-main">
-          <h2 id="profileFullName">Student Name</h2>
-          <p class="muted" id="profileEmail">email@example.com</p>
+  <!-- Mobile Drawer Backdrop -->
+  <div class="co-student-backdrop" id="studentBackdrop"></div>
 
-          <div class="summary-meta">
-            <div class="summary-chip"><label>College</label><strong id="profileCollege">-</strong></div>
-            <div class="summary-chip"><label>Course / Branch</label><strong id="profileBranch">Not set</strong></div>
-            <div class="summary-chip"><label>Semester / Year</label><strong id="profileSemester">Not set</strong></div>
-            <div class="summary-chip"><label>Join Date</label><strong id="profileJoinDate">-</strong></div>
-            <div class="summary-chip"><label>Current Streak</label><strong data-stat="currentStreak">0</strong></div>
-            <div class="summary-chip"><label>Total XP</label><strong data-stat="totalXp">0</strong></div>
+  <div class="co-student-shell">
+    <!-- LEFT SIDEBAR -->
+    <aside class="co-student-sidebar" id="studentSidebar">
+      <div class="co-sidebar-brand">
+        <a href="dashboard.html" class="brand-logo">
+          <div class="brand-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+          <div class="brand-text">College <span>OS</span></div>
+        </a>
+        <button class="co-sidebar-close" id="studentSidebarClose" aria-label="Close sidebar">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <nav class="co-sidebar-nav" aria-label="Student main navigation">
+        <div class="nav-section-title">LEARNING</div>
+        <a href="dashboard.html" class="nav-item" id="navDashboard">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="study.html" class="nav-item" id="navMyCourses">
+          <i class="fa-solid fa-book-open"></i>
+          <span>My Courses</span>
+        </a>
+        <a href="notes-library.html" class="nav-item" id="navNotes">
+          <i class="fa-solid fa-file-lines"></i>
+          <span>Notes Library</span>
+        </a>
+        <a href="pyqs.html" class="nav-item" id="navPyqs">
+          <i class="fa-solid fa-file-circle-question"></i>
+          <span>Previous Papers</span>
+        </a>
+        <a href="quizzes.html" class="nav-item" id="navQuizzes">
+          <i class="fa-solid fa-clipboard-question"></i>
+          <span>Quizzes</span>
+        </a>
+        <a href="mock-tests.html" class="nav-item" id="navMockTests">
+          <i class="fa-solid fa-flask"></i>
+          <span>Mock Tests</span>
+        </a>
+
+        <div class="nav-section-title">CAREER &amp; TOOLS</div>
+        <a href="study-roadmap.html" class="nav-item" id="navRoadmaps">
+          <i class="fa-solid fa-map-location-dot"></i>
+          <span>Career Roadmaps</span>
+        </a>
+        <a href="coding-challenges.html" class="nav-item" id="navCoding">
+          <i class="fa-solid fa-code"></i>
+          <span>Coding Arena</span>
+        </a>
+        <a href="ai-tools.html" class="nav-item" id="navAiTools">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span>AI Study Tools</span>
+        </a>
+        <a href="leaderboards.html" class="nav-item" id="navLeaderboards">
+          <i class="fa-solid fa-trophy"></i>
+          <span>Leaderboard</span>
+        </a>
+
+        <div class="nav-section-title">COMMUNITY &amp; LIVE</div>
+        <a href="college-feed.html" class="nav-item" id="navCommunity">
+          <i class="fa-solid fa-newspaper"></i>
+          <span>Campus Feed</span>
+        </a>
+        <a href="live-study.html" class="nav-item" id="navLiveStudy">
+          <i class="fa-solid fa-video"></i>
+          <span>Live Study Rooms</span>
+        </a>
+
+        <div class="nav-section-title">ACHIEVEMENTS &amp; ACCOUNT</div>
+        <a href="certificates.html" class="nav-item" id="navCertificates">
+          <i class="fa-solid fa-award"></i>
+          <span>Certificates</span>
+        </a>
+        <a href="academic-onboarding.html" class="nav-item" id="navAcademicProfile">
+          <i class="fa-solid fa-building-columns"></i>
+          <span>Academic Profile</span>
+        </a>
+        <a href="profile.html" class="nav-item active" id="navProfile">
+          <i class="fa-solid fa-user-gear"></i>
+          <span>Account Settings</span>
+        </a>
+      </nav>
+
+      <!-- Sidebar Mini Profile -->
+      <div class="co-sidebar-footer">
+        <div class="sidebar-user-pill">
+          <div class="user-avatar" id="sidebarStudentAvatar">ST</div>
+          <div class="user-info">
+            <div class="user-name" id="sidebarStudentName">Student</div>
+            <div class="user-meta" id="sidebarStudentSub">Learner</div>
           </div>
-
-          <div class="summary-actions">
-            <button class="btn primary" id="editProfileBtn"><i class="fa-solid fa-pen"></i> Edit Profile</button>
-            <button class="btn secondary" id="changePasswordBtn"><i class="fa-solid fa-key"></i> Change Password</button>
-            <button class="btn secondary" id="uploadPhotoBtn"><i class="fa-solid fa-camera"></i> Upload Profile Photo</button>
-            <input type="file" id="uploadPhotoInput" accept="image/*" style="display:none;" />
-          </div>
-          <p class="muted" id="profileActionStatus"></p>
         </div>
-      </article>
+      </div>
+    </aside>
 
-      <section class="quick-stats">
-        <article class="stat-card"><label>Total XP</label><strong data-stat="totalXp">0</strong></article>
-        <article class="stat-card"><label>Current Streak</label><strong data-stat="currentStreak">0</strong></article>
-        <article class="stat-card"><label>Mock Tests Attempted</label><strong data-stat="mockTestsAttempted">0</strong></article>
-        <article class="stat-card"><label>Certificates Earned</label><strong data-stat="certificatesEarned">0</strong></article>
-        <article class="stat-card"><label>Saved Notes</label><strong data-stat="savedNotes">0</strong></article>
-        <article class="stat-card"><label>Completed Roadmaps</label><strong data-stat="completedRoadmaps">0</strong></article>
-      </section>
-
-      <article class="card">
-        <h3><i class="fa-solid fa-chart-line"></i> Learning Progress</h3>
-        <div class="progress-grid">
-          <div class="progress-item">
-            <label>Roadmap Completion</label>
-            <strong id="progressRoadmapValue">0%</strong>
-            <div class="progress"><span id="progressRoadmapFill" style="width:0%"></span></div>
-          </div>
-          <div class="progress-item">
-            <label>Mock Test Performance</label>
-            <strong id="progressMockValue">0%</strong>
-            <div class="progress"><span id="progressMockFill" style="width:0%"></span></div>
-          </div>
-          <div class="progress-item">
-            <label>Certification Progress</label>
-            <strong id="progressCertValue">0%</strong>
-            <div class="progress"><span id="progressCertFill" style="width:0%"></span></div>
+    <!-- MAIN CONTAINER -->
+    <div class="co-student-main">
+      <!-- TOPBAR -->
+      <header class="co-student-topbar">
+        <div class="topbar-left">
+          <button class="co-mobile-toggle" id="studentSidebarToggle" aria-label="Open sidebar">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="topbar-search">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="search" id="studentGlobalSearch" placeholder="Search notes, subjects, PYQs, roadmaps... (Ctrl+K)" aria-label="Global search" />
+            <span class="search-kbd">⌘K</span>
           </div>
         </div>
-      </article>
 
-      <article class="card">
-        <h3><i class="fa-solid fa-trophy"></i> Achievements / Badges</h3>
-        <div class="badges-grid" id="achievementsGrid"></div>
-      </article>
+        <div class="topbar-right">
+          <!-- Theme Toggle -->
+          <button class="topbar-action-btn" id="studentThemeToggle" aria-label="Toggle dark/light mode" title="Toggle theme">
+            <i class="fa-solid fa-moon"></i>
+          </button>
 
-      <article class="card">
-        <h3><i class="fa-solid fa-clock-rotate-left"></i> Recent Activity</h3>
-        <div class="activity-grid">
-          <div class="activity-box"><strong>Recently Viewed Notes</strong><ul class="activity-list" id="activityNotes"></ul></div>
-          <div class="activity-box"><strong>Recently Attempted Mock Tests</strong><ul class="activity-list" id="activityMocks"></ul></div>
-          <div class="activity-box"><strong>Recently Earned Certificates</strong><ul class="activity-list" id="activityCertificates"></ul></div>
-          <div class="activity-box"><strong>Last Roadmap Opened</strong><ul class="activity-list" id="activityRoadmap"></ul></div>
+          <!-- Notification Bell -->
+          <a href="notifications.html" class="topbar-action-btn" aria-label="Notifications" title="Notifications">
+            <i class="fa-solid fa-bell"></i>
+          </a>
+
+          <!-- Profile Menu Toggle -->
+          <div class="topbar-profile" id="studentProfileMenuToggle" role="button" tabindex="0" aria-label="User profile menu">
+            <div class="profile-avatar" id="studentProfileAvatar">ST</div>
+            <div class="profile-meta">
+              <span class="profile-name" id="studentProfileName">Student</span>
+              <span class="profile-role" id="studentProfileRole">Learner</span>
+            </div>
+            <i class="fa-solid fa-chevron-down" style="font-size:0.75rem; color:var(--co-stu-text-light);"></i>
+
+            <!-- Dropdown Menu -->
+            <div class="profile-dropdown" id="studentProfileDropdown">
+              <div class="dropdown-header">
+                <div class="user-name" id="dropdownStudentName">Student</div>
+                <div class="user-email" id="dropdownStudentEmail">student@collegeo.in</div>
+              </div>
+              <div class="dropdown-links">
+                <a href="profile.html"><i class="fa-solid fa-user"></i> My Profile</a>
+                <a href="academic-onboarding.html"><i class="fa-solid fa-building-columns"></i> Academic Setup</a>
+                <a href="certificates.html"><i class="fa-solid fa-award"></i> My Certificates</a>
+                <a href="settings.html"><i class="fa-solid fa-gear"></i> Settings</a>
+              </div>
+              <div class="dropdown-footer">
+                <a href="/login" id="studentLogoutBtn" class="logout-link"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out</a>
+              </div>
+            </div>
+          </div>
         </div>
-      </article>
+      </header>
 
-      <section class="improved-cards">
-        <article class="info-card">
-          <h3><i class="fa-solid fa-graduation-cap"></i> My Certificates</h3>
-          <p class="value" data-stat="certificates">0</p>
-          <p class="muted" id="certificatesEmptyText">No certificates yet. Complete quizzes and tests to unlock your first certificate.</p>
-          <div class="actions"><a class="btn secondary" href="certificates.html">Gallery View</a></div>
+      <!-- PAGE CONTENT -->
+      <main class="co-student-container">
+        <!-- Breadcrumbs -->
+        <nav class="co-breadcrumb" aria-label="Breadcrumb">
+          <a href="dashboard.html"><i class="fa-solid fa-house"></i> Home</a>
+          <span class="separator">›</span>
+          <span class="current">Student Profile</span>
+        </nav>
+
+        <!-- Summary Profile Card -->
+        <article class="summary-card">
+          <div class="summary-avatar" id="profileAvatar">ST</div>
+          <div class="summary-main">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
+              <div>
+                <h1 style="font-size:1.5rem; font-weight:800; color:var(--co-stu-text); margin:0;" id="profileFullName">Student Name</h1>
+                <p style="font-size:0.86rem; color:var(--co-stu-text-muted); margin-top:2px;" id="profileEmail">student@collegeo.in</p>
+              </div>
+              <span class="co-badge success">Active Learner</span>
+            </div>
+
+            <div class="summary-meta">
+              <div class="summary-chip"><label>College Affiliation</label><strong id="profileCollege">-</strong></div>
+              <div class="summary-chip"><label>Course &amp; Branch</label><strong id="profileBranch">Not set</strong></div>
+              <div class="summary-chip"><label>Current Semester</label><strong id="profileSemester">Not set</strong></div>
+              <div class="summary-chip"><label>Member Since</label><strong id="profileJoinDate">-</strong></div>
+              <div class="summary-chip"><label>Study Streak</label><strong data-stat="currentStreak">0 Days</strong></div>
+              <div class="summary-chip"><label>Total XP</label><strong data-stat="totalXp">0 XP</strong></div>
+            </div>
+
+            <div class="summary-actions">
+              <a href="academic-onboarding.html" class="btn-stu primary sm"><i class="fa-solid fa-building-columns"></i> Edit Academic Profile</a>
+              <button class="btn-stu secondary sm" id="editProfileBtn"><i class="fa-solid fa-pen"></i> Edit Profile Info</button>
+              <button class="btn-stu secondary sm" id="changePasswordBtn"><i class="fa-solid fa-key"></i> Security</button>
+              <button class="btn-stu secondary sm" id="uploadPhotoBtn"><i class="fa-solid fa-camera"></i> Change Avatar</button>
+              <input type="file" id="uploadPhotoInput" accept="image/*" style="display:none;" />
+            </div>
+            <p class="co-page-header-desc" id="profileActionStatus" style="margin-top:6px;"></p>
+          </div>
         </article>
-        <article class="info-card">
-          <h3><i class="fa-solid fa-map"></i> My Roadmaps</h3>
-          <p class="value" data-stat="myRoadmaps">0</p>
-          <p class="muted" id="roadmapsEmptyText">Start your roadmap journey to track career progress.</p>
-          <div class="actions"><a class="btn secondary" href="study-roadmap.html">Open Roadmaps</a></div>
-        </article>
-        <article class="info-card">
-          <h3><i class="fa-solid fa-bookmark"></i> My Saved Notes</h3>
-          <p class="value" data-stat="savedNotes">0</p>
-          <p class="muted" id="notesEmptyText">No saved notes yet. Bookmark key concepts while studying.</p>
-          <div class="actions"><a class="btn secondary" href="notes-library.html">View Saved Notes</a></div>
-        </article>
-        <article class="info-card">
-          <h3><i class="fa-solid fa-handshake"></i> Referral Program</h3>
-          <p class="muted">Invite friends to College OS and earn rewards for successful referrals.</p>
-          <div class="actions"><a class="btn secondary" href="referrals.html">View Referrals</a></div>
-        </article>
-      </section>
-    </section>
-  </template>
+
+        <!-- Quick Stats Grid -->
+        <div class="co-kpi-grid">
+          <div class="co-kpi-card">
+            <div class="kpi-icon blue"><i class="fa-solid fa-star"></i></div>
+            <div class="kpi-body">
+              <span class="kpi-label">Total XP</span>
+              <h3 class="kpi-value" data-stat="totalXp">0</h3>
+            </div>
+          </div>
+          <div class="co-kpi-card">
+            <div class="kpi-icon indigo"><i class="fa-solid fa-fire"></i></div>
+            <div class="kpi-body">
+              <span class="kpi-label">Study Streak</span>
+              <h3 class="kpi-value" data-stat="currentStreak">0</h3>
+            </div>
+          </div>
+          <div class="co-kpi-card">
+            <div class="kpi-icon purple"><i class="fa-solid fa-flask"></i></div>
+            <div class="kpi-body">
+              <span class="kpi-label">Mock Tests</span>
+              <h3 class="kpi-value" data-stat="mockTestsAttempted">0</h3>
+            </div>
+          </div>
+          <div class="co-kpi-card">
+            <div class="kpi-icon emerald"><i class="fa-solid fa-award"></i></div>
+            <div class="kpi-body">
+              <span class="kpi-label">Certificates</span>
+              <h3 class="kpi-value" data-stat="certificatesEarned">0</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Learning Progress Card -->
+        <div class="co-card">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title"><i class="fa-solid fa-chart-line"></i> Learning Milestones</h2>
+              <p class="section-subtitle">Overall completion progress across syllabus modules and challenges.</p>
+            </div>
+          </div>
+
+          <div class="co-card-grid">
+            <div class="co-progress-wrap">
+              <div class="co-progress-label"><span>Roadmap Completion</span><strong id="progressRoadmapValue">0%</strong></div>
+              <div class="co-progress-track"><div class="co-progress-bar" id="progressRoadmapFill" style="width:0%;"></div></div>
+            </div>
+            <div class="co-progress-wrap">
+              <div class="co-progress-label"><span>Mock Test Performance</span><strong id="progressMockValue">0%</strong></div>
+              <div class="co-progress-track"><div class="co-progress-bar" id="progressMockFill" style="width:0%;"></div></div>
+            </div>
+            <div class="co-progress-wrap">
+              <div class="co-progress-label"><span>Certification Mastery</span><strong id="progressCertValue">0%</strong></div>
+              <div class="co-progress-track"><div class="co-progress-bar" id="progressCertFill" style="width:0%;"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Achievements & Badges -->
+        <div class="co-card">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title"><i class="fa-solid fa-trophy"></i> Achievement Badges</h2>
+              <p class="section-subtitle">Earned by consistently studying, solving coding arena problems, and contributing notes.</p>
+            </div>
+          </div>
+          <div class="co-card-grid" id="achievementsGrid"></div>
+        </div>
+
+        <!-- Recent Activity Stream -->
+        <div class="co-card">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title"><i class="fa-solid fa-clock-rotate-left"></i> Recent Activity</h2>
+              <p class="section-subtitle">Audit trail of your study sessions, test attempts, and bookmarked materials.</p>
+            </div>
+          </div>
+          <div class="activity-grid">
+            <div class="activity-box">
+              <strong style="color:var(--co-stu-text); font-size:0.9rem;"><i class="fa-solid fa-file-lines" style="color:var(--co-stu-primary);"></i> Recently Viewed Notes</strong>
+              <ul class="activity-list" id="activityNotes"><li>No notes viewed yet.</li></ul>
+            </div>
+            <div class="activity-box">
+              <strong style="color:var(--co-stu-text); font-size:0.9rem;"><i class="fa-solid fa-flask" style="color:var(--co-stu-secondary);"></i> Recent Mock Tests</strong>
+              <ul class="activity-list" id="activityMocks"><li>No mock tests taken yet.</li></ul>
+            </div>
+            <div class="activity-box">
+              <strong style="color:var(--co-stu-text); font-size:0.9rem;"><i class="fa-solid fa-award" style="color:var(--co-stu-success);"></i> Recent Certificates</strong>
+              <ul class="activity-list" id="activityCertificates"><li>No certificates earned yet.</li></ul>
+            </div>
+            <div class="activity-box">
+              <strong style="color:var(--co-stu-text); font-size:0.9rem;"><i class="fa-solid fa-route" style="color:var(--co-stu-accent-purple);"></i> Last Roadmap Track</strong>
+              <ul class="activity-list" id="activityRoadmap"><li>No roadmaps opened yet.</li></ul>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Scripts -->
   <script src="assets/js/api.js"></script>
-  <script src="assets/js/app.js"></script>
+  <script src="assets/js/student-shell.js"></script>
   <script src="assets/js/profile.js"></script>
 </body>
 </html>
-
-
-

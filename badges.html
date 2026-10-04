@@ -3,22 +3,174 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Achievement Badges - College OS</title>
+  <title>Achievement Badges — College OS</title>
+  <meta name="description" content="Unlock academic achievements, streaks, and milestone badges." />
+  <link rel="icon" type="image/png" href="assets/images/college-os-logo.png" />
   <script src="assets/js/theme-init.js"></script>
-  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" />
   <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <link rel="stylesheet" href="assets/css/student-dashboard-redesign.css" />
+  <style>
+    .badges-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+    .badge-card {
+      background: var(--co-surface);
+      border: 1px solid var(--co-border);
+      border-radius: var(--co-radius-lg);
+      padding: 1.5rem;
+      text-align: center;
+      box-shadow: var(--co-shadow-sm);
+      transition: all var(--co-transition-fast);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .badge-card:hover {
+      border-color: var(--co-border-hover);
+      box-shadow: var(--co-shadow-md);
+      transform: translateY(-2px);
+    }
+    .badge-icon-wrap {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 1.6rem;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(99, 102, 241, 0.15) 100%);
+      color: var(--co-accent-amber);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      margin-bottom: 0.25rem;
+    }
+    .badge-card h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--co-text-primary);
+      margin: 0;
+    }
+    .badge-card p {
+      font-size: 0.85rem;
+      color: var(--co-text-secondary);
+      line-height: 1.5;
+      margin: 0;
+    }
+  </style>
 </head>
 <body>
-  <div class="app-shell" data-shell></div>
-  <template data-page>
-    <section class="hero"><h1 data-page-title>Achievement Badges</h1><p>Unlock badges through streaks, top scores, and consistency.</p></section>
-    <section class="grid cols-3" id="badgesGrid"><p>Loading badges...</p></section>
-  </template>
+  <div class="co-student-backdrop" id="studentBackdrop"></div>
+  <div class="co-student-shell">
+    <!-- STUDENT SIDEBAR -->
+    <aside class="co-student-sidebar" id="studentSidebar">
+      <div class="co-sidebar-header">
+        <a href="dashboard.html" class="co-brand-logo">
+          <div class="co-brand-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+          <div class="co-brand-text">College <span>OS</span></div>
+        </a>
+      </div>
+      <div class="co-sidebar-nav">
+        <div class="co-nav-group-label">Core Learning</div>
+        <a href="dashboard.html" class="co-nav-item"><i class="fa-solid fa-house"></i><span>Dashboard</span></a>
+        <a href="study.html" class="co-nav-item"><i class="fa-solid fa-book-open"></i><span>My Courses</span></a>
+        <a href="notes-library.html" class="co-nav-item"><i class="fa-solid fa-file-lines"></i><span>Notes Library</span></a>
+        <a href="pyqs.html" class="co-nav-item"><i class="fa-solid fa-clock-rotate-left"></i><span>PYQs &amp; Papers</span></a>
+        <a href="materials-library.html" class="co-nav-item"><i class="fa-solid fa-folder-open"></i><span>Study Materials</span></a>
+
+        <div class="co-nav-group-label">Assessment &amp; Prep</div>
+        <a href="quizzes.html" class="co-nav-item"><i class="fa-solid fa-circle-question"></i><span>Practice Quizzes</span></a>
+        <a href="mock-tests.html" class="co-nav-item"><i class="fa-solid fa-chart-line"></i><span>Mock Tests</span></a>
+        <a href="study-roadmap.html" class="co-nav-item"><i class="fa-solid fa-route"></i><span>Career Roadmaps</span></a>
+        <a href="coding-challenges.html" class="co-nav-item"><i class="fa-solid fa-code"></i><span>Coding Arena</span></a>
+
+        <div class="co-nav-group-label">Community &amp; Tools</div>
+        <a href="ai-tools.html" class="co-nav-item"><i class="fa-solid fa-wand-magic-sparkles"></i><span>AI Study Studio</span></a>
+        <a href="college-feed.html" class="co-nav-item"><i class="fa-solid fa-comments"></i><span>Campus Feed</span></a>
+        <a href="live-study.html" class="co-nav-item"><i class="fa-solid fa-video"></i><span>Live Study Rooms</span></a>
+        <a href="leaderboards.html" class="co-nav-item"><i class="fa-solid fa-trophy"></i><span>Leaderboards</span></a>
+        <a href="certificates.html" class="co-nav-item active"><i class="fa-solid fa-award"></i><span>Certificates</span></a>
+
+        <div class="co-nav-group-label">Account</div>
+        <a href="profile.html" class="co-nav-item"><i class="fa-solid fa-user"></i><span>My Profile</span></a>
+        <a href="notifications.html" class="co-nav-item"><i class="fa-solid fa-bell"></i><span>Notifications</span></a>
+        <a href="settings.html" class="co-nav-item"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
+      </div>
+      <div class="co-sidebar-footer">
+        <a href="profile.html" class="co-user-card" id="sidebarUserProfile">
+          <div class="co-user-avatar" id="sidebarUserInitials">ST</div>
+          <div class="co-user-info">
+            <span class="co-user-name" id="sidebarUserName">Student</span>
+            <span class="co-user-role" id="sidebarUserRole">Scholar</span>
+          </div>
+          <i class="fa-solid fa-ellipsis-vertical" style="color:var(--co-text-muted);font-size:0.85rem;"></i>
+        </a>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <div class="co-student-main">
+      <header class="co-student-topbar">
+        <div class="co-topbar-left">
+          <button class="co-mobile-toggle" id="mobileNavToggle" aria-label="Open navigation menu">
+            <i class="fa-solid fa-bars-staggered"></i>
+          </button>
+          <div class="co-quick-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" placeholder="Search achievement badges..." aria-label="Search badges" />
+            <kbd>Ctrl+K</kbd>
+          </div>
+        </div>
+        <div class="co-topbar-right">
+          <button class="co-topbar-btn" id="themeToggleBtn" aria-label="Toggle theme">
+            <i class="fa-regular fa-sun" id="themeIcon"></i>
+          </button>
+          <a href="notifications.html" class="co-topbar-btn" aria-label="Notifications">
+            <i class="fa-regular fa-bell"></i>
+            <span class="co-badge-dot"></span>
+          </a>
+          <a href="profile.html" class="co-topbar-avatar" id="topbarUserAvatar">ST</a>
+        </div>
+      </header>
+
+      <main class="co-student-container">
+        <!-- BREADCRUMB & HEADER -->
+        <div class="co-breadcrumb">
+          <a href="dashboard.html"><i class="fa-solid fa-house"></i> Home</a>
+          <span>/</span>
+          <a href="certificates.html">Certificates</a>
+          <span>/</span>
+          <span class="active">Achievement Badges</span>
+        </div>
+
+        <div class="co-page-header">
+          <div class="co-page-header-title">
+            <h1>Achievement Badges</h1>
+            <p>Milestone badges unlocked through continuous daily study streaks, mock test mastery, and challenge completion.</p>
+          </div>
+          <div class="co-header-actions">
+            <a href="certificates.html" class="co-btn co-btn-primary">
+              <i class="fa-solid fa-award"></i> View My Certificates
+            </a>
+          </div>
+        </div>
+
+        <!-- BADGES GRID -->
+        <div class="badges-grid" id="badgesGrid">
+          <div class="co-card" style="text-align:center;padding:3rem 1rem;grid-column:1/-1;">
+            <div class="co-skeleton" style="height:20px;width:30%;margin:0 auto 1rem auto;border-radius:4px;"></div>
+            <div class="co-skeleton" style="height:14px;width:50%;margin:0 auto;border-radius:4px;"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
   <script src="assets/js/api.js"></script>
-  <script src="assets/js/app.js"></script>
+  <script src="assets/js/student-shell.js"></script>
   <script src="assets/js/content-pages.js"></script>
 </body>
 </html>
-
-
-

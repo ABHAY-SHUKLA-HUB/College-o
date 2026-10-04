@@ -1978,18 +1978,10 @@ function bindEmailLogin() {
       }
 
       const security = await ensureTurnstilePayload('login');
-      await window.CollegeOSApi.login({ email, password, rememberMe, ...security });
-
-      // Wait for session cookie to be available and /api/auth/me to return the user
-      const sessionUser = await waitForSessionReady(6000);
-      if (!sessionUser) {
-        setAuthMessages('login', '', 'Login successful. Finalizing session...');
-        // Try one more time before proceeding
-        await new Promise((r) => setTimeout(r, 400));
-      }
+      const loginPayload = await window.CollegeOSApi.login({ email, password, rememberMe, ...security });
 
       localStorage.setItem('collegeOsRememberEmail', rememberMe ? email : '');
-      setAuthMessages('login', '', 'Login successful. Preparing your dashboard...');
+      setAuthMessages('login', '', 'Login successful. Redirecting to your dashboard...');
       await completePostLoginFlow();
     } catch (error) {
       const message = getAuthApiErrorMessage(error, 'Login failed');
@@ -2107,8 +2099,6 @@ function bindMobileOtp() {
     try {
       const security = await ensureTurnstilePayload('login');
       await window.CollegeOSApi.loginWithEmailOtp({ email, code: otp, ...security });
-      // Wait for session to be established server-side
-      await waitForSessionReady(6000);
       setAuthMessages('login', '', 'OTP verified. Welcome back.');
       await completePostLoginFlow();
     } catch (error) {

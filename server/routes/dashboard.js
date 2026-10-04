@@ -508,14 +508,7 @@ router.get('/personalized', requireAuth, async (req, res) => {
 
   const { resolveStudentAcademicScope, applyAcademicScopeToQuery } = require('../utils/academic-scope');
   const studentScope = await resolveStudentAcademicScope(userId);
-
-  if (!isAdmin && (!studentScope || !studentScope.profileComplete)) {
-    return res.status(403).json({
-      error: 'ACADEMIC_PROFILE_REQUIRED',
-      code: 'ACADEMIC_PROFILE_REQUIRED',
-      message: 'Mandatory academic onboarding setup is required before accessing dashboard.'
-    });
-  }
+  const profileComplete = Boolean(isAdmin || (studentScope && studentScope.profileComplete));
 
   const accessClause = isPremium ? '' : `AND COALESCE(access_type, 'free') <> 'premium'`;
   const scopeFilterNotes = applyAcademicScopeToQuery(studentScope, { alias: 'n', startIndex: 1, legacySupport: true });
@@ -523,67 +516,91 @@ router.get('/personalized', requireAuth, async (req, res) => {
   const scopeFilterMocks = applyAcademicScopeToQuery(studentScope, { alias: 'm', startIndex: 1, legacySupport: true });
   const scopeFilterRoadmaps = applyAcademicScopeToQuery(studentScope, { alias: 'r', startIndex: 1, legacySupport: true });
 
-  const [recommendedNotes, recommendedQuizzes, recommendedMockTests, recommendedRoadmaps, aiTools, announcements] = await Promise.all([
-    pool.query(
-      `SELECT id, subject, chapter, access_type
-       FROM notes n
-       WHERE deleted_at IS NULL AND status = 'published'
-       AND ${scopeFilterNotes.sqlClause}
-       ${accessClause}
-       ORDER BY created_at DESC
-       LIMIT 5`,
-      scopeFilterNotes.params
-    ),
-    pool.query(
-      `SELECT id, subject, chapter, difficulty, access_type
-       FROM quizzes q
-       WHERE deleted_at IS NULL AND status = 'published'
-       AND ${scopeFilterQuizzes.sqlClause}
-       ${accessClause}
-       ORDER BY created_at DESC
-       LIMIT 5`,
-      scopeFilterQuizzes.params
-    ),
-    pool.query(
-      `SELECT id, title, subject, difficulty, access_type
-       FROM mock_tests m
-       WHERE deleted_at IS NULL AND status = 'published'
-       AND ${scopeFilterMocks.sqlClause}
-       ${accessClause}
-       ORDER BY created_at DESC
-       LIMIT 5`,
-      scopeFilterMocks.params
-    ),
-    pool.query(
-      `SELECT id, title
-       FROM career_roadmaps r
-       WHERE deleted_at IS NULL
-       AND ${scopeFilterRoadmaps.sqlClause}
-       ORDER BY created_at DESC
-       LIMIT 4`,
-      scopeFilterRoadmaps.params
-    ),
-    pool.query(
-      `SELECT id, tool_key, title, tagline, access_type, is_featured
-       FROM ai_tools_catalog
-       WHERE deleted_at IS NULL AND is_enabled = TRUE AND is_visible = TRUE
-       ${accessClause}
-       ORDER BY is_featured DESC, sort_order ASC
-       LIMIT 6`
-    ),
-    pool.query(
-      `SELECT id, title, message, created_at
-       FROM announcements
-       WHERE deleted_at IS NULL AND (status IS NULL OR status = 'published')
-       ORDER BY created_at DESC
-       LIMIT 5`
-    )
-  ]);
+  const [recommendedNotes, recommendedQuizzes, recommendedMockTests, recommendedRoadmaps, aiTools, announcements] = profileComplete
+    ? await Promise.all([
+        pool.query(
+          `SELECT id, subject, chapter, access_type
+           FROM notes n
+           WHERE deleted_at IS NULL AND status = 'published'
+           AND ${scopeFilterNotes.sqlClause}
+           ${accessClause}
+           ORDER BY created_at DESC
+           LIMIT 5`,
+          scopeFilterNotes.params
+        ),
+        pool.query(
+          `SELECT id, subject, chapter, difficulty, access_type
+           FROM quizzes q
+           WHERE deleted_at IS NULL AND status = 'published'
+           AND ${scopeFilterQuizzes.sqlClause}
+           ${accessClause}
+           ORDER BY created_at DESC
+           LIMIT 5`,
+          scopeFilterQuizzes.params
+        ),
+        pool.query(
+          `SELECT id, title, subject, difficulty, access_type
+           FROM mock_tests m
+           WHERE deleted_at IS NULL AND status = 'published'
+           AND ${scopeFilterMocks.sqlClause}
+           ${accessClause}
+           ORDER BY created_at DESC
+           LIMIT 5`,
+          scopeFilterMocks.params
+        ),
+        pool.query(
+          `SELECT id, title
+           FROM career_roadmaps r
+           WHERE deleted_at IS NULL
+           AND ${scopeFilterRoadmaps.sqlClause}
+           ORDER BY created_at DESC
+           LIMIT 4`,
+          scopeFilterRoadmaps.params
+        ),
+        pool.query(
+          `SELECT id, tool_key, title, tagline, access_type, is_featured
+           FROM ai_tools_catalog
+           WHERE deleted_at IS NULL AND is_enabled = TRUE AND is_visible = TRUE
+           ${accessClause}
+           ORDER BY is_featured DESC, sort_order ASC
+           LIMIT 6`
+        ),
+        pool.query(
+          `SELECT id, title, message, created_at
+           FROM announcements
+           WHERE deleted_at IS NULL AND (status IS NULL OR status = 'published')
+           ORDER BY created_at DESC
+           LIMIT 5`
+        )
+      ])
+    : [
+        { rows: [] },
+        { rows: [] },
+        { rows: [] },
+        { rows: [] },
+        await pool.query(
+          `SELECT id, tool_key, title, tagline, access_type, is_featured
+           FROM ai_tools_catalog
+           WHERE deleted_at IS NULL AND is_enabled = TRUE AND is_visible = TRUE
+           ${accessClause}
+           ORDER BY is_featured DESC, sort_order ASC
+           LIMIT 6`
+        ).catch(() => ({ rows: [] })),
+        await pool.query(
+          `SELECT id, title, message, created_at
+           FROM announcements
+           WHERE deleted_at IS NULL AND (status IS NULL OR status = 'published')
+           ORDER BY created_at DESC
+           LIMIT 5`
+        ).catch(() => ({ rows: [] }))
+      ];
 
   const goals = Array.isArray(profile.learning_goals) ? profile.learning_goals : [];
   const goalText = goals.length ? goals.join(', ') : 'Improve core subjects';
 
   res.json({
+    needsOnboarding: !profileComplete,
+    profileComplete: profileComplete,
     profile: {
       fullName: profile.full_name || 'Student',
       categoryId: profile.category_id || null,

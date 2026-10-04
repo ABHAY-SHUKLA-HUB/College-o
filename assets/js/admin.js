@@ -511,54 +511,67 @@ async function loadAdminIntelligence() {
 
 async function loadAdminDashboard() {
   if (!window.CollegeOSApi) return;
-  const [data, trends] = await Promise.all([
-    window.CollegeOSApi.adminDashboard(),
+  try {
+    const data = await window.CollegeOSApi.adminDashboard();
+    if (data) {
+      setText('kpiStudents', Number(data.totalStudents || 0).toLocaleString('en-IN'));
+      setText('kpiPremium', Number(data.premiumStudents || 0).toLocaleString('en-IN'));
+      setText('kpiRevenue', formatCurrency(data.revenueInr || 0));
+      setText('kpiFeedback', Number(data.totalFeedback || 0).toLocaleString('en-IN'));
+      setText('kpiPendingApprovals', Number(data.pendingApprovals || 0).toLocaleString('en-IN'));
+      setText('kpiExpiredUsers', Number(data.expiredUsers || 0).toLocaleString('en-IN'));
+      setText('kpiMonthlyRevenue', formatCurrency(data.monthlyRevenueInr || 0));
+      setText('kpiDailyActiveUsers', Number(data.dailyActiveUsers || 0).toLocaleString('en-IN'));
+      setText('kpiLiveSessions', Number(data.liveSessions?.live_sessions || 0).toLocaleString('en-IN'));
+      setText('kpiAttendanceRate', formatPercent(data.liveSessions?.attendance_rate || 0));
+      setText('adminCollegesCovered', `${Number(data.collegesCovered || 0)} campuses`);
+      setText('adminPlatformStatus', 'Platform healthy');
+
+      const students = Number(data.totalStudents || 0);
+      const premium = Number(data.premiumStudents || 0);
+      const conversion = students > 0 ? Math.round((premium / students) * 100) : 0;
+      setText('adminConversionRate', `${conversion}% premium conversion`);
+      setText('adminRevenuePulse', `${formatCurrency(data.revenueInr || 0)} active revenue`);
+      setText('adminFeedbackPulse', `${Number(data.totalFeedback || 0)} total feedback items`);
+      setText('adminStudentsTrend', `${students} active student accounts`);
+      setText('adminDAUPulse', `${Number(data.dailyActiveUsers || 0)} students active today`);
+      setText('adminLiveSessionsPulse', `${Number(data.liveSessions?.live_sessions || 0)} live / ${Number(data.liveSessions?.scheduled_sessions || 0)} scheduled`);
+      setText('adminAttendancePulse', `${formatPercent(data.liveSessions?.attendance_rate || 0)} attendance rate`);
+    }
+
+    // Load trends asynchronously so charts don't block KPI metric render
     window.CollegeOSApi.adminTrends()
-  ]);
-
-  setText('kpiStudents', Number(data.totalStudents || 0).toLocaleString('en-IN'));
-  setText('kpiPremium', Number(data.premiumStudents || 0).toLocaleString('en-IN'));
-  setText('kpiRevenue', formatCurrency(data.revenueInr || 0));
-  setText('kpiFeedback', Number(data.totalFeedback || 0).toLocaleString('en-IN'));
-  setText('kpiPendingApprovals', Number(data.pendingApprovals || 0).toLocaleString('en-IN'));
-  setText('kpiExpiredUsers', Number(data.expiredUsers || 0).toLocaleString('en-IN'));
-  setText('kpiMonthlyRevenue', formatCurrency(data.monthlyRevenueInr || 0));
-  setText('kpiDailyActiveUsers', Number(data.dailyActiveUsers || 0).toLocaleString('en-IN'));
-  setText('kpiLiveSessions', Number(data.liveSessions?.live_sessions || 0).toLocaleString('en-IN'));
-  setText('kpiAttendanceRate', formatPercent(data.liveSessions?.attendance_rate || 0));
-  setText('adminCollegesCovered', `${Number(data.collegesCovered || 0)} campuses`);
-  setText('adminPlatformStatus', 'Platform healthy');
-
-  const students = Number(data.totalStudents || 0);
-  const premium = Number(data.premiumStudents || 0);
-  const conversion = students > 0 ? Math.round((premium / students) * 100) : 0;
-  setText('adminConversionRate', `${conversion}% premium conversion`);
-  setText('adminRevenuePulse', `${formatCurrency(data.revenueInr || 0)} active revenue`);
-  setText('adminFeedbackPulse', `${Number(data.totalFeedback || 0)} total feedback items`);
-  setText('adminStudentsTrend', `${students} active student accounts`);
-  setText('adminDAUPulse', `${Number(data.dailyActiveUsers || 0)} students active today`);
-  setText('adminLiveSessionsPulse', `${Number(data.liveSessions?.live_sessions || 0)} live / ${Number(data.liveSessions?.scheduled_sessions || 0)} scheduled`);
-  setText('adminAttendancePulse', `${formatPercent(data.liveSessions?.attendance_rate || 0)} attendance rate`);
-
-  renderCharts(trends, data);
-  renderActivityFeed({ trends });
+      .then((trends) => {
+        if (trends) {
+          renderCharts(trends, data || {});
+          renderActivityFeed({ trends });
+        }
+      })
+      .catch((err) => {
+        console.warn('[admin] trends chart fallback:', err);
+      });
+  } catch (err) {
+    console.error('[admin] loadAdminDashboard error:', err);
+    throw err;
+  }
 }
 
 async function loadMembershipPayments() {
   const filter = byId('adminPaymentStatusFilter')?.value || 'all';
-  const { payments } = await window.CollegeOSApi.adminMembershipPayments(filter);
-  renderMembershipPayments(payments || []);
+  const res = await window.CollegeOSApi.adminMembershipPayments(filter).catch(() => ({ payments: [] }));
+  renderMembershipPayments(res?.payments || []);
 }
 
 async function loadStudents() {
   const college = byId('adminCollegeFilter')?.value || '';
-  const { students } = await window.CollegeOSApi.adminStudents(college);
-  renderStudents(students);
-  renderActivityFeed({ students });
+  const res = await window.CollegeOSApi.adminStudents(college).catch(() => ({ students: [] }));
+  renderStudents(res?.students || []);
+  renderActivityFeed({ students: res?.students || [] });
 }
 
 async function loadAdminFeedback() {
-  const { feedback } = await window.CollegeOSApi.adminFeedback();
+  const res = await window.CollegeOSApi.adminFeedback().catch(() => ({ feedback: [] }));
+  const feedback = res?.feedback || [];
   renderFeedback(feedback);
   if (feedback[0]) {
     setText('adminHeroInsight', `Latest student signal: ${feedback[0].full_name} rated the platform ${feedback[0].rating}/5. Review and reply to keep support quality high.`);
@@ -568,22 +581,29 @@ async function loadAdminFeedback() {
 
 function bindAdminLogin() {
   const form = byId('adminLoginForm');
-  if (!form) return;
+  if (!form || form.dataset.bound === 'true') return;
+  form.dataset.bound = 'true';
+
+  let isSubmitting = false;
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
+    if (isSubmitting) return;
+
     const email = byId('adminEmail').value.trim();
     const password = byId('adminPassword').value;
     const error = byId('adminLoginError');
-    error.textContent = '';
+    if (error) error.textContent = '';
+
+    isSubmitting = true;
     try {
       const captchaPayload = typeof getCaptchaPayload === 'function' ? getCaptchaPayload('admin') : null;
       await window.CollegeOSApi.adminLogin({ email, password, captcha: captchaPayload });
       window.location.href = 'admin-dashboard.html';
     } catch (e) {
-      error.textContent = e.message;
+      if (error) error.textContent = e.message;
+      isSubmitting = false;
     }
   });
-
 }
 
 function bindUploads() {
@@ -678,11 +698,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (byId('adminDashboardRoot')) {
     try {
-      await loadAdminDashboard();
-      await loadStudents();
-      await loadAdminFeedback();
-      await loadMembershipPayments();
-      await loadAdminIntelligence();
+      // Parallelize all admin sections so none blocks another
+      await Promise.allSettled([
+        loadAdminDashboard(),
+        loadStudents(),
+        loadAdminFeedback(),
+        loadMembershipPayments(),
+        loadAdminIntelligence()
+      ]);
     } catch (e) {
       const status = byId('adminStatus');
       if (status) status.textContent = e.message;

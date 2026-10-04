@@ -5,42 +5,65 @@ const { buildAdminIntelligenceOverview } = require('../services/intelligence-bra
 const router = express.Router();
 
 router.get('/overview', requireAdmin, async (_req, res) => {
-  const payload = await buildAdminIntelligenceOverview();
-  res.json(payload);
+  try {
+    res.setHeader('Cache-Control', 'private, max-age=15, stale-while-revalidate=30');
+    const payload = await buildAdminIntelligenceOverview();
+    res.json(payload);
+  } catch (error) {
+    console.error('[admin-intelligence] overview error:', error);
+    res.json({
+      generatedAt: new Date().toISOString(),
+      users: {},
+      weakTopicHeatmap: [],
+      monetization: {},
+      retention: {},
+      aiOperations: {},
+      recommendations: []
+    });
+  }
 });
 
 router.get('/segments', requireAdmin, async (_req, res) => {
-  const payload = await buildAdminIntelligenceOverview();
+  try {
+    res.setHeader('Cache-Control', 'private, max-age=15, stale-while-revalidate=30');
+    const payload = await buildAdminIntelligenceOverview();
 
-  const users = payload.users || {};
-  const premiumUsers = Number(users.premium_users || 0);
-  const totalStudents = Number(users.total_students || 0);
-  const premiumShare = totalStudents > 0 ? Math.round((premiumUsers / totalStudents) * 100) : 0;
+    const users = payload.users || {};
+    const premiumUsers = Number(users.premium_users || 0);
+    const totalStudents = Number(users.total_students || 0);
+    const premiumShare = totalStudents > 0 ? Math.round((premiumUsers / totalStudents) * 100) : 0;
 
-  res.json({
-    generatedAt: payload.generatedAt,
-    segments: [
-      {
-        key: 'at_risk_learners',
-        title: 'At-risk Learners',
-        size: Number(payload.retention?.at_risk || 0),
-        playbook: 'Launch comeback missions + weak-topic rescue in 24h.'
-      },
-      {
-        key: 'premium_high_intent',
-        title: 'Premium High-Intent',
-        size: premiumUsers,
-        sharePercent: premiumShare,
-        playbook: 'Promote advanced mock analytics and peer challenge loops.'
-      },
-      {
-        key: 'new_users_30d',
-        title: 'New Users (30d)',
-        size: Number(users.new_users_30d || 0),
-        playbook: 'Push guided next-action onboarding and trial activation.'
-      }
-    ]
-  });
+    res.json({
+      generatedAt: payload.generatedAt,
+      segments: [
+        {
+          key: 'at_risk_learners',
+          title: 'At-risk Learners',
+          size: Number(payload.retention?.at_risk || 0),
+          playbook: 'Launch comeback missions + weak-topic rescue in 24h.'
+        },
+        {
+          key: 'premium_high_intent',
+          title: 'Premium High-Intent',
+          size: premiumUsers,
+          sharePercent: premiumShare,
+          playbook: 'Promote advanced mock analytics and peer challenge loops.'
+        },
+        {
+          key: 'new_users_30d',
+          title: 'New Users (30d)',
+          size: Number(users.new_users_30d || 0),
+          playbook: 'Push guided next-action onboarding and trial activation.'
+        }
+      ]
+    });
+  } catch (error) {
+    console.error('[admin-intelligence] segments error:', error);
+    res.json({
+      generatedAt: new Date().toISOString(),
+      segments: []
+    });
+  }
 });
 
 router.post('/resource-automation/generate', requireAdmin, async (req, res) => {

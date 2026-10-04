@@ -16,10 +16,16 @@ async function ensurePerformanceIndexes() {
       ) WITH (OIDS=FALSE);
 
       CREATE INDEX IF NOT EXISTS idx_session_expire ON session (expire);
+      CREATE INDEX IF NOT EXISTS idx_users_role_created ON users (role, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_users_payment_status ON users (payment_status);
+      CREATE INDEX IF NOT EXISTS idx_users_sub_tier ON users (subscription_tier);
       CREATE INDEX IF NOT EXISTS idx_user_profiles_user_id ON user_profiles (user_id);
       CREATE INDEX IF NOT EXISTS idx_quiz_attempts_user_created ON quiz_attempts (user_id, attempted_at DESC);
       CREATE INDEX IF NOT EXISTS idx_mock_test_attempts_user_created ON mock_test_attempts (user_id, attempted_at DESC);
       CREATE INDEX IF NOT EXISTS idx_notes_created_by_created_at ON notes (created_by, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_notes_status_deleted ON notes (status, deleted_at, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_quizzes_status_deleted ON quizzes (status, deleted_at, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_mock_tests_status_deleted ON mock_tests (status, deleted_at, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_certificates_user_created ON certificates (user_id, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_roadmaps_user_updated ON roadmaps (user_id, updated_at DESC);
       CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications (user_id, created_at DESC);

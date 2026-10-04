@@ -163,11 +163,30 @@ router.post('/users/admin', requireAdmin, async (req, res) => {
   res.status(201).json({ admin: rows[0] });
 });
 
+let cachedAdminDashboardPayload = null;
+let cachedAdminDashboardExpires = 0;
+let cachedAdminTrendsPayload = null;
+let cachedAdminTrendsExpires = 0;
+
+async function safeAdminQuery(sql, params = [], fallback = []) {
+  try {
+    const res = await pool.query(sql, params);
+    return res.rows || fallback;
+  } catch (err) {
+    console.warn('[admin:safeQuery] query fallback:', err.message);
+    return fallback;
+  }
+}
+
 router.get('/dashboard', requireAdmin, async (_req, res) => {
-  res.setHeader('Cache-Control', 'private, max-age=10, stale-while-revalidate=30');
+  const now = Date.now();
+  if (cachedAdminDashboardPayload && now < cachedAdminDashboardExpires) {
+    res.setHeader('Cache-Control', 'private, max-age=15, stale-while-revalidate=45');
+    return res.json(cachedAdminDashboardPayload);
+  }
 
   const [userCounts, subs, feedback, payments, liveSessionTotals] = await Promise.all([
-    pool.query(
+    safeAdminQuery(
       `SELECT
         COUNT(*)::int AS total_students,
         COUNT(*) FILTER (WHERE subscription_tier = 'premium')::int AS premium_students,
@@ -175,17 +194,21 @@ router.get('/dashboard', requireAdmin, async (_req, res) => {
         COUNT(*) FILTER (WHERE payment_status = 'expired')::int AS expired_users,
         COUNT(*) FILTER (WHERE deleted_at IS NULL AND last_login_at >= CURRENT_DATE)::int AS daily_active_users
        FROM users
-       WHERE role = 'student'`
+       WHERE role = 'student'`,
+      [],
+      [{ total_students: 0, premium_students: 0, colleges_covered: 0, expired_users: 0, daily_active_users: 0 }]
     ),
-    pool.query("SELECT COALESCE(SUM(amount_inr), 0)::numeric(10,2) AS revenue FROM subscriptions WHERE status = 'active'"),
-    pool.query('SELECT COUNT(*)::int AS total FROM feedback'),
-    pool.query(
+    safeAdminQuery("SELECT COALESCE(SUM(amount_inr), 0)::numeric(10,2) AS revenue FROM subscriptions WHERE status = 'active'", [], [{ revenue: 0 }]),
+    safeAdminQuery('SELECT COUNT(*)::int AS total FROM feedback', [], [{ total: 0 }]),
+    safeAdminQuery(
       `SELECT
         COUNT(*) FILTER (WHERE status = 'pending')::int AS pending_approvals,
         COALESCE(SUM(amount_inr) FILTER (WHERE status = 'approved' AND approved_at >= DATE_TRUNC('month', NOW())), 0)::numeric(10,2) AS monthly_revenue
-       FROM membership_payment_requests`
+       FROM membership_payment_requests`,
+      [],
+      [{ pending_approvals: 0, monthly_revenue: 0 }]
     ),
-    pool.query(
+    safeAdminQuery(
       `SELECT
         COUNT(*) FILTER (WHERE status = 'live')::int AS live_sessions,
         COUNT(*) FILTER (WHERE status = 'scheduled')::int AS scheduled_sessions,
@@ -193,22 +216,29 @@ router.get('/dashboard', requireAdmin, async (_req, res) => {
         COUNT(*) FILTER (WHERE status = 'cancelled')::int AS cancelled_sessions,
         COALESCE(SUM(COALESCE(participant_count, 0)), 0)::int AS active_participants,
         COALESCE(ROUND(100.0 * SUM(COALESCE(participant_count, 0)) / NULLIF(SUM(COALESCE(max_participants, 0)), 0), 2), 0) AS attendance_rate
-       FROM live_sessions`
+       FROM live_sessions`,
+      [],
+      [{ live_sessions: 0, scheduled_sessions: 0, ended_sessions: 0, cancelled_sessions: 0, active_participants: 0, attendance_rate: 0 }]
     )
   ]);
 
-  res.json({
-    totalStudents: userCounts.rows[0].total_students,
-    premiumStudents: userCounts.rows[0].premium_students,
-    revenueInr: Number(subs.rows[0].revenue),
-    totalFeedback: feedback.rows[0].total,
-    collegesCovered: userCounts.rows[0].colleges_covered,
-    pendingApprovals: payments.rows[0].pending_approvals,
-    expiredUsers: userCounts.rows[0].expired_users,
-    monthlyRevenueInr: Number(payments.rows[0].monthly_revenue),
-    dailyActiveUsers: userCounts.rows[0].daily_active_users,
-    liveSessions: liveSessionTotals.rows[0]
-  });
+  const payload = {
+    totalStudents: userCounts[0]?.total_students || 0,
+    premiumStudents: userCounts[0]?.premium_students || 0,
+    revenueInr: Number(subs[0]?.revenue || 0),
+    totalFeedback: feedback[0]?.total || 0,
+    collegesCovered: userCounts[0]?.colleges_covered || 0,
+    pendingApprovals: payments[0]?.pending_approvals || 0,
+    expiredUsers: userCounts[0]?.expired_users || 0,
+    monthlyRevenueInr: Number(payments[0]?.monthly_revenue || 0),
+    dailyActiveUsers: userCounts[0]?.daily_active_users || 0,
+    liveSessions: liveSessionTotals[0] || { live_sessions: 0, scheduled_sessions: 0, attendance_rate: 0 }
+  };
+
+  cachedAdminDashboardPayload = payload;
+  cachedAdminDashboardExpires = now + 15000;
+  res.setHeader('Cache-Control', 'private, max-age=15, stale-while-revalidate=45');
+  res.json(payload);
 });
 
 async function sendAdminEmailTest(req, res) {
@@ -465,39 +495,53 @@ router.get('/students/report.xlsx', requireAdmin, async (_req, res) => {
 });
 
 router.get('/trends', requireAdmin, async (_req, res) => {
+  const now = Date.now();
+  if (cachedAdminTrendsPayload && now < cachedAdminTrendsExpires) {
+    res.setHeader('Cache-Control', 'private, max-age=15, stale-while-revalidate=45');
+    return res.json(cachedAdminTrendsPayload);
+  }
+
   const [signups, revenue, collegeStats, quizTrend, liveSessionTrend, aiUsageTrend, attendanceHeatmap, hostLeaderboard, liveActiveUsers, sessionAuditSummary] = await Promise.all([
-    pool.query(
+    safeAdminQuery(
       `SELECT TO_CHAR(DATE_TRUNC('day', created_at), 'YYYY-MM-DD') AS day, COUNT(*)::int AS count
        FROM users
        WHERE role = 'student' AND created_at >= NOW() - INTERVAL '7 days'
        GROUP BY 1
-       ORDER BY 1`
+       ORDER BY 1`,
+      [],
+      []
     ),
-    pool.query(
+    safeAdminQuery(
       `SELECT TO_CHAR(DATE_TRUNC('day', created_at), 'YYYY-MM-DD') AS day, COALESCE(SUM(amount_inr), 0)::numeric(10,2) AS amount
        FROM subscriptions
        WHERE created_at >= NOW() - INTERVAL '7 days'
        GROUP BY 1
-       ORDER BY 1`
+       ORDER BY 1`,
+      [],
+      []
     ),
-    pool.query(
+    safeAdminQuery(
       `SELECT college_name, COUNT(*)::int AS students
        FROM users
        WHERE role = 'student'
        GROUP BY college_name
        ORDER BY students DESC
-       LIMIT 6`
+       LIMIT 6`,
+      [],
+      []
     ),
-    pool.query(
+    safeAdminQuery(
       `SELECT TO_CHAR(DATE_TRUNC('day', created_at), 'YYYY-MM-DD') AS day,
               COUNT(*)::int AS attempts,
               COALESCE(ROUND(AVG(score_percent), 2), 0) AS avg_score
        FROM quiz_attempts
        WHERE created_at >= NOW() - INTERVAL '14 days'
        GROUP BY 1
-       ORDER BY 1`
+       ORDER BY 1`,
+      [],
+      []
     ),
-    pool.query(
+    safeAdminQuery(
       `SELECT TO_CHAR(DATE_TRUNC('day', COALESCE(actual_start, scheduled_start)), 'YYYY-MM-DD') AS day,
               COUNT(*) FILTER (WHERE status = 'live')::int AS live_sessions,
               COUNT(*) FILTER (WHERE status = 'ended')::int AS ended_sessions,
@@ -505,9 +549,11 @@ router.get('/trends', requireAdmin, async (_req, res) => {
        FROM live_sessions
        WHERE COALESCE(actual_start, scheduled_start) >= NOW() - INTERVAL '14 days'
        GROUP BY 1
-       ORDER BY 1`
+       ORDER BY 1`,
+      [],
+      []
     ),
-    pool.query(
+    safeAdminQuery(
       `SELECT TO_CHAR(DATE_TRUNC('day', created_at), 'YYYY-MM-DD') AS day,
               COUNT(*)::int AS requests,
               COUNT(*) FILTER (WHERE success = TRUE)::int AS successful_requests,
@@ -515,18 +561,22 @@ router.get('/trends', requireAdmin, async (_req, res) => {
        FROM ai_request_logs
        WHERE created_at >= NOW() - INTERVAL '14 days'
        GROUP BY 1
-       ORDER BY 1`
+       ORDER BY 1`,
+      [],
+      []
     ),
-    pool.query(
+    safeAdminQuery(
       `SELECT TO_CHAR(DATE_TRUNC('hour', COALESCE(actual_start, scheduled_start)), 'YYYY-MM-DD HH24:00') AS bucket,
               COUNT(*)::int AS sessions,
               COALESCE(SUM(COALESCE(participant_count, 0)), 0)::int AS participants
        FROM live_sessions
        WHERE COALESCE(actual_start, scheduled_start) >= NOW() - INTERVAL '7 days'
        GROUP BY 1
-       ORDER BY 1`
+       ORDER BY 1`,
+      [],
+      []
     ),
-    pool.query(
+    safeAdminQuery(
       `SELECT
          COALESCE(u.full_name, ls.assigned_host_email, 'Unassigned') AS host_name,
          COUNT(*)::int AS sessions,
@@ -537,35 +587,46 @@ router.get('/trends', requireAdmin, async (_req, res) => {
        WHERE COALESCE(ls.scheduled_start, NOW()) >= NOW() - INTERVAL '30 days'
        GROUP BY 1
        ORDER BY sessions DESC, participants DESC
-       LIMIT 8`
+       LIMIT 8`,
+      [],
+      []
     ),
-    pool.query(
+    safeAdminQuery(
       `SELECT COUNT(DISTINCT user_id)::int AS active_users
        FROM live_session_presence
-       WHERE status = 'online' AND is_present = TRUE`
+       WHERE status = 'online' AND is_present = TRUE`,
+      [],
+      [{ active_users: 0 }]
     ),
-    pool.query(
+    safeAdminQuery(
       `SELECT action, COUNT(*)::int AS total
        FROM live_session_logs
        WHERE created_at >= NOW() - INTERVAL '7 days'
        GROUP BY 1
        ORDER BY total DESC
-       LIMIT 8`
+       LIMIT 8`,
+      [],
+      []
     )
   ]);
 
-  res.json({
-    signupTrend: signups.rows,
-    revenueTrend: revenue.rows,
-    collegeDistribution: collegeStats.rows,
-    quizTrend: quizTrend.rows,
-    liveSessionTrend: liveSessionTrend.rows,
-    aiUsageTrend: aiUsageTrend.rows,
-    attendanceHeatmap: attendanceHeatmap.rows,
-    hostLeaderboard: hostLeaderboard.rows,
-    liveActiveUsers: Number(liveActiveUsers.rows[0]?.active_users || 0),
-    sessionAuditSummary: sessionAuditSummary.rows
-  });
+  const payload = {
+    signupTrend: signups,
+    revenueTrend: revenue,
+    collegeDistribution: collegeStats,
+    quizTrend: quizTrend,
+    liveSessionTrend: liveSessionTrend,
+    aiUsageTrend: aiUsageTrend,
+    attendanceHeatmap: attendanceHeatmap,
+    hostLeaderboard: hostLeaderboard,
+    liveActiveUsers: Number(liveActiveUsers[0]?.active_users || 0),
+    sessionAuditSummary: sessionAuditSummary
+  };
+
+  cachedAdminTrendsPayload = payload;
+  cachedAdminTrendsExpires = now + 15000;
+  res.setHeader('Cache-Control', 'private, max-age=15, stale-while-revalidate=45');
+  res.json(payload);
 });
 
 // Notes management endpoints (GET, POST, DELETE)

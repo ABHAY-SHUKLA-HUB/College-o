@@ -536,52 +536,75 @@ async function recordAiUsage(userId, data = {}) {
   );
 }
 
+let adminIntelligenceCache = { data: null, expiresAt: 0 };
+
 async function buildAdminIntelligenceOverview() {
-  await ensureSchema();
+  const now = Date.now();
+  if (adminIntelligenceCache.data && adminIntelligenceCache.expiresAt > now) {
+    return adminIntelligenceCache.data;
+  }
+
+  try {
+    await ensureSchema().catch(() => {});
+  } catch (_) {}
+
+  const safeQuery = async (queryText, fallback = { rows: [] }) => {
+    try {
+      return await pool.query(queryText);
+    } catch (err) {
+      console.warn('[intelligence-brain] query error fallback:', err.message);
+      return fallback;
+    }
+  };
 
   const [userStats, weakTopics, monetization, retention, aiOps] = await Promise.all([
-    pool.query(
+    safeQuery(
       `SELECT
          COUNT(*)::int AS total_users,
          COUNT(*) FILTER (WHERE role = 'student')::int AS total_students,
          COUNT(*) FILTER (WHERE subscription_tier = 'premium')::int AS premium_users,
          COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '30 days')::int AS new_users_30d
-       FROM users`
+       FROM users`,
+      { rows: [{ total_users: 0, total_students: 0, premium_users: 0, new_users_30d: 0 }] }
     ),
-    pool.query(
+    safeQuery(
       `SELECT COALESCE(q.subject, 'General') AS topic,
               COUNT(*)::int AS attempts,
               COALESCE(AVG(qa.score_percent), 0)::numeric(6,2) AS avg_score
        FROM quiz_attempts qa
        LEFT JOIN quizzes q ON q.id = qa.quiz_id
-       WHERE qa.attempted_at >= CURRENT_DATE - INTERVAL '30 days'
+       WHERE COALESCE(qa.attempted_at, qa.started_at, qa.created_at, CURRENT_TIMESTAMP) >= CURRENT_DATE - INTERVAL '30 days'
        GROUP BY COALESCE(q.subject, 'General')
        HAVING COUNT(*) >= 5
        ORDER BY avg_score ASC, attempts DESC
-       LIMIT 10`
+       LIMIT 10`,
+      { rows: [] }
     ),
-    pool.query(
+    safeQuery(
       `SELECT
          COUNT(*) FILTER (WHERE subscription_tier = 'premium')::int AS premium_total,
          COUNT(*) FILTER (WHERE payment_status = 'pending_approval')::int AS payment_pending,
          COUNT(*) FILTER (WHERE payment_status = 'rejected')::int AS payment_rejected
-       FROM users`
+       FROM users`,
+      { rows: [{ premium_total: 0, payment_pending: 0, payment_rejected: 0 }] }
     ),
-    pool.query(
+    safeQuery(
       `SELECT COUNT(*)::int AS at_risk
        FROM users
-       WHERE last_login_at IS NULL OR last_login_at < CURRENT_DATE - INTERVAL '5 days'`
+       WHERE last_login_at IS NULL OR last_login_at < CURRENT_DATE - INTERVAL '5 days'`,
+      { rows: [{ at_risk: 0 }] }
     ),
-    pool.query(
+    safeQuery(
       `SELECT
          COALESCE(COUNT(*), 0)::int AS ai_runs_30d,
          COALESCE(SUM(tokens_used), 0)::int AS ai_tokens_30d
        FROM ai_usage_events
-       WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'`
+       WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'`,
+      { rows: [{ ai_runs_30d: 0, ai_tokens_30d: 0 }] }
     )
   ]);
 
-  return {
+  const payload = {
     generatedAt: new Date().toISOString(),
     users: userStats.rows[0] || {},
     weakTopicHeatmap: weakTopics.rows || [],
@@ -594,6 +617,13 @@ async function buildAdminIntelligenceOverview() {
       'Run streak-recovery campaign for users inactive >= 5 days.'
     ]
   };
+
+  adminIntelligenceCache = {
+    data: payload,
+    expiresAt: now + 30000 // 30s cache TTL
+  };
+
+  return payload;
 }
 
 module.exports = {

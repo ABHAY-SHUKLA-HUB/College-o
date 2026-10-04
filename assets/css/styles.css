@@ -4671,8 +4671,9 @@ body.admin-portal {
 }
 
 .admin-portal .co-admin-nav {
-  display: grid;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
 .admin-portal .co-admin-brand {
@@ -5795,7 +5796,10 @@ body.admin-portal {
   }
 
   .admin-portal .co-admin-nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: 1fr;
+    gap: 3px;
   }
 
   .admin-portal .co-admin-main {

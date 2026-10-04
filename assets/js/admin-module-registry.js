@@ -638,6 +638,46 @@
     if (!sidebarContainer) return;
     const activeMod = getActiveModule(currentLocation);
 
+    // If sidebarContainer already has HTML rendered statically, do not wipe innerHTML
+    // Instead update the active class on existing links without destroying event listeners or data attributes
+    const existingLinks = sidebarContainer.querySelectorAll('.co-admin-nav-link');
+    if (existingLinks && existingLinks.length > 0) {
+      const currentPath = normalizePath(currentLocation.pathname || window.location.pathname);
+      const currentHash = String(currentLocation.hash || window.location.hash || '').toLowerCase();
+
+      let matchedLink = null;
+      let highestMatch = -1;
+
+      existingLinks.forEach(link => {
+        const href = link.getAttribute('href') || '';
+        const [hPath, hHash] = href.split('#');
+        const normHPath = normalizePath(hPath);
+        const normHHash = hHash ? `#${hHash.toLowerCase()}` : '';
+
+        let score = -1;
+        if (normHPath === currentPath) {
+          if (normHHash && currentHash && normHHash === currentHash) {
+            score = 10;
+          } else if (!normHHash && !currentHash) {
+            score = 5;
+          } else if (!normHHash && currentHash) {
+            score = 1;
+          }
+        }
+
+        if (score > highestMatch) {
+          highestMatch = score;
+          matchedLink = link;
+        }
+      });
+
+      if (matchedLink && highestMatch > 0) {
+        existingLinks.forEach(l => l.classList.remove('active'));
+        matchedLink.classList.add('active');
+      }
+      return;
+    }
+
     const sortedSections = [...SECTIONS].sort((a, b) => a.order - b.order);
     let html = '';
 

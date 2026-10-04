@@ -132,9 +132,12 @@
 
     aside?.addEventListener('click', (event) => {
       const target = event.target instanceof Element ? event.target.closest('a, button') : null;
-      if (!target || !mobileQuery.matches) return;
+      if (!target) return;
       if (target.classList.contains('co-admin-nav-link')) {
-        closeDrawer();
+        event.stopPropagation();
+        if (mobileQuery.matches) {
+          setTimeout(closeDrawer, 120);
+        }
       }
     });
 

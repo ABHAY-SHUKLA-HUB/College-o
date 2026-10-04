@@ -2,14 +2,466 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="refresh" content="0; url=/login.html?mode=signup" />
-  <meta name="robots" content="noindex, follow" />
-  <link rel="canonical" href="https://collegeo.in/login" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Redirecting - College OS</title>
+  <title>Create Account | College OS — Academic Operating System</title>
+  <meta name="description" content="Create your personalized College OS student account for curated notes, university PYQs, AI study assistant, and placement roadmaps." />
+  <meta name="robots" content="noindex, follow" />
+  <link rel="canonical" href="https://collegeo.in/signup" />
+  <meta property="og:title" content="Create Account | College OS" />
+  <meta property="og:description" content="Set up your College OS student workspace." />
+  <meta property="og:url" content="https://collegeo.in/signup" />
+  <meta property="og:image" content="https://collegeo.in/assets/images/college-os-logo.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/assets/images/college-os-logo.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+
+  <!-- GOOGLE FONTS: Sora & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" />
+  
+  <!-- FONT AWESOME 6 -->
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
+  <link rel="preconnect" href="https://challenges.cloudflare.com" />
+
+  <!-- EDTECH AUTH STYLES -->
+  <link rel="stylesheet" href="assets/css/auth-redesign.css" />
+
+  <script>
+    (function () {
+      var hostname = String(window.location && window.location.hostname || '').toLowerCase();
+      var protocol = String(window.location && window.location.protocol || '').toLowerCase();
+      var isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
+      if (isLocalHost && protocol === 'https:') {
+        window.location.replace('http://' + hostname + (window.location.port ? ':' + window.location.port : '') + window.location.pathname + window.location.search + window.location.hash);
+        return;
+      }
+
+      var isProdFrontend = hostname === 'collegeo.in' || hostname === 'www.collegeo.in' || hostname.endsWith('.vercel.app');
+      var fallbackApi = isProdFrontend ? 'https://college-o.onrender.com' : (isLocalHost ? 'http://' + hostname + ':3000' : (window.location && window.location.origin ? window.location.origin : 'http://localhost:3000'));
+      window.API_BASE_URL = window.API_BASE_URL || fallbackApi;
+      window.API_URL = window.API_URL || window.API_BASE_URL;
+    })();
+  </script>
 </head>
-<body>
-  <p>Redirecting to secure access...</p>
+
+<body class="co-auth-page">
+  <div class="co-auth-wrapper">
+    
+    <!-- ===================================================================
+         GLOBAL HEADER
+         =================================================================== -->
+    <header class="co-auth-header">
+      <a href="/" class="co-auth-logo-link" aria-label="College OS Home">
+        <img class="co-auth-logo-img" src="assets/images/college-os-logo.png" alt="College OS Logo" />
+        <div class="co-auth-logo-text-group">
+          <span class="co-auth-brand-name">College OS</span>
+          <span class="co-auth-brand-tagline">ACADEMIC OPERATING SYSTEM</span>
+        </div>
+      </a>
+
+      <div class="co-auth-header-action">
+        <span>Already have an account?</span>
+        <a href="/login" class="co-auth-header-btn" data-auth-tab="login">Sign In →</a>
+      </div>
+    </header>
+
+    <!-- ===================================================================
+         MAIN 2-COLUMN EXPERIENCE
+         =================================================================== -->
+    <div class="co-auth-main">
+      
+      <!-- LEFT HERO SECTION -->
+      <section class="co-hero-section">
+        <div class="co-hero-badge">
+          <i class="fa-solid fa-graduation-cap"></i> Student Workspace Portal
+        </div>
+
+        <h1 class="co-hero-title">
+          Your learning<br />
+          journey starts<br />
+          <span class="co-teal-highlight">here.</span>
+        </h1>
+
+        <p class="co-hero-desc">
+          Access your personalized academic workspace, curated notes, PYQs, mock tests, AI study tools and career roadmaps — all in one place.
+        </p>
+
+        <!-- Feature Stack + Student Visual Grid -->
+        <div class="co-hero-interactive-grid">
+          
+          <!-- 4 Feature Highlights -->
+          <div class="co-feature-stack">
+            <div class="co-feature-box">
+              <div class="co-feature-icon-box"><i class="fa-solid fa-book-open"></i></div>
+              <div class="co-feature-content">
+                <span class="co-feature-title">Study Resources</span>
+                <span class="co-feature-subtext">Notes, PYQs, Quizzes &amp; Mock Tests</span>
+              </div>
+            </div>
+
+            <div class="co-feature-box">
+              <div class="co-feature-icon-box"><i class="fa-solid fa-microchip"></i></div>
+              <div class="co-feature-content">
+                <span class="co-feature-title">AI Study Assistant</span>
+                <span class="co-feature-subtext">Explain, summarize, practice &amp; more</span>
+              </div>
+            </div>
+
+            <div class="co-feature-box">
+              <div class="co-feature-icon-box"><i class="fa-solid fa-chart-line"></i></div>
+              <div class="co-feature-content">
+                <span class="co-feature-title">Career Roadmaps</span>
+                <span class="co-feature-subtext">Skills, projects &amp; placement prep</span>
+              </div>
+            </div>
+
+            <div class="co-feature-box">
+              <div class="co-feature-icon-box"><i class="fa-solid fa-users"></i></div>
+              <div class="co-feature-content">
+                <span class="co-feature-title">Student Community</span>
+                <span class="co-feature-subtext">Discuss, ask, contribute &amp; grow</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Student Visual + Floating Cards -->
+          <div class="co-student-visual-container">
+            <!-- Floating 3D Graduation Cap -->
+            <div class="co-floating-decor co-decor-cap">
+              <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+
+            <!-- Floating Chip: Notes -->
+            <div class="co-floating-chip co-chip-notes">
+              <div class="co-chip-icon co-icon-blue"><i class="fa-solid fa-book"></i></div>
+              <div class="co-chip-text">
+                <span class="co-chip-title">Notes</span>
+                <span class="co-chip-sub">Study smarter</span>
+              </div>
+            </div>
+
+            <!-- Floating Chip: PYQs -->
+            <div class="co-floating-chip co-chip-pyqs">
+              <div class="co-chip-icon co-icon-purple"><i class="fa-solid fa-file-lines"></i></div>
+              <div class="co-chip-text">
+                <span class="co-chip-title">PYQs</span>
+                <span class="co-chip-sub">Practice more</span>
+              </div>
+            </div>
+
+            <!-- Floating Chip: Doc (Orange) -->
+            <div class="co-floating-chip co-chip-doc">
+              <div class="co-chip-icon co-icon-orange"><i class="fa-solid fa-file-invoice"></i></div>
+            </div>
+
+            <!-- Floating Chip: Career -->
+            <div class="co-floating-chip co-chip-career">
+              <div class="co-chip-icon co-icon-teal"><i class="fa-solid fa-chart-simple"></i></div>
+              <div class="co-chip-text">
+                <span class="co-chip-title">Career</span>
+                <span class="co-chip-sub">Build your future</span>
+              </div>
+            </div>
+
+            <!-- Floating Decor: Rocket -->
+            <div class="co-floating-decor co-decor-rocket">
+              <i class="fa-solid fa-rocket"></i>
+            </div>
+
+            <!-- Student Portrait -->
+            <div class="co-student-photo-wrapper">
+              <img class="co-student-photo" src="assets/images/student-hero.jpg" alt="College Student Learning on College OS" />
+            </div>
+
+            <!-- Bottom Floating Progress Card -->
+            <div class="co-progress-floating-card">
+              <div class="co-progress-card-header">
+                <div class="co-progress-card-icon"><i class="fa-solid fa-chart-column"></i></div>
+                <div class="co-progress-card-info">
+                  <span class="co-progress-card-title">Track Your Progress</span>
+                  <span class="co-progress-card-sub">Build habits and achieve your goals</span>
+                </div>
+              </div>
+              <div class="co-progress-bar-row">
+                <div class="co-progress-track">
+                  <div class="co-progress-fill" style="width: 72%;"></div>
+                </div>
+                <span class="co-progress-percent">72%</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Trust & Status Row -->
+        <div class="co-hero-trust-row">
+          <div class="co-trust-item">
+            <div class="co-trust-icon"><i class="fa-solid fa-user-group"></i></div>
+            <div class="co-trust-content">
+              <span class="co-trust-val">10,000+</span>
+              <span class="co-trust-lbl">Students</span>
+            </div>
+          </div>
+
+          <div class="co-trust-item">
+            <div class="co-trust-icon"><i class="fa-solid fa-folder-open"></i></div>
+            <div class="co-trust-content">
+              <span class="co-trust-val">50,000+</span>
+              <span class="co-trust-lbl">Study Materials</span>
+            </div>
+          </div>
+
+          <div class="co-status-badge">
+            <span class="co-status-dot"></span> All Systems Operational
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT SIDE: AUTH CARD (SIGNUP ACTIVE) -->
+      <section class="co-login-card-container">
+        <div class="co-login-card" id="authRightPanel">
+          
+          <!-- SIGNUP VIEW -->
+          <div class="auth-view" data-auth-view="signup">
+            <div class="co-card-header">
+              <h2 class="co-card-title" id="signupTitle">Create your account</h2>
+              <p class="co-card-subtitle" id="signupDescription">Set up your profile to unlock a branch-aware dashboard.</p>
+            </div>
+
+            <div class="google-auth-panel">
+              <div class="google-auth-slot" data-google-auth-slot="signup"></div>
+            </div>
+
+            <form id="signupForm" class="co-form-stack" novalidate>
+              <input type="text" id="signupWebsite" name="website" class="auth-honeypot" autocomplete="off" tabindex="-1" aria-hidden="true" />
+              
+              <div class="co-input-group">
+                <label class="co-input-label" for="signupName">Full Name</label>
+                <div class="co-input-wrapper">
+                  <i class="co-input-icon fa-regular fa-user"></i>
+                  <input id="signupName" class="co-input-control" type="text" placeholder="Enter your full name" required />
+                </div>
+              </div>
+
+              <div class="co-input-group">
+                <label class="co-input-label" for="signupEmail">Email Address</label>
+                <div class="co-input-wrapper">
+                  <i class="co-input-icon fa-regular fa-envelope"></i>
+                  <input id="signupEmail" class="co-input-control" type="email" placeholder="Enter your college or personal email" required />
+                </div>
+              </div>
+
+              <div class="co-input-group" data-signup-field="mobile">
+                <label class="co-input-label" for="signupMobile">Mobile Number</label>
+                <div class="co-input-wrapper">
+                  <i class="co-input-icon fa-solid fa-phone"></i>
+                  <input id="signupMobile" class="co-input-control" type="tel" maxlength="10" placeholder="10-digit mobile number" required />
+                </div>
+              </div>
+
+              <div class="co-input-group">
+                <label class="co-input-label" for="signupPassword">Password</label>
+                <div class="co-input-wrapper">
+                  <i class="co-input-icon fa-solid fa-lock"></i>
+                  <input id="signupPassword" class="co-input-control" type="password" placeholder="Create a strong password" required minlength="6" />
+                  <button type="button" id="toggleSignupPassword" class="co-password-toggle">Show</button>
+                </div>
+              </div>
+
+              <button id="signupSubmitBtn" class="co-submit-btn" type="submit">
+                <i class="fa-solid fa-user-plus"></i> <span>Create Account</span>
+              </button>
+            </form>
+
+            <p id="signupError" class="co-form-alert error form-error" role="alert" aria-live="assertive"></p>
+            <p id="signupSuccess" class="co-form-alert success form-success"></p>
+
+            <div class="co-card-footer">
+              <p style="margin: 0;">
+                Already have an account?
+                <a href="/login" class="co-card-switch-link auth-switch-link" data-auth-tab="login">Sign In →</a>
+              </p>
+            </div>
+
+            <div class="co-card-trust-footer">
+              <span><i class="fa-solid fa-shield-halved"></i> 256-bit encrypted student session</span>
+              <span><i class="fa-solid fa-lock"></i> Your data is protected</span>
+            </div>
+          </div>
+
+          <!-- LOGIN VIEW -->
+          <div class="auth-view hidden" data-auth-view="login">
+            <div class="co-card-header">
+              <h2 class="co-card-title" id="loginTitle">Welcome back</h2>
+              <p class="co-card-subtitle" id="loginDescription">Sign in to your College OS student workspace.</p>
+            </div>
+
+            <!-- Segmented Method Switcher -->
+            <div class="co-tab-switcher login-method-toggle">
+              <button type="button" class="co-tab-btn login-method-btn active" data-method="email">
+                <i class="fa-regular fa-envelope"></i> Email Login
+              </button>
+              <button type="button" class="co-tab-btn login-method-btn" data-method="otp">
+                <i class="fa-solid fa-mobile-screen-button"></i> OTP Login
+              </button>
+            </div>
+
+            <!-- EMAIL LOGIN FORM -->
+            <form id="loginForm" class="co-form-stack email-login-form" novalidate>
+              <div class="co-input-group">
+                <label class="co-input-label" for="loginEmail">Email Address</label>
+                <div class="co-input-wrapper">
+                  <i class="co-input-icon fa-regular fa-envelope"></i>
+                  <input id="loginEmail" class="co-input-control" type="email" placeholder="Enter your registered email" autocomplete="email" required />
+                </div>
+              </div>
+
+              <div class="co-input-group">
+                <label class="co-input-label" for="loginPassword">Password</label>
+                <div class="co-input-wrapper">
+                  <i class="co-input-icon fa-solid fa-lock"></i>
+                  <input id="loginPassword" class="co-input-control" type="password" placeholder="Enter your password" autocomplete="current-password" required minlength="6" />
+                  <button type="button" id="toggleLoginPassword" class="co-password-toggle" aria-label="Toggle password visibility">Show</button>
+                </div>
+              </div>
+
+              <div class="co-options-row">
+                <label class="co-checkbox-label" for="rememberMe">
+                  <input type="checkbox" id="rememberMe" checked />
+                  <span>Remember me</span>
+                </label>
+                <button type="button" id="forgotPasswordBtn" class="co-forgot-link">Forgot password?</button>
+              </div>
+
+              <input type="text" id="loginWebsite" name="website" class="auth-honeypot" autocomplete="off" tabindex="-1" aria-hidden="true" />
+
+              <!-- Cloudflare Turnstile Security Container -->
+              <div class="co-security-box captcha-box" id="loginCaptchaBox">
+                <div class="co-security-header">
+                  <i class="fa-solid fa-shield-halved"></i> <span id="loginCaptchaQuestion">Security verification</span>
+                </div>
+                <div class="co-turnstile-slot captcha-challenge turnstile-slot" id="loginCaptchaChallenge" aria-live="polite"></div>
+                <p class="co-security-status captcha-status" id="loginCaptchaStatus" aria-live="polite"></p>
+                <div class="captcha-actions" style="display:flex; justify-content:center;">
+                  <input id="loginCaptchaInput" type="hidden" />
+                  <button type="button" id="refreshLoginCaptcha" class="co-security-reset-btn btn-tertiary" aria-label="Reset security check">
+                    <i class="fa-solid fa-rotate-right"></i> <span>Reset Security Check</span>
+                  </button>
+                </div>
+              </div>
+
+              <button id="loginSubmitBtn" class="co-submit-btn" type="submit">
+                <span>Sign in to College OS</span> <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </form>
+
+            <!-- OTP LOGIN FORM -->
+            <div class="otp-box hidden" id="otpLoginSection">
+              <p style="font-size: 0.88rem; color: var(--co-muted); margin: 0 0 14px 0;">
+                Enter your registered Gmail ID to receive a secure login code.
+              </p>
+
+              <form id="mobileOtpRequestForm" class="co-form-stack" novalidate>
+                <div class="co-input-group">
+                  <label class="co-input-label" for="mobileNumber">Gmail ID</label>
+                  <div class="co-input-wrapper">
+                    <i class="co-input-icon fa-regular fa-envelope"></i>
+                    <input id="mobileNumber" class="co-input-control" type="email" placeholder="yourname@gmail.com" autocomplete="email" required />
+                  </div>
+                </div>
+                <button id="sendOtpBtn" class="co-submit-btn" type="submit">
+                  <i class="fa-solid fa-paper-plane"></i> <span>Send OTP Code</span>
+                </button>
+              </form>
+
+              <form id="mobileOtpVerifyForm" class="co-form-stack hidden" style="margin-top: 14px;" novalidate>
+                <div class="co-input-group">
+                  <label class="co-input-label" for="mobileOtp">6-Digit Verification Code</label>
+                  <div class="co-input-wrapper">
+                    <i class="co-input-icon fa-solid fa-key"></i>
+                    <input id="mobileOtp" class="co-input-control" type="text" maxlength="6" inputmode="numeric" placeholder="000000" required />
+                  </div>
+                </div>
+                
+                <div class="co-options-row" style="margin-top: 4px;">
+                  <span class="auth-otp-timer otp-timer" id="otpResendTimer" style="font-size:0.8rem; color:var(--co-muted);">Resend in 00:30</span>
+                  <button type="button" id="resendOtpBtn" class="co-forgot-link link-btn" disabled>Resend Code</button>
+                </div>
+
+                <button id="verifyOtpBtn" class="co-submit-btn" type="submit">
+                  <i class="fa-solid fa-shield-check"></i> <span>Verify &amp; Enter Workspace</span>
+                </button>
+              </form>
+            </div>
+
+            <!-- Feedback Alerts -->
+            <p id="loginError" class="co-form-alert error form-error" role="alert" aria-live="assertive"></p>
+            <p id="loginSuccess" class="co-form-alert success form-success"></p>
+
+            <div class="co-auth-divider"><span>OR CONTINUE WITH</span></div>
+
+            <div class="google-auth-panel">
+              <div class="google-auth-slot" data-google-auth-slot="login"></div>
+            </div>
+
+            <div class="co-card-footer">
+              <p style="margin: 0;">
+                New to College OS?
+                <a href="/signup" class="co-card-switch-link auth-switch-link" data-auth-tab="signup">Create your student account →</a>
+              </p>
+            </div>
+
+            <div class="co-card-trust-footer">
+              <span><i class="fa-solid fa-shield-halved"></i> 256-bit encrypted student session</span>
+              <span><i class="fa-solid fa-lock"></i> Your data is protected</span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- MODALS -->
+  <div id="signupOtpModal" class="modal signup-otp-modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="signupOtpTitle">
+    <div class="modal-card signup-otp-card" style="background:#fff; border-radius:16px; padding:24px; max-width:440px; margin:auto; box-shadow:0 20px 40px rgba(0,0,0,0.15);">
+      <div class="signup-otp-head" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
+        <div>
+          <h3 id="signupOtpTitle" style="margin:0 0 4px 0; color:#0f172a;">Verify your email</h3>
+          <p style="margin:0; font-size:0.88rem; color:#64748b;">Enter the 6-digit OTP sent to your email.</p>
+        </div>
+        <button type="button" id="signupOtpCloseBtn" class="signup-otp-close hidden" aria-label="Close verification dialog"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="co-input-group">
+        <label class="co-input-label" for="signupOtpInput">Enter 6-Digit OTP</label>
+        <div class="co-input-wrapper">
+          <input id="signupOtpInput" class="co-input-control otp-code-input" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" autocomplete="one-time-code" />
+        </div>
+      </div>
+
+      <div class="co-options-row" style="margin-top: 10px;">
+        <span class="auth-otp-timer otp-timer" id="signupOtpResendTimer" style="font-size:0.82rem; color:var(--co-muted);">Resend in 00:30</span>
+        <button type="button" id="signupOtpResendBtn" class="co-forgot-link" style="font-size:0.82rem;">Resend OTP</button>
+      </div>
+
+      <button type="button" id="signupOtpVerifyBtn" class="co-submit-btn" style="margin-top: 16px;">
+        <i class="fa-solid fa-shield-check"></i> Verify and Complete Signup
+      </button>
+
+      <p id="signupOtpError" class="co-form-alert error signup-otp-status"></p>
+      <p id="signupOtpSuccess" class="co-form-alert success signup-otp-status"></p>
+    </div>
+  </div>
+
+  <div id="supportModal" class="modal hidden" aria-hidden="true"></div>
+  <div id="legalModal" class="modal hidden" aria-hidden="true"></div>
+  <div id="onboardingModal" class="modal hidden" aria-hidden="true"></div>
+
+  <!-- SCRIPTS -->
+  <script src="assets/js/theme-init.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
 </body>
 </html>
-

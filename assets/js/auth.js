@@ -221,12 +221,34 @@ function bindInlineValidation() {
 }
 
 function switchAuthView(tabName) {
+  const targetTab = tabName === 'signup' ? 'signup' : 'login';
+
   document.querySelectorAll('[data-auth-tab]').forEach((button) => {
-    button.classList.toggle('active', button.dataset.authTab === tabName);
+    button.classList.toggle('active', button.dataset.authTab === targetTab);
   });
   document.querySelectorAll('[data-auth-view]').forEach((view) => {
-    view.classList.toggle('hidden', view.dataset.authView !== tabName);
+    view.classList.toggle('hidden', view.dataset.authView !== targetTab);
   });
+
+  const headerAction = document.querySelector('.co-auth-header-action');
+  if (headerAction) {
+    if (targetTab === 'signup') {
+      headerAction.innerHTML = `<span>Already have an account?</span> <a href="/login" class="co-auth-header-btn" data-auth-tab="login">Sign In →</a>`;
+    } else {
+      headerAction.innerHTML = `<span>New here?</span> <a href="/signup" class="co-auth-header-btn" data-auth-tab="signup">Create account →</a>`;
+    }
+    const btn = headerAction.querySelector('[data-auth-tab]');
+    if (btn) {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        switchAuthView(btn.dataset.authTab);
+        try {
+          window.history.pushState({ tab: btn.dataset.authTab }, '', btn.dataset.authTab === 'signup' ? '/signup' : '/login');
+        } catch (err) {}
+      });
+    }
+  }
+
   updateAuthTabIndicator();
   setAuthMessages('login');
   setAuthMessages('signup');
@@ -906,10 +928,10 @@ const authExperienceState = {
   text: {
     brandName: 'College OS',
     brandSubtext: 'Student Workspace',
-    loginTitle: 'Welcome back, build momentum',
-    loginDescription: 'Enter your secure workspace to continue your streak, plans, and career-focused study flow.',
+    loginTitle: 'Welcome back',
+    loginDescription: 'Sign in to your College OS student workspace.',
     signupTitle: 'Create your account',
-    signupDescription: 'Set up your profile in a few steps to unlock a branch-aware dashboard.',
+    signupDescription: 'Set up your profile to unlock a branch-aware dashboard.',
     supportLinkLabel: 'Need help? Contact support',
     footerConsentText: 'By continuing, you agree to our'
   },
@@ -1119,10 +1141,36 @@ function startOtpResendTimer(seconds, timerNodeId, buttonNodeId) {
 
 function bindTabs() {
   document.querySelectorAll('[data-auth-tab]').forEach((button) => {
-    button.addEventListener('click', () => {
+    button.addEventListener('click', (e) => {
       if (button.disabled) return;
-      switchAuthView(button.dataset.authTab);
+      if (button.tagName === 'A') {
+        e.preventDefault();
+      }
+      const targetTab = button.dataset.authTab;
+      switchAuthView(targetTab);
+      try {
+        const newUrl = targetTab === 'signup' ? '/signup' : '/login';
+        window.history.pushState({ tab: targetTab }, '', newUrl);
+      } catch (err) {}
     });
+  });
+
+  // Check initial mode on page load (e.g. ?mode=signup, ?tab=signup, or pathname === /signup)
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const pathname = String(window.location.pathname || '').toLowerCase();
+    const isSignup = params.get('mode') === 'signup' || 
+                     params.get('tab') === 'signup' || 
+                     pathname.endsWith('/signup') || 
+                     pathname.endsWith('/signup.html');
+    if (isSignup) {
+      switchAuthView('signup');
+    }
+  } catch (e) {}
+
+  window.addEventListener('popstate', (e) => {
+    const tab = e.state?.tab || (window.location.pathname.includes('signup') ? 'signup' : 'login');
+    switchAuthView(tab);
   });
 
   updateAuthTabIndicator();
@@ -1252,8 +1300,8 @@ function applyAuthExperienceConfig() {
 
   setText('authStatValue', branding.stats?.value || 'Active');
   setText('authStatLabel', branding.stats?.label || 'Learners Community');
-  setText('loginTitle', text.loginTitle || 'Welcome back, build momentum');
-  setText('loginDescription', text.loginDescription || 'Enter your secure workspace to continue your streak, plans, and career-focused study flow.');
+  setText('loginTitle', text.loginTitle || 'Welcome back');
+  setText('loginDescription', text.loginDescription || 'Sign in to your College OS student workspace.');
   setText('signupTitle', text.signupTitle || 'Create your account');
   setText('signupDescription', text.signupDescription || 'Set up your profile in a few steps to unlock a branch-aware dashboard.');
 
@@ -1440,8 +1488,14 @@ function validateSignupStep(step) {
 }
 
 function updateSignupStepUI() {
+  const stepSections = document.querySelectorAll('[data-signup-step]');
+  if (!stepSections || stepSections.length === 0) {
+    const submitBtn = byId('signupSubmitBtn');
+    if (submitBtn) submitBtn.classList.remove('hidden');
+    return;
+  }
   configureSignupFlowLayout();
-  document.querySelectorAll('[data-signup-step]').forEach((section) => {
+  stepSections.forEach((section) => {
     const stepNumber = Number(section.dataset.signupStep || 1);
     let shouldBeHidden = false;
     if (stepNumber === 2 || stepNumber === 3) {
@@ -2299,44 +2353,58 @@ function bindSignup() {
     event.preventDefault();
     setAuthMessages('signup');
 
-    if (signupStepState.current < signupStepState.total) {
-      if (!validateSignupStep(signupStepState.current)) return;
-      signupStepState.current = Math.min(signupStepState.total, signupStepState.current + 1);
-      updateSignupStepUI();
+    const nameInput = byId('signupName');
+    const emailInput = byId('signupEmail');
+    const mobileInput = byId('signupMobile');
+    const passwordInput = byId('signupPassword');
+    const confirmPasswordInput = byId('signupConfirmPassword');
+    const termsInput = byId('signupTerms');
+
+    const fullName = nameInput ? nameInput.value.trim() : '';
+    const email = emailInput ? emailInput.value.trim().toLowerCase() : '';
+    const mobile = mobileInput ? mobileInput.value.trim() : '';
+    const password = passwordInput ? passwordInput.value : '';
+    const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : password;
+    const acceptedTerms = termsInput ? Boolean(termsInput.checked) : true;
+
+    if (!fullName) {
+      if (nameInput) setFieldState(nameInput, { valid: false, message: 'Please enter your full name.' });
+      setAuthMessages('signup', 'Please enter your full name.');
       return;
     }
 
-    const fullName = byId('signupName').value.trim();
-    const email = byId('signupEmail').value.trim().toLowerCase();
-    const mobile = byId('signupMobile').value.trim();
-    const password = byId('signupPassword').value;
-    const confirmPassword = byId('signupConfirmPassword').value;
-    const acceptedTerms = Boolean(byId('signupTerms')?.checked);
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setFieldState(byId('signupEmail'), { valid: false, message: 'Enter a valid email address.' });
-      setAuthMessages('signup', 'Please fix the highlighted fields.');
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (emailInput) setFieldState(emailInput, { valid: false, message: 'Enter a valid email address.' });
+      setAuthMessages('signup', 'Enter a valid email address.');
       return;
     }
 
-    if (!fullName || !email || (isFieldVisible('mobile') && !mobile)) {
-      setAuthMessages('signup', 'Please complete your basic details.');
+    if (mobileInput && isFieldVisible('mobile') && !/^\d{10}$/.test(mobile)) {
+      setFieldState(mobileInput, { valid: false, message: 'Enter a valid 10-digit mobile number.' });
+      setAuthMessages('signup', 'Enter a valid 10-digit mobile number.');
       return;
     }
 
-    if (password !== confirmPassword) {
-      setAuthMessages('signup', 'Password and confirm password do not match.');
-      return;
-    }
-
-    if (!acceptedTerms) {
-      setAuthMessages('signup', 'Please accept terms and privacy policy to continue.');
+    if (!password) {
+      if (passwordInput) setFieldState(passwordInput, { valid: false, message: 'Password is required.' });
+      setAuthMessages('signup', 'Password is required.');
       return;
     }
 
     if (!isStrongSignupPassword(password)) {
-      setFieldState(byId('signupPassword'), { valid: false, message: PASSWORD_POLICY_MESSAGE });
+      if (passwordInput) setFieldState(passwordInput, { valid: false, message: PASSWORD_POLICY_MESSAGE });
       setAuthMessages('signup', PASSWORD_POLICY_MESSAGE);
+      return;
+    }
+
+    if (confirmPasswordInput && password !== confirmPassword) {
+      setFieldState(confirmPasswordInput, { valid: false, message: 'Password and confirm password do not match.' });
+      setAuthMessages('signup', 'Password and confirm password do not match.');
+      return;
+    }
+
+    if (termsInput && !acceptedTerms) {
+      setAuthMessages('signup', 'Please accept terms and privacy policy to continue.');
       return;
     }
 
@@ -2345,7 +2413,6 @@ function bindSignup() {
       email,
       mobile,
       password
-
     };
 
     signupVerificationState.method = 'email';

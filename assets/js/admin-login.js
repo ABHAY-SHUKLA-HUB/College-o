@@ -22,7 +22,10 @@
 
     if (qElem) qElem.textContent = window.__adminCaptchaState.question;
     if (inputElem) inputElem.value = '';
-    if (statusElem) statusElem.textContent = '';
+    if (statusElem) {
+      statusElem.innerHTML = '<i class="fa-solid fa-shield-check"></i> Security check ready.';
+      statusElem.classList.remove('error');
+    }
     return Promise.resolve(window.__adminCaptchaState);
   };
 
@@ -43,156 +46,147 @@
     });
   };
 
-  const emailInput = document.getElementById('adminEmail');
-  const pwdInput = document.getElementById('adminPassword');
-  const pwdToggle = document.getElementById('pwdToggle');
-  const pwdIcon = document.getElementById('pwdToggleIcon');
-  const emailHint = document.getElementById('emailHint');
-  const passwordHint = document.getElementById('passwordHint');
-  const loginBtn = document.getElementById('loginBtn');
-  const legacyError = document.getElementById('adminLoginError');
-  const errorBanner = document.getElementById('errorBanner');
-  const errorBannerText = document.getElementById('errorBannerText');
-  const captchaInput = document.getElementById('adminCaptchaInput');
-  const refreshBtn = document.getElementById('refreshAdminCaptcha');
-  const loginForm = document.getElementById('adminLoginForm');
+  function initAdminLogin() {
+    const emailInput = document.getElementById('adminEmail');
+    const pwdInput = document.getElementById('adminPassword');
+    const pwdToggle = document.getElementById('pwdToggle');
+    const pwdIcon = document.getElementById('pwdToggleIcon');
+    const emailHint = document.getElementById('emailHint');
+    const passwordHint = document.getElementById('passwordHint');
+    const loginBtn = document.getElementById('loginBtn');
+    const legacyError = document.getElementById('adminLoginError');
+    const errorBanner = document.getElementById('errorBanner');
+    const errorBannerText = document.getElementById('errorBannerText');
+    const captchaInput = document.getElementById('adminCaptchaInput');
+    const refreshBtn = document.getElementById('refreshAdminCaptcha');
+    const loginForm = document.getElementById('adminLoginForm');
 
-  if (
-    !emailInput ||
-    !pwdInput ||
-    !pwdToggle ||
-    !pwdIcon ||
-    !emailHint ||
-    !passwordHint ||
-    !loginBtn ||
-    !legacyError ||
-    !errorBanner ||
-    !errorBannerText ||
-    !captchaInput ||
-    !refreshBtn ||
-    !loginForm
-  ) {
-    return;
-  }
-
-  const clearFieldError = (input, hint) => {
-    input.classList.remove('is-invalid');
-    if (hint) hint.classList.remove('visible');
-  };
-
-  const getCaptchaHint = () => document.getElementById('adminCaptchaHint');
-
-  const ensureCaptchaHint = (text) => {
-    let hint = getCaptchaHint();
-    if (!hint) {
-      hint = document.createElement('div');
-      hint.id = 'adminCaptchaHint';
-      hint.className = 'field-hint';
-      const targetGroup = captchaInput.closest('.form-group');
-      if (targetGroup) {
-        targetGroup.appendChild(hint);
-      }
-    }
-
-    if (hint) {
-      hint.textContent = text;
-      hint.classList.add('visible');
-    }
-  };
-
-  pwdToggle.addEventListener('click', () => {
-    const isHidden = pwdInput.type === 'password';
-    pwdInput.type = isHidden ? 'text' : 'password';
-    pwdIcon.className = isHidden ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
-    pwdToggle.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
-  });
-
-  emailInput.addEventListener('input', () => clearFieldError(emailInput, emailHint));
-  pwdInput.addEventListener('input', () => clearFieldError(pwdInput, passwordHint));
-  captchaInput.addEventListener('input', () => clearFieldError(captchaInput, getCaptchaHint()));
-
-  const initAdminCaptcha = async () => {
-    try {
-      if (typeof refreshCaptcha === 'function') {
-        await refreshCaptcha('admin');
-      }
-    } catch (err) {
-      console.error('Failed to initialize captcha:', err);
-    }
-  };
-
-  refreshBtn.addEventListener('click', (event) => {
-    event.preventDefault();
-    if (typeof refreshCaptcha === 'function') {
-      refreshCaptcha('admin', { force: true });
+    if (!emailInput || !pwdInput || !loginBtn || !loginForm) {
       return;
     }
-    initAdminCaptcha();
-  });
 
-  // Load captcha on DOMContentLoaded for faster performance
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initAdminCaptcha);
-  } else {
-    // DOM already loaded, initialize immediately
-    initAdminCaptcha();
-  }
+    // Initialize Captcha
+    window.refreshCaptcha('admin');
 
-  new MutationObserver(() => {
-    const msg = legacyError.textContent.trim();
-    if (msg) {
-      errorBannerText.textContent = msg;
-      errorBanner.classList.add('visible');
-      loginBtn.classList.remove('loading');
-      loginBtn.disabled = false;
-      return;
+    const clearFieldError = (input, hint) => {
+      if (input) input.classList.remove('is-invalid');
+      if (hint) hint.classList.remove('visible');
+    };
+
+    const getCaptchaHint = () => document.getElementById('adminCaptchaHint');
+
+    const ensureCaptchaHint = (text) => {
+      let hint = getCaptchaHint();
+      if (!hint && captchaInput) {
+        hint = document.createElement('div');
+        hint.id = 'adminCaptchaHint';
+        hint.className = 'field-hint';
+        const targetGroup = captchaInput.closest('.form-group') || captchaInput.closest('.co-form-group') || captchaInput.closest('.co-admin-security-box');
+        if (targetGroup) {
+          targetGroup.appendChild(hint);
+        }
+      }
+
+      if (hint) {
+        hint.textContent = text;
+        hint.classList.add('visible');
+      }
+    };
+
+    const normalizeAdminErrorMessage = (rawError) => {
+      const text = String(rawError || '').trim();
+      if (/invalid email or password/i.test(text)) {
+        return 'Unable to sign in. Please check your credentials and try again.';
+      }
+      if (/too many/i.test(text) || /429/i.test(text)) {
+        return 'Too many attempts. Please wait and try again.';
+      }
+      if (/security check/i.test(text) || /captcha/i.test(text)) {
+        return 'Security verification failed. Please solve the calculation and try again.';
+      }
+      return text || 'Unable to sign in. Please verify your credentials and try again.';
+    };
+
+    if (pwdToggle) {
+      pwdToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        const isHidden = pwdInput.type === 'password';
+        pwdInput.type = isHidden ? 'text' : 'password';
+        if (pwdIcon) {
+          pwdIcon.className = isHidden ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
+        }
+        pwdToggle.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+      });
     }
-    errorBanner.classList.remove('visible');
-  }).observe(legacyError, { childList: true, characterData: true, subtree: true });
 
-  loginForm.addEventListener(
-    'submit',
-    (event) => {
+    emailInput.addEventListener('input', () => clearFieldError(emailInput, emailHint));
+    pwdInput.addEventListener('input', () => clearFieldError(pwdInput, passwordHint));
+    if (captchaInput) {
+      captchaInput.addEventListener('input', () => clearFieldError(captchaInput, getCaptchaHint()));
+    }
+
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        window.refreshCaptcha('admin');
+      });
+    }
+
+    if (legacyError && errorBanner && errorBannerText) {
+      new MutationObserver(() => {
+        const msg = legacyError.textContent.trim();
+        if (msg) {
+          errorBannerText.textContent = normalizeAdminErrorMessage(msg);
+          errorBanner.classList.add('visible');
+          loginBtn.classList.remove('loading');
+          loginBtn.disabled = false;
+          const labelNode = loginBtn.querySelector('.btn-label');
+          if (labelNode) labelNode.textContent = 'Sign In to Admin Panel';
+          return;
+        }
+        errorBanner.classList.remove('visible');
+      }).observe(legacyError, { childList: true, characterData: true, subtree: true });
+    }
+
+    loginForm.addEventListener('submit', (event) => {
+      event.preventDefault();
       let valid = true;
 
       if (!emailInput.value.trim() || !emailInput.validity.valid) {
         emailInput.classList.add('is-invalid');
-        emailHint.classList.add('visible');
+        if (emailHint) emailHint.classList.add('visible');
         valid = false;
       }
 
       if (!pwdInput.value) {
         pwdInput.classList.add('is-invalid');
-        passwordHint.classList.add('visible');
+        if (passwordHint) passwordHint.classList.add('visible');
         valid = false;
       }
 
-      if (!captchaInput.value.trim()) {
+      if (captchaInput && !captchaInput.value.trim()) {
         captchaInput.classList.add('is-invalid');
+        ensureCaptchaHint('Please enter the captcha answer.');
         valid = false;
-      }
-
-      if (typeof verifyCaptcha === 'function' && !verifyCaptcha('admin')) {
+      } else if (captchaInput && typeof window.verifyCaptcha === 'function' && !window.verifyCaptcha('admin')) {
         captchaInput.classList.add('is-invalid');
         ensureCaptchaHint('Captcha answer is incorrect. Please try again.');
         valid = false;
       }
 
       if (!valid) {
-        event.stopImmediatePropagation();
-        event.preventDefault();
         return;
       }
 
-      // Prevent full page form submission; use API endpoint for admin auth
-      event.preventDefault();
       loginBtn.classList.add('loading');
       loginBtn.disabled = true;
-      errorBanner.classList.remove('visible');
+      const labelNode = loginBtn.querySelector('.btn-label');
+      if (labelNode) labelNode.textContent = 'Signing in...';
+      if (errorBanner) errorBanner.classList.remove('visible');
 
       (async () => {
         try {
-          const captcha = (typeof ensureCaptchaPayload === 'function') ? await ensureCaptchaPayload('admin') : null;
+          const captcha = (typeof window.ensureCaptchaPayload === 'function') ? await window.ensureCaptchaPayload('admin') : null;
           const payload = { email: emailInput.value.trim(), password: pwdInput.value, captcha };
           const resp = await fetch('/api/admin/login', {
             method: 'POST',
@@ -203,12 +197,14 @@
 
           const data = await resp.json().catch(() => ({}));
           if (!resp.ok) {
-            const message = data?.error || 'Login failed. Please try again.';
-            legacyError.textContent = message;
-            errorBannerText.textContent = message;
-            errorBanner.classList.add('visible');
+            const message = normalizeAdminErrorMessage(data?.error);
+            if (legacyError) legacyError.textContent = message;
+            if (errorBannerText) errorBannerText.textContent = message;
+            if (errorBanner) errorBanner.classList.add('visible');
             loginBtn.classList.remove('loading');
             loginBtn.disabled = false;
+            if (labelNode) labelNode.textContent = 'Sign In to Admin Panel';
+            window.refreshCaptcha('admin');
             return;
           }
 
@@ -216,14 +212,22 @@
           window.location.assign('/admin-dashboard');
         } catch (err) {
           console.error('Admin login error', err);
-          legacyError.textContent = 'Login failed. Please try again.';
-          errorBannerText.textContent = 'Login failed. Please try again.';
-          errorBanner.classList.add('visible');
+          const message = 'Unable to sign in. Please check your connection and try again.';
+          if (legacyError) legacyError.textContent = message;
+          if (errorBannerText) errorBannerText.textContent = message;
+          if (errorBanner) errorBanner.classList.add('visible');
           loginBtn.classList.remove('loading');
           loginBtn.disabled = false;
+          if (labelNode) labelNode.textContent = 'Sign In to Admin Panel';
+          window.refreshCaptcha('admin');
         }
       })();
-    },
-    true
-  );
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAdminLogin);
+  } else {
+    initAdminLogin();
+  }
 })();

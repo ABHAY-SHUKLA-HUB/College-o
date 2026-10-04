@@ -3,521 +3,397 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Login — College OS</title>
+  <title>Admin Login | College OS — Academic Operating System</title>
+  <meta name="description" content="Secure Admin Control Panel login for College OS management, academic governance, and platform operations." />
   <meta name="robots" content="noindex, nofollow" />
   <link rel="canonical" href="https://collegeo.in/admin-login" />
-  <script src="assets/js/theme-init.js"></script>
-  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
-  <style>
-    :root {
-      --al-bg: #0f1117;
-      --al-grid: rgba(255, 255, 255, 0.04);
-      --al-panel: rgba(22, 27, 40, 0.90);
-      --al-panel-border: rgba(255, 255, 255, 0.07);
-      --al-title: #f1f5f9;
-      --al-text: #64748b;
-      --al-muted: #94a3b8;
-      --al-input-bg: rgba(15, 17, 23, 0.7);
-      --al-input-border: rgba(255, 255, 255, 0.08);
-      --al-input-text: #e2e8f0;
-      --al-placeholder: #334155;
-      --al-input-icon: #475569;
-      --al-note: #334155;
-    }
+  <link rel="icon" type="image/png" sizes="512x512" href="/assets/images/college-os-logo.png" />
 
-    html[data-theme-mode='light'] {
-      --al-bg: #f8fafc;
-      --al-grid: rgba(15, 23, 42, 0.05);
-      --al-panel: rgba(255, 255, 255, 0.92);
-      --al-panel-border: #e2e8f0;
-      --al-title: #0f172a;
-      --al-text: #475569;
-      --al-muted: #64748b;
-      --al-input-bg: #ffffff;
-      --al-input-border: #dbe4ef;
-      --al-input-text: #0f172a;
-      --al-placeholder: #94a3b8;
-      --al-input-icon: #64748b;
-      --al-note: #475569;
-    }
+  <!-- GOOGLE FONTS: Sora & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" />
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <!-- FONT AWESOME 6 -->
+  <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css" />
 
-    body {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      background: var(--al-bg);
-      background-image:
-        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(99, 102, 241, 0.18) 0%, transparent 70%),
-        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(168, 85, 247, 0.10) 0%, transparent 60%);
-      padding: 1rem;
-    }
+  <!-- DEDICATED ADMIN AUTH STYLES -->
+  <link rel="stylesheet" href="/assets/css/admin-auth-redesign.css" />
 
-    /* subtle animated dot grid */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image: radial-gradient(circle, var(--al-grid) 1px, transparent 1px);
-      background-size: 28px 28px;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .login-wrapper {
-      position: relative;
-      z-index: 1;
-      width: 100%;
-      max-width: 440px;
-    }
-
-    /* ── Brand strip ── */
-    .brand-strip {
-      text-align: center;
-      margin-bottom: 1.75rem;
-    }
-
-    .brand-icon {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 56px;
-      height: 56px;
-      border-radius: 16px;
-      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.40);
-      margin-bottom: 1rem;
-    }
-
-    .brand-icon i {
-      font-size: 1.5rem;
-      color: #fff;
-    }
-
-    .brand-name {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--al-title, #0f172a);
-      letter-spacing: -0.5px;
-    }
-
-    .brand-name span {
-      background: linear-gradient(90deg, #818cf8, #c084fc);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .brand-tagline {
-      margin-top: 0.25rem;
-      font-size: 0.8rem;
-      color: #64748b;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      font-weight: 500;
-    }
-
-    /* ── Login card ── */
-    .login-card {
-      background: var(--al-panel);
-      border: 1px solid var(--al-panel-border);
-      border-radius: 20px;
-      padding: 2.5rem 2rem;
-      -webkit-backdrop-filter: blur(16px);
-      backdrop-filter: blur(16px);
-      box-shadow:
-        0 0 0 1px rgba(99, 102, 241, 0.08),
-        0 24px 48px rgba(0, 0, 0, 0.50),
-        0 8px 16px rgba(0, 0, 0, 0.30);
-    }
-
-    .card-header {
-      margin-bottom: 1.75rem;
-    }
-
-    .card-header h2 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: var(--al-title);
-      letter-spacing: -0.3px;
-    }
-
-    .card-header p {
-      margin-top: 0.35rem;
-      font-size: 0.85rem;
-      color: var(--al-text);
-    }
-
-    /* ── Form fields ── */
-    .form-group {
-      margin-bottom: 1.1rem;
-    }
-
-    .form-group label {
-      display: block;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--al-muted);
-      margin-bottom: 0.45rem;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-
-    .input-wrapper {
-      position: relative;
-    }
-
-    .input-wrapper .input-icon {
-      position: absolute;
-      left: 0.9rem;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--al-input-icon);
-      font-size: 0.85rem;
-      pointer-events: none;
-      transition: color 0.2s;
-    }
-
-    .input-wrapper input {
-      width: 100%;
-      background: var(--al-input-bg);
-      border: 1.5px solid var(--al-input-border);
-      border-radius: 10px;
-      padding: 0.7rem 0.9rem 0.7rem 2.5rem;
-      font-size: 0.925rem;
-      color: var(--al-input-text);
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-      font-family: inherit;
-    }
-
-    .input-wrapper input::placeholder {
-      color: var(--al-placeholder);
-    }
-
-    .input-wrapper input:focus {
-      border-color: #6366f1;
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
-      background: rgba(15, 17, 23, 0.90);
-    }
-
-    .input-wrapper input:focus ~ .input-icon,
-    .input-wrapper:focus-within .input-icon {
-      color: #818cf8;
-    }
-
-    /* invalid state */
-    .input-wrapper input.is-invalid {
-      border-color: #ef4444;
-      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
-    }
-
-    /* password toggle */
-    .pwd-toggle {
-      position: absolute;
-      right: 0.85rem;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: var(--al-input-icon);
-      font-size: 0.85rem;
-      padding: 0.2rem;
-      transition: color 0.2s;
-      line-height: 1;
-    }
-
-    .pwd-toggle:hover { color: #818cf8; }
-
-    /* field-level error hint */
-    .field-hint {
-      font-size: 0.75rem;
-      color: #ef4444;
-      margin-top: 0.35rem;
-      min-height: 1rem;
-      display: none;
-    }
-
-    .field-hint.visible { display: block; }
-
-    /* ── Login error banner ── */
-    .error-banner {
-      display: none;
-      background: rgba(239, 68, 68, 0.10);
-      border: 1px solid rgba(239, 68, 68, 0.30);
-      color: #fca5a5;
-      border-radius: 8px;
-      padding: 0.65rem 0.9rem;
-      font-size: 0.83rem;
-      margin-bottom: 1rem;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .error-banner.visible {
-      display: flex;
-    }
-
-    .error-banner i {
-      flex-shrink: 0;
-      font-size: 0.9rem;
-    }
-
-    /* ── Submit button ── */
-    .btn-login {
-      width: 100%;
-      padding: 0.75rem 1rem;
-      border: none;
-      border-radius: 10px;
-      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-      color: #fff;
-      font-size: 0.95rem;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      letter-spacing: 0.01em;
-      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
-      box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.55rem;
-      margin-top: 1.5rem;
-    }
-
-    .btn-login:hover:not(:disabled) {
-      opacity: 0.92;
-      transform: translateY(-1px);
-      box-shadow: 0 6px 22px rgba(99, 102, 241, 0.45);
-    }
-
-    .btn-login:active:not(:disabled) {
-      transform: translateY(0);
-      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.30);
-    }
-
-    .btn-login:disabled {
-      opacity: 0.55;
-      cursor: not-allowed;
-    }
-
-    .btn-login .spinner {
-      display: none;
-      width: 16px;
-      height: 16px;
-      border: 2px solid rgba(255,255,255,0.30);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-    }
-
-    .btn-login.loading .spinner { display: block; }
-    .btn-login.loading .btn-icon { display: none; }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    /* ── Captcha box ── */
-    .captcha-box {
-      background: rgba(99, 102, 241, 0.06);
-      border: 1px solid rgba(99, 102, 241, 0.20);
-      border-radius: 10px;
-      padding: 0.9rem;
-      margin: 1.2rem 0;
-    }
-
-    .captcha-question {
-      font-size: 0.85rem;
-      color: var(--al-muted);
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 0.7rem;
-    }
-
-    .captcha-question i {
-      flex-shrink: 0;
-      color: #8b5cf6;
-      font-size: 0.9rem;
-    }
-
-    .captcha-question span {
-      font-weight: 500;
-    }
-
-    .captcha-actions {
-      display: flex;
-      gap: 0.5rem;
-      align-items: flex-end;
-    }
-
-    .captcha-actions .form-group {
-      flex: 1;
-      margin-bottom: 0;
-    }
-
-    .captcha-actions .form-group label {
-      font-size: 0.75rem;
-      margin-bottom: 0.35rem;
-    }
-
-    .captcha-actions .form-group input {
-      padding: 0.6rem 0.8rem;
-      font-size: 0.9rem;
-    }
-
-    .btn-refresh-captcha {
-      background: none;
-      border: 1px solid rgba(99, 102, 241, 0.30);
-      color: #818cf8;
-      border-radius: 8px;
-      padding: 0.6rem 0.8rem;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-size: 0.9rem;
-    }
-
-    .btn-refresh-captcha:hover {
-      background: rgba(99, 102, 241, 0.10);
-      border-color: #818cf8;
-    }
-
-    /* ── Divider / footer note ── */
-    .card-footer-note {
-      margin-top: 1.4rem;
-      text-align: center;
-      font-size: 0.75rem;
-      color: var(--al-note);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.4rem;
-    }
-
-    .card-footer-note i { color: #4ade80; font-size: 0.7rem; }
-
-    /* ── Responsive ── */
-    @media (max-width: 480px) {
-      .login-card { padding: 1.75rem 1.25rem; border-radius: 16px; }
-      .brand-icon { width: 48px; height: 48px; }
-      .brand-name { font-size: 1.3rem; }
-    }
-  </style>
+  <script src="/assets/js/theme-init.js"></script>
+  <script>
+    (function () {
+      var hostname = String(window.location && window.location.hostname || '').toLowerCase();
+      var protocol = String(window.location && window.location.protocol || '').toLowerCase();
+      var isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
+      if (isLocalHost && protocol === 'https:') {
+        window.location.replace('http://' + hostname + (window.location.port ? ':' + window.location.port : '') + window.location.pathname + window.location.search + window.location.hash);
+        return;
+      }
+      var isProdFrontend = hostname === 'collegeo.in' || hostname === 'www.collegeo.in' || hostname.endsWith('.vercel.app');
+      var fallbackApi = isProdFrontend ? 'https://college-o.onrender.com' : (isLocalHost ? 'http://' + hostname + ':3000' : (window.location && window.location.origin ? window.location.origin : 'http://localhost:3000'));
+      window.API_BASE_URL = window.API_BASE_URL || fallbackApi;
+      window.API_URL = window.API_URL || window.API_BASE_URL;
+    })();
+  </script>
 </head>
-<body>
 
-  <div class="login-wrapper">
+<body class="co-admin-auth-page">
+  <div class="co-admin-wrapper">
 
-    <!-- Brand strip -->
-    <div class="brand-strip">
-      <div class="brand-icon">
-        <i class="fa-solid fa-shield-halved"></i>
-      </div>
-      <div class="brand-name">College <span>OS</span></div>
-      <div class="brand-tagline">Admin Control Panel</div>
-    </div>
+    <!-- ===================================================================
+         MAIN 2-COLUMN EXPERIENCE
+         =================================================================== -->
+    <main class="co-admin-main">
+      
+      <!-- ===============================================================
+           LEFT SIDE: DARK PURPLE / INDIGO HERO SECTION
+           =============================================================== -->
+      <section class="co-admin-hero">
+        <div class="co-admin-grid-pattern"></div>
+        
+        <div class="co-admin-hero-content">
+          
+          <!-- Top Area: Brand & Badge -->
+          <div class="co-admin-hero-top">
+            <a href="/" class="co-admin-brand-header" aria-label="College OS Home">
+              <img class="co-admin-logo-img" src="/assets/images/college-os-logo.png" alt="College OS Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+              <div class="co-admin-logo-fallback" style="display:none;">CO</div>
+              <div class="co-admin-brand-text">
+                <span class="co-admin-brand-title">College OS</span>
+                <span class="co-admin-brand-tagline">ACADEMIC OPERATING SYSTEM</span>
+              </div>
+            </a>
 
-    <!-- Login card -->
-    <div class="login-card">
-
-      <div class="card-header">
-        <h2>Sign in to Admin Portal</h2>
-        <p>Secure access — authorised personnel only.</p>
-      </div>
-
-      <!-- Error banner -->
-      <!-- Hidden target that admin.js writes to (preserves original element ID) -->
-      <p id="adminLoginError" style="position:absolute;opacity:0;height:0;overflow:hidden;pointer-events:none;" aria-hidden="true"></p>
-
-      <!-- Styled error banner (populated by MutationObserver below) -->
-      <div class="error-banner" id="errorBanner" role="alert" aria-live="polite">
-        <i class="fa-solid fa-circle-exclamation"></i>
-        <span id="errorBannerText"></span>
-      </div>
-
-      <form id="adminLoginForm" novalidate autocomplete="on">
-
-        <!-- Email -->
-        <div class="form-group">
-          <label for="adminEmail">Email address</label>
-          <div class="input-wrapper">
-            <i class="fa-regular fa-envelope input-icon"></i>
-            <input
-              id="adminEmail"
-              type="email"
-              name="email"
-              autocomplete="username"
-              placeholder="admin@example.com"
-              required
-            />
-          </div>
-          <div class="field-hint" id="emailHint">Please enter a valid email address.</div>
-        </div>
-
-        <!-- Password -->
-        <div class="form-group">
-          <label for="adminPassword">Password</label>
-          <div class="input-wrapper">
-            <i class="fa-solid fa-lock input-icon"></i>
-            <input
-              id="adminPassword"
-              type="password"
-              name="password"
-              autocomplete="current-password"
-              placeholder="••••••••"
-              required
-            />
-            <button
-              type="button"
-              class="pwd-toggle"
-              id="pwdToggle"
-              aria-label="Toggle password visibility"
-            >
-              <i class="fa-regular fa-eye" id="pwdToggleIcon"></i>
-            </button>
-          </div>
-          <div class="field-hint" id="passwordHint">Password cannot be empty.</div>
-        </div>
-
-        <!-- Captcha -->
-        <div class="captcha-box" id="adminCaptchaBox">
-          <p class="captcha-question"><i class="fa-solid fa-shield"></i> <span id="adminCaptchaQuestion">Loading captcha...</span></p>
-          <div class="captcha-actions">
-            <div class="form-group">
-              <label for="adminCaptchaInput">Enter Answer</label>
-              <input id="adminCaptchaInput" type="text" name="captcha_answer" required />
+            <div class="co-admin-badge">
+              <i class="fa-solid fa-crown"></i> <span>Admin Control Panel</span>
             </div>
-            <button type="button" id="refreshAdminCaptcha" class="btn-refresh-captcha" aria-label="Refresh captcha"><i class="fa-solid fa-rotate-right"></i></button>
+
+            <h1 class="co-admin-headline">
+              Manage. Monitor.<br />
+              <span class="co-admin-highlight">Empower Education.</span>
+            </h1>
+
+            <p class="co-admin-desc">
+              Access powerful admin tools to manage students, content, academics, quizzes, mock tests, and more — all in one secure dashboard.
+            </p>
           </div>
-          <div class="field-hint visible" id="adminCaptchaStatus" aria-live="polite"></div>
+
+          <!-- Center Area: 4 Features + Administrator Visual -->
+          <div class="co-admin-hero-center-grid">
+            
+            <!-- 4 Admin Capability Features -->
+            <div class="co-admin-feature-stack">
+              
+              <div class="co-admin-feature-row">
+                <div class="co-feature-icon-circle co-icon-blue-grad">
+                  <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <div class="co-feature-texts">
+                  <span class="co-feature-heading">Manage Academic Structure</span>
+                  <span class="co-feature-subheading">Colleges, courses, branches, semesters &amp; subjects</span>
+                </div>
+              </div>
+
+              <div class="co-admin-feature-row">
+                <div class="co-feature-icon-circle co-icon-green-grad">
+                  <i class="fa-solid fa-file-lines"></i>
+                </div>
+                <div class="co-feature-texts">
+                  <span class="co-feature-heading">Create &amp; Share Content</span>
+                  <span class="co-feature-subheading">Notes, PDFs, PYQs, quizzes &amp; mock tests</span>
+                </div>
+              </div>
+
+              <div class="co-admin-feature-row">
+                <div class="co-feature-icon-circle co-icon-orange-grad">
+                  <i class="fa-solid fa-users"></i>
+                </div>
+                <div class="co-feature-texts">
+                  <span class="co-feature-heading">Monitor Students</span>
+                  <span class="co-feature-subheading">Registrations, activity, progress &amp; engagement</span>
+                </div>
+              </div>
+
+              <div class="co-admin-feature-row">
+                <div class="co-feature-icon-circle co-icon-purple-grad">
+                  <i class="fa-solid fa-gear"></i>
+                </div>
+                <div class="co-feature-texts">
+                  <span class="co-feature-heading">System Control</span>
+                  <span class="co-feature-subheading">Announcements, banners, settings &amp; more</span>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Administrator Visual with Floating Cards -->
+            <div class="co-admin-visual-scene">
+              
+              <!-- Floating 3D Paper Plane & Cap -->
+              <div class="co-floating-decor co-decor-plane">
+                <i class="fa-solid fa-paper-plane"></i>
+              </div>
+              <div class="co-floating-decor co-decor-cap">
+                <i class="fa-solid fa-graduation-cap"></i>
+              </div>
+
+              <!-- Top Floating Card: Dashboard Overview -->
+              <div class="co-card-overview">
+                <span class="co-overview-title">Dashboard Overview</span>
+                <div class="co-overview-row">
+                  <div class="co-overview-icon">
+                    <i class="fa-solid fa-user-graduate"></i>
+                  </div>
+                  <div class="co-overview-data">
+                    <span class="co-overview-label">Total Students</span>
+                    <span class="co-overview-val">12,480 <span class="co-trend-up">↑ 12%</span></span>
+                  </div>
+                </div>
+                <div class="co-mini-barchart">
+                  <div class="co-mini-bar" style="height: 6px;"></div>
+                  <div class="co-mini-bar" style="height: 10px;"></div>
+                  <div class="co-mini-bar" style="height: 8px;"></div>
+                  <div class="co-mini-bar" style="height: 14px;"></div>
+                  <div class="co-mini-bar active" style="height: 16px;"></div>
+                </div>
+              </div>
+
+              <!-- Admin Portrait Image -->
+              <div class="co-admin-photo-frame">
+                <img class="co-admin-photo" src="/assets/images/admin-hero.jpg" alt="College OS Administrator at Work" />
+              </div>
+
+              <!-- Right Vertical Floating Chips -->
+              <div class="co-admin-floating-chips">
+                <div class="co-stat-chip">
+                  <div class="co-chip-icon-box co-chip-purple">
+                    <i class="fa-solid fa-book"></i>
+                  </div>
+                  <div class="co-chip-info">
+                    <span class="co-chip-lbl">Notes</span>
+                    <span class="co-chip-num">346</span>
+                  </div>
+                </div>
+
+                <div class="co-stat-chip">
+                  <div class="co-chip-icon-box co-chip-coral">
+                    <i class="fa-solid fa-file-circle-question"></i>
+                  </div>
+                  <div class="co-chip-info">
+                    <span class="co-chip-lbl">Quizzes</span>
+                    <span class="co-chip-num">120</span>
+                  </div>
+                </div>
+
+                <div class="co-stat-chip">
+                  <div class="co-chip-icon-box co-chip-amber">
+                    <i class="fa-solid fa-folder-open"></i>
+                  </div>
+                  <div class="co-chip-info">
+                    <span class="co-chip-lbl">Mock Tests</span>
+                    <span class="co-chip-num">58</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- Bottom Trust Row -->
+          <div class="co-admin-trust-bar">
+            <div class="co-admin-trust-item">
+              <div class="co-trust-icon-box co-icon-blue-grad">
+                <i class="fa-solid fa-shield-halved"></i>
+              </div>
+              <div class="co-trust-info">
+                <strong>Secure Access</strong>
+                <span>Role-based control</span>
+              </div>
+            </div>
+
+            <div class="co-admin-trust-item">
+              <div class="co-trust-icon-box co-icon-purple-grad">
+                <i class="fa-solid fa-chart-simple"></i>
+              </div>
+              <div class="co-trust-info">
+                <strong>Real-time Data</strong>
+                <span>Live monitoring</span>
+              </div>
+            </div>
+
+            <div class="co-admin-trust-item">
+              <div class="co-trust-icon-box co-icon-green-grad">
+                <i class="fa-solid fa-user-group"></i>
+              </div>
+              <div class="co-trust-info">
+                <strong>Better Education</strong>
+                <span>Empower more students</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+
+      <!-- ===============================================================
+           RIGHT SIDE: WHITE ENTERPRISE LOGIN CARD
+           =============================================================== -->
+      <section class="co-admin-login-side">
+        
+        <!-- Top Nav: Back to Website -->
+        <div class="co-admin-top-nav">
+          <a href="/" class="co-back-website-btn" aria-label="Return to College OS homepage">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Back to Website</span>
+          </a>
         </div>
 
-        <!-- Submit -->
-        <button class="btn-login" type="submit" id="loginBtn">
-          <span class="spinner"></span>
-          <i class="fa-solid fa-arrow-right-to-bracket btn-icon"></i>
-          <span class="btn-label">Sign In</span>
-        </button>
+        <!-- White Enterprise Login Card -->
+        <div class="co-admin-card">
+          
+          <!-- Brand Badge in Card -->
+          <div class="co-card-center-brand">
+            <div class="co-admin-shield-badge">
+              <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div class="co-card-brand-name">College <span>OS</span></div>
+            <div class="co-card-brand-tagline">ADMIN CONTROL PANEL</div>
+          </div>
 
-      </form>
+          <div class="co-admin-card-header">
+            <h2 class="co-admin-card-title">Sign in to Admin Portal</h2>
+            <p class="co-admin-card-sub">Secure access — authorised personnel only.</p>
+          </div>
 
-      <div class="card-footer-note">
-        <i class="fa-solid fa-circle-check"></i>
-        Encrypted &amp; secure connection
-      </div>
+          <!-- Hidden target that admin.js writes to (preserves original element ID) -->
+          <p id="adminLoginError" style="position:absolute;opacity:0;height:0;overflow:hidden;pointer-events:none;" aria-hidden="true"></p>
 
-    </div>
+          <!-- Styled error banner (populated by admin-login.js MutationObserver) -->
+          <div class="error-banner" id="errorBanner" role="alert" aria-live="polite">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span id="errorBannerText"></span>
+          </div>
+
+          <!-- Form -->
+          <form id="adminLoginForm" class="co-admin-form" novalidate autocomplete="on">
+            
+            <!-- Email Address -->
+            <div class="co-form-group">
+              <label class="co-form-label" for="adminEmail">Email Address</label>
+              <div class="co-input-wrapper">
+                <i class="fa-regular fa-envelope co-input-icon"></i>
+                <input
+                  id="adminEmail"
+                  class="co-input-control"
+                  type="email"
+                  name="email"
+                  autocomplete="username"
+                  placeholder="admin@example.com"
+                  required
+                />
+              </div>
+              <div class="field-hint" id="emailHint">Please enter a valid email address.</div>
+            </div>
+
+            <!-- Password -->
+            <div class="co-form-group">
+              <label class="co-form-label" for="adminPassword">Password</label>
+              <div class="co-input-wrapper">
+                <i class="fa-solid fa-lock co-input-icon"></i>
+                <input
+                  id="adminPassword"
+                  class="co-input-control"
+                  type="password"
+                  name="password"
+                  autocomplete="current-password"
+                  placeholder="Enter your password"
+                  required
+                />
+                <button
+                  type="button"
+                  class="co-pwd-toggle"
+                  id="pwdToggle"
+                  aria-label="Toggle password visibility"
+                >
+                  <i class="fa-regular fa-eye" id="pwdToggleIcon"></i>
+                </button>
+              </div>
+              <div class="field-hint" id="passwordHint">Password cannot be empty.</div>
+            </div>
+
+            <!-- Security Verification Container -->
+            <div class="co-admin-security-box" id="adminCaptchaBox">
+              <div class="co-security-header">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span>Security Verification</span>
+              </div>
+
+              <div class="co-math-captcha-row">
+                <span class="co-math-question" id="adminCaptchaQuestion">Loading captcha...</span>
+                <input
+                  id="adminCaptchaInput"
+                  class="co-math-input"
+                  type="text"
+                  name="captcha_answer"
+                  placeholder="Answer"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+
+              <div class="co-security-footer-row">
+                <div class="co-security-status" id="adminCaptchaStatus" aria-live="polite">
+                  <i class="fa-solid fa-shield-check"></i> Security check ready.
+                </div>
+                <button type="button" id="refreshAdminCaptcha" class="co-btn-reset-security" aria-label="Reset security check">
+                  <i class="fa-solid fa-rotate-right"></i> <span>Reset Security Check</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button class="co-admin-submit-btn" type="submit" id="loginBtn">
+              <span class="spinner"></span>
+              <span class="btn-label">Sign In to Admin Panel</span>
+              <i class="fa-solid fa-arrow-right btn-icon"></i>
+            </button>
+
+          </form>
+
+          <!-- Security Badges Footer -->
+          <div class="co-admin-security-indicators">
+            <div class="co-sec-item">
+              <i class="fa-solid fa-shield-halved"></i>
+              <strong>Secure &amp; Encrypted</strong>
+              <span>Your data is protected</span>
+            </div>
+            <div class="co-sec-item">
+              <i class="fa-solid fa-lock"></i>
+              <strong>Role-based Access</strong>
+              <span>Admin only</span>
+            </div>
+            <div class="co-sec-item">
+              <i class="fa-solid fa-file-shield"></i>
+              <strong>Protected Access</strong>
+              <span>Full audit trail</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bottom Spacer -->
+        <div></div>
+
+      </section>
+
+    </main>
   </div>
 
-  <script src="assets/js/api.js"></script>
-  <script src="assets/js/auth.js"></script>
-  <script src="assets/js/admin.js"></script>
-  <script src="assets/js/admin-login.js"></script>
+  <!-- SCRIPTS -->
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/admin-login.js"></script>
 </body>
 </html>
-

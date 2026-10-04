@@ -220,6 +220,7 @@ const CLEAN_PAGE_ROUTES = new Map([
   ['/contribute', 'academic-contribution-hub.html'],
   ['/coding-challenges', 'coding-challenges.html'],
   ['/admin-login', 'admin-login.html'],
+  ['/admin/login', 'admin-login.html'],
   ['/admin-dashboard', 'admin-dashboard.html'],
   ['/admin-dashboard-mgmt', 'admin-dashboard-mgmt.html'],
   ['/admin-control', 'admin-control.html'],
@@ -615,8 +616,8 @@ app.use((req, res, next) => {
   return next();
 });
 
-// Admin page protection: serve admin HTML only when admin session exists and user has required permission.
-app.get(['/admin-login.html', '/admin-login'], (_req, res) => {
+// Admin login page routes (publicly accessible)
+app.get(['/admin-login.html', '/admin-login', '/admin/login'], (_req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
   res.sendFile(path.join(__dirname, '..', 'admin-login.html'));
 });

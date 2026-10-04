@@ -3,367 +3,452 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mock Test Studio - Admin</title>
+  <title>Mock Test Studio — College OS Admin</title>
   <script src="assets/js/theme-init.js"></script>
+  <!-- Base & Redesign Stylesheets -->
   <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/css/admin-dashboard-redesign.css?v=20261004-1" />
   <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
-  <style>
-    .studio-grid { display: grid; gap: 1rem; }
-
-    .studio-toolbar {
-      background: linear-gradient(130deg, #133563, #0f7b6c 56%, #d88d20);
-      color: #fff;
-      border-radius: 16px;
-      padding: 1rem;
-      display: grid;
-      gap: 0.5rem;
-      box-shadow: 0 16px 36px rgba(14, 42, 88, 0.3);
-    }
-
-    .studio-toolbar p { margin: 0; opacity: 0.92; }
-
-    .studio-panels {
-      display: grid;
-      grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-      gap: 1rem;
-      align-items: start;
-    }
-
-    .panel {
-      background: var(--surface);
-      border: 1px solid rgba(0, 0, 0, 0.08);
-      border-radius: 14px;
-      box-shadow: var(--shadow);
-      padding: 0.9rem;
-      display: grid;
-      gap: 0.7rem;
-    }
-
-    .field-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 0.55rem;
-    }
-
-    .field-grid .full { grid-column: 1 / -1; }
-
-    .panel input,
-    .panel select,
-    .panel textarea {
-      width: 100%;
-      border: 1px solid rgba(0, 0, 0, 0.12);
-      border-radius: 10px;
-      padding: 0.58rem 0.68rem;
-      font: inherit;
-      background: #fff;
-    }
-
-    .panel textarea { min-height: 96px; resize: vertical; }
-
-    .check-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 0.4rem;
-      font-size: 0.9rem;
-    }
-
-    .actions-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.48rem;
-      justify-content: flex-end;
-    }
-
-    .table-wrap {
-      overflow: auto;
-      border-radius: 12px;
-      border: 1px solid rgba(0, 0, 0, 0.08);
-    }
-
-    .table-wrap table { width: 100%; border-collapse: collapse; }
-
-    .table-wrap th,
-    .table-wrap td {
-      padding: 0.56rem;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-      text-align: left;
-      vertical-align: top;
-      font-size: 0.9rem;
-    }
-
-    .table-wrap th {
-      background: #f3f7fb;
-      font-size: 0.78rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: #57708a;
-    }
-
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 0.55rem;
-    }
-
-    .kpi {
-      border-radius: 12px;
-      border: 1px solid rgba(0, 0, 0, 0.08);
-      background: #fff;
-      padding: 0.62rem;
-    }
-
-    .kpi label { display: block; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
-    .kpi strong { font-family: 'Space Grotesk', sans-serif; font-size: 1.1rem; }
-
-    .insight-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; }
-
-    .insight {
-      border-radius: 12px;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      background: #fff;
-      padding: 0.62rem;
-    }
-
-    .insight ul { margin: 0.3rem 0 0; padding-left: 1rem; display: grid; gap: 0.22rem; }
-
-    .muted { color: var(--muted); }
-
-    @media (max-width: 1180px) {
-      .studio-panels { grid-template-columns: 1fr; }
-      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-
-    @media (max-width: 780px) {
-      .field-grid, .check-grid, .insight-grid { grid-template-columns: 1fr; }
-      .kpi-grid { grid-template-columns: 1fr; }
-    }
-  </style>
 </head>
 <body class="admin-portal">
-  <div class="co-admin-shell">
-    <aside class="co-admin-aside">
+  <div class="co-admin-shell" id="adminMockTestsRoot">
+
+    <!-- Mobile Drawer Backdrop -->
+    <div class="co-admin-backdrop" id="adminBackdrop"></div>
+
+    <!-- FIXED LEFT SIDEBAR -->
+    <aside class="co-admin-aside" id="adminSidebar">
       <div class="co-admin-brand">
-        <span class="co-admin-brand-mark"><i class="fa-solid fa-shield-halved"></i></span>
-        <div>
-          <h1>College OS Admin</h1>
-          <p>Academic operations, learner management, content publishing, and platform oversight in one workspace.</p>
+        <div class="co-admin-brand-mark">CO</div>
+        <div class="co-admin-brand-info">
+          <h1>College OS</h1>
+          <span class="co-admin-brand-badge">ADMIN CONTROL PANEL</span>
         </div>
+        <button class="co-admin-close-btn" id="adminSidebarClose" aria-label="Close sidebar">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
 
       <div class="co-admin-sidebar-nav-container">
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Overview</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-dashboard.html"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a>
-          <a class="co-admin-nav-link" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control Center</span></a>
-        </nav>
-      </section>
+        <!-- OVERVIEW -->
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">OVERVIEW</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-dashboard.html">
+              <i class="fa-solid fa-house"></i>
+              <span>Dashboard</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html">
+              <i class="fa-solid fa-sliders"></i>
+              <span>Control Center &amp; Analytics</span>
+            </a>
+          </nav>
+        </section>
 
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Academic Content</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i><span>Study Materials</span></a>
-          <a class="co-admin-nav-link" href="admin-notes.html"><i class="fa-solid fa-file-lines"></i><span>Notes Library</span></a>
-          <a class="co-admin-nav-link" href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i><span>Previous Papers</span></a>
-          <a class="co-admin-nav-link" href="admin-quizzes.html"><i class="fa-solid fa-clipboard-question"></i><span>Quizzes</span></a>
-          <a class="co-admin-nav-link active" href="admin-mock-tests.html"><i class="fa-solid fa-flask-vial"></i><span>Mock Test Studio</span></a>
-          <a class="co-admin-nav-link" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Study Roadmaps</span></a>
-          <a class="co-admin-nav-link" href="admin-academics.html"><i class="fa-solid fa-graduation-cap"></i><span>Academic Structure</span></a>
-        </nav>
-      </section>
+        <!-- CONTENT MANAGEMENT -->
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">CONTENT MANAGEMENT</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-materials.html">
+              <i class="fa-solid fa-book-bookmark"></i>
+              <span>Study Materials</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-notes.html">
+              <i class="fa-solid fa-file-lines"></i>
+              <span>Notes Library</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-papers.html">
+              <i class="fa-solid fa-file-pdf"></i>
+              <span>Previous Papers</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-quizzes.html">
+              <i class="fa-solid fa-clipboard-question"></i>
+              <span>Quizzes</span>
+            </a>
+            <a class="co-admin-nav-link active" href="admin-mock-tests.html">
+              <i class="fa-solid fa-flask-vial"></i>
+              <span>Mock Test Studio</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-campus-feed.html">
+              <i class="fa-solid fa-bullhorn"></i>
+              <span>Announcements</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-roadmaps.html">
+              <i class="fa-solid fa-map-location-dot"></i>
+              <span>Study Roadmaps</span>
+            </a>
+          </nav>
+        </section>
 
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Student Management</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-control.html#students-management"><i class="fa-solid fa-users"></i><span>Students & Memberships</span></a>
-          <a class="co-admin-nav-link" href="admin-academics.html#contributions"><i class="fa-solid fa-upload"></i><span>Student Contributions</span></a>
-          <a class="co-admin-nav-link" href="admin-certificates.html"><i class="fa-solid fa-certificate"></i><span>Certificates</span></a>
-        </nav>
-      </section>
+        <!-- ACADEMIC MANAGEMENT -->
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">ACADEMIC MANAGEMENT</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-academics.html">
+              <i class="fa-solid fa-graduation-cap"></i>
+              <span>Academic Structure</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-academics.html#branches">
+              <i class="fa-solid fa-sitemap"></i>
+              <span>Courses &amp; Branches</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-academics.html#semesters">
+              <i class="fa-solid fa-table-cells-large"></i>
+              <span>Semesters &amp; Subjects</span>
+            </a>
+          </nav>
+        </section>
 
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Coding Challenges</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-coding-challenges.html"><i class="fa-solid fa-code"></i><span>Coding Governance</span></a>
-        </nav>
-      </section>
+        <!-- STUDENT MANAGEMENT -->
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">STUDENT MANAGEMENT</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-control.html#students-management">
+              <i class="fa-solid fa-users"></i>
+              <span>All Students</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#membership-management">
+              <i class="fa-solid fa-wallet"></i>
+              <span>Membership Payments</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#audit-logs">
+              <i class="fa-solid fa-chart-line"></i>
+              <span>Student Activity</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#feedbacks-management">
+              <i class="fa-solid fa-comments"></i>
+              <span>Feedback &amp; Reviews</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-certificates.html">
+              <i class="fa-solid fa-award"></i>
+              <span>Certificates</span>
+            </a>
+          </nav>
+        </section>
 
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Community & Support</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-support-governance.html"><i class="fa-solid fa-headset"></i><span>Support Governance</span></a>
-          <a class="co-admin-nav-link" href="admin-campus-feed.html"><i class="fa-solid fa-newspaper"></i><span>Campus Feed</span></a>
-          <a class="co-admin-nav-link" href="admin-ai-tools.html"><i class="fa-solid fa-sparkles"></i><span>AI Tools Studio</span></a>
-        </nav>
-      </section>
-
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">System</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-control.html#system-settings"><i class="fa-solid fa-gear"></i><span>Settings & Feature Toggles</span></a>
-          <a class="co-admin-nav-link" href="admin-control.html#audit-logs"><i class="fa-solid fa-list-check"></i><span>Audit & Activity Logs</span></a>
-        </nav>
-      </section>
+        <!-- SYSTEM MANAGEMENT -->
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">SYSTEM MANAGEMENT</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-control.html#admins-management">
+              <i class="fa-solid fa-user-shield"></i>
+              <span>Admins &amp; Access</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#system-settings">
+              <i class="fa-solid fa-gear"></i>
+              <span>Platform Settings</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#audit-logs">
+              <i class="fa-solid fa-list-check"></i>
+              <span>System Logs</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#analytics-overview">
+              <i class="fa-solid fa-chart-pie"></i>
+              <span>Analytics &amp; Reports</span>
+            </a>
+          </nav>
+        </section>
       </div>
 
-      <div class="co-admin-side-card">
-        <strong>Admin Workspace</strong>
-        <p>Use this dashboard to manage student operations, academic content, premium adoption, and platform quality without breaking workflow.</p>
+      <div class="co-admin-sidebar-footer">
+        <div class="co-admin-side-card">
+          <strong><i class="fa-solid fa-shield-check" style="color:#38bdf8;"></i> Super Admin Active</strong>
+          <span id="adminPlatformStatus">Platform healthy</span> &bull; <span id="adminCollegesCovered">0 campuses</span>
+        </div>
       </div>
     </aside>
 
+    <!-- WORKSPACE AREA -->
     <div class="co-admin-workspace">
+
+      <!-- TOP NAVIGATION BAR -->
       <header class="co-admin-topbar">
-        <div class="co-admin-topbar-title">
-          <h2>Mock Test Management Studio</h2>
-          <p>Design premium exam experiences with branch/course filtering, access control, section configuration, question banking, and deep analytics.</p>
+        <div class="co-admin-topbar-left">
+          <button class="co-admin-hamburger-btn" id="adminSidebarToggle" aria-label="Toggle navigation">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          
+          <div class="co-admin-search-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="adminGlobalSearch" class="co-admin-search-input" placeholder="Search mock tests, sections, or questions..." />
+            <kbd class="co-admin-kbd">Ctrl K</kbd>
+          </div>
         </div>
-        <div class="co-admin-topbar-actions">
-          <a class="co-admin-chip" href="admin-dashboard.html"><i class="fa-solid fa-arrow-left"></i><span>Back to Dashboard</span></a>
-          <a class="co-admin-chip" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Open Control System</span></a>
+
+        <div class="co-admin-topbar-right">
+          <!-- Live Date Display -->
+          <div class="co-admin-date-widget">
+            <i class="fa-regular fa-calendar"></i>
+            <span id="adminCurrentDateText">October 4, 2026 Saturday</span>
+          </div>
+
+          <!-- Notification Bell -->
+          <div class="co-admin-icon-btn" id="adminNotifBtn" title="Notifications">
+            <i class="fa-regular fa-bell"></i>
+            <span class="co-admin-notif-dot">3</span>
+          </div>
+
+          <!-- Admin Profile Pill -->
+          <div class="co-admin-profile-pill" id="adminProfileMenuToggle">
+            <div class="co-admin-avatar">AS</div>
+            <div class="co-admin-profile-meta">
+              <span class="co-admin-profile-name" id="adminProfileName">Abhay Shukla</span>
+              <span class="co-admin-profile-role">Super Admin</span>
+            </div>
+            <i class="fa-solid fa-chevron-down"></i>
+
+            <!-- Dropdown Menu -->
+            <div class="co-admin-dropdown-menu" id="adminProfileDropdown">
+              <a href="admin-control.html#system-settings" class="co-admin-dropdown-item"><i class="fa-solid fa-gear"></i> Settings</a>
+              <a href="index.html" class="co-admin-dropdown-item" target="_blank"><i class="fa-solid fa-arrow-up-right-from-square"></i> Student Portal</a>
+              <a href="/api/admin/students/report.xlsx" class="co-admin-dropdown-item"><i class="fa-solid fa-file-excel"></i> Export Report</a>
+              <div style="height:1px; background:#e2e8f0; margin:4px 0;"></div>
+              <a href="admin-login.html" class="co-admin-dropdown-item danger"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+            </div>
+          </div>
         </div>
       </header>
 
-      <div class="co-admin-breadcrumbs" id="adminBreadcrumb"></div>
+      <!-- BREADCRUMBS -->
+      <div class="co-admin-breadcrumbs" id="adminBreadcrumb" style="display:none;"></div>
 
-      <main class="co-admin-main co-admin-page-block studio-grid">
+      <!-- MAIN CONTENT -->
+      <main class="co-admin-main">
 
-      <section class="studio-panels">
-        <section class="panel">
-          <h3>Create / Update Test</h3>
-          <form id="mockTestForm" class="field-grid" onsubmit="return false;">
-            <div><label>Title</label><input id="mtTitle" placeholder="Campus Grand Test 04" /></div>
-            <div><label>Category</label><select id="mtCategoryKey"><option value="grand">Grand</option><option value="practice">Practice</option><option value="topic">Topic</option><option value="previous">Previous Year</option><option value="quick">Quick</option></select></div>
-            <div><label>Difficulty</label><select id="mtDifficulty"><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></div>
-            <div><label>Duration (min)</label><input id="mtDuration" type="number" min="1" /></div>
-            <div><label>Total Marks</label><input id="mtTotalMarks" type="number" min="1" /></div>
-            <div><label>Total Questions</label><input id="mtTotalQuestions" type="number" min="1" /></div>
-            <div><label>Subject</label><input id="mtSubject" placeholder="DBMS" /></div>
-            <div><label>Topic</label><input id="mtTopic" placeholder="Normalization" /></div>
-            <div><label>Category ID</label><select id="mtCategoryId"></select></div>
-            <div><label>Branch ID</label><select id="mtBranchId"><option value="">All / None</option></select></div>
-            <div><label>Semester ID</label><select id="mtSemesterId"></select></div>
-            <div><label>Access</label><select id="mtAccessType"><option value="free">Free</option><option value="premium">Premium</option></select></div>
-            <div><label>Status</label><select id="mtStatus"><option value="published">Published</option><option value="draft">Draft</option><option value="unpublished">Unpublished</option></select></div>
-            <div><label>Free Attempt Limit</label><input id="mtAttemptLimitFree" type="number" min="0" value="2" /></div>
-            <div><label>Marks / Question</label><input id="mtMarksPerQuestion" type="number" step="0.25" value="1" /></div>
-            <div><label>Negative Marks</label><input id="mtNegativeMarks" type="number" step="0.25" value="0" /></div>
+        <!-- PAGE HEADER -->
+        <header class="co-admin-page-header">
+          <div class="co-admin-page-title-group">
+            <div class="co-admin-welcome-kicker">
+              <i class="fa-solid fa-flask-vial"></i>
+              <span>EXAM SIMULATION &amp; QUESTION STUDIO</span>
+            </div>
+            <h1 class="co-admin-page-title">Mock Test Studio</h1>
+            <p class="co-admin-page-subtitle">Design timed grand exams, practice test series, negative marking rules, question banking, and analyze cohort performance.</p>
+          </div>
+          <div class="co-admin-header-actions">
+            <button class="btn secondary" id="refreshAnalyticsBtn" type="button">
+              <i class="fa-solid fa-chart-line"></i>
+              <span>Analytics</span>
+            </button>
+            <button class="btn primary" type="button" onclick="document.getElementById('mtTitle').focus();">
+              <i class="fa-solid fa-plus"></i>
+              <span>Create Mock Test</span>
+            </button>
+          </div>
+        </header>
 
-            <div class="full"><label>Syllabus</label><textarea id="mtSyllabus" placeholder="Topics covered in this test"></textarea></div>
-            <div class="full"><label>Instructions</label><textarea id="mtInstructions" placeholder="Exam instructions shown to student"></textarea></div>
-
-            <div class="full check-grid">
-              <label><input type="checkbox" id="mtIsCommon" /> Common for all branches</label>
-              <label><input type="checkbox" id="mtRetakeAllowed" checked /> Retake Allowed</label>
-              <label><input type="checkbox" id="mtShuffleQuestions" /> Shuffle Questions</label>
-              <label><input type="checkbox" id="mtShuffleOptions" /> Shuffle Options</label>
-              <label><input type="checkbox" id="mtExplanationsVisible" checked /> Show Explanation After Submission</label>
-              <label><input type="checkbox" id="mtNegativeEnabled" /> Enable Negative Marking</label>
+        <!-- 2-COLUMN TOP SECTION: BUILDER & ANALYTICS -->
+        <div class="co-admin-grid two">
+          <!-- CREATE / UPDATE TEST PANEL -->
+          <section class="co-admin-panel">
+            <div class="co-admin-section-head">
+              <div>
+                <h3><i class="fa-solid fa-sliders text-blue" style="margin-right:6px;"></i> Create / Update Test</h3>
+                <p>Configure exam parameters, duration, grading rubric, syllabus, and retake policies.</p>
+              </div>
             </div>
 
-            <div class="full actions-row">
-              <button class="btn secondary" type="button" id="resetMockTestBtn">Reset</button>
-              <button class="btn primary" type="button" id="saveMockTestBtn">Save Mock Test</button>
+            <form id="mockTestForm" class="co-admin-form-compact-grid" onsubmit="return false;">
+              <div class="co-admin-field"><label>Title *</label><input id="mtTitle" placeholder="e.g. Campus Grand Test 04" /></div>
+              <div class="co-admin-field"><label>Category</label><select id="mtCategoryKey"><option value="grand">Grand Test</option><option value="practice">Practice</option><option value="topic">Topic Wise</option><option value="previous">Previous Year</option><option value="quick">Quick Test</option></select></div>
+              <div class="co-admin-field"><label>Difficulty</label><select id="mtDifficulty"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select></div>
+              <div class="co-admin-field"><label>Duration (min) *</label><input id="mtDuration" type="number" min="1" placeholder="60" /></div>
+              
+              <div class="co-admin-field"><label>Total Marks *</label><input id="mtTotalMarks" type="number" min="1" placeholder="100" /></div>
+              <div class="co-admin-field"><label>Total Questions *</label><input id="mtTotalQuestions" type="number" min="1" placeholder="50" /></div>
+              <div class="co-admin-field"><label>Subject</label><input id="mtSubject" placeholder="e.g. DBMS" /></div>
+              <div class="co-admin-field"><label>Topic</label><input id="mtTopic" placeholder="e.g. Normalization" /></div>
+              
+              <div class="co-admin-field"><label>Category ID</label><select id="mtCategoryId"></select></div>
+              <div class="co-admin-field"><label>Branch ID</label><select id="mtBranchId"><option value="">All / None</option></select></div>
+              <div class="co-admin-field"><label>Semester ID</label><select id="mtSemesterId"></select></div>
+              <div class="co-admin-field"><label>Access Tier</label><select id="mtAccessType"><option value="free">Free</option><option value="premium">Premium</option></select></div>
+              
+              <div class="co-admin-field"><label>Status</label><select id="mtStatus"><option value="published">Published</option><option value="draft">Draft</option><option value="unpublished">Unpublished</option></select></div>
+              <div class="co-admin-field"><label>Free Attempt Limit</label><input id="mtAttemptLimitFree" type="number" min="0" value="2" /></div>
+              <div class="co-admin-field"><label>Marks / Question</label><input id="mtMarksPerQuestion" type="number" step="0.25" value="1" /></div>
+              <div class="co-admin-field"><label>Negative Marks</label><input id="mtNegativeMarks" type="number" step="0.25" value="0" /></div>
+
+              <div class="co-admin-field" style="grid-column: 1 / -1;"><label>Syllabus Outline</label><textarea id="mtSyllabus" rows="2" placeholder="Topics covered in this exam..."></textarea></div>
+              <div class="co-admin-field" style="grid-column: 1 / -1;"><label>Exam Instructions</label><textarea id="mtInstructions" rows="2" placeholder="Instructions shown to student before beginning..."></textarea></div>
+
+              <div style="grid-column: 1 / -1; display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 12px; background: #f8fafc; border-radius: 8px; margin-top: 4px;">
+                <label style="font-size:12.5px; font-weight:600; display:flex; align-items:center; gap:6px;"><input type="checkbox" id="mtIsCommon" /> Common for all branches</label>
+                <label style="font-size:12.5px; font-weight:600; display:flex; align-items:center; gap:6px;"><input type="checkbox" id="mtRetakeAllowed" checked /> Retake Allowed</label>
+                <label style="font-size:12.5px; font-weight:600; display:flex; align-items:center; gap:6px;"><input type="checkbox" id="mtShuffleQuestions" /> Shuffle Questions</label>
+                <label style="font-size:12.5px; font-weight:600; display:flex; align-items:center; gap:6px;"><input type="checkbox" id="mtShuffleOptions" /> Shuffle Options</label>
+                <label style="font-size:12.5px; font-weight:600; display:flex; align-items:center; gap:6px;"><input type="checkbox" id="mtExplanationsVisible" checked /> Show Solution Review</label>
+                <label style="font-size:12.5px; font-weight:600; display:flex; align-items:center; gap:6px;"><input type="checkbox" id="mtNegativeEnabled" /> Enable Negative Marking</label>
+              </div>
+
+              <div style="grid-column: 1 / -1; display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+                <button class="btn secondary" type="button" id="resetMockTestBtn">Reset Form</button>
+                <button class="btn primary" type="button" id="saveMockTestBtn"><i class="fa-solid fa-floppy-disk"></i> Save Mock Test</button>
+              </div>
+            </form>
+            <p id="adminMockStatus" class="muted" style="font-size:13px; font-weight:600; margin-top:8px;"></p>
+          </section>
+
+          <!-- ADMIN ANALYTICS PANEL -->
+          <section class="co-admin-panel">
+            <div class="co-admin-section-head">
+              <div>
+                <h3><i class="fa-solid fa-chart-pie text-purple" style="margin-right:6px;"></i> Studio Test Analytics</h3>
+                <p>Real-time telemetry across student cohorts, scores, and completion rates.</p>
+              </div>
             </div>
-          </form>
-          <p id="adminMockStatus" class="muted"></p>
-        </section>
 
-        <section class="panel">
-          <h3>Admin Analytics</h3>
-          <div class="kpi-grid">
-            <article class="kpi"><label>Total Attempts</label><strong id="anaTotalAttempts">0</strong></article>
-            <article class="kpi"><label>Average Score</label><strong id="anaAvgScore">0</strong></article>
-            <article class="kpi"><label>Top Score</label><strong id="anaTopScore">0</strong></article>
-            <article class="kpi"><label>Completion Rate</label><strong id="anaCompletion">0%</strong></article>
-          </div>
-          <div class="insight-grid">
-            <article class="insight"><h4>Branch-wise Attempts</h4><ul id="anaBranchAttempts"></ul></article>
-            <article class="insight"><h4>Topic-wise Weakness</h4><ul id="anaTopicWeakness"></ul></article>
-            <article class="insight"><h4>Free vs Premium Usage</h4><ul id="anaFreePremium"></ul></article>
-          </div>
-          <div class="actions-row">
-            <button class="btn secondary" id="refreshAnalyticsBtn" type="button">Refresh Analytics</button>
-          </div>
-        </section>
-      </section>
-
-      <section class="panel">
-        <h3>Mock Test Library</h3>
-        <div class="field-grid">
-          <div><label>Search</label><input id="mtFilterSearch" placeholder="Search title, subject, topic" /></div>
-          <div><label>Status</label><select id="mtFilterStatus"><option value="">All</option><option value="published">Published</option><option value="draft">Draft</option><option value="unpublished">Unpublished</option></select></div>
-          <div><label>Category</label><select id="mtFilterCategoryId"></select></div>
-          <div><label>Branch</label><select id="mtFilterBranchId"><option value="">All / None</option></select></div>
-          <div><label>Semester</label><select id="mtFilterSemesterId"></select></div>
-          <div><label><input type="checkbox" id="mtFilterIncludeDeleted" /> Include deleted tests</label></div>
-        </div>
-        <div class="actions-row">
-          <button class="btn secondary" id="refreshMockTestsBtn" type="button">Refresh List</button>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th><th>Title</th><th>Category</th><th>Branch</th><th>Semester</th><th>Exam Setup</th><th>Attempts</th><th>Access/Status</th><th>Record</th><th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="mockTestsTableBody"><tr><td colspan="10" class="co-admin-table-empty">Loading mock tests...</td></tr></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="studio-panels">
-        <section class="panel">
-          <h3>Manual Question Entry</h3>
-          <form id="manualQuestionForm" class="field-grid" onsubmit="return false;">
-            <div class="full"><label>Question Text</label><textarea id="mqText" placeholder="Enter the question statement"></textarea></div>
-            <div><label>Type</label><select id="mqType"><option value="single_mcq">Single Correct MCQ</option><option value="multi_select">Multi Select</option><option value="true_false">True / False</option><option value="numerical">Numerical</option><option value="coding">Coding (future-ready)</option></select></div>
-            <div><label>Difficulty</label><select id="mqDifficulty"><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></div>
-            <div><label>Section</label><input id="mqSection" placeholder="Aptitude" /></div>
-            <div><label>Subject</label><input id="mqSubject" placeholder="DBMS" /></div>
-            <div><label>Topic</label><input id="mqTopic" placeholder="Normalization" /></div>
-            <div><label>Marks</label><input id="mqMarks" type="number" step="0.25" value="1" /></div>
-            <div><label>Negative Marks</label><input id="mqNegative" type="number" step="0.25" value="0" /></div>
-            <div><label>Order</label><input id="mqOrder" type="number" value="0" /></div>
-            <div><label>Correct Answer</label><input id="mqCorrect" placeholder="A or A,B or 42" /></div>
-            <div><label>Option A</label><input id="mqOptionA" /></div>
-            <div><label>Option B</label><input id="mqOptionB" /></div>
-            <div><label>Option C</label><input id="mqOptionC" /></div>
-            <div><label>Option D</label><input id="mqOptionD" /></div>
-            <div class="full"><label>Explanation</label><textarea id="mqExplanation" placeholder="Reasoning shown in review"></textarea></div>
-            <div class="full actions-row">
-              <button class="btn primary" type="button" id="addManualQuestionBtn">Add Question</button>
+            <div class="co-admin-stats" style="margin-bottom:14px;">
+              <article class="co-admin-stat">
+                <div class="co-admin-stat-label">Total Attempts</div>
+                <h3 class="co-admin-stat-value" id="anaTotalAttempts">0</h3>
+              </article>
+              <article class="co-admin-stat">
+                <div class="co-admin-stat-label">Average Score</div>
+                <h3 class="co-admin-stat-value" id="anaAvgScore">0</h3>
+              </article>
+              <article class="co-admin-stat">
+                <div class="co-admin-stat-label">Top Score</div>
+                <h3 class="co-admin-stat-value" id="anaTopScore">0</h3>
+              </article>
+              <article class="co-admin-stat">
+                <div class="co-admin-stat-label">Completion</div>
+                <h3 class="co-admin-stat-value" id="anaCompletion">0%</h3>
+              </article>
             </div>
-          </form>
-        </section>
 
-        <section class="panel">
-          <h3>Bulk Upload Question Bank</h3>
-          <p class="muted">Format per line: question|type|difficulty|topic|marks|negative|A:opt;B:opt;C:opt;D:opt|correct|explanation</p>
-          <textarea id="mqBulkInput" placeholder="What is 2+2?|single_mcq|easy|Arithmetic|1|0|A:2;B:3;C:4;D:5|C|Basic arithmetic"></textarea>
-          <div class="actions-row">
-            <button class="btn secondary" type="button" id="bulkUploadQuestionBtn">Upload Bulk Questions</button>
+            <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:10px; margin-top:10px;">
+              <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
+                <h4 style="font-size:12px; font-weight:700; color:#334155; margin:0 0 6px;">Branch Attempts</h4>
+                <ul id="anaBranchAttempts" style="font-size:12px; margin:0; padding-left:14px; color:#64748b;"></ul>
+              </div>
+              <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
+                <h4 style="font-size:12px; font-weight:700; color:#334155; margin:0 0 6px;">Topic Weakness</h4>
+                <ul id="anaTopicWeakness" style="font-size:12px; margin:0; padding-left:14px; color:#64748b;"></ul>
+              </div>
+              <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
+                <h4 style="font-size:12px; font-weight:700; color:#334155; margin:0 0 6px;">Tier Distribution</h4>
+                <ul id="anaFreePremium" style="font-size:12px; margin:0; padding-left:14px; color:#64748b;"></ul>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- MOCK TEST LIBRARY PANEL -->
+        <section class="co-admin-panel" style="margin-top:20px;">
+          <div class="co-admin-section-head">
+            <div>
+              <h3><i class="fa-solid fa-layer-group text-blue" style="margin-right:6px;"></i> Mock Test Library Catalog</h3>
+              <p>Published test packages, attempt trackers, configuration inspector, and question bank link.</p>
+            </div>
+          </div>
+
+          <div class="co-admin-form-compact-grid" style="grid-template-columns: repeat(5, minmax(0, 1fr)); margin-bottom:14px;">
+            <div class="co-admin-field"><label>Search</label><input id="mtFilterSearch" placeholder="Search title, subject, topic..." /></div>
+            <div class="co-admin-field"><label>Status</label><select id="mtFilterStatus"><option value="">All Statuses</option><option value="published">Published</option><option value="draft">Draft</option><option value="unpublished">Unpublished</option></select></div>
+            <div class="co-admin-field"><label>Category</label><select id="mtFilterCategoryId"></select></div>
+            <div class="co-admin-field"><label>Branch</label><select id="mtFilterBranchId"><option value="">All / None</option></select></div>
+            <div class="co-admin-field"><label>Semester</label><select id="mtFilterSemesterId"></select></div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+            <label style="font-size:12.5px; font-weight:600; color:#475569; display:flex; align-items:center; gap:6px;">
+              <input type="checkbox" id="mtFilterIncludeDeleted" /> Include deleted / archived tests
+            </label>
+            <button class="btn secondary btn-sm" id="refreshMockTestsBtn" type="button"><i class="fa-solid fa-rotate"></i> Refresh Catalog</button>
+          </div>
+
+          <div class="co-admin-table-wrap">
+            <table class="co-admin-data-table">
+              <thead>
+                <tr>
+                  <th>ID</th><th>Title</th><th>Category</th><th>Branch</th><th>Semester</th><th>Exam Setup</th><th>Attempts</th><th>Access / Status</th><th>Record</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="mockTestsTableBody"><tr><td colspan="10" class="co-admin-table-empty">Loading mock tests...</td></tr></tbody>
+            </table>
           </div>
         </section>
-      </section>
 
-      <section class="panel">
-        <h3 id="questionPanelTitle">Question Bank · Select a test</h3>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>ID</th><th>Order</th><th>Type</th><th>Topic</th><th>Marks</th><th>Negative</th><th>Question</th><th>Action</th></tr></thead>
-            <tbody id="mockQuestionsTableBody"><tr><td colspan="8" class="co-admin-table-empty">Select a test and click Questions to load.</td></tr></tbody>
-          </table>
+        <!-- 2-COLUMN BOTTOM SECTION: MANUAL QUESTION ENTRY & BULK UPLOAD -->
+        <div class="co-admin-grid two" style="margin-top:20px;">
+          <!-- MANUAL QUESTION ENTRY -->
+          <section class="co-admin-panel">
+            <div class="co-admin-section-head">
+              <div>
+                <h3><i class="fa-solid fa-pen-clip text-blue" style="margin-right:6px;"></i> Manual Question Entry</h3>
+                <p>Add a structured question statement, options, correct answer, and explanation to active test.</p>
+              </div>
+            </div>
+
+            <form id="manualQuestionForm" class="co-admin-form-compact-grid" onsubmit="return false;">
+              <div class="co-admin-field" style="grid-column: 1 / -1;"><label>Question Text *</label><textarea id="mqText" rows="2" placeholder="Enter the complete question statement..."></textarea></div>
+              <div class="co-admin-field"><label>Type</label><select id="mqType"><option value="single_mcq">Single Correct MCQ</option><option value="multi_select">Multi Select</option><option value="true_false">True / False</option><option value="numerical">Numerical</option><option value="coding">Coding</option></select></div>
+              <div class="co-admin-field"><label>Difficulty</label><select id="mqDifficulty"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select></div>
+              <div class="co-admin-field"><label>Section</label><input id="mqSection" placeholder="e.g. Aptitude" /></div>
+              <div class="co-admin-field"><label>Subject</label><input id="mqSubject" placeholder="e.g. DBMS" /></div>
+              
+              <div class="co-admin-field"><label>Topic</label><input id="mqTopic" placeholder="e.g. Normalization" /></div>
+              <div class="co-admin-field"><label>Marks</label><input id="mqMarks" type="number" step="0.25" value="1" /></div>
+              <div class="co-admin-field"><label>Negative Marks</label><input id="mqNegative" type="number" step="0.25" value="0" /></div>
+              <div class="co-admin-field"><label>Order Index</label><input id="mqOrder" type="number" value="0" /></div>
+
+              <div class="co-admin-field" style="grid-column: 1 / -1;"><label>Correct Answer (e.g. A or A,B or 42) *</label><input id="mqCorrect" placeholder="A" /></div>
+              <div class="co-admin-field" style="grid-column: span 2;"><label>Option A</label><input id="mqOptionA" placeholder="Option A text" /></div>
+              <div class="co-admin-field" style="grid-column: span 2;"><label>Option B</label><input id="mqOptionB" placeholder="Option B text" /></div>
+              <div class="co-admin-field" style="grid-column: span 2;"><label>Option C</label><input id="mqOptionC" placeholder="Option C text" /></div>
+              <div class="co-admin-field" style="grid-column: span 2;"><label>Option D</label><input id="mqOptionD" placeholder="Option D text" /></div>
+
+              <div class="co-admin-field" style="grid-column: 1 / -1;"><label>Solution Explanation</label><textarea id="mqExplanation" rows="2" placeholder="Step-by-step reasoning shown during test review..."></textarea></div>
+              <div style="grid-column: 1 / -1; display:flex; justify-content:flex-end;">
+                <button class="btn primary" type="button" id="addManualQuestionBtn"><i class="fa-solid fa-plus"></i> Add Question</button>
+              </div>
+            </form>
+          </section>
+
+          <!-- BULK UPLOAD QUESTION BANK -->
+          <section class="co-admin-panel">
+            <div class="co-admin-section-head">
+              <div>
+                <h3><i class="fa-solid fa-file-csv text-purple" style="margin-right:6px;"></i> Bulk Upload Question Bank</h3>
+                <p>Import questions rapidly via pipe-delimited schema syntax.</p>
+              </div>
+            </div>
+
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; font-size:12px; color:#475569; margin-bottom:10px;">
+              <strong>Format per line:</strong><br>
+              <code>question|type|difficulty|topic|marks|negative|A:opt;B:opt;C:opt;D:opt|correct|explanation</code>
+            </div>
+
+            <textarea id="mqBulkInput" rows="6" class="co-admin-textarea" placeholder="What is 2+2?|single_mcq|easy|Arithmetic|1|0|A:2;B:3;C:4;D:5|C|Basic arithmetic addition" style="font-family:monospace; font-size:12px;"></textarea>
+            <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+              <button class="btn secondary" type="button" id="bulkUploadQuestionBtn"><i class="fa-solid fa-upload"></i> Upload Bulk Questions</button>
+            </div>
+          </section>
         </div>
-      </section>
-    </main>
+
+        <!-- QUESTION BANK TABLE PANEL -->
+        <section class="co-admin-panel" style="margin-top:20px;">
+          <div class="co-admin-section-head">
+            <div>
+              <h3 id="questionPanelTitle"><i class="fa-solid fa-list text-blue" style="margin-right:6px;"></i> Question Bank &bull; Select a test</h3>
+              <p>Manage individual items and question orders for the selected assessment.</p>
+            </div>
+          </div>
+          <div class="co-admin-table-wrap">
+            <table class="co-admin-data-table">
+              <thead><tr><th>ID</th><th>Order</th><th>Type</th><th>Topic</th><th>Marks</th><th>Negative</th><th>Question</th><th>Action</th></tr></thead>
+              <tbody id="mockQuestionsTableBody"><tr><td colspan="8" class="co-admin-table-empty">Select a test from the library above and click Questions to load question bank.</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
     </div>
   </div>
 
   <script src="assets/js/api.js"></script>
   <script src="assets/js/admin-mock-tests.js"></script>
   <script src="assets/js/admin-module-registry.js?v=20260701-1"></script>
-  <script src="assets/js/admin-responsive.js?v=20260701-1"></script>
+  <script src="assets/js/admin-responsive.js?v=20261004-1"></script>
 </body>
 </html>

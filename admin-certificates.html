@@ -3,354 +3,509 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Certificate Management - College OS Admin</title>
+  <title>Certificates — College OS Admin</title>
   <script src="assets/js/theme-init.js"></script>
+  <!-- Base & Redesign Stylesheets -->
   <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/css/admin-dashboard-redesign.css?v=20261004-1" />
   <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
 </head>
 <body class="admin-portal">
-  <div class="co-admin-shell">
-    <aside class="co-admin-aside">
+  <div class="co-admin-shell" id="adminCertificatesRoot">
+
+    <!-- Mobile Drawer Backdrop -->
+    <div class="co-admin-backdrop" id="adminBackdrop"></div>
+
+    <!-- FIXED LEFT SIDEBAR -->
+    <aside class="co-admin-aside" id="adminSidebar">
       <div class="co-admin-brand">
-        <span class="co-admin-brand-mark"><i class="fa-solid fa-shield-halved"></i></span>
-        <div>
-          <h1>College OS Admin</h1>
-          <p>Academic operations, learner management, content publishing, and platform oversight in one workspace.</p>
+        <div class="co-admin-brand-mark">CO</div>
+        <div class="co-admin-brand-info">
+          <h1>College OS</h1>
+          <span class="co-admin-brand-badge">ADMIN CONTROL PANEL</span>
         </div>
+        <button class="co-admin-close-btn" id="adminSidebarClose" aria-label="Close sidebar">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
 
       <div class="co-admin-sidebar-nav-container">
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Overview</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-dashboard.html"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a>
-          <a class="co-admin-nav-link" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control Center</span></a>
-        </nav>
-      </section>
+        <!-- OVERVIEW -->
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">OVERVIEW</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-dashboard.html">
+              <i class="fa-solid fa-house"></i>
+              <span>Dashboard</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html">
+              <i class="fa-solid fa-sliders"></i>
+              <span>Control Center &amp; Analytics</span>
+            </a>
+          </nav>
+        </section>
 
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Academic Content</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i><span>Study Materials</span></a>
-          <a class="co-admin-nav-link" href="admin-notes.html"><i class="fa-solid fa-file-lines"></i><span>Notes Library</span></a>
-          <a class="co-admin-nav-link" href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i><span>Previous Papers</span></a>
-          <a class="co-admin-nav-link" href="admin-quizzes.html"><i class="fa-solid fa-clipboard-question"></i><span>Quizzes</span></a>
-          <a class="co-admin-nav-link" href="admin-mock-tests.html"><i class="fa-solid fa-flask-vial"></i><span>Mock Test Studio</span></a>
-          <a class="co-admin-nav-link" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Study Roadmaps</span></a>
-          <a class="co-admin-nav-link" href="admin-academics.html"><i class="fa-solid fa-graduation-cap"></i><span>Academic Structure</span></a>
-        </nav>
-      </section>
+        <!-- CONTENT MANAGEMENT -->
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">CONTENT MANAGEMENT</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-materials.html">
+              <i class="fa-solid fa-book-bookmark"></i>
+              <span>Study Materials</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-notes.html">
+              <i class="fa-solid fa-file-lines"></i>
+              <span>Notes Library</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-papers.html">
+              <i class="fa-solid fa-file-pdf"></i>
+              <span>Previous Papers</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-quizzes.html">
+              <i class="fa-solid fa-clipboard-question"></i>
+              <span>Quizzes</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-mock-tests.html">
+              <i class="fa-solid fa-flask-vial"></i>
+              <span>Mock Test Studio</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-campus-feed.html">
+              <i class="fa-solid fa-bullhorn"></i>
+              <span>Announcements</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-roadmaps.html">
+              <i class="fa-solid fa-map-location-dot"></i>
+              <span>Study Roadmaps</span>
+            </a>
+          </nav>
+        </section>
 
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Student Management</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-control.html#students-management"><i class="fa-solid fa-user-graduate"></i><span>Students</span></a>
-          <a class="co-admin-nav-link" href="admin-control.html#membership-management"><i class="fa-solid fa-id-card"></i><span>Memberships & Payments</span></a>
-          <a class="co-admin-nav-link" href="admin-academics.html#contributions"><i class="fa-solid fa-upload"></i><span>Student Contributions</span></a>
-          <a class="co-admin-nav-link active" href="admin-certificates.html"><i class="fa-solid fa-certificate"></i><span>Certificates</span></a>
-        </nav>
-      </section>
+        <!-- ACADEMIC MANAGEMENT -->
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">ACADEMIC MANAGEMENT</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-academics.html">
+              <i class="fa-solid fa-graduation-cap"></i>
+              <span>Academic Structure</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-academics.html#branches">
+              <i class="fa-solid fa-sitemap"></i>
+              <span>Courses &amp; Branches</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-academics.html#semesters">
+              <i class="fa-solid fa-table-cells-large"></i>
+              <span>Semesters &amp; Subjects</span>
+            </a>
+          </nav>
+        </section>
 
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Coding Challenges</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-coding-challenges.html"><i class="fa-solid fa-code"></i><span>Coding Governance</span></a>
-        </nav>
-      </section>
+        <!-- STUDENT MANAGEMENT -->
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">STUDENT MANAGEMENT</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-control.html#students-management">
+              <i class="fa-solid fa-users"></i>
+              <span>All Students</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#membership-management">
+              <i class="fa-solid fa-wallet"></i>
+              <span>Membership Payments</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#audit-logs">
+              <i class="fa-solid fa-chart-line"></i>
+              <span>Student Activity</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#feedbacks-management">
+              <i class="fa-solid fa-comments"></i>
+              <span>Feedback &amp; Reviews</span>
+            </a>
+            <a class="co-admin-nav-link active" href="admin-certificates.html">
+              <i class="fa-solid fa-award"></i>
+              <span>Certificates</span>
+            </a>
+          </nav>
+        </section>
 
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Community & Support</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-support-governance.html"><i class="fa-solid fa-headset"></i><span>Support Governance</span></a>
-          <a class="co-admin-nav-link" href="admin-campus-feed.html"><i class="fa-solid fa-newspaper"></i><span>Campus Feed</span></a>
-          <a class="co-admin-nav-link" href="admin-ai-tools.html"><i class="fa-solid fa-sparkles"></i><span>AI Tools Studio</span></a>
-        </nav>
-      </section>
-
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">System</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-control.html#system-settings"><i class="fa-solid fa-gear"></i><span>Settings & Feature Toggles</span></a>
-          <a class="co-admin-nav-link" href="admin-control.html#audit-logs"><i class="fa-solid fa-list-check"></i><span>Audit & Activity Logs</span></a>
-        </nav>
-      </section>
+        <!-- SYSTEM MANAGEMENT -->
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">SYSTEM MANAGEMENT</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-control.html#admins-management">
+              <i class="fa-solid fa-user-shield"></i>
+              <span>Admins &amp; Access</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#system-settings">
+              <i class="fa-solid fa-gear"></i>
+              <span>Platform Settings</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#audit-logs">
+              <i class="fa-solid fa-list-check"></i>
+              <span>System Logs</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#analytics-overview">
+              <i class="fa-solid fa-chart-pie"></i>
+              <span>Analytics &amp; Reports</span>
+            </a>
+          </nav>
+        </section>
       </div>
 
-      <div class="co-admin-side-card">
-        <strong>Admin Workspace</strong>
-        <p>Use this dashboard to manage student operations, academic content, premium adoption, and platform quality without breaking workflow.</p>
+      <div class="co-admin-sidebar-footer">
+        <div class="co-admin-side-card">
+          <strong><i class="fa-solid fa-shield-check" style="color:#38bdf8;"></i> Super Admin Active</strong>
+          <span id="adminPlatformStatus">Platform healthy</span> &bull; <span id="adminCollegesCovered">0 campuses</span>
+        </div>
       </div>
     </aside>
 
+    <!-- WORKSPACE AREA -->
     <div class="co-admin-workspace">
+
+      <!-- TOP NAVIGATION BAR -->
       <header class="co-admin-topbar">
-        <div class="co-admin-topbar-title">
-          <h2>Certificate Management</h2>
-          <p>Create, assign, issue, verify, and revoke student certificates with complete lifecycle control.</p>
+        <div class="co-admin-topbar-left">
+          <button class="co-admin-hamburger-btn" id="adminSidebarToggle" aria-label="Toggle navigation">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          
+          <div class="co-admin-search-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="adminGlobalSearch" class="co-admin-search-input" placeholder="Search certificates, recipients, or credentials..." />
+            <kbd class="co-admin-kbd">Ctrl K</kbd>
+          </div>
         </div>
-        <div class="co-admin-topbar-actions">
-          <a class="co-admin-chip" href="admin-dashboard.html"><i class="fa-solid fa-arrow-left"></i><span>Back to Dashboard</span></a>
+
+        <div class="co-admin-topbar-right">
+          <!-- Live Date Display -->
+          <div class="co-admin-date-widget">
+            <i class="fa-regular fa-calendar"></i>
+            <span id="adminCurrentDateText">October 4, 2026 Saturday</span>
+          </div>
+
+          <!-- Notification Bell -->
+          <div class="co-admin-icon-btn" id="adminNotifBtn" title="Notifications">
+            <i class="fa-regular fa-bell"></i>
+            <span class="co-admin-notif-dot">3</span>
+          </div>
+
+          <!-- Admin Profile Pill -->
+          <div class="co-admin-profile-pill" id="adminProfileMenuToggle">
+            <div class="co-admin-avatar">AS</div>
+            <div class="co-admin-profile-meta">
+              <span class="co-admin-profile-name" id="adminProfileName">Abhay Shukla</span>
+              <span class="co-admin-profile-role">Super Admin</span>
+            </div>
+            <i class="fa-solid fa-chevron-down"></i>
+
+            <!-- Dropdown Menu -->
+            <div class="co-admin-dropdown-menu" id="adminProfileDropdown">
+              <a href="admin-control.html#system-settings" class="co-admin-dropdown-item"><i class="fa-solid fa-gear"></i> Settings</a>
+              <a href="index.html" class="co-admin-dropdown-item" target="_blank"><i class="fa-solid fa-arrow-up-right-from-square"></i> Student Portal</a>
+              <a href="/api/admin/students/report.xlsx" class="co-admin-dropdown-item"><i class="fa-solid fa-file-excel"></i> Export Report</a>
+              <div style="height:1px; background:#e2e8f0; margin:4px 0;"></div>
+              <a href="admin-login.html" class="co-admin-dropdown-item danger"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+            </div>
+          </div>
         </div>
       </header>
 
-      <div class="co-admin-breadcrumbs" id="adminBreadcrumb"></div>
+      <!-- BREADCRUMBS -->
+      <div class="co-admin-breadcrumbs" id="adminBreadcrumb" style="display:none;"></div>
 
+      <!-- MAIN CONTENT -->
       <main class="co-admin-main">
 
-      <div id="adminCertificateRoot">
-        <section class="co-admin-stats">
-          <article class="co-admin-stat">
-            <div class="co-admin-stat-top">
-              <div>
-                <div class="co-admin-stat-label">All Certificates</div>
-                <h3 class="co-admin-stat-value" id="statAll">0</h3>
-              </div>
-              <span class="co-admin-icon-badge"><i class="fa-solid fa-certificate"></i></span>
+        <!-- PAGE HEADER -->
+        <header class="co-admin-page-header">
+          <div class="co-admin-page-title-group">
+            <div class="co-admin-welcome-kicker">
+              <i class="fa-solid fa-award"></i>
+              <span>CREDENTIALS &amp; CERTIFICATION CENTER</span>
             </div>
-          </article>
-          <article class="co-admin-stat">
-            <div class="co-admin-stat-top">
-              <div>
-                <div class="co-admin-stat-label">Draft</div>
-                <h3 class="co-admin-stat-value" id="statDraft">0</h3>
-              </div>
-              <span class="co-admin-icon-badge"><i class="fa-regular fa-file"></i></span>
-            </div>
-          </article>
-          <article class="co-admin-stat">
-            <div class="co-admin-stat-top">
-              <div>
-                <div class="co-admin-stat-label">Issued</div>
-                <h3 class="co-admin-stat-value" id="statIssued">0</h3>
-              </div>
-              <span class="co-admin-icon-badge"><i class="fa-solid fa-award"></i></span>
-            </div>
-          </article>
-          <article class="co-admin-stat">
-            <div class="co-admin-stat-top">
-              <div>
-                <div class="co-admin-stat-label">Verified</div>
-                <h3 class="co-admin-stat-value" id="statVerified">0</h3>
-              </div>
-              <span class="co-admin-icon-badge"><i class="fa-solid fa-circle-check"></i></span>
-            </div>
-          </article>
-        </section>
-
-        <div class="co-admin-filter-toolbar">
-          <input id="historySearch" class="co-admin-input" type="search" placeholder="Search by student name, ID, type, issue date..." style="flex: 1; min-width: 220px;" />
-          <select id="typeFilter" class="co-admin-select" style="max-width: 220px;">
-            <option value="">All Certificate Types</option>
-          </select>
-          <div class="co-admin-chip-row" id="statusFilters">
-            <button class="btn secondary btn-sm active" data-status="all">All</button>
-            <button class="btn secondary btn-sm" data-status="Draft">Draft</button>
-            <button class="btn secondary btn-sm" data-status="Issued">Issued</button>
-            <button class="btn secondary btn-sm" data-status="Verified">Verified</button>
-            <button class="btn secondary btn-sm" data-status="Revoked">Revoked</button>
+            <h1 class="co-admin-page-title">Certificates</h1>
+            <p class="co-admin-page-subtitle">Manage student certificates, verification, templates, and batch issuance with complete lifecycle control.</p>
           </div>
-          <button class="btn secondary btn-sm" id="refreshHistoryBtn"><i class="fa-solid fa-rotate"></i> Refresh</button>
-        </div>
+          <div class="co-admin-header-actions">
+            <button class="btn primary" type="button" onclick="document.getElementById('certificateType').focus();">
+              <i class="fa-solid fa-award"></i>
+              <span>Issue Certificate</span>
+            </button>
+            <button class="btn secondary" type="button" id="refreshHistoryBtn">
+              <i class="fa-solid fa-rotate"></i>
+              <span>Refresh</span>
+            </button>
+          </div>
+        </header>
 
-        <div class="co-admin-grid two">
-          <article class="co-admin-panel">
-            <div class="co-admin-section-head">
-              <h3>Certificate Builder</h3>
-              <p>Configure certificate parameters, select recipients, and issue credentials.</p>
-            </div>
-
-            <form id="adminCertificateForm" style="display: grid; gap: 14px;">
-              <input type="hidden" id="editingCertificateId" />
-              
-              <div class="co-admin-kicker">1. Certificate Specifications</div>
-              <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
-                <div class="co-admin-field">
-                  <label>Certificate Type</label>
-                  <input id="certificateType" required placeholder="e.g. Course Completion" />
-                </div>
-                <div class="co-admin-field">
-                  <label>Course / Achievement Name</label>
-                  <input id="achievementName" required placeholder="e.g. Advanced Data Structures" />
-                </div>
-                <div class="co-admin-field">
-                  <label>Score / Rank</label>
-                  <input id="scoreRank" placeholder="e.g. 92% / Rank 4" />
-                </div>
-                <div class="co-admin-field">
-                  <label>Issue Date</label>
-                  <input id="issueDate" type="date" required />
-                </div>
-                <div class="co-admin-field">
-                  <label>Certificate ID</label>
-                  <input id="certificateRefId" placeholder="Auto-generated" />
-                </div>
-                <div class="co-admin-field">
-                  <label>Organization Name</label>
-                  <input id="organizationName" value="College OS Academy" />
-                </div>
-                <div class="co-admin-field" style="grid-column: 1 / -1;">
-                  <label>Signatory Name</label>
-                  <input id="signatoryName" value="Academic Director" />
-                </div>
-                <div class="co-admin-field" style="grid-column: 1 / -1;">
-                  <label>Assignment Mode</label>
-                  <select id="issueMode">
-                    <option value="selected">Selected Students</option>
-                    <option value="all">All Eligible Students</option>
-                  </select>
-                </div>
-                <div class="co-admin-field" style="grid-column: 1 / -1;">
-                  <label>Description Note</label>
-                  <textarea id="description" rows="2" placeholder="Describe why this certificate is awarded..."></textarea>
-                </div>
-              </div>
-
-              <div class="co-admin-kicker" style="margin-top: 8px;">2. Template Selection</div>
-              <input type="hidden" id="templateName" value="Classic" />
-              <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;" id="templateCards">
-                <article class="co-admin-panel active" data-template="Classic" style="padding: 12px; cursor: pointer; border: 2px solid #2f6fed;">
-                  <strong style="font-size: 0.9rem; color: #0f172a;">Classic</strong>
-                  <p style="font-size: 0.78rem; margin: 2px 0 0;">Formal serif style with traditional crests.</p>
-                </article>
-                <article class="co-admin-panel" data-template="Modern" style="padding: 12px; cursor: pointer;">
-                  <strong style="font-size: 0.9rem; color: #0f172a;">Modern</strong>
-                  <p style="font-size: 0.78rem; margin: 2px 0 0;">Minimal clean layout for tech cohorts.</p>
-                </article>
-                <article class="co-admin-panel" data-template="Premium" style="padding: 12px; cursor: pointer;">
-                  <strong style="font-size: 0.9rem; color: #0f172a;">Premium</strong>
-                  <p style="font-size: 0.78rem; margin: 2px 0 0;">Luxury gold accents for top performers.</p>
-                </article>
-                <article class="co-admin-panel" data-template="College Branded" style="padding: 12px; cursor: pointer;">
-                  <strong style="font-size: 0.9rem; color: #0f172a;">Campus Branded</strong>
-                  <p style="font-size: 0.78rem; margin: 2px 0 0;">College insignia & signature framing.</p>
-                </article>
-              </div>
-
-              <div class="co-admin-kicker" style="margin-top: 8px;">3. Recipient Student Selection</div>
-              <div id="studentPicker" style="display: grid; gap: 10px;">
-                <input id="studentSearchInput" class="co-admin-input" type="search" placeholder="Search student by name, email, or ID..." />
-                <div id="studentResults" style="max-height: 160px; overflow: auto; display: grid; gap: 6px;"></div>
-                <div id="selectedStudents" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
-              </div>
-
-              <div class="co-admin-kicker" style="margin-top: 8px;">4. Actions</div>
-              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <button class="btn primary" type="button" id="issueCertBtn"><i class="fa-solid fa-award"></i> Issue Certificate</button>
-                <button class="btn secondary" type="button" id="saveDraftBtn"><i class="fa-regular fa-floppy-disk"></i> Save Draft</button>
-                <button class="btn secondary" type="button" id="previewBtn"><i class="fa-regular fa-eye"></i> Refresh Preview</button>
-                <button class="btn secondary" type="button" id="updateCertBtn"><i class="fa-solid fa-pen-to-square"></i> Update</button>
-                <button class="btn secondary" type="button" id="downloadPdfBtn"><i class="fa-solid fa-file-pdf"></i> Export PDF</button>
-                <button class="btn secondary" type="button" id="downloadImageBtn"><i class="fa-solid fa-image"></i> Export Image</button>
-                <button class="btn secondary" type="button" id="copyVerificationBtn"><i class="fa-regular fa-copy"></i> Copy Link</button>
-              </div>
-              <p class="status-text" id="portalStatusText" style="margin-top: 6px; font-size: 0.85rem;"></p>
-            </form>
-          </article>
-
-          <article class="co-admin-panel">
-            <div class="co-admin-section-head">
-              <h3>Live Certificate Preview</h3>
-            </div>
-            
-            <div id="previewCard" style="border: 2px solid #e2e8f0; border-radius: 16px; padding: 24px; background: #ffffff; box-shadow: 0 10px 30px rgba(0,0,0,0.05); text-align: center;">
-              <div style="width: 52px; height: 52px; border-radius: 50%; background: #0f7b6c; color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 1.2rem;">
-                <i class="fa-solid fa-building-columns"></i>
-              </div>
-              <h4 id="previewOrg" style="margin: 0 0 4px; color: #0f7b6c; font-size: 1rem;">College OS Academy</h4>
-              <h3 id="previewTitle" style="margin: 0 0 12px; font-size: 1.5rem; color: #0f172a; font-family: Georgia, serif;">Certificate of Excellence</h3>
-              
-              <p style="margin: 0; color: #64748b; font-size: 0.88rem;">This credential is proudly awarded to</p>
-              <h3 id="previewStudentName" style="margin: 10px 0; color: #b45309; font-size: 1.4rem; font-family: Georgia, serif;">No Student Selected (Preview Mode)</h3>
-              <p id="previewAchievement" style="margin: 0 0 16px; color: #334155; font-weight: 600; font-size: 0.95rem;">For outstanding academic achievement</p>
-
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.82rem; color: #475569; text-align: left; background: #f8fafc; padding: 12px; border-radius: 10px; margin-bottom: 16px;">
-                <div><strong>Type:</strong> <span id="previewType">Course Completion</span></div>
-                <div><strong>Score / Rank:</strong> <span id="previewScore">N/A</span></div>
-                <div><strong>Date:</strong> <span id="previewDate">-</span></div>
-                <div><strong>Ref ID:</strong> <span id="previewId">-</span></div>
-              </div>
-
-              <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 12px;">
-                <div style="text-align: left; border-top: 1px solid #cbd5e1; padding-top: 6px; font-size: 0.8rem; color: #475569;">
-                  Signatory: <strong id="previewSignatory">Academic Director</strong>
-                </div>
-                <div style="width: 70px; height: 70px; border-radius: 50%; border: 2px solid #b45309; color: #b45309; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800; transform: rotate(-10deg); background: rgba(254, 243, 199, 0.5);">
-                  OFFICIAL<br>SEAL
-                </div>
+        <div id="adminCertificateRoot">
+          <!-- KPI STATS CARDS -->
+          <section class="co-admin-stats">
+            <article class="co-admin-stat">
+              <div class="co-admin-stat-top">
                 <div>
-                  <img id="previewQr" alt="QR verification code" style="width:72px; height:72px; border:1px solid #cbd5e1; border-radius:8px; background:#fff;" />
+                  <div class="co-admin-stat-label">All Certificates</div>
+                  <h3 class="co-admin-stat-value" id="statAll">0</h3>
                 </div>
+                <span class="co-admin-icon-badge"><i class="fa-solid fa-certificate"></i></span>
+              </div>
+            </article>
+            <article class="co-admin-stat">
+              <div class="co-admin-stat-top">
+                <div>
+                  <div class="co-admin-stat-label">Draft</div>
+                  <h3 class="co-admin-stat-value" id="statDraft">0</h3>
+                </div>
+                <span class="co-admin-icon-badge"><i class="fa-regular fa-file"></i></span>
+              </div>
+            </article>
+            <article class="co-admin-stat">
+              <div class="co-admin-stat-top">
+                <div>
+                  <div class="co-admin-stat-label">Issued</div>
+                  <h3 class="co-admin-stat-value" id="statIssued">0</h3>
+                </div>
+                <span class="co-admin-icon-badge"><i class="fa-solid fa-award"></i></span>
+              </div>
+            </article>
+            <article class="co-admin-stat">
+              <div class="co-admin-stat-top">
+                <div>
+                  <div class="co-admin-stat-label">Verified</div>
+                  <h3 class="co-admin-stat-value" id="statVerified">0</h3>
+                </div>
+                <span class="co-admin-icon-badge"><i class="fa-solid fa-circle-check"></i></span>
+              </div>
+            </article>
+          </section>
+
+          <!-- FILTER TOOLBAR -->
+          <div class="co-admin-filter-toolbar">
+            <input id="historySearch" class="co-admin-input" type="search" placeholder="Search by student name, ID, type, issue date..." style="flex: 1; min-width: 220px;" />
+            <select id="typeFilter" class="co-admin-select" style="max-width: 220px;">
+              <option value="">All Certificate Types</option>
+            </select>
+            <div class="co-admin-chip-row" id="statusFilters">
+              <button class="btn secondary btn-sm active" data-status="all">All</button>
+              <button class="btn secondary btn-sm" data-status="Draft">Draft</button>
+              <button class="btn secondary btn-sm" data-status="Issued">Issued</button>
+              <button class="btn secondary btn-sm" data-status="Verified">Verified</button>
+              <button class="btn secondary btn-sm" data-status="Revoked">Revoked</button>
+            </div>
+          </div>
+
+          <!-- 2-COLUMN GRID: BUILDER & PREVIEW -->
+          <div class="co-admin-grid two">
+            <!-- BUILDER PANEL -->
+            <article class="co-admin-panel">
+              <div class="co-admin-section-head">
+                <div>
+                  <h3>Certificate Builder</h3>
+                  <p>Configure certificate parameters, select recipients, and issue credentials.</p>
+                </div>
+              </div>
+
+              <form id="adminCertificateForm" style="display: grid; gap: 14px;">
+                <input type="hidden" id="editingCertificateId" />
+                
+                <div class="co-admin-kicker">1. Certificate Specifications</div>
+                <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+                  <div class="co-admin-field">
+                    <label>Certificate Type *</label>
+                    <input id="certificateType" required placeholder="e.g. Course Completion" />
+                  </div>
+                  <div class="co-admin-field">
+                    <label>Course / Achievement Name *</label>
+                    <input id="achievementName" required placeholder="e.g. Advanced Data Structures" />
+                  </div>
+                  <div class="co-admin-field">
+                    <label>Score / Rank</label>
+                    <input id="scoreRank" placeholder="e.g. 92% / Rank 4" />
+                  </div>
+                  <div class="co-admin-field">
+                    <label>Issue Date *</label>
+                    <input id="issueDate" type="date" required />
+                  </div>
+                  <div class="co-admin-field">
+                    <label>Certificate ID</label>
+                    <input id="certificateRefId" placeholder="Auto-generated" />
+                  </div>
+                  <div class="co-admin-field">
+                    <label>Organization Name</label>
+                    <input id="organizationName" value="College OS Academy" />
+                  </div>
+                  <div class="co-admin-field" style="grid-column: 1 / -1;">
+                    <label>Signatory Name</label>
+                    <input id="signatoryName" value="Academic Director" />
+                  </div>
+                  <div class="co-admin-field" style="grid-column: 1 / -1;">
+                    <label>Assignment Mode</label>
+                    <select id="issueMode">
+                      <option value="selected">Selected Students</option>
+                      <option value="all">All Eligible Students</option>
+                    </select>
+                  </div>
+                  <div class="co-admin-field" style="grid-column: 1 / -1;">
+                    <label>Description Note</label>
+                    <textarea id="description" rows="2" placeholder="Describe why this certificate is awarded..."></textarea>
+                  </div>
+                </div>
+
+                <div class="co-admin-kicker" style="margin-top: 8px;">2. Template Selection</div>
+                <input type="hidden" id="templateName" value="Classic" />
+                <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;" id="templateCards">
+                  <article class="co-admin-panel active" data-template="Classic" style="padding: 12px; cursor: pointer; border: 2px solid #2563eb;">
+                    <strong style="font-size: 0.9rem; color: #0f172a;">Classic</strong>
+                    <p style="font-size: 0.78rem; margin: 2px 0 0; color: #64748b;">Formal serif style with traditional crests.</p>
+                  </article>
+                  <article class="co-admin-panel" data-template="Modern" style="padding: 12px; cursor: pointer;">
+                    <strong style="font-size: 0.9rem; color: #0f172a;">Modern</strong>
+                    <p style="font-size: 0.78rem; margin: 2px 0 0; color: #64748b;">Minimal clean layout for tech cohorts.</p>
+                  </article>
+                  <article class="co-admin-panel" data-template="Premium" style="padding: 12px; cursor: pointer;">
+                    <strong style="font-size: 0.9rem; color: #0f172a;">Premium</strong>
+                    <p style="font-size: 0.78rem; margin: 2px 0 0; color: #64748b;">Luxury gold accents for top performers.</p>
+                  </article>
+                  <article class="co-admin-panel" data-template="College Branded" style="padding: 12px; cursor: pointer;">
+                    <strong style="font-size: 0.9rem; color: #0f172a;">Campus Branded</strong>
+                    <p style="font-size: 0.78rem; margin: 2px 0 0; color: #64748b;">College insignia &amp; signature framing.</p>
+                  </article>
+                </div>
+
+                <div class="co-admin-kicker" style="margin-top: 8px;">3. Recipient Student Selection</div>
+                <div id="studentPicker" style="display: grid; gap: 10px;">
+                  <input id="studentSearchInput" class="co-admin-input" type="search" placeholder="Search student by name, email, or ID..." />
+                  <div id="studentResults" style="max-height: 160px; overflow: auto; display: grid; gap: 6px;"></div>
+                  <div id="selectedStudents" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+                </div>
+
+                <div class="co-admin-kicker" style="margin-top: 8px;">4. Actions</div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <button class="btn primary" type="button" id="issueCertBtn"><i class="fa-solid fa-award"></i> Issue Certificate</button>
+                  <button class="btn secondary" type="button" id="saveDraftBtn"><i class="fa-regular fa-floppy-disk"></i> Save Draft</button>
+                  <button class="btn secondary" type="button" id="previewBtn"><i class="fa-regular fa-eye"></i> Refresh Preview</button>
+                  <button class="btn secondary" type="button" id="updateCertBtn"><i class="fa-solid fa-pen-to-square"></i> Update</button>
+                  <button class="btn secondary" type="button" id="downloadPdfBtn"><i class="fa-solid fa-file-pdf"></i> Export PDF</button>
+                  <button class="btn secondary" type="button" id="downloadImageBtn"><i class="fa-solid fa-image"></i> Export Image</button>
+                  <button class="btn secondary" type="button" id="copyVerificationBtn"><i class="fa-regular fa-copy"></i> Copy Link</button>
+                </div>
+                <p class="status-text" id="portalStatusText" style="margin-top: 6px; font-size: 0.85rem; font-weight:600;"></p>
+              </form>
+            </article>
+
+            <!-- PREVIEW PANEL -->
+            <article class="co-admin-panel">
+              <div class="co-admin-section-head">
+                <div>
+                  <h3>Live Certificate Preview</h3>
+                  <p>Real-time visual rendering of the issued student certificate.</p>
+                </div>
+              </div>
+              
+              <div id="previewCard" style="border: 2px solid #e2e8f0; border-radius: 16px; padding: 24px; background: #ffffff; box-shadow: 0 10px 30px rgba(0,0,0,0.05); text-align: center;">
+                <div style="width: 52px; height: 52px; border-radius: 50%; background: #0f7b6c; color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 1.2rem;">
+                  <i class="fa-solid fa-building-columns"></i>
+                </div>
+                <h4 id="previewOrg" style="margin: 0 0 4px; color: #0f7b6c; font-size: 1rem;">College OS Academy</h4>
+                <h3 id="previewTitle" style="margin: 0 0 12px; font-size: 1.5rem; color: #0f172a; font-family: Georgia, serif;">Certificate of Excellence</h3>
+                
+                <p style="margin: 0; color: #64748b; font-size: 0.88rem;">This credential is proudly awarded to</p>
+                <h3 id="previewStudentName" style="margin: 10px 0; color: #b45309; font-size: 1.4rem; font-family: Georgia, serif;">No Student Selected (Preview Mode)</h3>
+                <p id="previewAchievement" style="margin: 0 0 16px; color: #334155; font-weight: 600; font-size: 0.95rem;">For outstanding academic achievement</p>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.82rem; color: #475569; text-align: left; background: #f8fafc; padding: 12px; border-radius: 10px; margin-bottom: 16px;">
+                  <div><strong>Type:</strong> <span id="previewType">Course Completion</span></div>
+                  <div><strong>Score / Rank:</strong> <span id="previewScore">N/A</span></div>
+                  <div><strong>Date:</strong> <span id="previewDate">-</span></div>
+                  <div><strong>Ref ID:</strong> <span id="previewId">-</span></div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 12px;">
+                  <div style="text-align: left; border-top: 1px solid #cbd5e1; padding-top: 6px; font-size: 0.8rem; color: #475569;">
+                    Signatory: <strong id="previewSignatory">Academic Director</strong>
+                  </div>
+                  <div style="width: 70px; height: 70px; border-radius: 50%; border: 2px solid #b45309; color: #b45309; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800; transform: rotate(-10deg); background: rgba(254, 243, 199, 0.5);">
+                    OFFICIAL<br>SEAL
+                  </div>
+                  <div>
+                    <img id="previewQr" alt="QR verification code" style="width:72px; height:72px; border:1px solid #cbd5e1; border-radius:8px; background:#fff;" />
+                  </div>
+                </div>
+              </div>
+
+              <canvas id="certificateCanvas" width="1200" height="800" style="display:none;"></canvas>
+
+              <div class="co-admin-section-head" style="margin-top: 24px;">
+                <div>
+                  <h3>Verification Management</h3>
+                  <p>Check and update certificate lifecycle verification status.</p>
+                </div>
+              </div>
+              <div style="display: grid; gap: 10px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                  <div class="co-admin-field">
+                    <label>Verification Ref ID</label>
+                    <input id="verificationIdField" readonly />
+                  </div>
+                  <div class="co-admin-field">
+                    <label>Current Lifecycle Status</label>
+                    <div style="padding-top: 4px;"><span class="co-admin-status info" id="verificationStatusPill">Draft</span></div>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <button class="btn secondary btn-sm" type="button" id="verifyCertBtn"><i class="fa-solid fa-shield"></i> Verify</button>
+                  <button class="btn danger btn-sm" type="button" id="revokeCertBtn"><i class="fa-solid fa-ban"></i> Revoke</button>
+                  <button class="btn secondary btn-sm" type="button" id="copyVerifyLinkBtn"><i class="fa-regular fa-copy"></i> Copy Link</button>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <!-- CERTIFICATE HISTORY TABLE -->
+          <article class="co-admin-panel" style="margin-top: 20px;">
+            <div class="co-admin-section-head">
+              <div>
+                <h3>Certificate History</h3>
+                <p>Manage existing records and execute bulk actions across student cohorts.</p>
               </div>
             </div>
 
-            <canvas id="certificateCanvas" width="1200" height="800" style="display:none;"></canvas>
-
-            <div class="co-admin-section-head" style="margin-top: 24px;">
-              <h3>Verification Management</h3>
+            <div class="co-admin-bulk-bar">
+              <span class="selected-count"><i class="fa-solid fa-layer-group"></i> Bulk Operations</span>
+              <div class="co-admin-bulk-actions">
+                <button class="btn secondary btn-sm" type="button" id="bulkIssueBtn"><i class="fa-solid fa-bolt"></i> Bulk Issue</button>
+                <button class="btn secondary btn-sm" type="button" id="bulkDownloadBtn"><i class="fa-solid fa-download"></i> Bulk Export</button>
+                <button class="btn secondary btn-sm" type="button" id="bulkVerifyBtn"><i class="fa-solid fa-circle-check"></i> Bulk Verify</button>
+                <button class="btn danger btn-sm" type="button" id="bulkRevokeBtn"><i class="fa-solid fa-triangle-exclamation"></i> Bulk Revoke</button>
+              </div>
             </div>
-            <div style="display: grid; gap: 10px;">
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div class="co-admin-field">
-                  <label>Verification Ref ID</label>
-                  <input id="verificationIdField" readonly />
-                </div>
-                <div class="co-admin-field">
-                  <label>Current Lifecycle Status</label>
-                  <div style="padding-top: 4px;"><span class="co-admin-status info" id="verificationStatusPill">Draft</span></div>
-                </div>
-              </div>
-              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <button class="btn secondary btn-sm" type="button" id="verifyCertBtn"><i class="fa-solid fa-shield"></i> Verify</button>
-                <button class="btn danger btn-sm" type="button" id="revokeCertBtn"><i class="fa-solid fa-ban"></i> Revoke</button>
-                <button class="btn secondary btn-sm" type="button" id="copyVerifyLinkBtn"><i class="fa-regular fa-copy"></i> Copy Link</button>
-              </div>
+
+            <div class="co-admin-table-wrap">
+              <table class="co-admin-data-table">
+                <thead>
+                  <tr>
+                    <th style="width: 40px;"><input id="selectAllRows" type="checkbox" /></th>
+                    <th>Student Name</th>
+                    <th>Certificate Type</th>
+                    <th>Certificate ID</th>
+                    <th>Issue Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="historyTableBody">
+                  <tr><td colspan="7" class="co-admin-table-empty"><i class="fa-solid fa-spinner fa-spin"></i> Loading certificate history...</td></tr>
+                </tbody>
+              </table>
             </div>
           </article>
         </div>
-
-        <article class="co-admin-panel" style="margin-top: 20px;">
-          <div class="co-admin-section-head">
-            <h3>Certificate History</h3>
-            <p>Manage existing records and execute bulk actions.</p>
-          </div>
-
-          <div class="co-admin-bulk-bar">
-            <span class="selected-count"><i class="fa-solid fa-layer-group"></i> Bulk Operations</span>
-            <div class="co-admin-bulk-actions">
-              <button class="btn secondary btn-sm" type="button" id="bulkIssueBtn"><i class="fa-solid fa-bolt"></i> Bulk Issue</button>
-              <button class="btn secondary btn-sm" type="button" id="bulkDownloadBtn"><i class="fa-solid fa-download"></i> Bulk Export</button>
-              <button class="btn secondary btn-sm" type="button" id="bulkVerifyBtn"><i class="fa-solid fa-circle-check"></i> Bulk Verify</button>
-              <button class="btn danger btn-sm" type="button" id="bulkRevokeBtn"><i class="fa-solid fa-triangle-exclamation"></i> Bulk Revoke</button>
-            </div>
-          </div>
-
-          <div class="co-admin-table-wrap">
-            <table class="co-admin-data-table">
-              <thead>
-                <tr>
-                  <th style="width: 40px;"><input id="selectAllRows" type="checkbox" /></th>
-                  <th>Student Name</th>
-                  <th>Certificate Type</th>
-                  <th>Certificate ID</th>
-                  <th>Issue Date</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="historyTableBody">
-                <tr><td colspan="7" class="co-admin-table-empty"><i class="fa-solid fa-spinner fa-spin"></i> Loading certificate history...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </article>
-      </div>
-    </main>
+      </main>
     </div>
   </div>
 
   <script src="assets/js/api.js"></script>
   <script src="assets/js/admin-module-registry.js?v=20260701-1"></script>
   <script src="assets/js/admin-certificates.js"></script>
-  <script src="assets/js/admin-responsive.js?v=20260701-1"></script>
+  <script src="assets/js/admin-responsive.js?v=20261004-1"></script>
 </body>
 </html>

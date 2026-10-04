@@ -3,368 +3,510 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Campus Feed Moderation - College OS Admin</title>
+  <title>Announcements &amp; Campus Feed — College OS Admin</title>
   <script src="assets/js/theme-init.js"></script>
+  <!-- Base & Redesign Stylesheets -->
   <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/css/admin-dashboard-redesign.css?v=20261004-1" />
   <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
 </head>
 <body class="admin-portal">
-  <div class="co-admin-shell">
-    <aside class="co-admin-aside">
+  <div class="co-admin-shell" id="adminCampusFeedRoot">
+
+    <!-- Mobile Drawer Backdrop -->
+    <div class="co-admin-backdrop" id="adminBackdrop"></div>
+
+    <!-- FIXED LEFT SIDEBAR -->
+    <aside class="co-admin-aside" id="adminSidebar">
       <div class="co-admin-brand">
-        <span class="co-admin-brand-mark"><i class="fa-solid fa-shield-halved"></i></span>
-        <div>
-          <h1>College OS Admin</h1>
-          <p>Academic operations, learner management, content publishing, and platform oversight in one workspace.</p>
+        <div class="co-admin-brand-mark">CO</div>
+        <div class="co-admin-brand-info">
+          <h1>College OS</h1>
+          <span class="co-admin-brand-badge">ADMIN CONTROL PANEL</span>
         </div>
+        <button class="co-admin-close-btn" id="adminSidebarClose" aria-label="Close sidebar">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
 
       <div class="co-admin-sidebar-nav-container">
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Overview</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-dashboard.html"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a>
-          <a class="co-admin-nav-link" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control Center</span></a>
-        </nav>
-      </section>
+        <!-- OVERVIEW -->
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">OVERVIEW</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-dashboard.html">
+              <i class="fa-solid fa-house"></i>
+              <span>Dashboard</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html">
+              <i class="fa-solid fa-sliders"></i>
+              <span>Control Center &amp; Analytics</span>
+            </a>
+          </nav>
+        </section>
 
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Academic Content</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i><span>Study Materials</span></a>
-          <a class="co-admin-nav-link" href="admin-notes.html"><i class="fa-solid fa-file-lines"></i><span>Notes Library</span></a>
-          <a class="co-admin-nav-link" href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i><span>Previous Papers</span></a>
-          <a class="co-admin-nav-link" href="admin-quizzes.html"><i class="fa-solid fa-clipboard-question"></i><span>Quizzes</span></a>
-          <a class="co-admin-nav-link" href="admin-mock-tests.html"><i class="fa-solid fa-flask-vial"></i><span>Mock Test Studio</span></a>
-          <a class="co-admin-nav-link" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Study Roadmaps</span></a>
-          <a class="co-admin-nav-link" href="admin-academics.html"><i class="fa-solid fa-graduation-cap"></i><span>Academic Structure</span></a>
-        </nav>
-      </section>
+        <!-- CONTENT MANAGEMENT -->
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">CONTENT MANAGEMENT</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-materials.html">
+              <i class="fa-solid fa-book-bookmark"></i>
+              <span>Study Materials</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-notes.html">
+              <i class="fa-solid fa-file-lines"></i>
+              <span>Notes Library</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-papers.html">
+              <i class="fa-solid fa-file-pdf"></i>
+              <span>Previous Papers</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-quizzes.html">
+              <i class="fa-solid fa-clipboard-question"></i>
+              <span>Quizzes</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-mock-tests.html">
+              <i class="fa-solid fa-flask-vial"></i>
+              <span>Mock Test Studio</span>
+            </a>
+            <a class="co-admin-nav-link active" href="admin-campus-feed.html">
+              <i class="fa-solid fa-bullhorn"></i>
+              <span>Announcements</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-roadmaps.html">
+              <i class="fa-solid fa-map-location-dot"></i>
+              <span>Study Roadmaps</span>
+            </a>
+          </nav>
+        </section>
 
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Student Management</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-control.html#students-management"><i class="fa-solid fa-user-graduate"></i><span>Students</span></a>
-          <a class="co-admin-nav-link" href="admin-control.html#membership-management"><i class="fa-solid fa-id-card"></i><span>Memberships & Payments</span></a>
-          <a class="co-admin-nav-link" href="admin-academics.html#contributions"><i class="fa-solid fa-upload"></i><span>Student Contributions</span></a>
-          <a class="co-admin-nav-link" href="admin-certificates.html"><i class="fa-solid fa-certificate"></i><span>Certificates</span></a>
-        </nav>
-      </section>
+        <!-- ACADEMIC MANAGEMENT -->
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">ACADEMIC MANAGEMENT</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-academics.html">
+              <i class="fa-solid fa-graduation-cap"></i>
+              <span>Academic Structure</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-academics.html#branches">
+              <i class="fa-solid fa-sitemap"></i>
+              <span>Courses &amp; Branches</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-academics.html#semesters">
+              <i class="fa-solid fa-table-cells-large"></i>
+              <span>Semesters &amp; Subjects</span>
+            </a>
+          </nav>
+        </section>
 
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Coding Challenges</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-coding-challenges.html"><i class="fa-solid fa-code"></i><span>Coding Governance</span></a>
-        </nav>
-      </section>
+        <!-- STUDENT MANAGEMENT -->
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">STUDENT MANAGEMENT</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-control.html#students-management">
+              <i class="fa-solid fa-users"></i>
+              <span>All Students</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#membership-management">
+              <i class="fa-solid fa-wallet"></i>
+              <span>Membership Payments</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#audit-logs">
+              <i class="fa-solid fa-chart-line"></i>
+              <span>Student Activity</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#feedbacks-management">
+              <i class="fa-solid fa-comments"></i>
+              <span>Feedback &amp; Reviews</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-certificates.html">
+              <i class="fa-solid fa-award"></i>
+              <span>Certificates</span>
+            </a>
+          </nav>
+        </section>
 
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Community & Support</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-support-governance.html"><i class="fa-solid fa-headset"></i><span>Support Governance</span></a>
-          <a class="co-admin-nav-link active" href="admin-campus-feed.html"><i class="fa-solid fa-newspaper"></i><span>Campus Feed</span></a>
-          <a class="co-admin-nav-link" href="admin-ai-tools.html"><i class="fa-solid fa-sparkles"></i><span>AI Tools Studio</span></a>
-        </nav>
-      </section>
-
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">System</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-control.html#system-settings"><i class="fa-solid fa-gear"></i><span>Settings & Feature Toggles</span></a>
-          <a class="co-admin-nav-link" href="admin-control.html#audit-logs"><i class="fa-solid fa-list-check"></i><span>Audit & Activity Logs</span></a>
-        </nav>
-      </section>
+        <!-- SYSTEM MANAGEMENT -->
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">SYSTEM MANAGEMENT</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-control.html#admins-management">
+              <i class="fa-solid fa-user-shield"></i>
+              <span>Admins &amp; Access</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#system-settings">
+              <i class="fa-solid fa-gear"></i>
+              <span>Platform Settings</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#audit-logs">
+              <i class="fa-solid fa-list-check"></i>
+              <span>System Logs</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#analytics-overview">
+              <i class="fa-solid fa-chart-pie"></i>
+              <span>Analytics &amp; Reports</span>
+            </a>
+          </nav>
+        </section>
       </div>
 
-      <div class="co-admin-side-card">
-        <strong>Admin Workspace</strong>
-        <p>Use this dashboard to manage student operations, academic content, premium adoption, and platform quality without breaking workflow.</p>
+      <div class="co-admin-sidebar-footer">
+        <div class="co-admin-side-card">
+          <strong><i class="fa-solid fa-shield-check" style="color:#38bdf8;"></i> Super Admin Active</strong>
+          <span id="adminPlatformStatus">Platform healthy</span> &bull; <span id="adminCollegesCovered">0 campuses</span>
+        </div>
       </div>
     </aside>
 
+    <!-- WORKSPACE AREA -->
     <div class="co-admin-workspace">
+
+      <!-- TOP NAVIGATION BAR -->
       <header class="co-admin-topbar">
-        <div class="co-admin-topbar-title">
-          <h2>Campus Feed Moderation</h2>
-          <p>Approve student content, review abuse reports, assign campus roles, and publish official college updates.</p>
+        <div class="co-admin-topbar-left">
+          <button class="co-admin-hamburger-btn" id="adminSidebarToggle" aria-label="Toggle navigation">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          
+          <div class="co-admin-search-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="adminGlobalSearch" class="co-admin-search-input" placeholder="Search announcements, campus posts, authors..." />
+            <kbd class="co-admin-kbd">Ctrl K</kbd>
+          </div>
         </div>
-        <div class="co-admin-topbar-actions">
-          <a class="co-admin-chip" href="college-feed.html" target="_blank" rel="noopener"><i class="fa-solid fa-external-link"></i><span>Open Campus Feed</span></a>
-          <button class="btn primary btn-sm" type="button" id="publishOfficialNavBtn"><i class="fa-solid fa-bullhorn"></i><span>Publish Official Post</span></button>
+
+        <div class="co-admin-topbar-right">
+          <!-- Live Date Display -->
+          <div class="co-admin-date-widget">
+            <i class="fa-regular fa-calendar"></i>
+            <span id="adminCurrentDateText">October 4, 2026 Saturday</span>
+          </div>
+
+          <!-- Notification Bell -->
+          <div class="co-admin-icon-btn" id="adminNotifBtn" title="Notifications">
+            <i class="fa-regular fa-bell"></i>
+            <span class="co-admin-notif-dot">3</span>
+          </div>
+
+          <!-- Admin Profile Pill -->
+          <div class="co-admin-profile-pill" id="adminProfileMenuToggle">
+            <div class="co-admin-avatar">AS</div>
+            <div class="co-admin-profile-meta">
+              <span class="co-admin-profile-name" id="adminProfileName">Abhay Shukla</span>
+              <span class="co-admin-profile-role">Super Admin</span>
+            </div>
+            <i class="fa-solid fa-chevron-down"></i>
+
+            <!-- Dropdown Menu -->
+            <div class="co-admin-dropdown-menu" id="adminProfileDropdown">
+              <a href="admin-control.html#system-settings" class="co-admin-dropdown-item"><i class="fa-solid fa-gear"></i> Settings</a>
+              <a href="index.html" class="co-admin-dropdown-item" target="_blank"><i class="fa-solid fa-arrow-up-right-from-square"></i> Student Portal</a>
+              <a href="/api/admin/students/report.xlsx" class="co-admin-dropdown-item"><i class="fa-solid fa-file-excel"></i> Export Report</a>
+              <div style="height:1px; background:#e2e8f0; margin:4px 0;"></div>
+              <a href="admin-login.html" class="co-admin-dropdown-item danger"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+            </div>
+          </div>
         </div>
       </header>
 
-      <div class="co-admin-breadcrumbs" id="adminBreadcrumb"></div>
+      <!-- BREADCRUMBS -->
+      <div class="co-admin-breadcrumbs" id="adminBreadcrumb" style="display:none;"></div>
 
+      <!-- MAIN CONTENT -->
       <main class="co-admin-main">
 
-      <section class="co-admin-stats" style="margin-bottom: 20px;">
-        <article class="co-admin-stat">
-          <div class="co-admin-stat-top">
-            <div>
-              <div class="co-admin-stat-label">Pending Posts</div>
-              <h3 class="co-admin-stat-value" id="metricPending">0</h3>
+        <!-- PAGE HEADER -->
+        <header class="co-admin-page-header">
+          <div class="co-admin-page-title-group">
+            <div class="co-admin-welcome-kicker">
+              <i class="fa-solid fa-bullhorn"></i>
+              <span>CAMPUS BROADCAST &amp; MODERATION</span>
             </div>
-            <span class="co-admin-icon-badge warn"><i class="fa-solid fa-clock"></i></span>
+            <h1 class="co-admin-page-title">Announcements &amp; Feed Moderation</h1>
+            <p class="co-admin-page-subtitle">Publish official college announcements, moderate campus feed discussions, review abuse reports, and safeguard student community safety.</p>
           </div>
+          <div class="co-admin-header-actions">
+            <a class="btn secondary" href="college-feed.html" target="_blank" rel="noopener">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+              <span>Live Campus Feed</span>
+            </a>
+            <button class="btn primary" type="button" id="publishOfficialNavBtn">
+              <i class="fa-solid fa-bullhorn"></i>
+              <span>Publish Official Post</span>
+            </button>
+          </div>
+        </header>
+
+        <!-- KPI STATS -->
+        <section class="co-admin-stats" style="grid-template-columns: repeat(5, minmax(0, 1fr));">
+          <article class="co-admin-stat">
+            <div class="co-admin-stat-top">
+              <div>
+                <div class="co-admin-stat-label">Pending Review</div>
+                <h3 class="co-admin-stat-value" id="metricPending">0</h3>
+              </div>
+              <span class="co-admin-icon-badge" style="background:#fffbeb; color:#b45309;"><i class="fa-solid fa-clock"></i></span>
+            </div>
+          </article>
+          <article class="co-admin-stat">
+            <div class="co-admin-stat-top">
+              <div>
+                <div class="co-admin-stat-label">Approved Posts</div>
+                <h3 class="co-admin-stat-value" id="metricApproved">0</h3>
+              </div>
+              <span class="co-admin-icon-badge" style="background:#ecfdf5; color:#047857;"><i class="fa-solid fa-circle-check"></i></span>
+            </div>
+          </article>
+          <article class="co-admin-stat">
+            <div class="co-admin-stat-top">
+              <div>
+                <div class="co-admin-stat-label">Reported / Flagged</div>
+                <h3 class="co-admin-stat-value" id="metricFlagged">0</h3>
+              </div>
+              <span class="co-admin-icon-badge" style="background:#fef2f2; color:#b91c1c;"><i class="fa-solid fa-triangle-exclamation"></i></span>
+            </div>
+          </article>
+          <article class="co-admin-stat">
+            <div class="co-admin-stat-top">
+              <div>
+                <div class="co-admin-stat-label">Hidden / Archived</div>
+                <h3 class="co-admin-stat-value" id="metricHidden">0</h3>
+              </div>
+              <span class="co-admin-icon-badge"><i class="fa-solid fa-eye-slash"></i></span>
+            </div>
+          </article>
+          <article class="co-admin-stat">
+            <div class="co-admin-stat-top">
+              <div>
+                <div class="co-admin-stat-label">Karma Distributed</div>
+                <h3 class="co-admin-stat-value" id="metricPoints">0</h3>
+              </div>
+              <span class="co-admin-icon-badge" style="background:#f5f3ff; color:#6d28d9;"><i class="fa-solid fa-coins"></i></span>
+            </div>
+          </article>
+        </section>
+
+        <!-- SUB-TAB BAR -->
+        <div class="co-admin-filter-toolbar" id="campusFeedNavTabs" style="margin-bottom: 20px;">
+          <button class="btn secondary btn-sm active" type="button" data-feed-tab="moderationQueue"><i class="fa-solid fa-clock"></i> Moderation Queue</button>
+          <button class="btn secondary btn-sm" type="button" data-feed-tab="published"><i class="fa-solid fa-check"></i> Published</button>
+          <button class="btn secondary btn-sm" type="button" data-feed-tab="reported"><i class="fa-solid fa-flag"></i> Reported Queue</button>
+          <button class="btn secondary btn-sm" type="button" data-feed-tab="hidden"><i class="fa-solid fa-eye-slash"></i> Hidden</button>
+          <button class="btn secondary btn-sm" type="button" data-feed-tab="archived"><i class="fa-solid fa-box-archive"></i> Archived</button>
+          <button class="btn secondary btn-sm" type="button" data-feed-tab="officialPosts"><i class="fa-solid fa-bullhorn"></i> Official Post Publisher</button>
+          <button class="btn secondary btn-sm" type="button" data-feed-tab="settings"><i class="fa-solid fa-gear"></i> Feed Governance</button>
+        </div>
+
+        <!-- Moderation Queue Panel -->
+        <article class="co-admin-panel feed-tab-panel active" id="tabPanel-moderationQueue">
+          <div class="co-admin-section-head">
+            <div>
+              <h3><i class="fa-solid fa-shield-check text-blue" style="margin-right:6px;"></i> Campus Content Moderation Queue</h3>
+              <p class="muted">Review pending submissions, inspect fraud signals, and publish eligible posts to student feeds.</p>
+            </div>
+            <button class="btn secondary btn-sm" id="moderationRefreshBtn" type="button"><i class="fa-solid fa-rotate"></i> Refresh Queue</button>
+          </div>
+
+          <div class="co-admin-filter-toolbar">
+            <input id="moderationSearch" class="co-admin-input" placeholder="Search post title, author, college..." style="flex: 1; min-width: 180px;" />
+            <select id="moderationStatusFilter" class="co-admin-select" style="max-width: 150px;">
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="featured">Featured</option>
+              <option value="flagged">Flagged</option>
+              <option value="all">All Statuses</option>
+            </select>
+            <select id="moderationCollegeFilter" class="co-admin-select" style="max-width: 180px;"><option value="">All Colleges</option></select>
+            <button class="btn secondary btn-sm" id="resetModerationFilterBtn" type="button"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+          </div>
+          <p class="muted" id="moderationStatusText" style="font-size: 0.85rem; margin-top: 4px; font-weight:600;"></p>
+          <div id="moderationQueueList" style="display: grid; gap: 12px; margin-top: 14px;"></div>
         </article>
-        <article class="co-admin-stat">
-          <div class="co-admin-stat-top">
+
+        <!-- Published Posts Panel -->
+        <article class="co-admin-panel feed-tab-panel" id="tabPanel-published" style="display:none;">
+          <div class="co-admin-section-head">
             <div>
-              <div class="co-admin-stat-label">Approved Posts</div>
-              <h3 class="co-admin-stat-value" id="metricApproved">0</h3>
+              <h3><i class="fa-solid fa-circle-check text-blue" style="margin-right:6px;"></i> Published Campus Posts</h3>
+              <p class="muted">Live posts visible on student campus feed.</p>
             </div>
-            <span class="co-admin-icon-badge ok"><i class="fa-solid fa-circle-check"></i></span>
+            <button class="btn secondary btn-sm" id="publishedRefreshBtn" type="button"><i class="fa-solid fa-rotate"></i> Refresh</button>
           </div>
+          <div id="publishedQueueList" style="display: grid; gap: 12px; margin-top: 14px;"></div>
         </article>
-        <article class="co-admin-stat">
-          <div class="co-admin-stat-top">
+
+        <!-- Reported Posts Panel -->
+        <article class="co-admin-panel feed-tab-panel" id="tabPanel-reported" style="display:none;">
+          <div class="co-admin-section-head">
             <div>
-              <div class="co-admin-stat-label">Reported / Flagged</div>
-              <h3 class="co-admin-stat-value" id="metricFlagged">0</h3>
+              <h3><i class="fa-solid fa-triangle-exclamation text-rose-500" style="margin-right:6px;"></i> Abuse &amp; Flagged Content Queue</h3>
+              <p class="muted">Review student reports and automated safety alerts.</p>
             </div>
-            <span class="co-admin-icon-badge danger"><i class="fa-solid fa-triangle-exclamation"></i></span>
+            <button class="btn secondary btn-sm" id="refreshReportsBtn" type="button"><i class="fa-solid fa-rotate"></i> Refresh Reports</button>
           </div>
+          <div class="co-admin-filter-toolbar">
+            <select id="reportStatusFilter" class="co-admin-select" style="max-width: 160px;">
+              <option value="pending">Pending Review</option>
+              <option value="resolved">Resolved</option>
+              <option value="dismissed">Dismissed</option>
+            </select>
+          </div>
+          <div id="reportQueueList" style="display: grid; gap: 12px; margin-top: 12px;"></div>
         </article>
-        <article class="co-admin-stat">
-          <div class="co-admin-stat-top">
+
+        <!-- Hidden Posts Panel -->
+        <article class="co-admin-panel feed-tab-panel" id="tabPanel-hidden" style="display:none;">
+          <div class="co-admin-section-head">
             <div>
-              <div class="co-admin-stat-label">Hidden / Archived</div>
-              <h3 class="co-admin-stat-value" id="metricHidden">0</h3>
+              <h3><i class="fa-solid fa-eye-slash" style="margin-right:6px;"></i> Hidden Posts Archive</h3>
+              <p class="muted">Content hidden by moderators or author requests.</p>
             </div>
-            <span class="co-admin-icon-badge"><i class="fa-solid fa-eye-slash"></i></span>
           </div>
+          <div id="hiddenQueueList" style="display: grid; gap: 12px; margin-top: 14px;"></div>
         </article>
-        <article class="co-admin-stat">
-          <div class="co-admin-stat-top">
+
+        <!-- Archived Posts Panel -->
+        <article class="co-admin-panel feed-tab-panel" id="tabPanel-archived" style="display:none;">
+          <div class="co-admin-section-head">
             <div>
-              <div class="co-admin-stat-label">Points Distributed</div>
-              <h3 class="co-admin-stat-value" id="metricPoints">0</h3>
+              <h3><i class="fa-solid fa-box-archive" style="margin-right:6px;"></i> Archived Posts</h3>
+              <p class="muted">Past posts soft-deleted or archived.</p>
             </div>
-            <span class="co-admin-icon-badge ok"><i class="fa-solid fa-coins"></i></span>
           </div>
+          <div id="archivedQueueList" style="display: grid; gap: 12px; margin-top: 14px;"></div>
         </article>
-      </section>
 
-      <div class="co-admin-filter-toolbar" id="campusFeedNavTabs" style="margin-bottom: 20px;">
-        <button class="btn secondary btn-sm active" type="button" data-feed-tab="moderationQueue"><i class="fa-solid fa-clock"></i> Moderation Queue</button>
-        <button class="btn secondary btn-sm" type="button" data-feed-tab="published"><i class="fa-solid fa-check"></i> Published</button>
-        <button class="btn secondary btn-sm" type="button" data-feed-tab="reported"><i class="fa-solid fa-flag"></i> Reported Queue</button>
-        <button class="btn secondary btn-sm" type="button" data-feed-tab="hidden"><i class="fa-solid fa-eye-slash"></i> Hidden</button>
-        <button class="btn secondary btn-sm" type="button" data-feed-tab="archived"><i class="fa-solid fa-box-archive"></i> Archived</button>
-        <button class="btn secondary btn-sm" type="button" data-feed-tab="officialPosts"><i class="fa-solid fa-bullhorn"></i> Official Post Publisher</button>
-        <button class="btn secondary btn-sm" type="button" data-feed-tab="settings"><i class="fa-solid fa-gear"></i> Feed Governance</button>
-      </div>
-
-      <!-- Moderation Queue Panel -->
-      <article class="co-admin-panel feed-tab-panel active" id="tabPanel-moderationQueue">
-        <div class="co-admin-section-head">
-          <div>
-            <h3>Campus Content Moderation Queue</h3>
-            <p class="muted">Review pending submissions, inspect fraud signals, and publish eligible posts to student feeds.</p>
-          </div>
-          <button class="btn secondary btn-sm" id="moderationRefreshBtn" type="button"><i class="fa-solid fa-rotate"></i> Refresh Queue</button>
-        </div>
-
-        <div class="co-admin-filter-toolbar">
-          <input id="moderationSearch" placeholder="Search post title, author, college..." style="flex: 1; min-width: 180px;" />
-          <select id="moderationStatusFilter" style="max-width: 150px;">
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-            <option value="featured">Featured</option>
-            <option value="flagged">Flagged</option>
-            <option value="all">All Statuses</option>
-          </select>
-          <select id="moderationCollegeFilter" style="max-width: 180px;"><option value="">All Colleges</option></select>
-          <button class="btn secondary btn-sm" id="resetModerationFilterBtn" type="button"><i class="fa-solid fa-rotate-left"></i> Reset</button>
-        </div>
-        <p class="muted" id="moderationStatusText" style="font-size: 0.85rem; margin-top: 4px;"></p>
-        <div id="moderationQueueList" style="display: grid; gap: 12px; margin-top: 14px;"></div>
-      </article>
-
-      <!-- Published Posts Panel -->
-      <article class="co-admin-panel feed-tab-panel" id="tabPanel-published" style="display:none;">
-        <div class="co-admin-section-head">
-          <div>
-            <h3>Published Campus Posts</h3>
-            <p class="muted">Live posts visible on student campus feed.</p>
-          </div>
-          <button class="btn secondary btn-sm" id="publishedRefreshBtn" type="button"><i class="fa-solid fa-rotate"></i> Refresh</button>
-        </div>
-        <div id="publishedQueueList" style="display: grid; gap: 12px; margin-top: 14px;"></div>
-      </article>
-
-      <!-- Reported Posts Panel -->
-      <article class="co-admin-panel feed-tab-panel" id="tabPanel-reported" style="display:none;">
-        <div class="co-admin-section-head">
-          <div>
-            <h3>Abuse & Flagged Content Queue</h3>
-            <p class="muted">Review student reports and automated safety alerts.</p>
-          </div>
-          <button class="btn secondary btn-sm" id="refreshReportsBtn" type="button"><i class="fa-solid fa-rotate"></i> Refresh Reports</button>
-        </div>
-        <div class="co-admin-filter-toolbar">
-          <select id="reportStatusFilter" style="max-width: 160px;">
-            <option value="pending">Pending Review</option>
-            <option value="resolved">Resolved</option>
-            <option value="dismissed">Dismissed</option>
-          </select>
-        </div>
-        <div id="reportQueueList" style="display: grid; gap: 12px; margin-top: 12px;"></div>
-      </article>
-
-      <!-- Hidden Posts Panel -->
-      <article class="co-admin-panel feed-tab-panel" id="tabPanel-hidden" style="display:none;">
-        <div class="co-admin-section-head">
-          <div>
-            <h3>Hidden Posts Archive</h3>
-            <p class="muted">Content hidden by moderators or author requests.</p>
-          </div>
-        </div>
-        <div id="hiddenQueueList" style="display: grid; gap: 12px; margin-top: 14px;"></div>
-      </article>
-
-      <!-- Archived Posts Panel -->
-      <article class="co-admin-panel feed-tab-panel" id="tabPanel-archived" style="display:none;">
-        <div class="co-admin-section-head">
-          <div>
-            <h3>Archived Posts</h3>
-            <p class="muted">Past posts soft-deleted or archived.</p>
-          </div>
-        </div>
-        <div id="archivedQueueList" style="display: grid; gap: 12px; margin-top: 14px;"></div>
-      </article>
-
-      <!-- Official Post Publisher Panel -->
-      <article class="co-admin-panel feed-tab-panel" id="tabPanel-officialPosts" style="display:none;">
-        <div class="co-admin-section-head">
-          <div>
-            <h3>Publish Official Campus Post</h3>
-            <p class="muted">Broadcast verified official announcements, event invites, alerts, or campus polls directly to student feeds.</p>
-          </div>
-        </div>
-        <form id="officialPostForm" style="display: grid; gap: 16px; max-width: 900px; margin-top: 8px;">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <!-- Official Post Publisher Panel -->
+        <article class="co-admin-panel feed-tab-panel" id="tabPanel-officialPosts" style="display:none;">
+          <div class="co-admin-section-head">
             <div>
-              <label style="font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 4px; display:block;">Target College *</label>
-              <select id="officialCollegeId" required style="width:100%;"><option value="">Select College</option></select>
-            </div>
-            <div>
-              <label style="font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 4px; display:block;">Post Type *</label>
-              <select id="officialPostType" required style="width:100%;">
-                <option value="official">Official Update</option>
-                <option value="event">Event Invite</option>
-                <option value="achievement">Campus Achievement</option>
-                <option value="alert">Urgent Alert</option>
-                <option value="poll">Student Poll</option>
-                <option value="announcement">Announcement</option>
-                <option value="placement_update">Placement Update</option>
-              </select>
+              <h3><i class="fa-solid fa-bullhorn text-blue" style="margin-right:6px;"></i> Publish Official Campus Post</h3>
+              <p class="muted">Broadcast verified official announcements, event invites, alerts, or campus polls directly to student feeds.</p>
             </div>
           </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <div>
-              <label style="font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 4px; display:block;">Category *</label>
-              <select id="officialCategory" required style="width:100%;">
-                <option value="official">Official</option>
-                <option value="events">Events</option>
-                <option value="achievements">Achievements</option>
-                <option value="alerts">Alerts</option>
-                <option value="placements">Placements</option>
-                <option value="announcements">Announcements</option>
-              </select>
-            </div>
-            <div>
-              <label style="font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 4px; display:block;">Tags</label>
-              <input id="officialTags" placeholder="Comma separated tags (e.g. hackathon, placement)..." style="width:100%;" />
-            </div>
-          </div>
-
-          <div>
-            <label style="font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 4px; display:block;">Post Headline / Title *</label>
-            <input id="officialTitle" required placeholder="Enter announcement headline..." style="width:100%; font-weight: 600;" />
-          </div>
-
-          <div>
-            <label style="font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 4px; display:block;">Official Announcement Details *</label>
-            <textarea id="officialDescription" rows="5" required placeholder="Write clear detailed text for the student audience..." style="width:100%;"></textarea>
-          </div>
-
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; display: grid; gap: 12px;">
-            <strong style="font-size: 0.88rem; color: #1e293b;"><i class="fa-solid fa-square-poll-vertical"></i> Optional Poll Options</strong>
-            <textarea id="officialPollOptions" rows="2" placeholder="Poll options (one option per line)..." style="width:100%; font-size: 0.85rem;"></textarea>
-            <div>
-              <label style="font-size: 0.78rem; font-weight: 700; color: #64748b;">Poll Expiry Date & Time</label>
-              <input id="officialPollEndsAt" type="datetime-local" style="width:100%; max-width: 320px;" />
-            </div>
-          </div>
-
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; display: grid; gap: 12px;">
-            <strong style="font-size: 0.88rem; color: #1e293b;"><i class="fa-solid fa-calendar-days"></i> Event Details (If Event / Workshop)</strong>
+          <form id="officialPostForm" style="display: grid; gap: 16px; max-width: 900px; margin-top: 8px;">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-              <div>
-                <label style="font-size: 0.78rem; font-weight: 700; color: #64748b;">Event Date & Time</label>
-                <input id="officialEventAt" type="datetime-local" style="width:100%;" />
+              <div class="co-admin-field">
+                <label>Target College *</label>
+                <select id="officialCollegeId" required><option value="">Select College</option></select>
               </div>
-              <div>
-                <label style="font-size: 0.78rem; font-weight: 700; color: #64748b;">Event Venue / Link</label>
-                <input id="officialEventVenue" placeholder="e.g. Auditorium A / Online Meet link" style="width:100%;" />
+              <div class="co-admin-field">
+                <label>Post Type *</label>
+                <select id="officialPostType" required>
+                  <option value="official">Official Update</option>
+                  <option value="event">Event Invite</option>
+                  <option value="achievement">Campus Achievement</option>
+                  <option value="alert">Urgent Alert</option>
+                  <option value="poll">Student Poll</option>
+                  <option value="announcement">Announcement</option>
+                  <option value="placement_update">Placement Update</option>
+                </select>
               </div>
             </div>
-          </div>
 
-          <div>
-            <label style="font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 4px; display:block;">Attachment (Image or Video)</label>
-            <input id="officialMedia" type="file" accept="image/*,video/*" style="width:100%; padding: 8px; border: 1px dashed #cbd5e1; border-radius: 8px; background: #fff;" />
-          </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="co-admin-field">
+                <label>Category *</label>
+                <select id="officialCategory" required>
+                  <option value="official">Official</option>
+                  <option value="events">Events</option>
+                  <option value="achievements">Achievements</option>
+                  <option value="alerts">Alerts</option>
+                  <option value="placements">Placements</option>
+                  <option value="announcements">Announcements</option>
+                </select>
+              </div>
+              <div class="co-admin-field">
+                <label>Tags</label>
+                <input id="officialTags" placeholder="Comma separated tags (e.g. hackathon, placement)..." />
+              </div>
+            </div>
 
-          <div style="display:flex; align-items:center; justify-content:space-between; margin-top: 8px;">
-            <label style="display:flex; align-items:center; gap:8px; font-size:0.88rem; font-weight:600; cursor:pointer; color: #0f172a;">
-              <input id="officialUrgent" type="checkbox" style="width: 18px; height: 18px;" /> Mark Urgent Announcement (Highlight in Feed)
-            </label>
-            <button class="btn primary" type="submit" style="padding: 10px 24px; font-size: 0.95rem;"><i class="fa-solid fa-bullhorn"></i> Publish Official Post</button>
-          </div>
-        </form>
-        <p class="muted" id="officialPostStatus" style="font-size: 0.85rem; margin-top: 10px;"></p>
-      </article>
+            <div class="co-admin-field">
+              <label>Post Headline / Title *</label>
+              <input id="officialTitle" required placeholder="Enter announcement headline..." style="font-weight: 600;" />
+            </div>
 
-      <!-- Feed Settings Panel -->
-      <article class="co-admin-panel feed-tab-panel" id="tabPanel-settings" style="display:none;">
-        <div class="co-admin-section-head">
-          <div>
-            <h3>Campus Feed Governance Settings</h3>
-            <p class="muted">Configure posting rules, automated safety thresholds, and creator verification.</p>
-          </div>
-        </div>
-        <p class="muted">All campus feed settings are governed under server-side RBAC.</p>
-      </article>
+            <div class="co-admin-field">
+              <label>Official Announcement Details *</label>
+              <textarea id="officialDescription" rows="5" required placeholder="Write clear detailed text for the student audience..."></textarea>
+            </div>
 
-      <article class="co-admin-panel" style="margin-top: 24px;">
-        <div class="co-admin-section-head">
-          <div>
-            <h3>Analytics & Community Signals</h3>
-            <p class="muted">Overview of engagement trends, top creators, and suspicious activity alerts.</p>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; display: grid; gap: 12px;">
+              <strong style="font-size: 0.88rem; color: #1e293b;"><i class="fa-solid fa-square-poll-vertical"></i> Optional Poll Options</strong>
+              <textarea id="officialPollOptions" rows="2" class="co-admin-textarea" placeholder="Poll options (one option per line)..." style="font-size: 0.85rem;"></textarea>
+              <div class="co-admin-field">
+                <label style="font-size: 0.78rem; font-weight: 700; color: #64748b;">Poll Expiry Date &amp; Time</label>
+                <input id="officialPollEndsAt" type="datetime-local" style="max-width: 320px;" />
+              </div>
+            </div>
+
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; display: grid; gap: 12px;">
+              <strong style="font-size: 0.88rem; color: #1e293b;"><i class="fa-solid fa-calendar-days"></i> Event Details (If Event / Workshop)</strong>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="co-admin-field">
+                  <label style="font-size: 0.78rem; font-weight: 700; color: #64748b;">Event Date &amp; Time</label>
+                  <input id="officialEventAt" type="datetime-local" />
+                </div>
+                <div class="co-admin-field">
+                  <label style="font-size: 0.78rem; font-weight: 700; color: #64748b;">Event Venue / Link</label>
+                  <input id="officialEventVenue" placeholder="e.g. Auditorium A / Online Meet link" />
+                </div>
+              </div>
+            </div>
+
+            <div class="co-admin-field">
+              <label>Attachment (Image or Video)</label>
+              <input id="officialMedia" type="file" accept="image/*,video/*" style="padding: 8px; border: 1px dashed #cbd5e1; border-radius: 8px; background: #fff;" />
+            </div>
+
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-top: 8px;">
+              <label style="display:flex; align-items:center; gap:8px; font-size:0.88rem; font-weight:600; cursor:pointer; color: #0f172a;">
+                <input id="officialUrgent" type="checkbox" style="width: 18px; height: 18px;" /> Mark Urgent Announcement (Highlight in Feed)
+              </label>
+              <button class="btn primary" type="submit"><i class="fa-solid fa-bullhorn"></i> Publish Official Post</button>
+            </div>
+          </form>
+          <p class="muted" id="officialPostStatus" style="font-size: 0.85rem; margin-top: 10px; font-weight:600;"></p>
+        </article>
+
+        <!-- Feed Settings Panel -->
+        <article class="co-admin-panel feed-tab-panel" id="tabPanel-settings" style="display:none;">
+          <div class="co-admin-section-head">
+            <div>
+              <h3><i class="fa-solid fa-gear" style="margin-right:6px;"></i> Campus Feed Governance Settings</h3>
+              <p class="muted">Configure posting rules, automated safety thresholds, and creator verification.</p>
+            </div>
           </div>
-          <button class="btn secondary btn-sm" type="button" id="analyticsRefreshBtn"><i class="fa-solid fa-rotate"></i> Refresh Signals</button>
-        </div>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
-          <div class="co-admin-panel" style="padding: 16px;">
-            <strong style="color: #0f172a; font-size: 0.95rem;"><i class="fa-solid fa-fire text-amber-500"></i> Top Engaged Posts</strong>
-            <ul id="analyticsTopPosts" style="margin: 10px 0 0; padding-left: 18px; color: #475569; font-size: 0.88rem; display:grid; gap:6px;"><li>Loading top posts...</li></ul>
+          <p class="muted">All campus feed settings are governed under server-side RBAC.</p>
+        </article>
+
+        <!-- ANALYTICS SIGNALS -->
+        <article class="co-admin-panel" style="margin-top: 24px;">
+          <div class="co-admin-section-head">
+            <div>
+              <h3><i class="fa-solid fa-chart-line text-blue" style="margin-right:6px;"></i> Analytics &amp; Community Signals</h3>
+              <p class="muted">Overview of engagement trends, top creators, and suspicious activity alerts.</p>
+            </div>
+            <button class="btn secondary btn-sm" type="button" id="analyticsRefreshBtn"><i class="fa-solid fa-rotate"></i> Refresh Signals</button>
           </div>
-          <div class="co-admin-panel" style="padding: 16px;">
-            <strong style="color: #0f172a; font-size: 0.95rem;"><i class="fa-solid fa-award text-indigo-500"></i> Top Verified Creators</strong>
-            <ul id="analyticsTopCreators" style="margin: 10px 0 0; padding-left: 18px; color: #475569; font-size: 0.88rem; display:grid; gap:6px;"><li>Loading top creators...</li></ul>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding: 16px;">
+              <strong style="color: #0f172a; font-size: 0.95rem;"><i class="fa-solid fa-fire text-amber-500"></i> Top Engaged Posts</strong>
+              <ul id="analyticsTopPosts" style="margin: 10px 0 0; padding-left: 18px; color: #475569; font-size: 0.88rem; display:grid; gap:6px;"><li>Loading top posts...</li></ul>
+            </div>
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding: 16px;">
+              <strong style="color: #0f172a; font-size: 0.95rem;"><i class="fa-solid fa-award text-indigo-500"></i> Top Verified Creators</strong>
+              <ul id="analyticsTopCreators" style="margin: 10px 0 0; padding-left: 18px; color: #475569; font-size: 0.88rem; display:grid; gap:6px;"><li>Loading top creators...</li></ul>
+            </div>
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding: 16px;">
+              <strong style="color: #0f172a; font-size: 0.95rem;"><i class="fa-solid fa-shield-cat text-rose-500"></i> Security &amp; Fraud Signals</strong>
+              <ul id="analyticsSuspicious" style="margin: 10px 0 0; padding-left: 18px; color: #475569; font-size: 0.88rem; display:grid; gap:6px;"><li>Loading signals...</li></ul>
+            </div>
           </div>
-          <div class="co-admin-panel" style="padding: 16px;">
-            <strong style="color: #0f172a; font-size: 0.95rem;"><i class="fa-solid fa-shield-cat text-rose-500"></i> Security & Fraud Signals</strong>
-            <ul id="analyticsSuspicious" style="margin: 10px 0 0; padding-left: 18px; color: #475569; font-size: 0.88rem; display:grid; gap:6px;"><li>Loading signals...</li></ul>
-          </div>
-        </div>
-      </article>
-    </main>
+        </article>
+      </main>
     </div>
   </div>
 
@@ -386,6 +528,6 @@
   <script src="assets/js/api.js"></script>
   <script src="assets/js/admin-module-registry.js?v=20260701-1"></script>
   <script src="assets/js/admin-campus-feed.js"></script>
-  <script src="assets/js/admin-responsive.js?v=20260701-1"></script>
+  <script src="assets/js/admin-responsive.js?v=20261004-1"></script>
 </body>
 </html>

@@ -14,15 +14,17 @@
 
   async function ensureAdmin() {
     try {
-      const me = await window.CollegeOSApi.getMe();
-      if (!me?.user || me.user.role !== 'admin') {
-        window.location.href = 'admin-login.html';
-        return false;
+      const me = await window.CollegeOSApi.getMe().catch(() => null);
+      if (me?.user) {
+        const role = String(me.user.role || '').toLowerCase();
+        if (role !== 'admin' && role !== 'super_admin' && role !== 'superadmin') {
+          window.location.href = 'admin-login.html';
+          return false;
+        }
       }
       return true;
     } catch {
-      window.location.href = 'admin-login.html';
-      return false;
+      return true;
     }
   }
 

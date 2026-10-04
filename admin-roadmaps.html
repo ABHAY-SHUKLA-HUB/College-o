@@ -3,242 +3,313 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin - Career Roadmaps</title>
+  <title>Study Roadmaps — College OS Admin</title>
   <script src="assets/js/theme-init.js"></script>
+  <!-- Base & Redesign Stylesheets -->
   <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/css/admin-dashboard-redesign.css?v=20261004-1" />
   <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
-  <style>
-    .co-admin-page-block {
-      display: grid;
-      gap: 18px;
-    }
-
-    .co-admin-form-grid-tight {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-    }
-
-    .co-admin-showcase-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 16px;
-    }
-
-    .co-admin-showcase-card {
-      border-radius: 22px;
-      border: 1px solid rgba(15, 23, 42, 0.08);
-      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
-      box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
-      padding: 18px;
-    }
-
-    .co-admin-showcase-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-
-    .co-admin-builder-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.9fr);
-      gap: 18px;
-      align-items: start;
-    }
-
-    .co-admin-empty {
-      border-radius: 18px;
-      padding: 22px;
-      text-align: center;
-      color: #64748b;
-      background: rgba(255,255,255,0.72);
-      border: 1px dashed #cbd5e1;
-    }
-
-    @media (max-width: 1100px) {
-      .co-admin-builder-grid,
-      .co-admin-form-grid-tight {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
 </head>
 <body class="admin-portal">
-  <div class="co-admin-shell">
-    <aside class="co-admin-aside">
+  <div class="co-admin-shell" id="adminRoadmapsRoot">
+
+    <!-- Mobile Drawer Backdrop -->
+    <div class="co-admin-backdrop" id="adminBackdrop"></div>
+
+    <!-- FIXED LEFT SIDEBAR -->
+    <aside class="co-admin-aside" id="adminSidebar">
       <div class="co-admin-brand">
-        <span class="co-admin-brand-mark"><i class="fa-solid fa-shield-halved"></i></span>
-        <div>
-          <h1>College OS Admin</h1>
-          <p>Academic operations, learner management, content publishing, and platform oversight in one workspace.</p>
+        <div class="co-admin-brand-mark">CO</div>
+        <div class="co-admin-brand-info">
+          <h1>College OS</h1>
+          <span class="co-admin-brand-badge">ADMIN CONTROL PANEL</span>
         </div>
+        <button class="co-admin-close-btn" id="adminSidebarClose" aria-label="Close sidebar">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
 
       <div class="co-admin-sidebar-nav-container">
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Overview</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-dashboard.html"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a>
-          <a class="co-admin-nav-link" href="admin-control.html"><i class="fa-solid fa-sliders"></i><span>Control Center</span></a>
-        </nav>
-      </section>
+        <!-- OVERVIEW -->
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">OVERVIEW</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-dashboard.html">
+              <i class="fa-solid fa-house"></i>
+              <span>Dashboard</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html">
+              <i class="fa-solid fa-sliders"></i>
+              <span>Control Center &amp; Analytics</span>
+            </a>
+          </nav>
+        </section>
 
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Academic Content</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-materials.html"><i class="fa-solid fa-folder-open"></i><span>Study Materials</span></a>
-          <a class="co-admin-nav-link" href="admin-notes.html"><i class="fa-solid fa-file-lines"></i><span>Notes Library</span></a>
-          <a class="co-admin-nav-link" href="admin-papers.html"><i class="fa-solid fa-file-pdf"></i><span>Previous Papers</span></a>
-          <a class="co-admin-nav-link" href="admin-quizzes.html"><i class="fa-solid fa-clipboard-question"></i><span>Quizzes</span></a>
-          <a class="co-admin-nav-link" href="admin-mock-tests.html"><i class="fa-solid fa-flask-vial"></i><span>Mock Test Studio</span></a>
-          <a class="co-admin-nav-link active" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i><span>Study Roadmaps</span></a>
-          <a class="co-admin-nav-link" href="admin-academics.html"><i class="fa-solid fa-graduation-cap"></i><span>Academic Structure</span></a>
-        </nav>
-      </section>
+        <!-- CONTENT MANAGEMENT -->
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">CONTENT MANAGEMENT</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-materials.html">
+              <i class="fa-solid fa-book-bookmark"></i>
+              <span>Study Materials</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-notes.html">
+              <i class="fa-solid fa-file-lines"></i>
+              <span>Notes Library</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-papers.html">
+              <i class="fa-solid fa-file-pdf"></i>
+              <span>Previous Papers</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-quizzes.html">
+              <i class="fa-solid fa-clipboard-question"></i>
+              <span>Quizzes</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-mock-tests.html">
+              <i class="fa-solid fa-flask-vial"></i>
+              <span>Mock Test Studio</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-campus-feed.html">
+              <i class="fa-solid fa-bullhorn"></i>
+              <span>Announcements</span>
+            </a>
+            <a class="co-admin-nav-link active" href="admin-roadmaps.html">
+              <i class="fa-solid fa-map-location-dot"></i>
+              <span>Study Roadmaps</span>
+            </a>
+          </nav>
+        </section>
 
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Student Management</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-control.html#students-management"><i class="fa-solid fa-user-graduate"></i><span>Students</span></a>
-          <a class="co-admin-nav-link" href="admin-control.html#membership-management"><i class="fa-solid fa-id-card"></i><span>Memberships & Payments</span></a>
-          <a class="co-admin-nav-link" href="admin-academics.html#contributions"><i class="fa-solid fa-upload"></i><span>Student Contributions</span></a>
-          <a class="co-admin-nav-link" href="admin-certificates.html"><i class="fa-solid fa-certificate"></i><span>Certificates</span></a>
-        </nav>
-      </section>
+        <!-- ACADEMIC MANAGEMENT -->
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">ACADEMIC MANAGEMENT</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-academics.html">
+              <i class="fa-solid fa-graduation-cap"></i>
+              <span>Academic Structure</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-academics.html#branches">
+              <i class="fa-solid fa-sitemap"></i>
+              <span>Courses &amp; Branches</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-academics.html#semesters">
+              <i class="fa-solid fa-table-cells-large"></i>
+              <span>Semesters &amp; Subjects</span>
+            </a>
+          </nav>
+        </section>
 
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Coding Challenges</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-coding-challenges.html"><i class="fa-solid fa-code"></i><span>Coding Governance</span></a>
-        </nav>
-      </section>
+        <!-- STUDENT MANAGEMENT -->
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">STUDENT MANAGEMENT</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-control.html#students-management">
+              <i class="fa-solid fa-users"></i>
+              <span>All Students</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#membership-management">
+              <i class="fa-solid fa-wallet"></i>
+              <span>Membership Payments</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#audit-logs">
+              <i class="fa-solid fa-chart-line"></i>
+              <span>Student Activity</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#feedbacks-management">
+              <i class="fa-solid fa-comments"></i>
+              <span>Feedback &amp; Reviews</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-certificates.html">
+              <i class="fa-solid fa-award"></i>
+              <span>Certificates</span>
+            </a>
+          </nav>
+        </section>
 
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">Community & Support</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-support-governance.html"><i class="fa-solid fa-headset"></i><span>Support Governance</span></a>
-          <a class="co-admin-nav-link" href="admin-campus-feed.html"><i class="fa-solid fa-newspaper"></i><span>Campus Feed</span></a>
-          <a class="co-admin-nav-link" href="admin-ai-tools.html"><i class="fa-solid fa-sparkles"></i><span>AI Tools Studio</span></a>
-        </nav>
-      </section>
-
-      <section class="co-admin-nav-section">
-        <p class="co-admin-nav-label">System</p>
-        <nav class="co-admin-nav">
-          <a class="co-admin-nav-link" href="admin-control.html#system-settings"><i class="fa-solid fa-gear"></i><span>Settings & Feature Toggles</span></a>
-          <a class="co-admin-nav-link" href="admin-control.html#audit-logs"><i class="fa-solid fa-list-check"></i><span>Audit & Activity Logs</span></a>
-        </nav>
-      </section>
+        <!-- SYSTEM MANAGEMENT -->
+        <section class="co-admin-nav-section">
+          <p class="co-admin-nav-label">SYSTEM MANAGEMENT</p>
+          <nav class="co-admin-nav">
+            <a class="co-admin-nav-link" href="admin-control.html#admins-management">
+              <i class="fa-solid fa-user-shield"></i>
+              <span>Admins &amp; Access</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#system-settings">
+              <i class="fa-solid fa-gear"></i>
+              <span>Platform Settings</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#audit-logs">
+              <i class="fa-solid fa-list-check"></i>
+              <span>System Logs</span>
+            </a>
+            <a class="co-admin-nav-link" href="admin-control.html#analytics-overview">
+              <i class="fa-solid fa-chart-pie"></i>
+              <span>Analytics &amp; Reports</span>
+            </a>
+          </nav>
+        </section>
       </div>
 
-      <div class="co-admin-side-card">
-        <strong>Admin Workspace</strong>
-        <p>Use this dashboard to manage student operations, academic content, premium adoption, and platform quality without breaking workflow.</p>
+      <div class="co-admin-sidebar-footer">
+        <div class="co-admin-side-card">
+          <strong><i class="fa-solid fa-shield-check" style="color:#38bdf8;"></i> Super Admin Active</strong>
+          <span id="adminPlatformStatus">Platform healthy</span> &bull; <span id="adminCollegesCovered">0 campuses</span>
+        </div>
       </div>
     </aside>
 
+    <!-- WORKSPACE AREA -->
     <div class="co-admin-workspace">
+
+      <!-- TOP NAVIGATION BAR -->
       <header class="co-admin-topbar">
-        <div class="co-admin-topbar-title">
-          <h2>Career Roadmap Studio</h2>
-          <p>Create realistic career tracks with skills, tools, projects, certifications, milestones, and publish control by branch or semester.</p>
+        <div class="co-admin-topbar-left">
+          <button class="co-admin-hamburger-btn" id="adminSidebarToggle" aria-label="Toggle navigation">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          
+          <div class="co-admin-search-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="adminGlobalSearch" class="co-admin-search-input" placeholder="Search career tracks, skills, milestones..." />
+            <kbd class="co-admin-kbd">Ctrl K</kbd>
+          </div>
         </div>
-        <div class="co-admin-topbar-actions">
-          <a class="co-admin-chip" href="admin-dashboard.html"><i class="fa-solid fa-arrow-left"></i><span>Back to Dashboard</span></a>
+
+        <div class="co-admin-topbar-right">
+          <!-- Live Date Display -->
+          <div class="co-admin-date-widget">
+            <i class="fa-regular fa-calendar"></i>
+            <span id="adminCurrentDateText">October 4, 2026 Saturday</span>
+          </div>
+
+          <!-- Notification Bell -->
+          <div class="co-admin-icon-btn" id="adminNotifBtn" title="Notifications">
+            <i class="fa-regular fa-bell"></i>
+            <span class="co-admin-notif-dot">3</span>
+          </div>
+
+          <!-- Admin Profile Pill -->
+          <div class="co-admin-profile-pill" id="adminProfileMenuToggle">
+            <div class="co-admin-avatar">AS</div>
+            <div class="co-admin-profile-meta">
+              <span class="co-admin-profile-name" id="adminProfileName">Abhay Shukla</span>
+              <span class="co-admin-profile-role">Super Admin</span>
+            </div>
+            <i class="fa-solid fa-chevron-down"></i>
+
+            <!-- Dropdown Menu -->
+            <div class="co-admin-dropdown-menu" id="adminProfileDropdown">
+              <a href="admin-control.html#system-settings" class="co-admin-dropdown-item"><i class="fa-solid fa-gear"></i> Settings</a>
+              <a href="index.html" class="co-admin-dropdown-item" target="_blank"><i class="fa-solid fa-arrow-up-right-from-square"></i> Student Portal</a>
+              <a href="/api/admin/students/report.xlsx" class="co-admin-dropdown-item"><i class="fa-solid fa-file-excel"></i> Export Report</a>
+              <div style="height:1px; background:#e2e8f0; margin:4px 0;"></div>
+              <a href="admin-login.html" class="co-admin-dropdown-item danger"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+            </div>
+          </div>
         </div>
       </header>
 
-      <div class="co-admin-breadcrumbs" id="adminBreadcrumb"></div>
+      <!-- BREADCRUMBS -->
+      <div class="co-admin-breadcrumbs" id="adminBreadcrumb" style="display:none;"></div>
 
-      <main class="co-admin-main co-admin-page-block">
-      <section class="co-admin-hero">
-        <div class="co-admin-hero-grid">
-          <div>
-            <div class="co-admin-hero-tags">
-              <span class="co-admin-chip-soft"><i class="fa-solid fa-route"></i><span>Career-track control</span></span>
-              <span class="co-admin-chip-soft"><i class="fa-solid fa-layer-group"></i><span>Stage-based builder</span></span>
-              <span class="co-admin-chip-soft"><i class="fa-solid fa-filter-circle-dollar"></i><span>Free / Premium visibility</span></span>
+      <!-- MAIN CONTENT -->
+      <main class="co-admin-main">
+
+        <!-- PAGE HEADER -->
+        <header class="co-admin-page-header">
+          <div class="co-admin-page-title-group">
+            <div class="co-admin-welcome-kicker">
+              <i class="fa-solid fa-map-location-dot"></i>
+              <span>CAREER PATHWAYS &amp; LEARNING TRACKS</span>
             </div>
-            <h1>Modern roadmap management</h1>
-            <p>Build role-specific learning journeys for Software Developer, AI Engineer, Data Analyst, Cloud Engineer, Web Developer, and Commerce or Finance careers while keeping branch-wise and semester-wise control.</p>
+            <h1 class="co-admin-page-title">Study &amp; Career Roadmaps</h1>
+            <p class="co-admin-page-subtitle">Build structured stage-based curriculum tracks for software development, AI engineering, data analytics, and cloud architectures.</p>
           </div>
-          <div class="kpi-grid" id="careerRoadmapMetrics"></div>
-        </div>
-      </section>
-
-      <section class="co-admin-builder-grid">
-        <section class="co-admin-panel">
-          <div class="co-admin-section-head">
-            <div>
-              <h3>Roadmap Builder</h3>
-              <p>Define who this roadmap is for, what it teaches, and how students progress through it.</p>
-            </div>
+          <div class="co-admin-header-actions">
+            <nav class="co-admin-subnav-pills">
+              <a href="admin-materials.html"><i class="fa-solid fa-folder-open"></i> Materials</a>
+              <a href="admin-quizzes.html"><i class="fa-solid fa-clipboard-question"></i> Quizzes</a>
+              <a class="active" href="admin-roadmaps.html"><i class="fa-solid fa-map-location-dot"></i> Roadmaps</a>
+            </nav>
           </div>
-          <form id="careerRoadmapForm" class="co-admin-form">
-            <div class="co-admin-form-grid">
-              <div class="co-admin-field"><label>Roadmap title</label><input name="title" placeholder="Software Developer" required /></div>
-              <div class="co-admin-field"><label>Career track</label><input name="careerTrack" placeholder="Engineering" required /></div>
-              <div class="co-admin-field full"><label>Tagline</label><input name="tagline" placeholder="Build strong fundamentals, projects, and interview readiness." /></div>
-              <div class="co-admin-field full"><label>Description</label><textarea name="description" rows="3" placeholder="Detailed overview for student-facing roadmap card"></textarea></div>
-              <div class="co-admin-field"><label>Icon name</label><input name="iconName" placeholder="fa-code" value="fa-route" /></div>
-              <div class="co-admin-field"><label>Accent color</label><input name="accentColor" type="color" value="#2563eb" /></div>
-              <div class="co-admin-field"><label>Difficulty level</label><select name="difficultyLevel"><option>Beginner</option><option>Beginner to Intermediate</option><option>Intermediate</option><option>Advanced</option></select></div>
-              <div class="co-admin-field"><label>Estimated duration</label><input name="estimatedDuration" placeholder="24 weeks" /></div>
-              <div class="co-admin-field"><label>Access type</label><select name="accessType"><option value="free">Free</option><option value="premium">Premium</option></select></div>
-              <div class="co-admin-field"><label>Status</label><select name="status"><option value="published">Published</option><option value="draft">Draft</option><option value="hidden">Hidden</option></select></div>
-              <div class="co-admin-field"><label>Published</label><select name="isPublished"><option value="true">Yes</option><option value="false">No</option></select></div>
-              <div class="co-admin-field"><label>Featured</label><select name="isFeatured"><option value="false">No</option><option value="true">Yes</option></select></div>
-              <div class="co-admin-field"><label>Sort order</label><input name="sortOrder" type="number" value="0" /></div>
-              <div class="co-admin-field"><label>Category</label><select id="careerCategoryId" name="categoryId"></select></div>
-              <div class="co-admin-field"><label>Branch</label><select id="careerBranchId" name="branchId"><option value="">All branches</option></select></div>
-              <div class="co-admin-field"><label>Semester</label><select id="careerSemesterId" name="semesterId"></select></div>
-              <div class="co-admin-field"><label>Required skills</label><textarea name="skills" rows="3" placeholder="Comma separated"></textarea></div>
-              <div class="co-admin-field"><label>Tools to learn</label><textarea name="tools" rows="3" placeholder="Comma separated"></textarea></div>
-              <div class="co-admin-field"><label>Projects to build</label><textarea name="projects" rows="3" placeholder="Comma separated"></textarea></div>
-              <div class="co-admin-field"><label>Certifications</label><textarea name="certifications" rows="3" placeholder="Comma separated"></textarea></div>
-              <div class="co-admin-field full"><label>Interview preparation</label><textarea name="interviewPrep" rows="3"></textarea></div>
-              <div class="co-admin-field full"><label>Placement readiness</label><textarea name="placementReadiness" rows="3"></textarea></div>
-            </div>
+        </header>
 
-            <div class="co-admin-section-head" style="margin-top:20px;">
+        <!-- KPI METRICS -->
+        <div id="careerRoadmapMetrics" style="display:none;"></div>
+
+        <!-- 2-COLUMN GRID: BUILDER & SHOWCASE -->
+        <div class="co-admin-grid two">
+          <!-- ROADMAP BUILDER -->
+          <section class="co-admin-panel">
+            <div class="co-admin-section-head">
               <div>
-                <h3>Stages and milestones</h3>
-                <p>Each stage can define skills, tools, projects, certifications, interview prep, and placement outcomes.</p>
+                <h3><i class="fa-solid fa-compass-drafting text-blue" style="margin-right:6px;"></i> Roadmap Builder</h3>
+                <p>Define who this roadmap is for, target domain, estimated weeks, and progression milestones.</p>
               </div>
-              <button class="btn secondary" id="careerAddStageBtn" type="button"><i class="fa-solid fa-plus"></i> Add stage</button>
             </div>
-            <div id="careerStageContainer"></div>
 
-            <div class="control-actions" style="margin-top:16px;">
-              <button class="btn primary" id="careerRoadmapSubmitBtn" type="submit"><i class="fa-solid fa-floppy-disk"></i> Save roadmap</button>
-              <button class="btn secondary" id="careerRoadmapResetBtn" type="button">Reset</button>
-            </div>
-            <p class="muted" id="careerRoadmapStatus"></p>
-          </form>
-        </section>
+            <form id="careerRoadmapForm" class="co-admin-form">
+              <div class="co-admin-form-compact-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+                <div class="co-admin-field"><label>Roadmap Title *</label><input name="title" placeholder="e.g. Software Developer" required /></div>
+                <div class="co-admin-field"><label>Career Track *</label><input name="careerTrack" placeholder="e.g. Engineering" required /></div>
+                <div class="co-admin-field" style="grid-column: 1 / -1;"><label>Tagline</label><input name="tagline" placeholder="Build strong fundamentals, projects, and interview readiness." /></div>
+                <div class="co-admin-field" style="grid-column: 1 / -1;"><label>Description</label><textarea name="description" rows="2" placeholder="Detailed overview for student-facing roadmap card..."></textarea></div>
+                <div class="co-admin-field"><label>Icon Name</label><input name="iconName" placeholder="fa-code" value="fa-route" /></div>
+                <div class="co-admin-field"><label>Accent Color</label><input name="accentColor" type="color" value="#2563eb" style="height:40px; padding:2px;" /></div>
+                <div class="co-admin-field"><label>Difficulty Level</label><select name="difficultyLevel"><option>Beginner</option><option>Beginner to Intermediate</option><option>Intermediate</option><option>Advanced</option></select></div>
+                <div class="co-admin-field"><label>Estimated Duration</label><input name="estimatedDuration" placeholder="24 weeks" /></div>
+                <div class="co-admin-field"><label>Access Tier</label><select name="accessType"><option value="free">Free</option><option value="premium">Premium</option></select></div>
+                <div class="co-admin-field"><label>Status</label><select name="status"><option value="published">Published</option><option value="draft">Draft</option><option value="hidden">Hidden</option></select></div>
+                <div class="co-admin-field"><label>Published</label><select name="isPublished"><option value="true">Yes</option><option value="false">No</option></select></div>
+                <div class="co-admin-field"><label>Featured</label><select name="isFeatured"><option value="false">No</option><option value="true">Yes</option></select></div>
+                <div class="co-admin-field"><label>Sort Order</label><input name="sortOrder" type="number" value="0" /></div>
+                <div class="co-admin-field"><label>Academic Category</label><select id="careerCategoryId" name="categoryId"></select></div>
+                <div class="co-admin-field"><label>Target Branch</label><select id="careerBranchId" name="branchId"><option value="">All branches</option></select></div>
+                <div class="co-admin-field"><label>Target Semester</label><select id="careerSemesterId" name="semesterId"></select></div>
+                <div class="co-admin-field"><label>Required Skills</label><textarea name="skills" rows="2" placeholder="Comma separated skills..."></textarea></div>
+                <div class="co-admin-field"><label>Tools to Learn</label><textarea name="tools" rows="2" placeholder="Comma separated tools..."></textarea></div>
+                <div class="co-admin-field"><label>Projects to Build</label><textarea name="projects" rows="2" placeholder="Comma separated project ideas..."></textarea></div>
+                <div class="co-admin-field"><label>Certifications</label><textarea name="certifications" rows="2" placeholder="Comma separated credentials..."></textarea></div>
+                <div class="co-admin-field" style="grid-column: 1 / -1;"><label>Interview Preparation</label><textarea name="interviewPrep" rows="2"></textarea></div>
+                <div class="co-admin-field" style="grid-column: 1 / -1;"><label>Placement Readiness</label><textarea name="placementReadiness" rows="2"></textarea></div>
+              </div>
 
-        <section class="co-admin-panel">
-          <div class="co-admin-section-head">
-            <div>
-              <h3>Roadmap Library</h3>
-              <p>Review all live tracks, switch visibility, or jump into edit mode for any roadmap.</p>
+              <!-- STAGES & MILESTONES -->
+              <div class="co-admin-section-head" style="margin-top:20px; padding-top:16px; border-top:1px solid #f1f5f9;">
+                <div>
+                  <h3>Stages and Milestones</h3>
+                  <p>Each stage can define skills, tools, projects, certifications, interview prep, and placement outcomes.</p>
+                </div>
+                <button class="btn secondary btn-sm" id="careerAddStageBtn" type="button"><i class="fa-solid fa-plus"></i> Add Stage</button>
+              </div>
+              <div id="careerStageContainer" style="display:flex; flex-direction:column; gap:12px;"></div>
+
+              <div class="actions" style="margin-top:18px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid #f1f5f9; padding-top:14px;">
+                <button class="btn secondary" id="careerRoadmapResetBtn" type="button">Reset</button>
+                <button class="btn primary" id="careerRoadmapSubmitBtn" type="submit"><i class="fa-solid fa-floppy-disk"></i> Save Roadmap</button>
+              </div>
+              <p class="muted" id="careerRoadmapStatus" style="font-size:13px; font-weight:600; margin-top:8px;"></p>
+            </form>
+          </section>
+
+          <!-- ROADMAP LIBRARY SHOWCASE -->
+          <section class="co-admin-panel">
+            <div class="co-admin-section-head">
+              <div>
+                <h3><i class="fa-solid fa-layer-group text-purple" style="margin-right:6px;"></i> Roadmap Library</h3>
+                <p>Review all live tracks, switch visibility, or jump into edit mode for any roadmap.</p>
+              </div>
             </div>
-          </div>
-          <div class="co-admin-showcase-grid" id="careerRoadmapAdminGrid"></div>
-        </section>
-      </section>
-    </main>
+            <div id="careerRoadmapAdminGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;"></div>
+          </section>
+        </div>
+      </main>
     </div>
   </div>
 
   <script src="assets/js/api.js"></script>
   <script src="assets/js/admin-career-roadmaps.js"></script>
   <script src="assets/js/admin-module-registry.js?v=20260701-1"></script>
-  <script src="assets/js/admin-responsive.js?v=20260701-1"></script>
+  <script src="assets/js/admin-responsive.js?v=20261004-1"></script>
 </body>
 </html>
-
-
-

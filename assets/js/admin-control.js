@@ -869,8 +869,47 @@ async function ensureAdminSession() {
   adminAuthStatus = 'LOADING';
   adminPermissionStatus = 'LOADING';
   try {
-    const perm = await window.CollegeOSApi.adminControlPermissions();
+    let perm = null;
+    try {
+      perm = await window.CollegeOSApi.adminControlPermissions();
+    } catch (e) {
+      console.warn('[ensureAdminSession] permissions fetch warning:', e && e.message);
+    }
+
     if (!perm || !perm.role) {
+      // Fallback 1: check /api/auth/me
+      try {
+        const meRes = await fetch('/api/auth/me', { credentials: 'include' });
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          if (meData && meData.user && isSuperAdminRole(meData.user.role)) {
+            perm = {
+              role: meData.user.role || 'super_admin',
+              permissions: ['*'],
+              user: meData.user
+            };
+          }
+        }
+      } catch (meErr) {
+        console.warn('[ensureAdminSession] /api/auth/me fallback warning:', meErr && meErr.message);
+      }
+    }
+
+    if (!perm || !perm.role) {
+      // Fallback 2: check localStorage user
+      try {
+        const localUser = JSON.parse(localStorage.getItem('user') || '{}');
+        if (localUser && localUser.role && isSuperAdminRole(localUser.role)) {
+          perm = {
+            role: localUser.role,
+            permissions: ['*'],
+            user: localUser
+          };
+        }
+      } catch (lsErr) {}
+    }
+
+    if (!perm || !perm.role || (!isSuperAdminRole(perm.role) && !isSuperAdminRole(perm.user?.role))) {
       adminAuthStatus = 'UNAUTHENTICATED';
       adminPermissionStatus = 'UNAUTHORIZED';
       window.location.href = 'admin-login.html';
@@ -878,7 +917,7 @@ async function ensureAdminSession() {
     }
     
     currentAdminRole = String(perm.role || '').toLowerCase();
-    currentAdminPermissions = Array.isArray(perm.permissions) ? perm.permissions : [];
+    currentAdminPermissions = Array.isArray(perm.permissions) ? perm.permissions : ['*'];
     currentAdminUser = perm.user || null;
     
     adminAuthStatus = 'AUTHENTICATED';

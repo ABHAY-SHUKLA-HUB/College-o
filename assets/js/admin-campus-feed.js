@@ -312,6 +312,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function bindFilters() {
+    byId('moderationStatusFilter')?.addEventListener('change', loadModerationQueue);
+    byId('moderationCollegeFilter')?.addEventListener('change', loadModerationQueue);
+    byId('moderationSearch')?.addEventListener('input', () => {
+      clearTimeout(window.__modSearchTimer);
+      window.__modSearchTimer = setTimeout(loadModerationQueue, 250);
+    });
+    byId('reportStatusFilter')?.addEventListener('change', loadReports);
+  }
+
   bindFilters();
   bindOfficialPostForm();
   bindNavTabs();
